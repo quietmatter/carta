@@ -1,0 +1,19 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#232019" rx="110"/>
+  
+  <!-- Coffee cup body -->
+  <path d="M 120 150 L 150 360 Q 150 390 180 390 L 332 390 Q 362 390 362 360 L 392 150 Z" fill="#EFE9DC" stroke="#232019" stroke-width="4"/>
+  
+  <!-- Coffee inside -->
+  <ellipse cx="256" cy="210" rx="100" ry="20" fill="#8B6F47"/>
+  <path d="M 160 200 Q 160 270 170 330 Q 180 365 200 385" fill="none" stroke="#6B4E27" stroke-width="4" opacity="0.6"/>
+  
+  <!-- Handle -->
+  <path d="M 392 210 Q 430 210 430 290 Q 430 370 392 370" fill="none" stroke="#EFE9DC" stroke-width="16" stroke-linecap="round"/>
+  
+  <!-- Steam wisps -->
+  <path d="M 190 130 Q 190 80 210 20" fill="none" stroke="#D4CCBA" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 256 120 Q 256 70 276 10" fill="none" stroke="#D4CCBA" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 322 130 Q 322 80 342 20" fill="none" stroke="#D4CCBA" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+</svg>

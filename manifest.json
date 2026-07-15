@@ -1,0 +1,23 @@
+{
+  "name": "CARTA Coffee Ledger",
+  "short_name": "CARTA",
+  "start_url": "/carta/",
+  "display": "standalone",
+  "background_color": "#EFE9DC",
+  "theme_color": "#232019",
+  "scope": "/carta/",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

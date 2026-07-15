@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#232019">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<title>CARTA</title>
+<style>
+:root{
+  --paper:#EFE9DC;
+  --paper-2:#E6DFCF;
+  --ink:#1C1A16;
+  --ink-2:#4A453D;
+  --ink-3:#8B8478;
+  --graphite:#232019;
+  --graphite-2:#2E2A22;
+  --line:#D4CCBA;
+  --accent:hsl(30,55%,42%);
+  --accent-ink:#fff;
+  --danger:#8A3324;
+  --radius:10px;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --serif:Georgia,'Times New Roman',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Inter,Arial,sans-serif;
+  font-size:16px;line-height:1.45;
+  max-width:560px;margin:0 auto;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+header.app{
+  background:var(--graphite);color:var(--paper);
+  padding:calc(14px + env(safe-area-inset-top)) 20px 12px;
+  display:flex;justify-content:space-between;align-items:baseline;
+  position:sticky;top:0;z-index:20;
+}
+header.app h1{font-size:15px;letter-spacing:.35em;font-weight:600}
+header.app .sub{font-family:var(--serif);font-style:italic;font-size:12px;color:#A79E8D}
+main{padding:16px}
+h2{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:22px 0 10px}
+h2:first-child{margin-top:4px}
+.card{background:#F7F3E9;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px}
+.card.tap{cursor:pointer}
+.card.tap:active{background:var(--paper-2)}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.muted{color:var(--ink-3);font-size:13px}
+.small{font-size:13px}
+.serif{font-family:var(--serif)}
+.chip{
+  display:inline-block;font-size:11px;letter-spacing:.06em;padding:2px 9px;border-radius:99px;
+  border:1px solid var(--line);color:var(--ink-2);font-variant-numeric:tabular-nums;
+}
+.chip.window{border-color:var(--accent);color:var(--accent);font-weight:600}
+.chip.resting{color:var(--ink-3)}
+.chip.past{color:var(--danger);border-color:var(--danger)}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+.btn{
+  display:block;width:100%;text-align:center;padding:15px;border-radius:var(--radius);
+  font-size:15px;font-weight:600;letter-spacing:.02em;
+}
+.btn-primary{background:var(--accent);color:var(--accent-ink)}
+.btn-primary:active{filter:brightness(.92)}
+.btn-quiet{background:none;border:1px solid var(--line);color:var(--ink-2)}
+.btn-quiet:active{background:var(--paper-2)}
+.btn-graphite{background:var(--graphite);color:var(--paper)}
+.btn-danger{color:var(--danger);border:1px solid var(--danger);background:none}
+.btn+.btn{margin-top:8px}
+/* forms */
+label.f{display:block;margin-bottom:12px}
+label.f span.l{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px;font-weight:600}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+  background:#FBF8F0;color:var(--ink);appearance:none;-webkit-appearance:none;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{min-height:64px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+/* dial stepper */
+.dial{border:1px solid var(--line);border-radius:var(--radius);background:#FBF8F0;padding:8px 6px 10px;margin-bottom:10px;text-align:center;position:relative}
+.dial .l{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.dial .v{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15;margin:2px 0}
+.dial .v .u{font-size:12px;color:var(--ink-3);font-weight:400;margin-left:2px}
+.dial .ctl{display:flex;justify-content:center;gap:6px}
+.dial .ctl button{
+  width:52px;height:34px;border:1px solid var(--line);border-radius:8px;background:#F1EBDD;
+  font-size:20px;font-weight:500;color:var(--ink-2);
+}
+.dial .ctl button:active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dial .ticks{position:absolute;top:8px;right:10px;font-size:9px;color:var(--ink-3);letter-spacing:.1em}
+.dialrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* hedonic */
+.hedonic{display:flex;gap:5px;justify-content:space-between;margin:6px 0 4px}
+.hedonic button{
+  flex:1;aspect-ratio:1/1.15;border:1px solid var(--line);border-radius:8px;background:#FBF8F0;
+  font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink-2);max-width:46px;
+}
+.hedonic button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.desc{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.desc button{font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:99px;background:#FBF8F0;color:var(--ink-2)}
+.desc button.on{background:var(--graphite);color:var(--paper);border-color:var(--graphite)}
+/* segmented */
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.seg button{flex:1;padding:9px 4px;font-size:13px;background:#FBF8F0;color:var(--ink-2);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:var(--graphite);color:var(--paper)}
+/* timer */
+.timer{background:var(--graphite);color:var(--paper);border-radius:var(--radius);padding:16px;text-align:center;margin-bottom:12px}
+.timer .t{font-size:52px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.timer .ctl{display:flex;gap:8px;margin-top:10px}
+.timer .ctl button{flex:1;padding:11px;border-radius:8px;border:1px solid #4A453D;color:var(--paper);font-size:14px;font-weight:600}
+.timer .ctl button.go{background:var(--accent);border-color:var(--accent)}
+/* tab bar */
+nav.tabs{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;
+  background:var(--graphite);display:flex;z-index:30;
+  padding-bottom:env(safe-area-inset-bottom);border-top:1px solid #3A362C;
+}
+nav.tabs button{flex:1;padding:11px 0 9px;color:#7E776A;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+nav.tabs button .ic{display:block;font-size:17px;margin-bottom:2px;font-weight:400}
+nav.tabs button.on{color:var(--paper)}
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(28,26,22,.5);z-index:40;display:none}
+.sheet-bg.open{display:block}
+.sheet{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;
+  background:var(--paper);border-radius:16px 16px 0 0;z-index:50;
+  max-height:92vh;overflow-y:auto;display:none;
+  padding:10px 18px calc(20px + env(safe-area-inset-bottom));
+}
+.sheet.open{display:block}
+.sheet .grab{width:36px;height:4px;background:var(--line);border-radius:2px;margin:4px auto 12px}
+.sheet h3{font-size:16px;font-weight:700;margin-bottom:2px}
+.sheet .sub{font-family:var(--serif);font-style:italic;color:var(--ink-3);font-size:13px;margin-bottom:14px}
+/* misc */
+.bagphoto{width:100%;border-radius:8px;margin-bottom:10px;display:block}
+.photozone{
+  border:1.5px dashed var(--line);border-radius:var(--radius);padding:18px;text-align:center;
+  color:var(--ink-3);font-size:13px;margin-bottom:12px;cursor:pointer;background:#F7F3E9;
+}
+.thumb{width:48px;height:48px;object-fit:cover;border-radius:6px}
+.empty{font-family:var(--serif);font-style:italic;color:var(--ink-3);text-align:center;padding:28px 20px;font-size:14px}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--ink-3)}
+.kv .v{font-variant-numeric:tabular-nums;text-align:right}
+.n-note{font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+svg text{font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+.toast{
+  position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  background:var(--graphite);color:var(--paper);padding:10px 20px;border-radius:99px;font-size:13px;
+  z-index:99;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:1}
+.link{color:var(--accent);font-weight:600;font-size:13px}
+/* quick start */
+ol.steps{list-style:none;counter-reset:s;margin:2px 0 4px}
+ol.steps>li{counter-increment:s;position:relative;padding-left:38px;margin-bottom:14px}
+ol.steps>li::before{
+  content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:99px;
+  background:var(--graphite);color:var(--paper);display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;
+}
+ol.steps .t{font-size:14px;font-weight:700;line-height:26px}
+ol.steps .b{font-size:13px;color:var(--ink-2);margin-top:1px}
+ol.steps .go{font-size:12px;color:var(--accent);font-weight:600;margin-top:5px;display:inline-block}
+.rule{border-left:3px solid var(--accent);padding:2px 0 2px 12px;margin:14px 0}
+.rule.hard{border-left-color:var(--danger)}
+.rule .t{font-size:13px;font-weight:700}
+.rule .b{font-size:13px;color:var(--ink-2)}
+.warn{border:1px solid var(--danger);border-radius:var(--radius);padding:12px 14px;margin:12px 0;background:#F7F3E9}
+.warn .t{font-size:11px;font-weight:700;color:var(--danger);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.warn .b{font-size:13px;color:var(--ink-2)}
+.loop{display:flex;align-items:stretch;gap:4px;margin:10px 0 6px}
+.loop .s{flex:1;background:#F7F3E9;border:1px solid var(--line);border-radius:8px;padding:8px 3px;text-align:center}
+.loop .s .k{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.loop .s .v{font-size:12px;font-weight:600;margin-top:2px;line-height:1.25}
+.loop .a{display:flex;align-items:center;color:var(--ink-3);font-size:12px}
+.gtab{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.gtab:last-child{border-bottom:none}
+.gtab .ic{width:18px;color:var(--accent);font-size:14px;flex:none;text-align:center}
+.gtab .nm{width:50px;font-weight:700;font-size:13px;flex:none}
+.gtab .ds{font-size:12px;color:var(--ink-2);flex:1}
+.gt{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}
+.gt td{padding:6px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.gt td:last-child{text-align:right;color:var(--ink-2)}
+.gt tr:last-child td{border-bottom:none}
+code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1px 5px;border-radius:4px}
+.helpbtn{color:#7E776A;font-size:15px;padding:0 0 0 12px;line-height:1}
+.helpbtn:active{color:var(--paper)}
+</style>
+</head>
+<body>
+<header class="app"><h1>CARTA</h1>
+<div style="display:flex;align-items:baseline"><div class="sub">we keep the record</div>
+<button class="helpbtn" onclick="openGuide()" aria-label="Quick start">?</button></div></header>
+<main id="main"></main>
+<nav class="tabs" id="tabs"></nav>
+<div class="sheet-bg" id="sheetbg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+<input type="file" accept="image/*" capture="environment" id="photoInput" style="display:none">
+<input type="file" accept=".json,application/json" id="importInput" style="display:none">
+
+<script>
+'use strict';
+/* ============ store ============ */
+const KEY='carta.v1';
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],createdAt:new Date().toISOString()};
+const clone=o=>JSON.parse(JSON.stringify(o));
+let D=load();
+function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):clone(blank)}catch(e){return clone(blank)}}
+function save(){localStorage.setItem(KEY,JSON.stringify(D))}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today=()=>new Date().toISOString().slice(0,10);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const byNew=(a,b)=>b.createdAt.localeCompare(a.createdAt);
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
+
+/* ============ domain ============ */
+const ROAST_LEVELS=['','Light','Light-medium','Medium','Medium-dark','Dark'];
+// accent hue derived from roast level (Section 10: the only colour decision)
+function roastAccent(lv){
+  const map={1:'hsl(36,62%,46%)',2:'hsl(30,58%,42%)',3:'hsl(25,52%,38%)',4:'hsl(20,48%,32%)',5:'hsl(15,42%,26%)'};
+  return map[lv]||'hsl(30,55%,42%)';
+}
+function setAccent(lv){document.documentElement.style.setProperty('--accent',roastAccent(lv))}
+// rest window heuristic (days off roast) by roast level — an opinion, shown as one
+function restWindow(lv){ if(lv<=2)return[7,28]; if(lv===3)return[5,21]; return[3,14]; }
+function daysOff(bag){ if(!bag.roastDate)return null; return Math.floor((Date.now()-new Date(bag.roastDate+'T00:00'))/864e5); }
+function restState(bag){
+  const d=daysOff(bag); if(d==null)return null;
+  const[a,b]=restWindow(bag.roastLevel||3);
+  return {d, state: d<a?'resting':(d<=b?'window':'past'), a, b};
+}
+function restChip(bag){
+  const r=restState(bag); if(!r)return'';
+  const lbl=r.state==='resting'?`resting · day ${r.d}`:r.state==='window'?`in window · day ${r.d}`:`day ${r.d} · past window`;
+  return `<span class="chip ${r.state} num">${lbl}</span>`;
+}
+const bagName=b=>b?`${b.roaster?b.roaster+' — ':''}${b.name||'(unnamed)'}`:'—';
+const setupById=id=>D.setups.find(s=>s.id===id);
+const bagById=id=>D.bags.find(b=>b.id===id);
+const brewsOf=bagId=>D.brews.filter(x=>x.bagId===bagId).sort(byNew);
+const fmtTime=s=>s==null?'—':`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
+const DESCRIPTORS=['floral','citrus','berry','stone fruit','tropical','chocolate','nutty','caramel','honey','spice','tea-like','fermented','roasted','vegetal'];
+const INSTR=['measured','estimated','recalled'];
+
+/* ============ router ============ */
+const TABS=[
+  {id:'field',ic:'●',label:'Field'},
+  {id:'bags',ic:'▤',label:'Bags'},
+  {id:'setups',ic:'⚙',label:'Setups'},
+  {id:'trace',ic:'∿',label:'Trace'},
+  {id:'ledger',ic:'≡',label:'Ledger'},
+];
+let tab='field';
+function go(t){tab=t;render()}
+function render(){
+  document.getElementById('tabs').innerHTML=TABS.map(t=>
+    `<button class="${tab===t.id?'on':''}" onclick="go('${t.id}')"><span class="ic">${t.ic}</span>${t.label}</button>`).join('');
+  const m=document.getElementById('main');
+  m.innerHTML=({field:vField,bags:vBags,setups:vSetups,trace:vTrace,ledger:vLedger})[tab]();
+  window.scrollTo(0,0);
+}
+
+/* ============ views ============ */
+function vField(){
+  const bags=D.bags.filter(b=>!b.archived).sort(byNew);
+  const cups=D.cups.slice().sort(byNew).slice(0,8);
+  if(firstRun())return `
+  <div class="card" style="border-color:var(--accent)">
+    <div class="row"><strong>Start here</strong><span class="chip window">2 min</span></div>
+    <div class="muted small serif" style="font-style:italic;margin:3px 0 10px">A Setup, then a bag. Then make coffee and log it after — that's the whole app.</div>
+    <button class="btn btn-primary" onclick="openGuide()">Read the quick start</button>
+    <button class="btn btn-quiet" onclick="go('setups');openSetupForm()">Skip it — define a Setup</button>
+  </div>
+  <div class="empty">The record begins with the next cup.</div>`;
+  return `
+  <button class="btn btn-primary" onclick="openBrew()">Log a brew</button>
+  <button class="btn btn-quiet" onclick="openCafe()">Café cup</button>
+  <h2>Open bags</h2>
+  ${bags.length? bags.map(b=>`
+    <div class="card tap" onclick="openBrew('${b.id}')">
+      <div class="row"><strong>${esc(bagName(b))}</strong>${restChip(b)}</div>
+      <div class="muted small">${esc([b.originCountry,b.process].filter(Boolean).join(' · '))||'&nbsp;'}
+        <span class="num" style="float:right">${brewsOf(b.id).length} brews</span></div>
+    </div>`).join('') : `<div class="empty">No bags yet. Capture your first under Bags.</div>`}
+  <h2>Recent cups</h2>
+  ${cups.length? cups.map(cupRow).join('') : `<div class="empty">The record begins with the next cup.</div>`}`;
+}
+function cupRow(c){
+  const b=bagById(c.bagId);
+  const what=c.kind==='cafe'?`${esc(c.shop||'café')} · ${esc(c.drink||'cup')}`:esc(bagName(b));
+  const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
+  const meta=brew?`<span class="num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span>`:`<span class="chip">${c.instrumentation||'recalled'}</span>`;
+  return `<div class="card">
+    <div class="row"><span class="small"><strong>${what}</strong></span>
+      <span class="num" style="font-size:20px;font-weight:700;color:var(--accent)">${c.hedonic??'—'}</span></div>
+    <div class="muted small">${meta}</div>
+    ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic">${c.descriptors.map(esc).join(', ')}</div>`:''}
+    <div class="muted" style="font-size:11px" >${new Date(c.createdAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+  </div>`;
+}
+
+function vBags(){
+  const bags=D.bags.slice().sort(byNew);
+  return `<button class="btn btn-primary" onclick="openBagForm()">Capture a bag</button>
+  <h2>All bags <span class="n-note">n=${bags.length}</span></h2>
+  ${bags.length? bags.map(b=>`
+    <div class="card tap" onclick="openBagDetail('${b.id}')">
+      <div style="display:flex;gap:12px;align-items:center">
+        ${b.photo?`<img class="thumb" src="${b.photo}">`:''}
+        <div style="flex:1">
+          <div class="row"><strong>${esc(bagName(b))}</strong>${restChip(b)}</div>
+          <div class="muted small">${esc([b.originCountry,b.producer,b.process].filter(Boolean).join(' · '))||'&nbsp;'}</div>
+        </div>
+      </div>
+    </div>`).join('') : `<div class="empty">30 seconds for a bag: photograph it, confirm, done.</div>`}`;
+}
+
+function vSetups(){
+  return `<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">A grind setting without a Setup is not a number, it's a rumour. Grind settings are only comparable within a Setup.</div>
+  <h2>Setups <span class="n-note">n=${D.setups.length}</span></h2>
+  ${D.setups.length? D.setups.slice().sort(byNew).map(s=>`
+    <div class="card tap" onclick="openSetupForm('${s.id}')">
+      <strong>${esc(s.name)}</strong>
+      <div class="muted small">${esc([s.grinder,s.brewer,s.basket].filter(Boolean).join(' · '))}</div>
+      ${s.water?`<div class="muted small">water: ${esc(s.water)}</div>`:''}
+      <div class="muted" style="font-size:11px" class="num">${D.brews.filter(x=>x.setupId===s.id).length} brews on this Setup</div>
+    </div>`).join('') : `<div class="empty">Define the assembly — grinder, brewer, basket, papers, water — before the first brew.</div>`}`;
+}
+
+function vTrace(){
+  const bags=D.bags.filter(b=>brewsOf(b.id).length>0).sort(byNew);
+  if(!bags.length)return `<div class="empty">The dial-in trace appears once a bag has brews.</div>`;
+  return bags.map(b=>traceCard(b)).join('');
+}
+function traceCard(b){
+  const brews=brewsOf(b.id).slice().reverse(); // chronological
+  const n=brews.length;
+  const hed=brews.map(x=>{const c=D.cups.find(c=>c.brewId===x.id);return c?c.hedonic:null});
+  const grinds=brews.map(x=>x.grind).filter(v=>v!=null);
+  const gmin=Math.min(...grinds),gmax=Math.max(...grinds);
+  const W=480,H=150,P=28;
+  const X=i=>n===1?W/2:P+i*(W-2*P)/(n-1);
+  const GY=v=>gmax===gmin?H/2:H-P-((v-gmin)/(gmax-gmin))*(H-2*P);
+  const HY=v=>H-P-((v-1)/8)*(H-2*P);
+  let path='',pts='',hpts='';
+  brews.forEach((x,i)=>{ if(x.grind!=null){ path+=(path?'L':'M')+X(i).toFixed(1)+' '+GY(x.grind).toFixed(1)+' ';
+    pts+=`<circle cx="${X(i).toFixed(1)}" cy="${GY(x.grind).toFixed(1)}" r="3.5" fill="var(--accent)"/>`;}
+    if(hed[i]!=null) hpts+=`<circle cx="${X(i).toFixed(1)}" cy="${HY(hed[i]).toFixed(1)}" r="3" fill="none" stroke="var(--ink-2)" stroke-width="1.5"/>`;
+  });
+  return `<div class="card">
+    <div class="row"><strong>${esc(bagName(b))}</strong><span class="n-note">n=${n}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%">
+      <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="var(--line)"/>
+      ${grinds.length?`<text x="${P}" y="14" font-size="10" fill="var(--ink-3)">grind ${gmin}–${gmax}</text>`:''}
+      <text x="${W-P}" y="14" font-size="10" fill="var(--ink-3)" text-anchor="end">○ hedonic 1–9</text>
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>${pts}${hpts}
+    </svg>
+    <div class="n-note">solid — grind setting · hollow — hedonic. Comparable only within one Setup; every point carries its instrumentation.</div>
+  </div>`;
+}
+
+function vLedger(){
+  const counts=[['Bags',D.bags.length],['Setups',D.setups.length],['Brews',D.brews.length],['Cups',D.cups.length]];
+  return `
+  <h2>Your ledger</h2>
+  <div class="card">${counts.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">Your ledger is yours — full export, open schema, no lock-in. If we die, you keep everything, readable.</div>
+  <button class="btn btn-graphite" onclick="exportJSON()">Export ledger (JSON)</button>
+  <button class="btn btn-quiet" onclick="document.getElementById('importInput').click()">Import ledger</button>
+  <h2>Phase 0</h2>
+  <div class="card small muted">Kill gate, day 60: fewer than 40 brews logged → stop.
+    <div class="kv"><span class="k">Brews logged</span><span class="v num">${D.brews.length} / 40</span></div>
+  </div>
+  <h2>The manual</h2>
+  <button class="btn btn-quiet" onclick="openGuide()">Quick start</button>`;
+}
+
+/* ============ sheet plumbing ============ */
+function openSheet(html){document.getElementById('sheet').innerHTML='<div class="grab"></div>'+html;
+  document.getElementById('sheet').classList.add('open');document.getElementById('sheetbg').classList.add('open');
+  document.getElementById('sheet').scrollTop=0;}
+function closeSheet(){document.getElementById('sheet').classList.remove('open');document.getElementById('sheetbg').classList.remove('open');stopTimer(false)}
+const val=id=>{const e=document.getElementById(id);return e?e.value.trim():''};
+const numv=id=>{const v=val(id);return v===''?null:Number(v)};
+
+/* ============ dial component ============ */
+const dialState={};
+function dial(id,label,unit,value,step,min,max,dp){
+  dialState[id]={v:value,step,min,max,dp:dp??(String(step).includes('.')?1:0)};
+  return `<div class="dial"><div class="l">${label}</div>
+    <div class="v num" id="dv_${id}">${fmtDial(id)}<span class="u">${unit}</span></div>
+    <div class="ctl">
+      <button onclick="nudge('${id}',-1)">−</button>
+      <button onclick="nudge('${id}',1)">+</button>
+    </div></div>`;
+}
+function fmtDial(id){const s=dialState[id];return s.v==null?'—':s.v.toFixed(s.dp)}
+function nudge(id,dir){const s=dialState[id]; s.v=(s.v==null?(s.min??0):s.v)+dir*s.step;
+  if(s.min!=null)s.v=Math.max(s.min,s.v); if(s.max!=null)s.v=Math.min(s.max,s.v);
+  s.v=Number(s.v.toFixed(s.dp));
+  document.getElementById('dv_'+id).innerHTML=fmtDial(id)+`<span class="u">${document.getElementById('dv_'+id).querySelector('.u').textContent}</span>`;
+  if(navigator.vibrate)navigator.vibrate(3);
+}
+
+/* ============ segmented + hedonic + descriptors state ============ */
+let segState={},hedState=null,descState=new Set();
+function seg(id,options,selected){segState[id]=selected;
+  return `<div class="seg" id="seg_${id}">${options.map(o=>
+    `<button class="${o===selected?'on':''}" onclick="segPick('${id}','${o}',this)">${o}</button>`).join('')}</div>`;}
+function segPick(id,o,el){segState[id]=o;el.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===el))}
+function hedonicRow(){hedState=null;return `<div class="hedonic" id="hed">${[1,2,3,4,5,6,7,8,9].map(i=>
+  `<button class="num" onclick="hedPick(${i},this)">${i}</button>`).join('')}</div>
+  <div class="muted" style="display:flex;justify-content:space-between;font-size:10px"><span>poor</span><span>extraordinary</span></div>`;}
+function hedPick(i,el){hedState=i;document.getElementById('hed').querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',j===i-1))}
+function descRow(){descState=new Set();return `<div class="desc">${DESCRIPTORS.map(d=>
+  `<button onclick="descPick('${d}',this)">${d}</button>`).join('')}</div>`;}
+function descPick(d,el){descState.has(d)?descState.delete(d):descState.add(d);el.classList.toggle('on')}
+
+/* ============ photo ============ */
+let photoTarget=null,photoData=null;
+document.getElementById('photoInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const img=new Image(); img.onload=()=>{
+    const M=800,r=Math.min(1,M/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');c.width=img.width*r;c.height=img.height*r;
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    photoData=c.toDataURL('image/jpeg',0.65);
+    const z=document.getElementById('photozone');
+    if(z)z.innerHTML=`<img class="bagphoto" src="${photoData}" style="margin:0">`;
+    URL.revokeObjectURL(img.src);
+  };
+  img.src=URL.createObjectURL(f); e.target.value='';
+});
+
+/* ============ bag form ============ */
+function openBagForm(id){
+  const b=id?bagById(id):{};
+  photoData=b.photo||null;
+  openSheet(`
+  <h3>${id?'Edit bag':'Capture a bag'}</h3>
+  <div class="sub">30 seconds. Free text is fine — resolution comes later.</div>
+  <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">
+    ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the bag'}</div>
+  <div class="grid2">
+    <label class="f"><span class="l">Roaster</span><input type="text" id="f_roaster" value="${esc(b.roaster)}" placeholder="Sey"></label>
+    <label class="f"><span class="l">Coffee</span><input type="text" id="f_name" value="${esc(b.name)}" placeholder="Gesha Village"></label>
+    <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry)}" placeholder="Ethiopia"></label>
+    <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion)}" placeholder="Bench Maji"></label>
+    <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer)}" placeholder="free text"></label>
+    <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety)}" placeholder="Gesha 1931"></label>
+    <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process)}" placeholder="washed"></label>
+    <label class="f"><span class="l">Roast date</span><input type="date" id="f_roastDate" value="${esc(b.roastDate)}"></label>
+    <label class="f"><span class="l">Bought at</span><input type="text" id="f_boughtAt" value="${esc(b.boughtAt)}" placeholder="Kumquat, LA"></label>
+    <label class="f"><span class="l">Price</span><input type="number" id="f_price" value="${b.price??''}" placeholder="$" inputmode="decimal"></label>
+  </div>
+  <label class="f"><span class="l">Roast level (sets the session accent)</span>
+    ${seg('roast',ROAST_LEVELS.slice(1),ROAST_LEVELS[b.roastLevel]||'Medium')}</label>
+  <label class="f"><span class="l">Notes</span><textarea id="f_notes">${esc(b.notes)}</textarea></label>
+  <button class="btn btn-primary" onclick="saveBag('${id||''}')">Save bag</button>
+  ${id?`<button class="btn btn-danger" onclick="archiveBag('${id}')">${b.archived?'Unarchive':'Archive'} bag</button>`:''}`);
+}
+function saveBag(id){
+  const roastLevel=ROAST_LEVELS.indexOf(segState.roast);
+  const rec={roaster:val('f_roaster'),name:val('f_name'),originCountry:val('f_country'),originRegion:val('f_region'),
+    producer:val('f_producer'),variety:val('f_variety'),process:val('f_process'),roastDate:val('f_roastDate'),
+    boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),photo:photoData};
+  if(!rec.roaster&&!rec.name){toast('Give it a roaster or a name');return}
+  if(id){Object.assign(bagById(id),rec)}else{D.bags.push({id:uid(),createdAt:new Date().toISOString(),archived:false,...rec})}
+  save();setAccent(roastLevel);closeSheet();go('bags');toast('Bag recorded');
+}
+function archiveBag(id){const b=bagById(id);b.archived=!b.archived;save();closeSheet();render();toast(b.archived?'Archived':'Restored')}
+function openBagDetail(id){
+  const b=bagById(id),r=restState(b),brews=brewsOf(id);
+  openSheet(`
+  <h3>${esc(bagName(b))}</h3>
+  <div class="sub">${esc([b.originCountry,b.originRegion,b.producer].filter(Boolean).join(' · '))||'origin unrecorded'}</div>
+  ${b.photo?`<img class="bagphoto" src="${b.photo}">`:''}
+  <div class="card">
+    <div class="kv"><span class="k">Process</span><span class="v">${esc(b.process)||'—'}</span></div>
+    <div class="kv"><span class="k">Variety</span><span class="v">${esc(b.variety)||'—'}</span></div>
+    <div class="kv"><span class="k">Roast</span><span class="v">${ROAST_LEVELS[b.roastLevel]||'—'} · ${esc(b.roastDate)||'no date'}</span></div>
+    ${r?`<div class="kv"><span class="k">Rest</span><span class="v num">day ${r.d} · window ${r.a}–${r.b}d</span></div>`:''}
+    <div class="kv"><span class="k">Bought at</span><span class="v">${esc(b.boughtAt)||'—'}</span></div>
+    <div class="kv"><span class="k">Brews</span><span class="v num">${brews.length}</span></div>
+  </div>
+  ${b.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${esc(b.notes)}</div>`:''}
+  <button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
+  <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`);
+}
+
+/* ============ setup form ============ */
+function openSetupForm(id){
+  const s=id?setupById(id):{};
+  openSheet(`
+  <h3>${id?'Edit Setup':'New Setup'}</h3>
+  <div class="sub">The assembly, not the appliance. Change a burr, a basket, the water — that's a new Setup.</div>
+  <label class="f"><span class="l">Name</span><input type="text" id="s_name" value="${esc(s.name)}" placeholder="Home espresso · 49mm"></label>
+  <div class="grid2">
+    <label class="f"><span class="l">Grinder (burrs incl.)</span><input type="text" id="s_grinder" value="${esc(s.grinder)}" placeholder="EG-1, SSP MP"></label>
+    <label class="f"><span class="l">Brewer / machine</span><input type="text" id="s_brewer" value="${esc(s.brewer)}" placeholder="Slayer / V60"></label>
+    <label class="f"><span class="l">Basket / dripper</span><input type="text" id="s_basket" value="${esc(s.basket)}" placeholder="49mm step-down"></label>
+    <label class="f"><span class="l">Papers / screens</span><input type="text" id="s_papers" value="${esc(s.papers)}" placeholder="paper below + puck screen"></label>
+  </div>
+  <label class="f"><span class="l">Water recipe</span><input type="text" id="s_water" value="${esc(s.water)}" placeholder="40ppm, 2:1 Mg:Ca"></label>
+  <label class="f"><span class="l">Notes</span><textarea id="s_notes">${esc(s.notes)}</textarea></label>
+  <button class="btn btn-primary" onclick="saveSetup('${id||''}')">Save Setup</button>`);
+}
+function saveSetup(id){
+  const rec={name:val('s_name'),grinder:val('s_grinder'),brewer:val('s_brewer'),basket:val('s_basket'),
+    papers:val('s_papers'),water:val('s_water'),notes:val('s_notes')};
+  if(!rec.name){toast('Name the Setup');return}
+  if(id){Object.assign(setupById(id),rec)}else{D.setups.push({id:uid(),createdAt:new Date().toISOString(),...rec})}
+  save();closeSheet();render();toast('Setup saved');
+}
+
+/* ============ timer ============ */
+let tInt=null,tStart=null,tElapsed=0;
+function timerHTML(){return `<div class="timer">
+  <div class="t num" id="tclock">0:00.0</div>
+  <div class="ctl">
+    <button class="go" id="tbtn" onclick="toggleTimer()">Start</button>
+    <button onclick="resetTimer()">Reset</button>
+    <button onclick="useTimer()">Use time ↓</button>
+  </div></div>`;}
+function tickTimer(){const s=tElapsed+(tStart?(Date.now()-tStart)/1000:0);
+  const el=document.getElementById('tclock');if(el)el.textContent=`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}.${Math.floor(s*10%10)}`;}
+function toggleTimer(){
+  if(tInt){tElapsed+=(Date.now()-tStart)/1000;tStart=null;clearInterval(tInt);tInt=null;document.getElementById('tbtn').textContent='Start';}
+  else{tStart=Date.now();tInt=setInterval(tickTimer,100);document.getElementById('tbtn').textContent='Stop';}
+}
+function resetTimer(){stopTimer(true);tickTimer()}
+function stopTimer(zero){if(tInt){clearInterval(tInt);tInt=null}if(zero){tElapsed=0;tStart=null}else if(tStart){tElapsed+=(Date.now()-tStart)/1000;tStart=null}}
+function useTimer(){const s=tElapsed+(tStart?(Date.now()-tStart)/1000:0);
+  if(dialState.time){dialState.time.v=Math.round(s);
+    const el=document.getElementById('dv_time');if(el)el.innerHTML=fmtDial('time')+'<span class="u">s</span>';}
+  toast('Time captured');}
+
+/* ============ brew flow ============ */
+function lastBrewFor(bagId,setupId){
+  return D.brews.filter(x=>x.bagId===bagId&&(!setupId||x.setupId===setupId)).sort(byNew)[0]
+      || D.brews.filter(x=>x.setupId===setupId).sort(byNew)[0]
+      || D.brews.slice().sort(byNew)[0] || null;
+}
+function openBrew(bagId){
+  const bags=D.bags.filter(b=>!b.archived).sort(byNew);
+  if(!bags.length){toast('Capture a bag first');go('bags');return}
+  if(!D.setups.length){toast('Define a Setup first — grind needs one');go('setups');openSetupForm();return}
+  const lastAny=D.brews.slice().sort(byNew)[0];
+  const bag=bagId?bagById(bagId):(lastAny?bagById(lastAny.bagId):bags[0])||bags[0];
+  setAccent(bag.roastLevel);
+  const last=lastBrewFor(bag.id, null);
+  const setup=last?setupById(last.setupId):D.setups[D.setups.length-1];
+  const techs=[...new Set(D.brews.map(x=>x.technique).filter(Boolean))];
+  openSheet(`
+  <h3>Log a brew</h3>
+  <div class="sub">${last?'Opened as last time — turn one dial.':'First brew. Set your starting point.'}</div>
+  <div class="grid2">
+    <label class="f"><span class="l">Bag</span><select id="b_bag" onchange="setAccent(bagById(this.value).roastLevel)">
+      ${bags.map(x=>`<option value="${x.id}" ${x.id===bag.id?'selected':''}>${esc(bagName(x))}</option>`).join('')}</select></label>
+    <label class="f"><span class="l">Setup (required)</span><select id="b_setup">
+      ${D.setups.map(s=>`<option value="${s.id}" ${setup&&s.id===setup.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>
+  </div>
+  <label class="f"><span class="l">Technique (free text — it's a node, not an enum)</span>
+    <input type="text" id="b_technique" list="techlist" value="${esc(last?last.technique:'')}" placeholder="V60 · 9-bar · turbo · soup">
+    <datalist id="techlist">${techs.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></label>
+  ${timerHTML()}
+  <div class="dialrow">
+    ${dial('grind','Grind','',last?last.grind:20,0.5,0,null,1)}
+    ${dial('dose','Dose','g',last?last.doseG:18,0.1,0,null,1)}
+    ${dial('water','Water / yield','g',last?last.waterG:36,1,0,null,0)}
+    ${dial('temp','Temp','°C',last?last.tempC:94,0.5,60,100,1)}
+  </div>
+  ${dial('time','Time','s',last?last.timeSec:28,1,0,null,0)}
+  <label class="f"><span class="l">Instrumentation</span>${seg('instr',INSTR,last?last.instrumentation||'measured':'measured')}</label>
+  <label class="f"><span class="l">Brew notes</span><input type="text" id="b_notes" placeholder="optional"></label>
+  <button class="btn btn-primary" onclick="saveBrew()">Save brew → impression</button>`);
+}
+function saveBrew(){
+  const setupId=val('b_setup');
+  if(!setupId){toast('Refused: a brew requires a Setup');return}
+  const brew={id:uid(),createdAt:new Date().toISOString(),bagId:val('b_bag'),setupId,
+    technique:val('b_technique'),grind:dialState.grind.v,doseG:dialState.dose.v,waterG:dialState.water.v,
+    tempC:dialState.temp.v,timeSec:dialState.time.v,instrumentation:segState.instr||'measured',notes:val('b_notes')};
+  D.brews.push(brew);save();stopTimer(true);
+  openImpression(brew);
+}
+function openImpression(brew){
+  const b=bagById(brew.bagId);
+  openSheet(`
+  <h3>The cup</h3>
+  <div class="sub">${esc(bagName(b))} — three taps and you're done.</div>
+  <label class="f"><span class="l">Hedonic (how was it, 1–9)</span>${hedonicRow()}</label>
+  <label class="f"><span class="l">What you found (optional)</span>${descRow()}</label>
+  <label class="f"><span class="l">A line for the record (optional)</span><input type="text" id="c_notes" placeholder=""></label>
+  <button class="btn btn-primary" onclick="saveCup('home','${brew.id}','${brew.bagId}')">Done</button>
+  <button class="btn btn-quiet" onclick="saveCup('home','${brew.id}','${brew.bagId}',true)">Skip impression</button>`);
+}
+function saveCup(kind,brewId,bagId,skip){
+  if(!skip&&hedState==null&&kind==='home'){toast('One tap on the scale, or skip');return}
+  const brew=brewId?D.brews.find(x=>x.id===brewId):null;
+  D.cups.push({id:uid(),createdAt:new Date().toISOString(),kind,brewId:brewId||null,bagId:bagId||null,
+    shop:kind==='cafe'?val('c_shop'):null,drink:kind==='cafe'?val('c_drink'):null,
+    hedonic:skip?null:hedState,descriptors:skip?[]:[...descState],notes:skip?'':val('c_notes'),
+    instrumentation:kind==='cafe'?'recalled':(brew?brew.instrumentation:'measured'),blind:false,runId:null});
+  save();closeSheet();go('field');toast(skip?'Brew recorded':'Recorded. The ritual is the point.');
+}
+
+/* ============ café cup ============ */
+function openCafe(){
+  const shops=[...new Set(D.cups.filter(c=>c.shop).map(c=>c.shop))];
+  openSheet(`
+  <h3>Café cup</h3>
+  <div class="sub">8 seconds. Valid record, flagged low-instrumentation, down-weighted honestly.</div>
+  <div class="grid2">
+    <label class="f"><span class="l">Shop</span><input type="text" id="c_shop" list="shoplist" placeholder="Kumquat">
+      <datalist id="shoplist">${shops.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
+    <label class="f"><span class="l">Drink</span><input type="text" id="c_drink" placeholder="pour over / espresso"></label>
+  </div>
+  <label class="f"><span class="l">Hedonic (1–9)</span>${hedonicRow()}</label>
+  <label class="f"><span class="l">What you found (optional)</span>${descRow()}</label>
+  <label class="f"><span class="l">A line for the record (optional)</span><input type="text" id="c_notes"></label>
+  <button class="btn btn-primary" onclick="saveCafeCup()">Done</button>`);
+}
+function saveCafeCup(){
+  if(!val('c_shop')&&hedState==null){toast('A shop or a score — give it one');return}
+  saveCup('cafe',null,null,false);
+}
+
+/* ============ export / import ============ */
+function exportJSON(){
+  const out={...D,exportedAt:new Date().toISOString(),schema:'carta-phase0-v1'};
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`carta-ledger-${today()}.json`;a.click();URL.revokeObjectURL(a.href);
+  toast('Ledger exported');
+}
+document.getElementById('importInput').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{const d=JSON.parse(t);
+    if(!d.bags||!d.brews){toast('Not a CARTA ledger');return}
+    if(confirm(`Replace current ledger with import? (${d.bags.length} bags, ${d.brews.length} brews)`)){
+      D=d;save();render();toast('Ledger imported');}
+  }).catch(()=>toast('Could not read file'));
+  e.target.value='';
+});
+
+/* ============ quick start ============ */
+const firstRun=()=>!D.setups.length&&!D.bags.length&&!D.cups.length;
+function openGuide(){
+  const n=D.brews.length;
+  openSheet(`
+  <h3>Quick start</h3>
+  <div class="sub">Two screens to set up. Ten seconds a brew after that. Read it once.</div>
+
+  <h2 style="margin-top:8px">The first five minutes</h2>
+  <ol class="steps">
+    <li>
+      <div class="t">Define a Setup — first</div>
+      <div class="b">The assembly, not the appliance: grinder <em>including burrs</em>, brewer, basket, papers, water. Name it so future-you knows which one it was — "Home espresso · 49mm", not "espresso".<br>
+      The app refuses to log a brew until one exists. That refusal is deliberate.</div>
+      <button class="go" onclick="closeSheet();go('setups');openSetupForm()">Define one now →</button>
+    </li>
+    <li>
+      <div class="t">Capture a bag</div>
+      <div class="b">Photograph it, fill what the label tells you. Free text is fine everywhere — resolution comes later, never at 7am. Only two fields do real work: <strong>roast date</strong> drives the rest window, <strong>roast level</strong> sets the session accent. The rest can wait or stay blank.</div>
+      <button class="go" onclick="closeSheet();go('bags');openBagForm()">Capture one now →</button>
+    </li>
+    <li>
+      <div class="t">Make coffee. Log it after.</div>
+      <div class="b">That's the whole setup. You're done here.</div>
+    </li>
+  </ol>
+
+  <div class="rule hard">
+    <div class="t">The anti-rule</div>
+    <div class="b">Nothing may require your attention while coffee is being made, except the timer. You log <em>after</em>. If this ever feels like homework at 7am, the app is wrong — not you.</div>
+  </div>
+
+  <h2>The daily loop</h2>
+  <div class="loop">
+    <div class="s"><div class="k">tap</div><div class="v">Log a brew</div></div>
+    <div class="a">→</div>
+    <div class="s"><div class="k">opens as</div><div class="v">last time</div></div>
+    <div class="a">→</div>
+    <div class="s"><div class="k">turn</div><div class="v">one dial</div></div>
+    <div class="a">→</div>
+    <div class="s"><div class="k">3 taps</div><div class="v">the cup</div></div>
+  </div>
+  <div class="muted small">The brew screen pre-fills from your last brew on that bag — grind, dose, water, temp, time, technique. Change the one thing you actually changed. Save.</div>
+
+  <div class="card" style="margin-top:12px">
+    <strong class="small">The timer</strong>
+    <div class="muted small">Start it when you pull. Hit <strong>Use time ↓</strong> and it drops into the time dial. Don't transcribe numbers by hand.</div>
+    <strong class="small" style="display:block;margin-top:10px">Technique is free text</strong>
+    <div class="muted small">Type <em>soup</em>, <em>turbo</em>, <em>9-bar</em>, <em>allongé</em> — whatever it actually was. Past entries autocomplete. It's a node, not an enum: don't force today's brew into last year's vocabulary.</div>
+    <strong class="small" style="display:block;margin-top:10px">Instrumentation — be honest</strong>
+    <div class="muted small" style="margin-top:3px">
+      <span class="chip">measured</span> read off a scale ·
+      <span class="chip">estimated</span> eyeballed ·
+      <span class="chip">recalled</span> from memory
+    </div>
+    <div class="muted small" style="margin-top:5px">A recalled brew is a valid record. A recalled brew labelled <em>measured</em> is poison. Every claim this app ever makes carries this flag — lie here and you're lying to yourself in six months.</div>
+  </div>
+
+  <div class="card">
+    <strong class="small">The cup — hedonic 1–9</strong>
+    <div class="muted small">One tap, optional descriptors, optional line. No opinion? Hit <strong>Skip impression</strong> — the brew still records. Don't invent a score to satisfy a form.</div>
+    <strong class="small" style="display:block;margin-top:10px">Café cup — 8 seconds</strong>
+    <div class="muted small">Shop, drink, one tap. Auto-flagged <span class="chip">recalled</span> and down-weighted honestly. Log it even when you know nothing — a low-instrumentation record beats a missing one.</div>
+  </div>
+
+  <h2>The five tabs</h2>
+  <div class="card">
+    ${TABS.map(t=>`<div class="gtab"><span class="ic">${t.ic}</span><span class="nm">${t.label}</span><span class="ds">${{
+      field:'What you use daily. Log a brew, café cup, open bags with rest state, recent cups.',
+      bags:'Every bag, photo and rest chip. Tap one to see it, edit it, or brew it.',
+      setups:'Your assemblies. Change a burr, a basket, the water — that is a <em>new</em> Setup, not an edit.',
+      trace:'The dial-in, per bag. Solid line = grind. Hollow circles = hedonic.',
+      ledger:'Counts, export, import, and the day-60 gate.'}[t.id]}</span></div>`).join('')}
+  </div>
+
+  <h2>The rest chip</h2>
+  <div class="muted small">On every bag with a roast date. An opinion, shown as one — a heuristic by roast level, not a measurement.</div>
+  <table class="gt">
+    <tr><td>Light · Light-medium</td><td class="num">7–28 days</td></tr>
+    <tr><td>Medium</td><td class="num">5–21 days</td></tr>
+    <tr><td>Medium-dark · Dark</td><td class="num">3–14 days</td></tr>
+  </table>
+  <div class="small" style="line-height:2.1">
+    <span class="chip resting num">resting · day 3</span> early — brew it anyway, that's data<br>
+    <span class="chip window num">in window · day 11</span> the app thinks now<br>
+    <span class="chip past num">day 34 · past window</span> past the heuristic, not past drinking
+  </div>
+
+  <h2>Reading the Trace</h2>
+  <div class="card">
+    <div class="small">Solid line — your grind, brew by brew, chronological. Hollow circles — that brew's hedonic on a 1–9 axis.</div>
+    <div class="muted small" style="margin-top:6px">Read it for the shape of your hunting, not for truth. You're looking for one thing: <em>do you overshoot grind and undershoot temp?</em> Most people do.</div>
+  </div>
+  <div class="rule">
+    <div class="t">Grind is only comparable within one Setup</div>
+    <div class="b">The Trace will happily draw a line across two Setups if you brewed a bag on both. That line is meaningless. A grind setting without a Setup is a rumour — and one compared <em>across</em> Setups is a rumour with a chart.</div>
+  </div>
+
+  <h2>Export. Actually do it.</h2>
+  <div class="warn">
+    <div class="t">The one that will hurt</div>
+    <div class="b">Everything — bags, photos, brews, cups — lives in this browser's local storage under <code>carta.v1</code>. Clearing site data, a browser reset, a private window, or a storage overflow from bag photos takes the whole ledger. There is no server. There is no undo.</div>
+  </div>
+  <div class="small">Export monthly, and after any session you'd hate to lose. Open schema, readable forever, yours. Import <em>replaces</em> the ledger wholesale — it asks first, but read the dialog.</div>
+  <button class="btn btn-graphite" style="margin-top:10px" onclick="exportJSON()">Export ledger now</button>
+
+  <h2>Phase 0 · the only gate that matters</h2>
+  <div class="card">
+    <div class="kv"><span class="k">Deadline</span><span class="v">day 60</span></div>
+    <div class="kv"><span class="k">Threshold</span><span class="v num">40 brews</span></div>
+    <div class="kv"><span class="k">Logged so far</span><span class="v num" style="color:${n>=40?'var(--accent)':'var(--ink)'}">${n}</span></div>
+    <div class="kv"><span class="k">If under</span><span class="v" style="color:var(--danger)">stop</span></div>
+  </div>
+  <div class="muted small">The tell for failure is two weeks of silence around week six — not a bad week, a quiet one. If that happens the answer isn't more schema. No schema saves an unused project.</div>
+  <div class="muted small" style="margin-top:6px">And the honest test underneath the count: <em>has this changed a brewing decision you'd otherwise have made wrong?</em> If not by day 120, it's a diary. Fine — but not a business.</div>
+
+  <div class="empty" style="margin-top:6px">We do not sell coffee. We keep the record.</div>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+
+/* ============ boot ============ */
+const lastBag=D.bags.slice().sort(byNew)[0];
+if(lastBag)setAccent(lastBag.roastLevel);
+render();
+</script>
+</body>
+</html>
