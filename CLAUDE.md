@@ -68,6 +68,14 @@ server/
   ledger object; `load()` / `save()` read/write it. `blank` is the empty ledger
   shape. `readOnly()` / `guard()` block writes when viewing another user's
   ledger.
+- **the Register** — the shared café ledger ("Jane's Fighting Ships, for
+  cafés"): one canonical entry per café, stored *outside* the per-user keys
+  under `carta.register.v1` (`REG`), shared by every user of the device and —
+  via `/api/cafes` — every keeper on a sync server. `regByName` looks a café
+  up; `regUpsert` writes (sparse by default: sightings fill blanks, never
+  erase; `{full:true}` for the café editor); `regSeed` sweeps every readable
+  ledger into it at boot/import/refresh. Entries carry provenance
+  (`firstBy`/`firstAt`, `by`/`updatedAt`).
 - **domain** — pure helpers: roast levels + accent color, rest-window math
   (`restWindow`/`restState`/`daysOff`), temperature conversion (`c2f`/`f2c`),
   time parse/format (`parseTime`/`fmtTime`), descriptor/café constants, small
@@ -121,8 +129,10 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   `again`, plus optional structured traceability aligned to bags —
   `originCountry`, `originRegion`, `producer`, `variety`, `lot`, `process`).
   `hedonic` (1–9), `descriptors[]`, `notes`.
-- **cafes** — per-café profiles keyed by shop name (`cafeProfile`/
-  `saveCafeProfile`): branding `photo`; a `palette` **derived from that photo**
+- **cafes** — per-café profiles keyed by shop name (`saveCafeProfile` writes
+  them; reads via `cafeProfile` resolve **Register-first**, falling back to
+  this per-user copy, which remains for export/sync back-compat and to seed
+  Registers elsewhere): branding `photo`; a `palette` **derived from that photo**
   (`derivePalette` → `{h,s,l,brand,dark}`) that themes the whole café surface via
   `cafeColors`/`cafeVars`; a legacy `accent` string kept for back-compat (old
   records with only `accent` are re-themed through `palOf`); and location
@@ -132,6 +142,12 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 - **deleted** — tombstones so removed records stay removed across a sync merge.
 - **prefs** — per-user preferences (`tempUnit`, `hideTimer`, …) via
   `getPref`/`setPref`.
+
+Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
+`{version, rev, dirty, entries, deleted}` where each entry is a canonical café
+— `id`, `name`, `city`, `address`, `lat`/`lon`, `photo`, `palette`/`accent`,
+`notes`, and provenance (`firstBy`/`firstAt`, `by`/`updatedAt`). It is shared
+by all users on the device and synced as one group-writable document.
 
 ### Invariants to preserve
 
@@ -143,6 +159,10 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 - **Existing single-user data migrates automatically** to the per-user key on
   first boot — don't break that migration path.
 - Deletions must record tombstones (`deleted`) so sync doesn't resurrect them.
+- **A café's identity lives in the Register; cups stay per-user.** Café reads
+  resolve Register-first (`cafeProfile`); café writes go through `regUpsert`
+  *and* the per-user `D.cafes` copy. A sighting fills blanks, never erases —
+  don't let a sparse write strip a rich entry.
 
 ## The sync server (`server/`)
 
@@ -160,6 +180,14 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   server rev is newer; pushes `PUT {baseRev, ledger}`. A `baseRev` mismatch
   returns **409** carrying the server's copy — the client merges and retries.
   Revisions only increment.
+- **The café Register** — one shared document at `GET/PUT /api/cafes` (the
+  `/api/register` path was taken by sign-up), same rev/409 protocol, but
+  **writable by any authenticated user** — the group maintains it together.
+  The client merge (`mergeRegister`) unions by entry id (newer `updatedAt`
+  wins; ties break by substance, then bytes, so both sides converge) and
+  collapses same-name entries born on different devices, keeping the earliest
+  provenance. Older servers 404 the endpoint; the client skips it and the
+  Register stays device-local.
 - **Offline-first.** `localStorage` is always the source of truth; sync is
   additive. The app syncs on boot, on `online`, and on `visibilitychange` to
   visible (iOS PWAs get no background time — that's the heartbeat).
