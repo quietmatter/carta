@@ -16,11 +16,15 @@ Temperature has a **°C / °F** switch right on the dial (whole-degree steps), r
 
 If you time and weigh on your machine or a Bluetooth scale (e.g. the Argos app), hide CARTA's stopwatch in **Ledger → Preferences** and simply type the time and weight in. CARTA keeps the record; it doesn't need to be the timer.
 
+## Appearance
+
+CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, hierarchy from weight and space rather than colour. Two themes — **Paper** and **Dusk** — switch in **Ledger → Preferences**, remembered per user. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
+
 ## Café cups
 
 The **Cafés** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays fast by default: a shop and one tap on the scale is a whole record. Add as much as the cup deserves.
 
-- **Each café gets its own page.** Photograph the branding — the sign, the cup, the storefront — and the café takes on a colour read straight from that photo, so its card and detail carry its own identity.
+- **Each café gets its own page.** Photograph the branding — the sign, the cup, the storefront — and a colour read from that photo is kept with the record.
 - **Pin it on the map.** Look up a café's address online and open it in Maps from its page. Typing the address by hand always works; the lookup is a convenience, not a requirement, and the app stays fully offline without it.
 - **Traceability, aligned to your bags.** A café cup can carry the same fields a bag does — country, region, producer, variety, lot, process — tucked behind one optional tap. Bags gained a lot number too, so a café cup and the bag on your shelf finally line up.
 - **Home vs café.** When you've had the same beans at home, the café cup says so — your average out against your average in. The shape of how a preference travels, not a verdict.
@@ -51,6 +55,7 @@ CARTA can synchronize ledgers through a tiny self-hosted server, so your record 
 ## What's Included
 
 - **index.html** — The complete app (self-contained, no build required)
+- **fonts/** — Self-hosted typefaces (Spectral, Libre Franklin; woff2)
 - **manifest.json** — PWA metadata for homescreen installation
 - **icon-192.svg** & **icon-512.svg** — App icons
 - **README.md** — This file
