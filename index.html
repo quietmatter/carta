@@ -208,6 +208,39 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .empty-hero h2{font-family:var(--serif);font-size:34px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);margin:0 0 10px}
 .empty-hero p{color:var(--ink-3);font-style:italic;margin-bottom:22px;max-width:30ch}
 
+/* ===== welcome (first-run home flow — the way in) ===== */
+.welcome{position:fixed;inset:0;z-index:120;background:var(--paper);display:none;flex-direction:column}
+.welcome.open{display:flex}
+.wc{flex:1;display:flex;flex-direction:column;width:100%;max-width:480px;margin:0 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(24px + env(safe-area-inset-top)) 28px calc(24px + env(safe-area-inset-bottom))}
+.wc-top{display:flex;justify-content:space-between;align-items:center}
+.wc-mark{font-family:var(--sans);font-size:12px;letter-spacing:.42em;font-weight:600;color:var(--ink)}
+.wc-prog{display:flex;gap:6px;align-items:center}
+.wc-prog i{width:18px;height:1px;background:var(--ink);opacity:.18;transition:opacity .35s}
+.wc-prog i.on{opacity:1}
+.wc-body{padding:34px 0 8px}
+.wc-eyebrow{font-family:var(--sans);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);font-weight:650;margin-bottom:14px}
+.wc-head{font-family:var(--serif);font-size:42px;line-height:1.0;letter-spacing:-.04em;font-weight:600;color:var(--ink);margin:0 0 18px;max-width:13ch}
+.wc-head.sm{font-size:36px}
+.wc-lede{font-family:var(--serif);font-size:17px;line-height:1.5;color:var(--ink-2);max-width:34ch;margin-bottom:14px}
+.wc-lede em{font-style:italic;color:var(--ink)}
+.wc-note{font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-top:16px;line-height:1.5;max-width:36ch}
+.wc-foot{margin-top:auto;padding-top:22px}
+.wc-seal{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3);text-align:center;margin-top:18px}
+.wc-list{margin-top:28px}
+.wc-item{width:100%;text-align:left;display:flex;align-items:baseline;gap:16px;
+  padding:19px 2px;border-top:1px solid var(--line);transition:background .15s}
+.wc-item:last-of-type{border-bottom:1px solid var(--line)}
+.wc-item:active{background:var(--paper-2)}
+.wc-item .tx{flex:1;min-width:0}
+.wc-item .tt{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.01em;color:var(--ink);display:block}
+.wc-item .dd{font-family:var(--sans);font-size:13px;color:var(--ink-3);margin-top:5px;line-height:1.5;display:block}
+.wc-item .go{align-self:center;color:var(--ink-3);font-size:15px;flex:none}
+.wc-skip{font-family:var(--sans);font-size:12px;color:var(--ink-3);text-decoration:underline;text-underline-offset:3px;text-align:center;width:100%;margin-top:14px;min-height:26px}
+@keyframes wc-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.wc-rise{opacity:0;animation:wc-rise .55s cubic-bezier(.22,.61,.36,1) forwards}
+@media (prefers-reduced-motion:reduce){.wc-rise{animation:none;opacity:1}}
+
 /* ===== sheet ===== */
 .sheet-bg{position:fixed;inset:0;background:rgba(26,26,22,.42);z-index:40;display:none}
 .sheet-bg.open{display:block}
@@ -355,6 +388,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 <nav class="tabs" id="tabs"></nav>
 <div class="sheet-bg" id="sheetbg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
+<div class="welcome" id="welcome"></div>
 <div class="toast" id="toast"></div>
 <input type="file" accept="image/*" capture="environment" id="photoInput" style="display:none">
 <input type="file" accept=".json,application/json" id="importInput" style="display:none">
@@ -505,10 +539,15 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='2.2.0';
+const APP_VERSION='2.3.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'2.3.0',date:'Jul 16, 2026',title:'The way in',items:[
+    'A first-run welcome that says what CARTA is before it asks anything of you — one cup, two contexts, the record yours.',
+    'Pick where you start: the cup at home, the cup away, or both. Your choice sets your first screen, and nothing you can\'t change.',
+    'Straight from the welcome to the one action that fits — define a Setup, or remember a café cup. Replay it any time from the Ledger.',
+  ]},
   {v:'2.2.0',date:'Jul 16, 2026',title:'Other people\'s cups',items:[
     'A Friends tab. Every record you can read — the users on this device, everyone on your sync server — pools into one stream of café cups, newest first.',
     'Places worth the walk: every café your people have logged, ranked by their scores, with the usual order and the pin on the map. Read the record, steal the order, go.',
@@ -750,6 +789,7 @@ function vLedger(){
   </div>
   <h2>The manual</h2>
   <button class="btn btn-quiet" onclick="openGuide()">Quick start</button>
+  ${readOnly()?'':`<button class="btn btn-quiet" onclick="openWelcome()">Replay the welcome</button>`}
   <button class="btn btn-quiet" onclick="openWhatsNew(false)">What's new</button>
   <div class="qm-seal">Quiet Matter<span class="em">CARTA is a Quiet Matter record.</span></div>
   <div class="muted small serif" style="font-style:italic;text-align:center;margin:8px 2px 2px">CARTA v${APP_VERSION} — we keep the record.</div>`;
@@ -2262,14 +2302,106 @@ function openWhatsNew(auto){
   <button class="btn btn-primary" onclick="closeSheet()">Got it</button>`);
 }
 
+/* ============ welcome — the way in (first-run home flow) ============
+ * Before it asks anything, it says what CARTA is (the why), then funnels by
+ * intent (home / café / both) and drops the user on the one aligned action.
+ * Gated on firstRun() so returning users never see it; replayable from Ledger.
+ * intent is a pref, so it exports/syncs and picks the default screen thereafter. */
+let wcStep=0,wcIntent=null;
+const INTENT_TAB={home:'field',cafe:'cafes',both:'field'};
+function needsWelcome(){return !readOnly()&&!getPref('onboarded',false)&&firstRun()}
+function openWelcome(){wcStep=0;wcIntent=getPref('intent',null);renderWelcome();
+  const w=document.getElementById('welcome');w.classList.add('open');w.scrollTop=0}
+function closeWelcome(){document.getElementById('welcome').classList.remove('open')}
+function wcGo(n){wcStep=n;renderWelcome();const w=document.getElementById('welcome');if(w){w.scrollTop=0;const el=w.querySelector('.wc');if(el)el.scrollTop=0}}
+function wcPick(intent){wcIntent=intent;wcGo(2)}
+const wcProg=i=>`<div class="wc-prog">${[0,1,2].map(k=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div>`;
+function renderWelcome(){const w=document.getElementById('welcome');if(!w)return;
+  w.innerHTML=`<div class="wc">${[wcCover,wcFunnel,wcRamp][wcStep]()}</div>`}
+
+function wcCover(){return `
+  <div class="wc-top"><span class="wc-mark">CARTA</span>${wcProg(0)}</div>
+  <div class="wc-body">
+    <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">A Quiet Matter record</div>
+    <h1 class="wc-head wc-rise" style="animation-delay:.12s">One cup.<br>Two contexts.</h1>
+    <p class="wc-lede wc-rise" style="animation-delay:.24s">A coffee memory that gives the cup you <em>make</em> and the cup you're <em>served</em> the same weight.</p>
+    <p class="wc-lede wc-rise" style="animation-delay:.32s">Offline, single file, yours — full export, open schema, no lock-in. The product is the record.</p>
+  </div>
+  <div class="wc-foot wc-rise" style="animation-delay:.44s">
+    <button class="btn btn-primary" onclick="wcGo(1)">Begin</button>
+    <button class="wc-skip" onclick="finishWelcome(null,null)">Skip — I'll find my way</button>
+  </div>`;}
+
+function wcFunnel(){
+  const c=(intent,tt,dd,d)=>`<button class="wc-item wc-rise" style="animation-delay:${d}s" onclick="wcPick('${intent}')">
+      <span class="tx"><span class="tt">${tt}</span><span class="dd">${dd}</span></span>
+      <span class="go">&rarr;</span></button>`;
+  return `
+  <div class="wc-top"><span class="wc-mark">CARTA</span>${wcProg(1)}</div>
+  <div class="wc-body">
+    <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">Where you'll start</div>
+    <h1 class="wc-head sm wc-rise" style="animation-delay:.10s">What brings you in?</h1>
+    <div class="wc-list">
+      ${c('home','The cup at home','Dial it in. Change one thing, log it, watch the line move.','.20')}
+      ${c('cafe','The cup away','Remember the café — and the order worth ordering again.','.27')}
+      ${c('both','Both','One taste, two rooms — the whole idea.','.34')}
+    </div>
+    <div class="wc-note wc-rise" style="animation-delay:.42s">Nothing here is locked — this only picks your first screen. You can log either kind of cup any time.</div>
+  </div>
+  <div class="wc-foot"><button class="wc-skip" onclick="wcGo(0)">&larr; Back</button></div>`;
+}
+
+function wcRamp(){
+  const conf={
+    home:{eb:'First, the tools',h:'Define a Setup.',
+      b:`The assembly, not the appliance — grinder and burrs, brewer, basket, water. CARTA won't log a brew without one. That refusal is the point: a grind number without a Setup is a <em>rumour</em>.`,
+      cta:'Define your Setup &rarr;',act:'setup',skip:'Skip &mdash; take me home',alt:null},
+    cafe:{eb:'First, a cup',h:'Remember a cup.',
+      b:`A shop and one tap on the 1&ndash;9 scale is a whole record. The order, the beans, a photo, an order-again verdict &mdash; all optional, all later.`,
+      cta:'Log a café cup &rarr;',act:'cafe',skip:'Skip &mdash; take me to Café',alt:null},
+    both:{eb:'Two ways in',h:'Start with the tools.',
+      b:`Home dials the cup in; Café remembers the one worth returning to &mdash; the same 1&ndash;9 language on both. Begin with a Setup; log a café cup any time from the Café tab.`,
+      cta:'Define your Setup &rarr;',act:'setup',skip:'Skip for now',alt:'Log a café cup instead'},
+  }[wcIntent||'both'];
+  return `
+  <div class="wc-top"><span class="wc-mark">CARTA</span>${wcProg(2)}</div>
+  <div class="wc-body">
+    <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">${conf.eb}</div>
+    <h1 class="wc-head sm wc-rise" style="animation-delay:.10s">${conf.h}</h1>
+    <p class="wc-lede wc-rise" style="animation-delay:.20s">${conf.b}</p>
+  </div>
+  <div class="wc-foot wc-rise" style="animation-delay:.30s">
+    <button class="btn btn-primary" onclick="finishWelcome('${wcIntent||'both'}','${conf.act}')">${conf.cta}</button>
+    ${conf.alt?`<button class="btn btn-quiet" onclick="finishWelcome('${wcIntent||'both'}','cafe')">${conf.alt}</button>`:''}
+    <button class="wc-skip" onclick="finishWelcome('${wcIntent||'both'}',null)">${conf.skip}</button>
+    <div class="wc-seal">We do not sell coffee. We keep the record.</div>
+  </div>`;
+}
+
+// Commit the funnel choice and drop onto the one aligned action.
+function finishWelcome(intent,action){
+  if(intent)setPref('intent',intent);
+  setPref('onboarded',true);
+  markVersionSeen();                       // welcomed users skip the "what's new" bump too
+  closeWelcome();
+  // Land on the screen that owns the action; otherwise the chosen intent's screen.
+  go(action==='cafe'?'cafes':action==='setup'?'field':(intent&&INTENT_TAB[intent])||'field');
+  if(action==='setup')openSetupForm();
+  else if(action==='cafe')openCafe();
+}
+
 /* ============ boot ============ */
 applyTheme();
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
+// A café-first user is served the Café screen on arrival; home/both land on Home.
+if(getPref('intent',null)==='cafe')tab='cafes';
 render();
-// Version tracker: greet returning users with the changelog on a version bump.
-// Brand-new users get onboarding instead — just mark this version as seen for them.
-if(lastSeenVersion()!==APP_VERSION){
+// First run: the welcome flow (the why → the funnel → the one action). Returning
+// users skip it and get the changelog on a version bump instead.
+if(needsWelcome()){
+  setTimeout(openWelcome,140);
+}else if(lastSeenVersion()!==APP_VERSION){
   if(firstRun())markVersionSeen();
   else setTimeout(()=>openWhatsNew(true),350);
 }
