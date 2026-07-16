@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#fafaf8">
+<meta name="theme-color" content="#f2eee6">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.svg">
 <title>CARTA</title>
@@ -26,20 +26,20 @@
 @font-face{font-family:'Spectral';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/Spectral-SemiBold.latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 
 :root{
-  --paper:#fafaf8;        /* page */
-  --paper-card:#ffffff;   /* card surface */
-  --paper-2:#f2f0ec;      /* sunk surface */
-  --paper-3:#e6e4e0;      /* opaque hairline */
-  --ink:#1a1a1a;          /* interpretive body */
-  --ink-2:#4a4a4a;        /* operational */
-  --ink-3:#6e6c6a;        /* subtle (AA) */
+  --paper:#f2eee6;        /* warm stock */
+  --paper-card:#f8f5ee;   /* lifted paper */
+  --paper-2:#e9e3d8;      /* sunk surface */
+  --paper-3:#ddd5c7;      /* opaque hairline */
+  --ink:#241d18;          /* roasted ink */
+  --ink-2:#554a41;        /* operational */
+  --ink-3:#776b60;        /* subtle (AA) */
   --ink-d:#b8b5b0;        /* disabled */
-  --graphite:#1a1a1a;     /* legacy alias -> ink */
-  --line:rgba(26,26,26,.10);
-  --line-2:#e6e4e0;
-  --line-strong:#1a1a1a;
-  --accent:#1a1a1a;       /* NO accent colour — hierarchy is typographic */
-  --accent-ink:#fafaf8;
+  --graphite:#241d18;
+  --line:rgba(36,29,24,.13);
+  --line-2:#ddd5c7;
+  --line-strong:#241d18;
+  --accent:#a63f2b;       /* one warm signal: action and score */
+  --accent-ink:#fffaf1;
   --danger:#8c3b34;       /* functional destructive only, always labelled */
   --radius:0;             /* square by default */
   --chipr:2px;            /* the one sanctioned rounding */
@@ -48,10 +48,10 @@
   --sans:'Libre Franklin',system-ui,-apple-system,sans-serif; /* operational layer */
 }
 html[data-theme="dusk"]{
-  --paper:#161513; --paper-card:#1f1e1b; --paper-2:#2a2825; --paper-3:#2a2825;
-  --ink:#ece9e3; --ink-2:#c4c0b8; --ink-3:#928d84; --ink-d:#5b574f;
+  --paper:#171310; --paper-card:#211b17; --paper-2:#2d241f; --paper-3:#342923;
+  --ink:#f0e9dd; --ink-2:#c8bcae; --ink-3:#9f9183; --ink-d:#5b574f;
   --line:rgba(236,233,227,.14); --line-2:#2a2825; --line-strong:#ece9e3;
-  --accent:#ece9e3; --accent-ink:#161513;
+  --accent:#e06b4f; --accent-ink:#171310;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -69,11 +69,11 @@ body{
 /* ===== header ===== */
 header.app{
   background:var(--paper);color:var(--ink);
-  padding:calc(16px + env(safe-area-inset-top)) 20px 12px;
+  padding:calc(18px + env(safe-area-inset-top)) 20px 14px;
   display:flex;justify-content:space-between;align-items:baseline;
   flex:none;z-index:20;border-bottom:1px solid var(--line);
 }
-header.app h1{font-family:var(--sans);font-size:13px;letter-spacing:.34em;font-weight:500;color:var(--ink)}
+header.app h1{font-family:var(--sans);font-size:13px;letter-spacing:.42em;font-weight:600;color:var(--ink)}
 header.app .sub{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3)}
 main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 18px 24px}
 
@@ -108,8 +108,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;
   transition:background .2s ease,color .2s ease,border-color .2s ease;
 }
-.btn-primary{background:var(--ink);color:var(--accent-ink);border:1px solid var(--ink)}
-.btn-primary:active{background:var(--ink-2);border-color:var(--ink-2)}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent)}
+.btn-primary:active{filter:brightness(.88)}
 .btn-quiet{background:none;border:1px solid var(--line-strong);color:var(--ink)}
 .btn-quiet:active{background:var(--paper-2)}
 .btn-graphite{background:var(--ink);color:var(--accent-ink);border:1px solid var(--ink)}
@@ -185,6 +185,28 @@ nav.tabs{
 nav.tabs button{flex:1;padding:12px 0 10px;color:var(--ink-3);font-family:var(--sans);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;border-top:2px solid transparent;margin-top:-1px}
 nav.tabs button .ic{display:none}
 nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
+
+/* ===== the daily loop ===== */
+.hero{padding:12px 2px 20px}
+.eyebrow{font-family:var(--sans);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:650;margin-bottom:8px}
+.hero h2{font-family:var(--serif);font-size:36px;line-height:1.02;letter-spacing:-.035em;text-transform:none;color:var(--ink);font-weight:600;margin:0;max-width:11ch}
+.hero .origin{font-family:var(--serif);font-style:italic;color:var(--ink-3);font-size:15px;margin-top:8px}
+.continuation{border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:15px 0;margin:2px 0 16px}
+.continuation .score{font-family:var(--sans);font-size:46px;line-height:.9;color:var(--accent);font-weight:550;letter-spacing:-.05em}
+.continuation .score small{font-size:12px;letter-spacing:.04em;color:var(--ink-3);font-weight:400}
+.continuation .row>div:last-child{max-width:62%}
+.recipe{font-family:var(--sans);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-2);margin-top:5px;overflow-wrap:anywhere}
+.finding{font-family:var(--serif);font-style:italic;font-size:15px;margin-top:9px;color:var(--ink)}
+.bestline{display:flex;justify-content:space-between;gap:12px;margin:12px 1px 0;font-size:12px;color:var(--ink-3)}
+.bestline strong{color:var(--ink);font-family:var(--sans);font-weight:550}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:26px 0 10px}
+.section-head h2{margin:0}
+.text-action{font-family:var(--sans);font-size:11px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
+.coffee-card{position:relative;padding-right:70px}
+.coffee-card .count{position:absolute;right:16px;top:16px;font-family:var(--sans);font-size:11px;color:var(--ink-3)}
+.empty-hero{padding:34px 4px 24px}
+.empty-hero h2{font-family:var(--serif);font-size:34px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);margin:0 0 10px}
+.empty-hero p{color:var(--ink-3);font-style:italic;margin-bottom:22px;max-width:30ch}
 
 /* ===== sheet ===== */
 .sheet-bg{position:fixed;inset:0;background:rgba(26,26,22,.42);z-index:40;display:none}
@@ -314,8 +336,8 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 </head>
 <body>
 <header class="app"><h1>CARTA</h1>
-<div style="display:flex;align-items:baseline"><div class="sub" id="who">we keep the record</div>
-<button class="helpbtn" onclick="openGuide()" aria-label="Quick start">guide</button></div></header>
+<div style="display:flex;align-items:baseline"><div class="sub" id="who">one cup · two contexts</div>
+<button class="helpbtn" onclick="go('ledger')" aria-label="Open settings and ledger">more</button></div></header>
 <main id="main"></main>
 <nav class="tabs" id="tabs"></nav>
 <div class="sheet-bg" id="sheetbg" onclick="closeSheet()"></div>
@@ -374,7 +396,7 @@ function roastAccent(lv){
   const map={1:'hsl(36,62%,46%)',2:'hsl(30,58%,42%)',3:'hsl(25,52%,38%)',4:'hsl(20,48%,32%)',5:'hsl(15,42%,26%)'};
   return map[lv]||'hsl(30,55%,42%)';
 }
-function setAccent(lv){/* Quiet Matter: no accent colour in the customer surface — hierarchy is typographic. Kept as a no-op so callers stay intact. */}
+function setAccent(lv){/* The v2 customer surface uses one fixed ember accent. Roast data never repaints the interface. */}
 // rest window heuristic (days off roast) by roast level — an opinion, shown as one
 function restWindow(lv){ if(lv<=2)return[7,28]; if(lv===3)return[5,21]; return[3,14]; }
 function daysOff(bag){ if(!bag.roastDate)return null; return Math.floor((Date.now()-new Date(bag.roastDate+'T00:00'))/864e5); }
@@ -440,10 +462,15 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='1.6.0';
+const APP_VERSION='2.0.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'2.0.0',date:'Jul 16, 2026',title:'The next cup',items:[
+    'CARTA is now one cup in two contexts: the cup you make and the cup you are served.',
+    'The daily path is three places — Home, Café, Record. Everything operational moved out of the way.',
+    'Home resumes the coffee in hand. Café remembers the place worth returning to. Record holds both in the same language.',
+  ]},
   {v:'1.6.0',date:'Jul 16, 2026',title:'The record, reset in type',items:[
     'CARTA now reads like a printed record. Two typefaces do the work — a serif for what you tasted, a sans for what you measured. Hierarchy comes from weight and space, not colour.',
     'A dusk theme, in Ledger under Appearance. Paper by day, warm dark after sunset. Your choice is remembered per user.',
@@ -506,18 +533,15 @@ const markVersionSeen=()=>{try{localStorage.setItem(SEEN_KEY,APP_VERSION)}catch(
 
 /* ============ router ============ */
 const TABS=[
-  {id:'field',ic:'●',label:'Field'},
-  {id:'cafes',ic:'☕',label:'Cafés'},
-  {id:'bags',ic:'▤',label:'Bags'},
-  {id:'setups',ic:'⚙',label:'Setups'},
-  {id:'trace',ic:'∿',label:'Trace'},
-  {id:'ledger',ic:'≡',label:'Ledger'},
+  {id:'field',ic:'●',label:'Home'},
+  {id:'cafes',ic:'☕',label:'Café'},
+  {id:'trace',ic:'∿',label:'Record'},
 ];
 let tab='field';
 function go(t){tab=t;render()}
 function render(){
   document.getElementById('who').textContent=
-    readOnly()?`viewing ${viewingUser().name}`:(USERS.users.length>1?viewingUser().name:'we keep the record');
+    readOnly()?`viewing ${viewingUser().name}`:(USERS.users.length>1?viewingUser().name:'one cup · two contexts');
   document.getElementById('tabs').innerHTML=TABS.map(t=>
     `<button class="${tab===t.id?'on':''}" onclick="go('${t.id}')"><span class="ic">${t.ic}</span>${t.label}</button>`).join('');
   const m=document.getElementById('main');
@@ -527,30 +551,6 @@ function render(){
 function viewBanner(){return `<div class="viewbar"><span>Viewing <strong>${esc(viewingUser().name)}</strong>'s ledger — read only${remoteStale?` · cached ${fmtAgo(remoteStale===true?null:remoteStale)}`:''}</span><button onclick="exitView()">Back to mine</button></div>`}
 
 /* ============ views ============ */
-function vField(){
-  const bags=D.bags.filter(b=>!b.archived).sort(byNew);
-  const cups=D.cups.slice().sort(byNew).slice(0,8);
-  if(firstRun())return `
-  <div class="card" style="border-color:var(--accent)">
-    <div class="row"><strong>Start here</strong><span class="chip window">2 min</span></div>
-    <div class="muted small serif" style="font-style:italic;margin:3px 0 10px">A Setup, then a bag. Then make coffee and log it after — that's the whole app.</div>
-    <button class="btn btn-primary" onclick="openGuide()">Read the quick start</button>
-    <button class="btn btn-quiet" onclick="go('setups');openSetupForm()">Skip it — define a Setup</button>
-  </div>
-  <div class="empty">The record begins with the next cup.</div>`;
-  return `
-  ${readOnly()?'':`<button class="btn btn-primary" onclick="openBrew()">Log a brew</button>
-  <button class="btn btn-quiet" onclick="openCafe()">Café cup</button>`}
-  <h2>Open bags</h2>
-  ${bags.length? bags.map(b=>`
-    <div class="card tap" onclick="openBrew('${b.id}')">
-      <div class="row"><strong>${esc(bagName(b))}</strong>${restChip(b)}</div>
-      <div class="muted small">${esc([b.originCountry,b.process].filter(Boolean).join(' · '))||'&nbsp;'}
-        <span class="num" style="float:right">${brewsOf(b.id).length} brews</span></div>
-    </div>`).join('') : `<div class="empty">No bags yet. Capture your first under Bags.</div>`}
-  <h2>Recent cups</h2>
-  ${cups.length? cups.map(cupRow).join('') : `<div class="empty">The record begins with the next cup.</div>`}`;
-}
 function cupRow(c){
   const b=bagById(c.bagId);
   const cafe=c.kind==='cafe';
@@ -652,11 +652,6 @@ function vSetups(){
     </div>`).join('') : `<div class="empty">Define the assembly — grinder, brewer, basket, papers, water — before the first brew.</div>`}`;
 }
 
-function vTrace(){
-  const bags=D.bags.filter(b=>brewsOf(b.id).length>0).sort(byNew);
-  if(!bags.length)return `<div class="empty">The dial-in trace appears once a bag has brews.</div>`;
-  return bags.map(b=>traceCard(b)).join('');
-}
 function traceCard(b){
   const brews=brewsOf(b.id).slice().reverse(); // chronological
   const n=brews.length;
@@ -731,7 +726,7 @@ function applyTheme(){
   const t=getPref('theme','paper')==='dusk'?'dusk':'paper';
   document.documentElement.setAttribute('data-theme',t);
   const mc=document.querySelector('meta[name=theme-color]');
-  if(mc)mc.setAttribute('content',t==='dusk'?'#161513':'#fafaf8');
+  if(mc)mc.setAttribute('content',t==='dusk'?'#171310':'#f2eee6');
 }
 function themeSet(t){setPref('theme',t);applyTheme();render()}
 /* ============ sheet plumbing ============ */
@@ -1275,24 +1270,6 @@ function shopCard(s){
     <div class="muted small">${s.visits} visit${s.visits>1?'s':''}${s.usual?` · usual <strong>${esc(s.usual)}</strong>`:''}${s.spend?` · ${money(s.spend)}`:''}</div>
   </div>`;
 }
-function vCafes(){
-  const all=cafeCups();
-  const shops=shopAgg();
-  const cities=[...new Set(all.map(c=>c.city).filter(Boolean))];
-  const spend=all.reduce((a,c)=>a+(c.price||0),0);
-  const top=shops.filter(s=>s.visits>=2&&s.avg!=null).sort((a,b)=>(b.avg-a.avg))[0];
-  return `${readOnly()?'':`<button class="btn btn-primary" onclick="openCafe()">Log a café cup</button>`}
-  ${all.length?`
-  <div class="loop" style="margin-top:12px">
-    <div class="s"><div class="k">Cafés</div><div class="v num">${shops.length}</div></div>
-    <div class="s"><div class="k">Cups</div><div class="v num">${all.length}</div></div>
-    <div class="s"><div class="k">Cities</div><div class="v num">${cities.length}</div></div>
-    <div class="s"><div class="k">Spend</div><div class="v num">${spend?money(spend):'—'}</div></div>
-  </div>`:''}
-  ${top?`<div class="muted small serif" style="font-style:italic;margin:4px 2px 2px">Your bench: <strong>${esc(top.shop)}</strong>${top.city?`, ${esc(top.city)}`:''} — averaging ${top.avg} across ${top.visits} visits.</div>`:''}
-  <h2>Cafés <span class="n-note">n=${shops.length}</span></h2>
-  ${shops.length?shops.map(shopCard).join(''):`<div class="empty">No café cups yet. Log the next flat white you have out — a shop, a style, one tap on the scale.</div>`}`;
-}
 function openShopDetail(shop){
   const cups=cafeCups().filter(c=>(c.shop||'').trim()===shop.trim()).sort(byNew);
   if(!cups.length){go('cafes');return}
@@ -1378,6 +1355,112 @@ function geoChoose(address,lat,lon){
   const box=document.getElementById('georesults');if(box)box.innerHTML=`<div class="pinned">Pinned · ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)} <a class="link" onclick="geoUnpin()">remove</a></div>`;
 }
 function geoUnpin(){geoPick={address:val('p_address'),lat:null,lon:null};const box=document.getElementById('georesults');if(box)box.innerHTML='';}
+
+/* ============ v2: one cup, two contexts ============ */
+function brewRecipe(b){
+  if(!b)return'No brew recorded';
+  return [
+    b.grind!=null?`${b.grind} grind`:null,
+    b.doseG!=null?`${b.doseG}g`:null,
+    b.waterG!=null?`→ ${b.waterG}g`:null,
+    b.timeSec!=null?fmtTime(b.timeSec):null
+  ].filter(Boolean).join(' · ');
+}
+
+function vField(){
+  const bags=D.bags.filter(b=>!b.archived).sort(byNew);
+  const homeCups=D.cups.filter(c=>c.kind==='home').slice().sort(byNew);
+  if(!D.setups.length||!bags.length)return `
+    <div class="empty-hero">
+      <div class="eyebrow">The cup at home</div>
+      <h2>Make it. Change one thing.</h2>
+      <p>Define the tools once. Add the coffee in hand. Then every cup opens where the last one left off.</p>
+      ${!D.setups.length?`<button class="btn btn-primary" onclick="openSetupForm()">Define your Setup</button>`:''}
+      ${!bags.length?`<button class="btn ${D.setups.length?'btn-primary':'btn-quiet'}" onclick="openBagForm()">Add a coffee</button>`:''}
+    </div>
+    <div class="qm-seal">Home<span class="em">Measured. Adjusted. Made again.</span></div>`;
+
+  const lastAny=D.brews.slice().sort(byNew)[0];
+  const bag=(lastAny&&bagById(lastAny.bagId))||bags[0];
+  const last=lastBrewFor(bag.id,null);
+  const lastCup=last?D.cups.find(c=>c.brewId===last.id):null;
+  const scored=brewsOf(bag.id).map(b=>({brew:b,cup:D.cups.find(c=>c.brewId===b.id)}))
+    .filter(x=>x.cup&&x.cup.hedonic!=null).sort((a,b)=>b.cup.hedonic-a.cup.hedonic);
+  const best=scored[0]||null;
+  const notes=lastCup&&(lastCup.notes||((lastCup.descriptors||[]).join(' · ')));
+  return `
+    <div class="hero">
+      <div class="eyebrow">The cup at home</div>
+      <h2>${esc(bagName(bag))}</h2>
+      <div class="origin">${esc([bag.originCountry,bag.originRegion,bag.process].filter(Boolean).join(' · '))||'Coffee in hand'} ${restChip(bag)}</div>
+    </div>
+    ${last?`<div class="continuation">
+      <div class="row">
+        <div><div class="eyebrow">Last cup</div><div class="score">${lastCup&&lastCup.hedonic!=null?lastCup.hedonic:'—'}<small> / 9</small></div></div>
+        <div style="text-align:right"><div class="eyebrow">Start here</div><div class="recipe">${brewRecipe(last)}</div></div>
+      </div>
+      ${notes?`<div class="finding">${esc(notes)}</div>`:''}
+      ${best?`<div class="bestline"><span>Best on this coffee</span><strong>${best.cup.hedonic}/9 · ${brewRecipe(best.brew)}</strong></div>`:''}
+    </div>`:`<div class="continuation"><div class="eyebrow">No baseline yet</div><div class="finding">The first cup gives the next one somewhere honest to begin.</div></div>`}
+    ${readOnly()?'':`<button class="btn btn-primary" onclick="openBrew('${bag.id}')">${last?'Brew from here':'Log the first cup'}</button>`}
+    <div class="section-head"><h2>Coffees</h2><button class="text-action" onclick="go('bags')">Manage</button></div>
+    ${bags.filter(b=>b.id!==bag.id).slice(0,2).map(b=>`
+      <div class="card tap coffee-card" onclick="openBrew('${b.id}')">
+        <strong>${esc(bagName(b))}</strong>
+        <div class="muted small">${esc([b.originCountry,b.process].filter(Boolean).join(' · '))||'No origin recorded'}</div>
+        <span class="count num">${brewsOf(b.id).length} cups</span>
+      </div>`).join('')||`<div class="empty">One coffee is enough.</div>`}
+    <div class="section-head"><h2>Recent at home</h2><button class="text-action" onclick="go('trace')">Full record</button></div>
+    ${homeCups.slice(0,3).map(cupRow).join('')||`<div class="empty">The record begins with this cup.</div>`}`;
+}
+
+function vCafes(){
+  const cups=cafeCups().slice().sort(byNew);
+  const shops=shopAgg();
+  const last=cups[0]||null;
+  const top=shops.filter(s=>s.visits>=2&&s.avg!=null).sort((a,b)=>b.avg-a.avg)[0]||null;
+  const lastNotes=last&&(last.notes||((last.descriptors||[]).join(' · ')));
+  return `
+    <div class="hero">
+      <div class="eyebrow">The cup away</div>
+      <h2>${last?esc(last.shop||'The last café'):'Arrive without a recipe.'}</h2>
+      <div class="origin">${last?esc([last.drink,last.city].filter(Boolean).join(' · ')):'Receive it. Notice it. Remember where to return.'}</div>
+    </div>
+    ${last?`<div class="continuation">
+      <div class="row">
+        <div><div class="eyebrow">Last cup out</div><div class="score">${last.hedonic??'—'}<small> / 9</small></div></div>
+        <div style="text-align:right"><div class="eyebrow">Preparation</div><div class="recipe">${esc([last.style,last.drink].filter(Boolean).join(' · '))||'As served'}</div></div>
+      </div>
+      ${lastNotes?`<div class="finding">${esc(lastNotes)}</div>`:''}
+      ${top?`<div class="bestline"><span>Worth returning to</span><strong>${esc(top.shop)} · ${top.avg}/9</strong></div>`:''}
+    </div>`:`<div class="continuation"><div class="eyebrow">No cup away yet</div><div class="finding">A shop and one tap on the scale is a whole record.</div></div>`}
+    ${readOnly()?'':`<button class="btn btn-primary" onclick="openCafe()">${last?'Log a café cup':'Remember the next cup'}</button>`}
+    <div class="section-head"><h2>Places</h2><span class="n-note">n=${shops.length}</span></div>
+    ${shops.length?shops.slice(0,4).map(shopCard).join(''):`<div class="empty">The café half begins with the next cup you are served.</div>`}
+    ${cups.length?`<div class="section-head"><h2>Recent away</h2><button class="text-action" onclick="go('trace')">Full record</button></div>${cups.slice(0,3).map(cupRow).join('')}`:''}`;
+}
+
+function vTrace(){
+  const home=D.cups.filter(c=>c.kind==='home').slice().sort(byNew);
+  const away=cafeCups().slice().sort(byNew);
+  const all=D.cups.slice().sort(byNew);
+  const bags=D.bags.filter(b=>brewsOf(b.id).length>1).sort(byNew);
+  return `
+    <div class="hero">
+      <div class="eyebrow">One cup · two contexts</div>
+      <h2>Your taste is the through-line.</h2>
+      <div class="origin">Prepared differently. Experienced in the same language.</div>
+    </div>
+    <div class="loop">
+      <div class="s"><div class="k">Home</div><div class="v num">${avgHedonic(home)||'—'} <span class="muted">· ${home.length}</span></div></div>
+      <div class="a">↔</div>
+      <div class="s"><div class="k">Café</div><div class="v num">${avgHedonic(away)||'—'} <span class="muted">· ${away.length}</span></div></div>
+    </div>
+    <div class="finding" style="text-align:center;margin:12px 0 22px">Not a contest. The shape of one preference in two rooms.</div>
+    ${bags.length?`<div class="section-head"><h2>At home · what changed</h2></div>${bags.map(traceCard).join('')}`:''}
+    <div class="section-head"><h2>Every cup</h2><span class="n-note">n=${all.length}</span></div>
+    ${all.map(cupRow).join('')||`<div class="empty">The record begins on either side.</div>`}`;
+}
 
 /* ============ users ============ */
 // Peek at another user's stored ledger without loading it into the app.

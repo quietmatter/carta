@@ -6,12 +6,15 @@ already sounds like, and prescriptive for what comes next.
 
 ## What CARTA is (the one sentence)
 
-**We do not sell coffee. We keep the record.**
+**One cup. Two contexts. Your taste is the through-line.**
 
-CARTA is a coffee brewing journal that belongs to the person keeping it. It is
-offline-first, single-file, and yours — full export, open schema, no lock-in.
-The product is *the record*, and the voice is the voice of a keeper of records:
-exact, unsentimental, quietly on your side.
+CARTA is a personal coffee memory that gives equal weight to the cup made at home
+and the cup served in a café. It is offline-first, single-file, and yours — full
+export, open schema, no lock-in. The product is *the record*, and the voice is the
+voice of a keeper of records: exact, unsentimental, quietly on your side.
+
+Home and Café are a matched pair, never a primary product and a side feature.
+Preparation differs. The Cup language does not.
 
 ## Brand goals
 
