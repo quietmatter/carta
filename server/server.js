@@ -13,10 +13,13 @@
  * Storage:
  *   <data>/users.json          users + tokens (small, held in memory)
  *   <data>/ledgers/<id>.json   {rev, updatedAt, ledger} per user (read on demand)
+ *   <data>/register.json       {rev, updatedAt, register} — the shared café Register
  *
  * Auth model: name + passcode per user. Every authenticated user can READ
  * every ledger — seeing each other's records is the point. Only the owner
- * can WRITE their own. This is trust-your-friends auth for a small group,
+ * can WRITE their own. The café Register is the one shared document: any
+ * authenticated user may read AND write it, so the group keeps a single
+ * record of each café. This is trust-your-friends auth for a small group,
  * not a hardened public service. See server/README.md.
  * ============================================================ */
 
@@ -91,6 +94,12 @@ function limited(ip) {
 const ledgerFile = id => path.join(LEDGERS, id + '.json');
 function readLedger(id) {
   return readJSON(ledgerFile(id)) || { rev: 0, updatedAt: null, ledger: null };
+}
+
+/* ---------- the café Register (one shared document) ---------- */
+const REGISTER_FILE = path.join(DATA, 'register.json');
+function readRegister() {
+  return readJSON(REGISTER_FILE) || { rev: 0, updatedAt: null, register: null };
 }
 function counts(ledger) {
   const n = k => (ledger && Array.isArray(ledger[k]) ? ledger[k].length : 0);
@@ -189,6 +198,28 @@ function handleGetLedger(res, id, metaOnly) {
   send(res, 200, metaOnly ? { rev: l.rev, updatedAt: l.updatedAt } : l);
 }
 
+function handleGetRegister(res, metaOnly) {
+  const r = readRegister();
+  send(res, 200, metaOnly ? { rev: r.rev, updatedAt: r.updatedAt } : r);
+}
+
+// Unlike ledgers, the Register is writable by every authenticated user — the
+// group maintains it together. Same optimistic concurrency: a stale baseRev
+// gets a 409 carrying the server copy to merge against.
+function handlePutRegister(req, res, auth) {
+  readBody(req, res, body => {
+    if (typeof body.baseRev !== 'number' || !body.register || typeof body.register !== 'object' ||
+        !Array.isArray(body.register.entries))
+      return err(res, 400, 'bad-input', 'Expected {baseRev, register} with an entries array');
+    const cur = readRegister();
+    if (body.baseRev !== cur.rev)
+      return send(res, 409, { error: 'conflict', message: 'Register changed since your base revision', rev: cur.rev, updatedAt: cur.updatedAt, register: cur.register });
+    const next = { rev: cur.rev + 1, updatedAt: new Date().toISOString(), updatedBy: auth.name, register: body.register };
+    writeJSON(REGISTER_FILE, next);
+    send(res, 200, { rev: next.rev, updatedAt: next.updatedAt });
+  });
+}
+
 function handlePutLedger(req, res, auth, id) {
   if (auth.id !== id) return err(res, 403, 'not-owner', 'You can only write your own ledger');
   readBody(req, res, body => {
@@ -232,6 +263,12 @@ const server = http.createServer((req, res) => {
   if (!auth) return err(res, 401, 'unauthorized', 'Missing or invalid token');
 
   if (req.method === 'GET' && p === '/api/users') return handleUsers(res);
+
+  // /api/cafes is the café Register ("register" was taken by sign-up).
+  if (p === '/api/cafes') {
+    if (req.method === 'GET') return handleGetRegister(res, u.searchParams.get('meta') === '1');
+    if (req.method === 'PUT') return handlePutRegister(req, res, auth);
+  }
 
   const m = /^\/api\/ledgers\/([a-f0-9]{16})$/.exec(p);
   if (m) {

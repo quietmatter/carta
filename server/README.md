@@ -86,6 +86,7 @@ The one exception: `http://localhost` is allowed by browsers, so local developme
 data/
   users.json           accounts (scrypt-hashed passcodes) + session tokens
   ledgers/<id>.json    one file per user: {rev, updatedAt, ledger}
+  register.json        the shared café Register: {rev, updatedAt, register}
 ```
 
 Everything is plain JSON. **Back up the data directory** — copying it while the server is idle is a complete backup. Writes are atomic (temp file + rename), so a crash never leaves a half-written ledger.
@@ -95,6 +96,7 @@ Everything is plain JSON. **Back up the data directory** — copying it while th
 - Register with a **name + passcode** (passcodes are scrypt-hashed with per-user salts; login is timing-safe and rate-limited).
 - Every authenticated user can **read** every ledger — seeing each other's records is the point.
 - Only the owner can **write** their own ledger.
+- The **café Register** (`/api/cafes`) is the one shared document: every authenticated user can read *and* write it, so the group keeps a single record of each café. At this early stage all contributors are trusted to amend it.
 - Tokens don't expire. To revoke a device, delete its token from `users.json` (server restart not required for ledgers, but token changes are read from memory — restart after editing the file).
 
 This is deliberately simple, built for a household or a group of friends — not a hardened public service. Don't run it on the open internet for strangers.
@@ -122,10 +124,15 @@ All bodies are JSON. Errors are `{error: "<code>", message}`. Authenticated endp
 | GET | `/api/ledgers/:id` | ✓ | — | 200 `{rev, updatedAt, ledger}` (rev 0, ledger null if never pushed) | 401, 404 |
 | GET | `/api/ledgers/:id?meta=1` | ✓ | — | 200 `{rev, updatedAt}` — cheap change poll | 401, 404 |
 | PUT | `/api/ledgers/:id` | owner | `{baseRev, ledger}` | 200 `{rev, updatedAt}` | 401, 403, 400, 409 conflict (carries current `{rev, updatedAt, ledger}`), 413 |
+| GET | `/api/cafes` | ✓ | — | 200 `{rev, updatedAt, register}` — the shared café Register (rev 0, register null if never pushed) | 401 |
+| GET | `/api/cafes?meta=1` | ✓ | — | 200 `{rev, updatedAt}` — cheap change poll | 401 |
+| PUT | `/api/cafes` | ✓ any user | `{baseRev, register}` (`register.entries` array required) | 200 `{rev, updatedAt}` | 401, 400, 409 conflict (carries current `{rev, updatedAt, register}`), 413 |
 
 ### Sync protocol
 
 The client keeps the last server revision it saw. To sync it polls `?meta=1`; if the server rev is newer it pulls and merges (union by record id). To push it sends `PUT {baseRev, ledger}` — if `baseRev` doesn't match the server's current rev the push is rejected with **409** carrying the server's copy, the client merges and retries. Revisions only ever increment.
+
+The café Register (`/api/cafes`) follows the same protocol with one difference: it's a single shared document rather than per-user, and **any** authenticated user may PUT it. The client merges by entry id, collapses entries that name the same café from different devices, and keeps the earliest provenance (`firstBy`/`firstAt`). Servers older than this endpoint simply 404 it; clients skip it and keep the Register device-local.
 
 ## Tests
 

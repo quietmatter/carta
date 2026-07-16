@@ -402,6 +402,55 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const byNew=(a,b)=>b.createdAt.localeCompare(a.createdAt);
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
 
+/* ============ the Register ============ */
+/* One entry per café, kept once — Jane's Fighting Ships, for cafés. The single
+ * source of truth for a café's identity: name, city, address and pin, branding
+ * photo and palette. Cups stay personal, per ledger; the place is common
+ * knowledge, so it lives OUTSIDE the per-user keys, shared by every user of
+ * this device — and, through sync (/api/cafes), by every keeper on the server.
+ * Any keeper may amend an entry; the entry remembers who entered it first. */
+const REG_KEY='carta.register.v1';
+let REG=loadReg();
+function loadReg(){
+  try{const r=localStorage.getItem(REG_KEY);const g=r?JSON.parse(r):null;
+    if(g&&Array.isArray(g.entries))return{version:1,rev:g.rev||0,dirty:!!g.dirty,entries:g.entries,deleted:g.deleted||[]};
+  }catch(e){}
+  return{version:1,rev:0,dirty:false,entries:[],deleted:[]};
+}
+function saveReg(){try{localStorage.setItem(REG_KEY,JSON.stringify(REG))}catch(e){}}
+const regByName=name=>REG.entries.find(e=>normName(e.name)===normName(name))||null;
+const regSubstance=v=>v!=null&&v!=='';
+const activeName=()=>(typeof SYNC!=='undefined'&&SYNC&&syncedHere()&&SYNC.name)||((userById(USERS.activeId)||{}).name||'');
+// Upsert an entry. Sparse by default — a sighting fills blanks, never erases —
+// so a fast cup log can't strip a rich entry. {full:true} (the café editor)
+// overwrites the fields it carries. {at} backdates provenance to the record
+// that named the café, so firstBy/firstAt stay honest when seeding history.
+function regUpsert(name,fields,who,opts){
+  name=String(name||'').trim(); if(!name)return null;
+  opts=opts||{};
+  const now=new Date().toISOString(),at=opts.at||now;
+  let e=regByName(name),changed=false;
+  if(!e){e={id:uid(),name,createdAt:at,firstBy:who||'',firstAt:at};REG.entries.push(e);changed=true}
+  else if(at<(e.firstAt||e.createdAt||'')){e.firstAt=at;if(who)e.firstBy=who;changed=true}
+  Object.keys(fields||{}).forEach(k=>{const v=fields[k];
+    if(opts.full ? ((regSubstance(v)||regSubstance(e[k]))&&e[k]!==v) : (regSubstance(v)&&!regSubstance(e[k]))){e[k]=v==null?null:v;changed=true}});
+  if(changed){e.updatedAt=now;if(who)e.by=who;REG.dirty=true;saveReg();schedulePush()}
+  return e;
+}
+// Seed the Register from every ledger this device can read — each user's café
+// profiles and every shop their café cups name. Chronological, so the first
+// record to name a café holds the provenance. Idempotent: fills blanks only.
+function regSeed(){
+  const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
+  remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
+  const sights=[];
+  srcs.forEach(s=>{const d=s.led;if(!d)return;
+    (d.cafes||[]).forEach(p=>{if(p&&p.name)sights.push({at:p.createdAt||'',who:s.who,name:p.name,fields:{city:p.city,address:p.address,lat:p.lat,lon:p.lon,photo:p.photo,palette:p.palette,accent:p.accent,notes:p.notes}})});
+    (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&c.shop)sights.push({at:c.createdAt||'',who:s.who,name:c.shop,fields:{city:c.city}})});
+  });
+  sights.sort((a,b)=>a.at.localeCompare(b.at)).forEach(s=>regUpsert(s.name,s.fields,s.who,{at:s.at||null}));
+}
+
 /* ============ domain ============ */
 const ROAST_LEVELS=['','Light','Light-medium','Medium','Medium-dark','Dark'];
 // accent hue derived from roast level (Section 10: the only colour decision)
@@ -453,11 +502,14 @@ const roasterList=()=>[...new Set([...D.bags.map(b=>b.roaster),...cafeCups().map
 // escape a string for use inside a single-quoted JS call within a double-quoted HTML attribute
 const jsq=s=>`'${String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;')}'`;
 // café profiles — branding/location that belongs to the café, not one cup. Keyed by name.
+// Reads resolve Register-first, so every user sees the same café; the per-user
+// copy remains for export/sync back-compat and is what saveCafeProfile writes.
 const normName=s=>String(s??'').trim().toLowerCase();
-const cafeProfile=name=>(D.cafes||[]).find(c=>normName(c.name)===normName(name))||null;
+const ownCafeProfile=name=>(D.cafes||[]).find(c=>normName(c.name)===normName(name))||null;
+const cafeProfile=name=>regByName(name)||ownCafeProfile(name);
 function saveCafeProfile(name,rec){
   D.cafes=D.cafes||[];
-  const ex=cafeProfile(name);
+  const ex=ownCafeProfile(name);
   if(ex){Object.assign(ex,rec,{updatedAt:new Date().toISOString()});return ex}
   const c={id:uid(),createdAt:new Date().toISOString(),name:String(name).trim(),...rec};
   D.cafes.push(c);return c;
@@ -505,10 +557,16 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='2.2.0';
+const APP_VERSION='2.3.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'2.3.0',date:'Jul 16, 2026',title:'The Register',items:[
+    'One entry per café, kept once and shared — every keeper on this device and on your sync server reads the same record of a place. Jane\'s Fighting Ships, for cafés.',
+    'Name a shop and it enters the Register. Photograph its branding, pin its address — every user then sees the same café, in the same colours.',
+    'Any keeper can amend an entry; a sighting fills blanks, never erases. The entry remembers who entered it first and who amended it last.',
+    'The Café tab now lists Register entries you haven\'t been to — other people\'s finds, with the pin and the provenance. Discovery, from the record.',
+  ]},
   {v:'2.2.0',date:'Jul 16, 2026',title:'Other people\'s cups',items:[
     'A Friends tab. Every record you can read — the users on this device, everyone on your sync server — pools into one stream of café cups, newest first.',
     'Places worth the walk: every café your people have logged, ranked by their scores, with the usual order and the pin on the map. Read the record, steal the order, go.',
@@ -1220,6 +1278,7 @@ function saveCup(kind,brewId,bagId,skip){
     // structured traceability, aligned to the bag schema — the café's aspiration toward the exact coffee
     cup.originCountry=val('c_country');cup.originRegion=val('c_region');cup.producer=val('c_producer');
     cup.variety=val('c_variety');cup.lot=val('c_lot');cup.process=val('c_process');
+    if(cup.shop)regUpsert(cup.shop,{city:cup.city},activeName()); // a sighting — the café enters the Register
   }
   D.cups.push(cup);save();closeSheet();
   if(kind==='cafe'){go(cup.shop?'cafes':'field');toast('Café cup logged');}
@@ -1230,7 +1289,8 @@ function saveCup(kind,brewId,bagId,skip){
 function openCafe(pre){
   if(guard())return;
   pre=pre||{};
-  const shops=[...new Set(cafeCups().map(c=>c.shop).filter(Boolean))];
+  // the shop field looks up the Register too — every café anyone has named
+  const shops=[...new Set([...cafeCups().map(c=>c.shop).filter(Boolean),...REG.entries.map(e=>e.name)])];
   const cities=[...new Set(cafeCups().map(c=>c.city).filter(Boolean))];
   photoData=null;photoAccent=null;cafeStyleState='Espresso';againState=null;
   openSheet(`
@@ -1292,7 +1352,11 @@ function cafeShopHint(){
   const v=val('c_shop').toLowerCase();
   if(!v){el.innerHTML='';return;}
   const past=cafeCups().filter(c=>(c.shop||'').trim().toLowerCase()===v);
-  if(!past.length){el.innerHTML='';return;}
+  if(!past.length){ // never been — but the Register may know the place
+    const e=regByName(v);
+    el.innerHTML=e?`<div class="cafeback">In the Register — ${[e.city,e.lat!=null?'pinned':null].filter(Boolean).map(esc).join(' · ')||'known'}${e.firstBy?`, first entered by <strong>${esc(e.firstBy)}</strong>`:''}.</div>`:'';
+    return;
+  }
   const usual=modeOf(past.map(c=>c.drink).filter(Boolean));
   const avg=avgHedonic(past);
   el.innerHTML=`<div class="cafeback">Welcome back — visit ${past.length+1}.${usual?` Usual: <strong>${esc(usual)}</strong>.`:''}${avg?` You average <strong>${avg}</strong> here.`:''}</div>`;
@@ -1344,7 +1408,7 @@ function shopCard(s){
 }
 function openShopDetail(shop){
   const cups=cafeCups().filter(c=>(c.shop||'').trim()===shop.trim()).sort(byNew);
-  if(!cups.length){go('cafes');return}
+  if(!cups.length){closeSheet();if(regByName(shop))openRegisterSheet(shop);else go('cafes');return} // no cups of yours — the Register entry stands
   const avg=avgHedonic(cups),usual=modeOf(cups.map(c=>c.drink).filter(Boolean));
   const city=modeOf(cups.map(c=>c.city).filter(Boolean));
   const spend=cups.reduce((a,c)=>a+(c.price||0),0);
@@ -1371,11 +1435,12 @@ function openShopDetail(shop){
     ${spend?`<div class="kv"><span class="k">Total spend</span><span class="v num">${money(spend)}</span></div>`:''}
     <div class="kv"><span class="k">Last visit</span><span class="v">${new Date(cups[0].createdAt).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}</span></div>
     ${p&&p.address?`<div class="kv"><span class="k">Address</span><span class="v">${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}</span></div>`:''}
+    ${p&&p.firstBy?`<div class="kv"><span class="k">Register</span><span class="v">first entered by ${esc(p.firstBy)}</span></div>`:''}
   </div>
   ${x&&x.home.n&&x.cafe.n?`<div class="cafeback">Same beans, two rooms: you average <strong>${x.home.avg}</strong> at home vs <strong>${x.cafe.avg}</strong> here${roaster?` on ${esc(roaster)}`:''}. The shape of a preference, not a verdict.</div>`:''}
   ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
   ${readOnly()?'':`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Log a cup here</button>
-  <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.photo||p.address||p.notes)?'Edit café':'Add café branding'}</button>
+  <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.photo||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
   <button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`}
   <h2>Every cup</h2>
   ${cups.map(cupRow).join('')}
@@ -1402,15 +1467,18 @@ function openCafeProfile(shop){
   <div class="muted small" style="margin:6px 2px 0">Looks up the address above — or the café's name, if you leave it blank. Offline, the text still saves without a pin.</div>
   <div id="georesults"></div>
   <label class="f"><span class="l">A line for the record <span class="opt">optional</span></span><input type="text" id="p_notes" value="${esc(p.notes||'')}" placeholder="the one worth the walk"></label>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">The Register keeps one entry per café, shared by every keeper. This amendment is signed ${esc(activeName())}.</div>
   <button class="btn btn-primary" onclick="saveCafeProfileForm(${jsq(shop)})">Save café</button>
   <button class="btn btn-quiet" onclick="openShopDetail(${jsq(shop)})">Cancel</button>`);
 }
 function saveCafeProfileForm(shop){
   if(guard())return;
   const addr=val('p_address'),pinned=addr&&geoPick.address===addr; // coords only survive if they still match the typed address
-  saveCafeProfile(shop,{name:shop.trim(),city:val('p_city'),notes:val('p_notes'),photo:photoData,accent:photoAccent,palette:photoPalette,
-    address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null});
-  save();openShopDetail(shop);toast('Café saved');
+  const rec={name:shop.trim(),city:val('p_city'),notes:val('p_notes'),photo:photoData,accent:photoAccent,palette:photoPalette,
+    address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null};
+  saveCafeProfile(shop,rec);                              // the per-user copy — exports and ledger sync carry it
+  regUpsert(shop,rec,activeName(),{full:true});           // the Register — the shared, canonical entry
+  save();openShopDetail(shop);toast('Café saved — the Register amended');
 }
 // Online geocode (OpenStreetMap Nominatim — no key). Progressive enhancement: type wins offline.
 // The query prefers a typed address, else falls back to the café's own name + city — so a lookup
@@ -1435,6 +1503,54 @@ function geoChoose(address,lat,lon){
   const box=document.getElementById('georesults');if(box)box.innerHTML=`<div class="pinned">Pinned · ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)} <a class="link" onclick="geoUnpin()">remove</a></div>`;
 }
 function geoUnpin(){geoPick={address:val('p_address'),lat:null,lon:null};const box=document.getElementById('georesults');if(box)box.innerHTML='';}
+
+/* --- the Register, on screen: entries you haven't visited are the discovery list --- */
+function regUnvisited(){
+  const mine=new Set(cafeCups().map(c=>normName(c.shop)).filter(Boolean));
+  return REG.entries.filter(e=>!mine.has(normName(e.name)))
+    .sort((a,b)=>(b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
+}
+function regCard(e){
+  const pal=palOf(e),vars=pal?cafeVars(pal):''; // a Register entry carries the café's own palette
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openRegisterSheet(${jsq(e.name)})">
+    ${e.photo?`<img class="brandhead" src="${e.photo}">`:''}
+    <div class="row">
+      <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}</span>`:''}</span>
+      ${e.lat!=null?'<span class="badge ghost">pinned</span>':''}
+    </div>
+    <div class="muted small">${e.firstBy?`first entered by ${esc(e.firstBy)}`:'on the record'}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</div>
+  </div>`;
+}
+// The entry itself: identity, provenance, and what your people made of the place.
+function openRegisterSheet(shop){
+  const e=regByName(shop); if(!e)return;
+  const pal=palOf(e),vars=pal?cafeVars(pal):'';
+  const mine=cafeCups().filter(c=>normName(c.shop)===normName(shop));
+  const others=circleCups().filter(c=>normName(c.shop)===normName(shop));
+  const people=[...new Set(others.map(c=>c._who))];
+  const avg=avgHedonic(others);
+  const head=e.photo
+    ?`<div class="masthead"><img src="${e.photo}"><div class="scrim"></div><div class="bar"></div>
+      <div class="id"><div class="nm">${esc(e.name)}</div>${e.city?`<div class="ct">${esc(e.city)}</div>`:''}</div></div>
+      <div class="sub" style="margin:10px 2px 14px">an entry in the Register</div>`
+    :`<h3>${esc(e.name)}</h3><div class="sub">an entry in the Register</div>`;
+  openSheet(`<div class="cafe-theme"${vars?` style="${vars}"`:''}>
+  ${head}
+  <div class="card">
+    ${e.city?`<div class="kv"><span class="k">City</span><span class="v">${esc(e.city)}</span></div>`:''}
+    ${e.address?`<div class="kv"><span class="k">Address</span><span class="v">${esc(e.address)}${e.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}</span></div>`:''}
+    <div class="kv"><span class="k">First entered</span><span class="v">${esc(e.firstBy)||'—'}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}`:''}</span></div>
+    ${e.by&&e.updatedAt?`<div class="kv"><span class="k">Last amended</span><span class="v">${esc(e.by)} · ${fmtAgo(e.updatedAt)}</span></div>`:''}
+    ${others.length?`<div class="kv"><span class="k">Their reading</span><span class="v num">${avg??'—'} across ${others.length} cup${others.length>1?'s':''}</span></div>
+    <div class="kv"><span class="k">Who's been</span><span class="v">${people.map(esc).join(', ')}</span></div>`:''}
+  </div>
+  ${e.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(e.notes)}"</div>`:''}
+  ${mine.length?`<button class="btn btn-graphite" onclick="openShopDetail(${jsq(e.name)})">Your page here — ${mine.length} cup${mine.length>1?'s':''}</button>`:''}
+  ${readOnly()?'':`<button class="btn btn-primary" onclick="cafeHere(${jsq(e.name)},${jsq(e.city||'')})">Log a cup here</button>
+  <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(e.name)})">Amend the entry</button>`}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>
+  </div>`);
+}
 
 /* ============ v2: one cup, two contexts ============ */
 function brewRecipe(b){
@@ -1497,6 +1613,7 @@ function vField(){
 function vCafes(){
   const cups=cafeCups().slice().sort(byNew);
   const shops=shopAgg();
+  const unvisited=regUnvisited();
   const last=cups[0]||null;
   const top=shops.filter(s=>s.visits>=2&&s.avg!=null).sort((a,b)=>b.avg-a.avg)[0]||null;
   const lastNotes=last&&(last.notes||((last.descriptors||[]).join(' · ')));
@@ -1517,6 +1634,9 @@ function vCafes(){
     ${readOnly()?'':`<button class="btn btn-primary" onclick="openCafe()">${last?'Log a café cup':'Remember the next cup'}</button>`}
     <div class="section-head"><h2>Places</h2><span class="n-note">n=${shops.length}</span></div>
     ${shops.length?shops.slice(0,4).map(shopCard).join(''):`<div class="empty">The café half begins with the next cup you are served.</div>`}
+    ${REG.entries.length?`<div class="section-head"><h2>The Register</h2><span class="n-note">n=${REG.entries.length}</span></div>
+    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">One entry per café, kept once for every keeper. ${unvisited.length?'Places on the record you haven\'t been:':'Every entry is already on your passport.'}</div>
+    ${unvisited.slice(0,5).map(regCard).join('')}`:''}
     ${cups.length?`<div class="section-head"><h2>Recent away</h2><button class="text-action" onclick="go('trace')">Full record</button></div>${cups.slice(0,3).map(cupRow).join('')}`:''}`;
 }
 
@@ -1661,6 +1781,7 @@ function importAsUser(){
   catch(e){toast('Storage full — could not import');return}
   USERS.users.push(nu);saveUsers();
   pendingImport=null;closeSheet();
+  regSeed(); // an imported record may name cafés the Register hasn't met
   viewLedger(nu.id);
 }
 function importReplace(){
@@ -1668,7 +1789,7 @@ function importReplace(){
   if(guard())return;
   const me=userById(USERS.activeId).name;
   if(!confirm(`Replace ${me}'s current ledger with the import?\n\nThis cannot be undone.`))return;
-  D=pendingImport;pendingImport=null;save();closeSheet();render();toast('Ledger imported');
+  D=pendingImport;pendingImport=null;save();regSeed();closeSheet();render();toast('Ledger imported');
 }
 
 /* ============ sync ============ */
@@ -1714,6 +1835,64 @@ function mergeLedgers(loc,rem){
   out.version=loc.version||1;
   out.createdAt=[loc.createdAt,rem.createdAt].filter(Boolean).sort()[0]||out.createdAt;
   return out;
+}
+
+/* Register merge: union by id, newer updatedAt wins — then collapse entries
+ * that name the same café from different devices (same name, different ids):
+ * the newest-amended entry stands, blanks fill from the rest, the earliest
+ * provenance is kept. Both sides run the same collapse, so they converge. */
+function mergeRegister(loc,rem){
+  // Same id on both sides: newer updatedAt wins; on a tie the copy carrying
+  // more substance stands (a collapse fills fields without touching updatedAt,
+  // so the filled copy must beat its thinner twin), then bytes break the tie —
+  // deterministic either way, so both sides converge.
+  const fuller=e=>Object.keys(e).filter(k=>regSubstance(e[k])).length;
+  const beats=(l,r)=>{const lu=l.updatedAt||'',ru=r.updatedAt||'';if(lu!==ru)return lu>ru;
+    const lf=fuller(l),rf=fuller(r);if(lf!==rf)return lf>rf;
+    return JSON.stringify(l)>=JSON.stringify(r)};
+  const dead=new Map();[...((rem&&rem.deleted)||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
+  const m=new Map();((rem&&rem.entries)||[]).forEach(r=>m.set(r.id,r));
+  (loc.entries||[]).forEach(l=>{const r=m.get(l.id);if(!r||beats(l,r))m.set(l.id,l)});
+  const groups={};
+  [...m.values()].filter(e=>e&&e.name&&!dead.has(e.id)).forEach(e=>{const k=normName(e.name);(groups[k]=groups[k]||[]).push(e)});
+  const entries=Object.keys(groups).sort().map(k=>{
+    const g=groups[k].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')||String(a.id).localeCompare(String(b.id)));
+    const w={...g[0]};
+    g.slice(1).forEach(e=>{
+      Object.keys(e).forEach(f=>{if(!regSubstance(w[f])&&regSubstance(e[f]))w[f]=e[f]});
+      if(e.firstAt&&(!w.firstAt||e.firstAt<w.firstAt)){w.firstAt=e.firstAt;w.firstBy=e.firstBy||w.firstBy}
+    });
+    return w;
+  });
+  return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
+}
+// The Register rides the same heartbeat as the ledger: poll meta, pull + merge
+// when the server moved, push while dirty (409 → merge, retry). Any keeper may
+// push — the document is the group's. Older servers without /api/cafes answer
+// 404 and are skipped; the Register then stays device-local, still useful.
+async function syncRegister(){
+  const meta=await api('/api/cafes?meta=1');
+  if(meta.status!==200)return;
+  if(meta.body.rev>REG.rev){
+    const full=await api('/api/cafes');
+    if(full.status===200&&full.body.register){
+      const merged=mergeRegister({entries:REG.entries,deleted:REG.deleted},full.body.register);
+      REG.rev=full.body.rev;REG.entries=merged.entries;REG.deleted=merged.deleted;
+      REG.dirty=JSON.stringify(merged)!==JSON.stringify({entries:full.body.register.entries||[],deleted:full.body.register.deleted||[]});
+      saveReg();
+    }
+  }
+  let tries=0;
+  while(REG.dirty&&tries<3){
+    tries++;
+    const r=await api('/api/cafes','PUT',{baseRev:REG.rev,register:{version:1,entries:REG.entries,deleted:REG.deleted}});
+    if(r.status===200){REG.rev=r.body.rev;REG.dirty=false;saveReg()}
+    else if(r.status===409){
+      const merged=mergeRegister({entries:REG.entries,deleted:REG.deleted},r.body.register||{});
+      REG.rev=r.body.rev;REG.entries=merged.entries;REG.deleted=merged.deleted;saveReg();
+    }
+    else break;
+  }
 }
 
 async function api(path,method,body){
@@ -1763,6 +1942,9 @@ async function syncNow(manual){
       else break;
     }
     if(SYNC.dirty&&manual)toast('Sync conflict — will retry');
+    await syncRegister();                              // the café Register, same heartbeat
+    regSeed();                                         // pulled ledgers may have named new cafés
+    if(tab==='cafes'&&!document.getElementById('sheet').classList.contains('open'))render();
     try{
       const dir=await api('/api/users');
       if(dir.status===200)localStorage.setItem(DIR_KEY,JSON.stringify({fetchedAt:new Date().toISOString(),users:dir.body.users}));
@@ -1925,7 +2107,8 @@ function circleCups(){
     (d.cups||[]).filter(c=>c.kind==='cafe').forEach(c=>cups.push({...c,_who:s.name,_src:s.id}))});
   return cups.sort(byNew);
 }
-// a café's page data may live on anyone's ledger — take the first profile that carries substance
+// a café's page data may live on anyone's ledger — the Register first (the
+// canonical entry), then the first per-user profile that carries substance
 function circleProfile(shop){
   const own=cafeProfile(shop); if(own&&(own.address||own.photo))return own;
   for(const s of circleSources()){const d=circleLedger(s);if(!d)continue;
@@ -1969,6 +2152,7 @@ async function circleRefresh(){
     }
   }catch(e){/* offline or signed out — the cached stream stands */}
   finally{circleBusy=false}
+  if(changed)regSeed(); // fresh ledgers may carry cafés the Register hasn't met
   if(changed&&tab==='circle'&&!document.getElementById('sheet').classList.contains('open'))render();
 }
 function feedRow(c){
@@ -2174,13 +2358,15 @@ function openGuide(){
     <div class="muted small">One tap, optional descriptors, optional line. No opinion? Hit <strong>Skip impression</strong> — the brew still records. Don't invent a score to satisfy a form.</div>
     <strong class="small" style="display:block;margin-top:10px">Café cup — as fast or as full as you like</strong>
     <div class="muted small">A shop and one tap is a valid record — always auto-flagged <span class="chip">recalled</span> and down-weighted honestly. But there's room now: style and a drink chip, the beans they poured, city, price, a photo of the cup, and an <em>order-again</em> verdict. Every café you log builds up in the <strong>Cafés</strong> tab — your passport, with your average, your usual, and what you've spent, per shop.</div>
+    <strong class="small" style="display:block;margin-top:10px">The Register — one entry per café</strong>
+    <div class="muted small">Name a shop and it enters the Register: one shared entry per café — name, city, pin, branding — read by every keeper on this device and on your sync server. Jane's Fighting Ships, for cafés. Anyone can amend an entry; a sighting fills blanks, never erases, and the entry remembers who entered it first. Cups stay yours — only the place is common knowledge.</div>
   </div>
 
   <h2>The tabs</h2>
   <div class="card">
     ${TABS.map(t=>`<div class="gtab"><span class="ic">${t.ic}</span><span class="nm">${t.label}</span><span class="ds">${{
       field:'What you use daily. Log a brew, café cup, open bags with rest state, recent cups.',
-      cafes:'Your café passport. Every shop you log, with your average, usual order, visits, and spend. Tap one for every cup you had there.',
+      cafes:'Your café passport — every shop you log, with your average, usual order, visits, and spend. Below it, the Register: every café on anyone\'s record, one shared entry each.',
       circle:'Other people\'s café cups — one stream, and the places worth the walk. Read only, always. You never have to log a thing to use it.',
       bags:'Every bag, photo and rest chip. Tap one to see it, edit it, or brew it.',
       setups:'Your assemblies. Change a burr, a basket, the water — that is a <em>new</em> Setup, not an edit.',
@@ -2264,6 +2450,7 @@ function openWhatsNew(auto){
 
 /* ============ boot ============ */
 applyTheme();
+regSeed(); // the Register meets every ledger already on this device
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
 render();

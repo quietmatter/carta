@@ -47,6 +47,31 @@ The **Cafés** tab is a passport of every shop you log — your average, visit c
 
 The café screen and the brew screen are deliberately the same shape: **Coffee → Preparation → Cup.** Both end in a hedonic 1–9 and what you found, so a cup out and a cup in are comparable.
 
+## The Register — one entry per café
+
+Cafés get named by many people, on many devices. The **Register** keeps a single
+canonical entry for each one — *Jane's Fighting Ships*, for cafés. It is the
+single source of truth for a café's identity: name, city, address and map pin,
+branding photo and derived palette, a line for the record.
+
+- **Shared, not per-user.** Every user of the device reads the same Register,
+  and a sync server extends it to every keeper on the server (`/api/cafes`). A
+  café looks the same from user to user — same colours, same pin.
+- **Compiled from sightings.** Naming a shop on any café cup enters it into the
+  Register; a sighting fills blanks and never erases, so a fast log can't strip
+  a rich entry. Everything already on the device's ledgers is seeded in
+  automatically.
+- **Anyone can amend, provenance is kept.** At this early stage every
+  contributor may edit an entry ("Amend the entry" on the café's page). The
+  entry remembers who entered it first and who amended it last.
+- **Lookup and discovery.** The café cup form looks the shop up against the
+  Register as you type — "In the Register — Los Angeles · pinned, first entered
+  by Jane." And the Café tab lists Register entries you haven't been to: other
+  people's finds, with the pin, waiting. In search of better cups, the
+  consistent record of the place is the map.
+
+Cups stay personal, per ledger. Only the place is common knowledge.
+
 ## Friends — reading without keeping
 
 Not everyone wants to keep a record. Some people just want to know where to go

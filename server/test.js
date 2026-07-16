@@ -152,6 +152,41 @@ let srv2 = null, DATA2 = null;
   assert.equal(r.status, 404);
   ok('unknown user id is 404');
 
+  // ---- the café Register: one shared document, writable by every keeper ----
+  const REGDOC = who => ({
+    version: 1, deleted: [],
+    entries: [{ id: 'cafe-1', name: 'Kumquat', city: who, firstBy: who, updatedAt: '2026-01-01T00:00:00Z' }],
+  });
+
+  r = await req('GET', '/api/cafes');
+  assert.equal(r.status, 401);
+  ok('Register requires auth');
+
+  r = await req('GET', '/api/cafes', { token: alice.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 0); assert.equal(r.body.register, null);
+  ok('unpushed Register reads as rev 0 / null');
+
+  r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 0, register: REGDOC('alice') } });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 1);
+  ok('first Register push accepted, rev 1');
+
+  r = await req('PUT', '/api/cafes', { token: bob.token, body: { baseRev: 1, register: REGDOC('bob') } });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 2);
+  ok('another keeper CAN write the Register (shared, unlike ledgers)');
+
+  r = await req('GET', '/api/cafes?meta=1', { token: alice.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 2); assert.equal(r.body.register, undefined);
+  ok('Register meta poll returns rev without the blob');
+
+  r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 0, register: REGDOC('stale') } });
+  assert.equal(r.status, 409); assert.equal(r.body.error, 'conflict'); assert.equal(r.body.rev, 2);
+  assert.equal(r.body.register.entries[0].city, 'bob');
+  ok('stale Register baseRev rejected with 409 carrying the server copy');
+
+  r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 2, register: { nope: true } } });
+  assert.equal(r.status, 400);
+  ok('malformed Register rejected with 400');
+
   // ---- registration code gate (separate server instance) ----
   DATA2 = fs.mkdtempSync(path.join(os.tmpdir(), 'carta-sync-test2-'));
   const BASE2 = `http://127.0.0.1:${PORT + 1}`;
