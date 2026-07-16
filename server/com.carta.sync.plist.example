@@ -25,6 +25,8 @@
     <string>8787</string>
     <key>CARTA_DATA</key>
     <string>/Users/YOUR_USERNAME/carta-data</string>
+    <!-- Public (Tailscale Funnel)? Require a shared code to sign up — uncomment: -->
+    <!-- <key>CARTA_REGISTER_CODE</key><string>our-shared-code</string> -->
   </dict>
 
   <!-- Start at login and keep it alive (relaunch if it ever exits). -->

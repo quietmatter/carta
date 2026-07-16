@@ -1588,6 +1588,7 @@ function openSyncSheet(loginOnly){
     <label class="f"><span class="l">Name</span><input type="text" id="sy_name" value="${esc(SYNC?SYNC.name:(me?me.name:''))}" autocapitalize="off"></label>
     <label class="f"><span class="l">Passcode</span><input type="password" id="sy_pass" placeholder="min 4 characters"></label>
   </div>
+  ${loginOnly?'':`<label class="f"><span class="l">Invite code</span><input type="text" id="sy_code" placeholder="only if the server requires one" autocapitalize="off" autocorrect="off"></label>`}
   <div class="muted small" style="margin-bottom:10px">Servers must be <strong>https</strong> (localhost is fine for testing). Run your own with one command — see <code>server/README.md</code> in the CARTA repo.</div>
   ${loginOnly?'':`<button class="btn btn-primary" onclick="connectSync('register')">Create account &amp; sync</button>`}
   <button class="btn ${loginOnly?'btn-primary':'btn-quiet'}" onclick="connectSync('login')">Sign in</button>`);
@@ -1599,12 +1600,15 @@ async function connectSync(mode){
   if(!/^https?:\/\//.test(url))url='https://'+url;
   if(/^http:\/\//.test(url)&&!/^http:\/\/(localhost|127\.0\.0\.1)/.test(url)){toast('Plain http only works for localhost — use https');return}
   if(!name||pass.length<4){toast('Name and a passcode of 4+ characters');return}
+  const body={name,passcode:pass};
+  if(mode==='register'){const code=val('sy_code');if(code)body.registerCode=code;}
   let r;
   try{
-    const res=await fetch(url+'/api/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,passcode:pass})});
+    const res=await fetch(url+'/api/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     r={status:res.status,body:await res.json().catch(()=>null)};
   }catch(e){toast('Could not reach that server');return}
   if(r.status===409){toast('Name taken — sign in instead');return}
+  if(r.status===403&&r.body&&r.body.error==='bad-register-code'){toast('This server needs a valid invite code to sign up');return}
   if(r.status===401){toast('Wrong name or passcode');return}
   if(r.status!==200&&r.status!==201){toast((r.body&&r.body.message)||'Server refused');return}
   SYNC={url,token:r.body.token,userId:r.body.userId,name:r.body.name,

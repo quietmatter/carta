@@ -42,6 +42,8 @@ tailscale funnel status        # shows your URL: https://<your-mac>.<tailnet>.ts
 ```
 Prefer to keep it private to your own devices instead of the public internet? Use `tailscale serve --bg 8787` — but then every user's phone must also install Tailscale and join your tailnet.
 
+Because `funnel` is public, gate sign-ups with a shared code so strangers who find the URL can't register — set `CARTA_REGISTER_CODE` (see [Gating sign-ups](#gating-sign-ups-with-a-registration-code)) and add it to the launchd plist's `EnvironmentVariables`.
+
 **3. Auto-start the server with launchd** so it comes back after reboots and crashes:
 ```bash
 cp ~/carta/server/com.carta.sync.plist.example ~/Library/LaunchAgents/com.carta.sync.plist
@@ -76,6 +78,7 @@ The one exception: `http://localhost` is allowed by browsers, so local developme
 | `PORT` | `8787` | Listen port |
 | `CARTA_DATA` | `./data` | Data directory (created if missing) |
 | `CARTA_MAX_BODY` | `20971520` (20 MB) | Max request body — ledgers embed photos as base64 |
+| `CARTA_REGISTER_CODE` | _(unset)_ | If set, new sign-ups must supply this shared code. Unset = open registration. See [Auth model](#auth-model--trust-your-friends) |
 
 ## Data layout
 
@@ -96,6 +99,16 @@ Everything is plain JSON. **Back up the data directory** — copying it while th
 
 This is deliberately simple, built for a household or a group of friends — not a hardened public service. Don't run it on the open internet for strangers.
 
+### Gating sign-ups with a registration code
+
+By default anyone who can reach the server can create an account — fine on a private network, but a concern when the server is exposed publicly (e.g. Tailscale Funnel). Set `CARTA_REGISTER_CODE` to a shared secret and new sign-ups must enter it:
+
+```
+CARTA_REGISTER_CODE='our-shared-code' node server/server.js
+```
+
+The app shows an **Invite code** field on the sign-up screen; existing users' logins are unaffected. The code is checked before anything else, so a caller without it can't even probe which names are taken, and the comparison is constant-time. Hand the code to people out-of-band; change it any time by restarting with a new value.
+
 ## API
 
 All bodies are JSON. Errors are `{error: "<code>", message}`. Authenticated endpoints take `Authorization: Bearer <token>`. CORS is open (`*`) — data is protected by auth, not origin.
@@ -103,7 +116,7 @@ All bodies are JSON. Errors are `{error: "<code>", message}`. Authenticated endp
 | Method | Path | Auth | Body | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/health` | — | — | 200 `{ok, users, uptime}` — liveness probe | — |
-| POST | `/api/register` | — | `{name, passcode}` | 201 `{token, userId, name}` | 400, 409 name-taken, 429 |
+| POST | `/api/register` | — | `{name, passcode, registerCode?}` | 201 `{token, userId, name}` | 400, 403 bad-register-code, 409 name-taken, 429 |
 | POST | `/api/login` | — | `{name, passcode}` | 200 `{token, userId, name}` | 401, 429 |
 | GET | `/api/users` | ✓ | — | 200 `{users:[{id, name, rev, updatedAt, counts}]}` | 401 |
 | GET | `/api/ledgers/:id` | ✓ | — | 200 `{rev, updatedAt, ledger}` (rev 0, ledger null if never pushed) | 401, 404 |
