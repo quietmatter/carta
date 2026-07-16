@@ -11,7 +11,17 @@ CARTA supports multiple users on one device. Manage them from the **Ledger** tab
 - **View another user's ledger** — browse every tab of their record in a clearly-marked read-only mode; a banner offers "Back to mine"
 - **Import as a new user** — a friend's exported ledger file can be imported as a new user, so you can browse their record beside your own without touching yours
 
-Existing single-user data migrates automatically on first launch — nothing to do, nothing lost. Everything still lives in this browser's local storage; there is no server and no syncing between devices.
+Existing single-user data migrates automatically on first launch — nothing to do, nothing lost. Everything lives in this browser's local storage; syncing between devices is optional (below).
+
+## Server Sync (optional)
+
+CARTA can synchronize ledgers through a tiny self-hosted server, so your record follows you across devices and everyone on the server can **view** (never edit) each other's ledgers — live, from the Users list in the Ledger tab.
+
+- Run the server: `node server/server.js` — one file, zero dependencies, JSON storage. See **[server/README.md](server/README.md)** for deployment, the HTTPS requirement, and the API.
+- Connect from the app: Ledger tab → Sync → **Connect to a sync server** (server URL, name, passcode).
+- Offline-first: with no server configured or reachable, nothing changes. Edits queue and sync when the app comes back to the foreground.
+- Conflicts merge by record — logging on two devices keeps both entries; removed cups stay removed (tombstones).
+- Viewed ledgers are cached locally, so a friend's record remains browsable while offline (marked as a cached copy).
 
 ## What's Included
 
