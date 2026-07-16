@@ -253,6 +253,7 @@ function restChip(bag){
 const bagName=b=>b?`${b.roaster?b.roaster+' — ':''}${b.name||'(unnamed)'}`:'—';
 const setupById=id=>D.setups.find(s=>s.id===id);
 const bagById=id=>D.bags.find(b=>b.id===id);
+const cupById=id=>D.cups.find(c=>c.id===id);
 const brewsOf=bagId=>D.brews.filter(x=>x.bagId===bagId).sort(byNew);
 const fmtTime=s=>s==null?'—':`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
 const DESCRIPTORS=['floral','citrus','berry','stone fruit','tropical','chocolate','nutty','caramel','honey','spice','tea-like','fermented','roasted','vegetal'];
@@ -306,13 +307,45 @@ function cupRow(c){
   const what=c.kind==='cafe'?`${esc(c.shop||'café')} · ${esc(c.drink||'cup')}`:esc(bagName(b));
   const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
   const meta=brew?`<span class="num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span>`:`<span class="chip">${c.instrumentation||'recalled'}</span>`;
-  return `<div class="card">
+  return `<div class="card tap" onclick="openCupDetail('${c.id}')">
     <div class="row"><span class="small"><strong>${what}</strong></span>
       <span class="num" style="font-size:20px;font-weight:700;color:var(--accent)">${c.hedonic??'—'}</span></div>
     <div class="muted small">${meta}</div>
     ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic">${c.descriptors.map(esc).join(', ')}</div>`:''}
     <div class="muted" style="font-size:11px" >${new Date(c.createdAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
   </div>`;
+}
+function openCupDetail(id){
+  const c=cupById(id); if(!c)return;
+  const b=bagById(c.bagId);
+  const what=c.kind==='cafe'?`${esc(c.shop||'café')} · ${esc(c.drink||'cup')}`:esc(bagName(b));
+  const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
+  const setup=brew?setupById(brew.setupId):null;
+  openSheet(`
+  <h3>${what}</h3>
+  <div class="sub">${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+  <div class="card">
+    <div class="kv"><span class="k">Hedonic</span><span class="v num">${c.hedonic??'—'}</span></div>
+    <div class="kv"><span class="k">Kind</span><span class="v">${c.kind==='cafe'?'café cup':'brew'}</span></div>
+    <div class="kv"><span class="k">Instrumentation</span><span class="v">${esc(c.instrumentation)||'—'}</span></div>
+    ${brew?`<div class="kv"><span class="k">Brew</span><span class="v num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span></div>`:''}
+    ${setup?`<div class="kv"><span class="k">Setup</span><span class="v">${esc(setup.name)}</span></div>`:''}
+  </div>
+  ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
+  ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
+  <div class="muted small" style="margin-bottom:10px">Removing a cup deletes this impression only. ${brew?'The brew it came from stays in the ledger.':''}</div>
+  <button class="btn btn-danger" onclick="removeCup('${c.id}')">Remove from ledger</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+function removeCup(id){
+  const c=cupById(id); if(!c)return;
+  const b=bagById(c.bagId);
+  const what=c.kind==='cafe'?`${c.shop||'café'} · ${c.drink||'cup'}`:bagName(b);
+  if(!confirm(`Remove this cup from the ledger?\n\n${what}\n\nThis cannot be undone.`))return;
+  const i=D.cups.findIndex(x=>x.id===id);
+  if(i<0)return;
+  D.cups.splice(i,1);
+  save();closeSheet();render();toast('Cup removed');
 }
 
 function vBags(){
