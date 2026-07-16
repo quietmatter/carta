@@ -1,0 +1,16 @@
+# Caddy gives you automatic HTTPS (Let's Encrypt) in front of the sync server,
+# which CARTA requires when the app is served over https.
+#
+#   1. Point sync.example.com's DNS A/AAAA record at this box.
+#   2. Copy this file to /etc/caddy/Caddyfile (edit the domain).
+#   3. Run the server:  CARTA_DATA=/var/lib/carta node server/server.js
+#   4. Reload Caddy:    caddy reload   (or: systemctl reload caddy)
+#
+# Your sync URL is then https://sync.example.com
+#
+# One-liner alternative without a config file:
+#   caddy reverse-proxy --from sync.example.com --to localhost:8787
+
+sync.example.com {
+	reverse_proxy localhost:8787
+}

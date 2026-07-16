@@ -206,6 +206,10 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
 
+  // Unauthenticated liveness probe for load balancers / deploy platforms.
+  if (req.method === 'GET' && (p === '/health' || p === '/api/health'))
+    return send(res, 200, { ok: true, users: db.users.length, uptime: Math.round(process.uptime()) });
+
   if (req.method === 'POST' && p === '/api/register') return handleRegister(req, res, ip);
   if (req.method === 'POST' && p === '/api/login') return handleLogin(req, res, ip);
 

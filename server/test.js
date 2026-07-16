@@ -49,8 +49,13 @@ const ok = name => console.log(`PASS  ${++n}. ${name}`);
 (async () => {
   await waitUp();
 
+  // health probe (unauthenticated)
+  let r = await req('GET', '/health');
+  assert.equal(r.status, 200); assert.equal(r.body.ok, true); assert.equal(typeof r.body.uptime, 'number');
+  ok('health probe returns 200 without auth');
+
   // register
-  let r = await req('POST', '/api/register', { body: { name: 'Alice', passcode: 'coffee' } });
+  r = await req('POST', '/api/register', { body: { name: 'Alice', passcode: 'coffee' } });
   assert.equal(r.status, 201); assert.ok(r.body.token && r.body.userId);
   const alice = r.body;
   ok('register returns 201 with token + userId');

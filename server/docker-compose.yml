@@ -1,0 +1,21 @@
+# Self-host on any box with Docker. Note: this serves plain HTTP on :8787.
+# Browsers block an https CARTA page from calling http, so put a TLS proxy
+# in front (see Caddyfile.example) — or run CARTA from http://localhost.
+services:
+  carta-sync:
+    build: .
+    # Or use a prebuilt image instead of `build: .`:
+    #   image: node:22-alpine
+    #   command: node /app/server.js
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      PORT: "8787"
+      CARTA_DATA: /data
+      # CARTA_MAX_BODY: "20971520"   # 20 MB, ledgers embed base64 photos
+    volumes:
+      - carta-data:/data
+
+volumes:
+  carta-data:
