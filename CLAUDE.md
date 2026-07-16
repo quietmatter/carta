@@ -86,8 +86,11 @@ server/
 - **segmented / hedonic / descriptors** — selection-control state.
 - **forms** — `openBagForm`/`saveBag`, `openSetupForm`/`saveSetup`.
 - **brew flow** — `openBrew` → `saveBrew` → `openImpression` → `saveCup`.
-- **café** — logging café cups (`openCafe`/`saveCafeCup`) and the café passport
-  (`shopAgg`, `vCafes`, favorites).
+- **café** — logging café cups (`openCafe`/`saveCafeCup`, with optional
+  structured traceability), the café passport (`shopAgg`, `vCafes`, favorites),
+  and per-café profiles (`openCafeProfile`: branding photo → derived `accent`,
+  online address lookup `geoLookup` via OpenStreetMap Nominatim). The home-vs-café
+  comparison is `crossContext`.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
 - **export / import** — JSON export (stamped with the user's name); import as a
@@ -105,14 +108,20 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   `brewer`, `basket`, `papers`, `water`, and the grinder's real scale
   (`grindMin`, `grindMax`, `grindStep`). **Grind is only comparable within one
   Setup** — each Setup's grind dial moves the way that grinder does.
-- **bags** — a bag of coffee: `roaster`, `name`, origin fields, `process`,
-  `roastDate`, `roastLevel` (index into `ROAST_LEVELS`), `price`, `photo`,
-  `archived`.
+- **bags** — a bag of coffee: `roaster`, `name`, origin fields (`originCountry`,
+  `originRegion`, `producer`, `variety`, `process`, `lot`), `roastDate`,
+  `roastLevel` (index into `ROAST_LEVELS`), `price`, `photo`, `archived`.
 - **brews** — one brew: `bagId`, `setupId`, `technique`, `grind`, `doseG`,
   `waterG`, `tempC` (stored canonically in °C), `timeSec`, `instrumentation`.
 - **cups** — a tasting. `kind` is `home` (linked to a `brewId`/`bagId`) or
-  `cafe` (with `shop`, `city`, `style`, `drink`, `roaster`, `origin`, `again`).
+  `cafe` (with `shop`, `city`, `style`, `drink`, `roaster`, `origin`, `price`,
+  `again`, plus optional structured traceability aligned to bags —
+  `originCountry`, `originRegion`, `producer`, `variety`, `lot`, `process`).
   `hedonic` (1–9), `descriptors[]`, `notes`.
+- **cafes** — per-café profiles keyed by shop name (`cafeProfile`/
+  `saveCafeProfile`): branding `photo`, an `accent` colour **derived from that
+  photo** (`dominantAccent`), and location (`address`, `lat`, `lon`, from the
+  optional online lookup). Merged in sync like any other collection.
 - **cafeFavs** — favorited café shop names.
 - **deleted** — tombstones so removed records stay removed across a sync merge.
 - **prefs** — per-user preferences (`tempUnit`, `hideTimer`, …) via
@@ -183,7 +192,13 @@ is the one exception browsers allow, so local dev needs no TLS.
   compact, single-line helpers and inline handlers. The server is idiomatic,
   commented Node with clear section banners.
 - **Keep the app dependency-free and single-file.** Same for the server
-  (zero deps). This is a core design property, not an accident.
+  (zero deps). This is a core design property, not an accident. The one network
+  call the app makes is the *optional* café address lookup (OpenStreetMap
+  Nominatim) — progressive enhancement that degrades to manual text offline; it
+  bundles nothing and must stay that way (no map tiles, no embedded library).
+- **Match the brand voice.** `VOICE.md` is the standard for every user-facing
+  string — sentence case, terse, honest, no emoji, the record-keeper persona.
+  Screen new copy against its gate before shipping.
 - **Bump `APP_VERSION` + add a `CHANGELOG` entry** in `index.html` for
   user-visible changes so returning users see "What's New."
 - **Update docs when behavior changes** — `README.md` (app) and
