@@ -15,6 +15,7 @@ The server speaks plain HTTP; the [HTTPS requirement](#️-https-required-read-t
 | Target | Files | Quickstart |
 |---|---|---|
 | **fly.io** (TLS included) | `fly.toml`, `Dockerfile` | `fly launch --no-deploy --copy-config` → `fly volumes create carta_data --size 1` → `fly deploy`. URL: `https://<app>.fly.dev` |
+| **Mac laptop + Tailscale** | `com.carta.sync.plist.example` | Auto-start with launchd + `tailscale funnel` for HTTPS — see [below](#run-on-a-mac-laptop-tailscale). Great for a small, trusted group when you're OK with the server going offline while the laptop sleeps |
 | **Docker / any VPS** | `Dockerfile`, `docker-compose.yml` | `docker compose up -d` (serves `:8787`; add a TLS proxy) |
 | **Bare VPS + systemd** | `carta-sync.service.example`, `Caddyfile.example` | Install the unit + point Caddy at `localhost:8787` — steps are in each file's header |
 | **Caddy proxy** | `Caddyfile.example` | `caddy reverse-proxy --from sync.example.com --to localhost:8787` |
@@ -22,6 +23,40 @@ The server speaks plain HTTP; the [HTTPS requirement](#️-https-required-read-t
 Each config file's header comments carry the full step-by-step. Whichever you use, the data directory (`CARTA_DATA`) must be on **persistent storage** — a Docker/fly volume, or a real path on a VPS — or ledgers vanish on restart.
 
 Once it's reachable over https, connect from the app: **Ledger → Sync → Connect to a sync server** and paste the URL.
+
+## Run on a Mac laptop (Tailscale)
+
+For a small, trusted group, you can host the server on your own Mac. The app is offline-first, so it's fine that the server disappears when the laptop sleeps — clients keep working locally and sync when it's back. [Tailscale](https://tailscale.com/) gives you the required HTTPS **and a stable hostname** that doesn't change when the laptop moves networks (don't use free ngrok — its URL changes every restart, and every device has to be reconfigured).
+
+**1. Get the code and confirm Node 18+:**
+```bash
+git clone https://github.com/quietmatter/carta.git ~/carta
+node --version        # need v18+; install with `brew install node` if missing
+mkdir -p ~/carta-data # where ledgers + logs live — back this folder up
+```
+
+**2. Install Tailscale** ([download](https://tailscale.com/download/mac)), sign in, then expose the server over HTTPS:
+```bash
+tailscale funnel --bg 8787     # public HTTPS; --bg persists across reboots
+tailscale funnel status        # shows your URL: https://<your-mac>.<tailnet>.ts.net
+```
+Prefer to keep it private to your own devices instead of the public internet? Use `tailscale serve --bg 8787` — but then every user's phone must also install Tailscale and join your tailnet.
+
+**3. Auto-start the server with launchd** so it comes back after reboots and crashes:
+```bash
+cp ~/carta/server/com.carta.sync.plist.example ~/Library/LaunchAgents/com.carta.sync.plist
+# Edit that copy: replace YOUR_USERNAME, and set the node path from `which node`
+launchctl load ~/Library/LaunchAgents/com.carta.sync.plist
+curl http://localhost:8787/health     # {"ok":true,...}
+```
+To stop it: `launchctl unload ~/Library/LaunchAgents/com.carta.sync.plist`. To apply edits, unload then load again. Logs: `tail -f ~/carta-data/server.log`.
+
+**4. Connect the app:** paste your `https://<your-mac>.<tailnet>.ts.net` URL into **Ledger → Sync → Connect to a sync server**.
+
+**Notes for laptop hosting**
+- The server pauses whenever the Mac sleeps and resumes on wake — expected, and clients tolerate it. To keep serving while the lid is closed and on power, run it under `caffeinate -s` or adjust Energy Saver.
+- Your data is `~/carta-data` — plain JSON. Copy it (or keep it in iCloud/Dropbox) for backups; a copy taken while idle is complete.
+- No `fly.toml`, Docker, or port-forwarding needed for this path — Tailscale handles reachability and TLS.
 
 ## ⚠️ HTTPS required (read this first)
 
