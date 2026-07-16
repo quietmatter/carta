@@ -23,7 +23,8 @@ and no test runner for the frontend.** Do not add one unless explicitly asked.
 ## Repository layout
 
 ```
-index.html            The entire app — inline <style> (lines ~12–255) and <script> (~269–1694)
+index.html            The entire app — inline <style> and <script>
+fonts/                Self-hosted typefaces (Spectral + Libre Franklin, woff2 subsets)
 manifest.json         PWA metadata (homescreen install); scope is /carta/
 icon-192.svg          App icons (manifest references .png variants at those sizes)
 icon-512.svg

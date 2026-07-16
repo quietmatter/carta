@@ -3,8 +3,8 @@
   "short_name": "CARTA",
   "start_url": "/carta/",
   "display": "standalone",
-  "background_color": "#EFE9DC",
-  "theme_color": "#232019",
+  "background_color": "#fafaf8",
+  "theme_color": "#fafaf8",
   "scope": "/carta/",
   "icons": [
     {
