@@ -88,6 +88,7 @@ input[type=text],input[type=number],input[type=date],select,textarea{
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 textarea{min-height:64px;resize:vertical}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px}
 /* dial stepper */
 .dial{border:1px solid var(--line);border-radius:var(--radius);background:#FBF8F0;padding:8px 6px 10px;margin-bottom:10px;text-align:center;position:relative}
 .dial .l{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
@@ -100,6 +101,12 @@ textarea{min-height:64px;resize:vertical}
 }
 .dial .ctl button:active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .dial .ticks{position:absolute;top:8px;right:10px;font-size:9px;color:var(--ink-3);letter-spacing:.1em}
+.dial .v.tapedit{display:inline-block;cursor:text;border-bottom:1px dotted var(--line)}
+.dedit{width:2.7em;min-width:46px;max-width:88%;font:inherit;font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;text-align:center;border:none;background:transparent;color:var(--ink);padding:0}
+.dedit:focus{outline:none}
+.dcorner{position:absolute;top:6px;right:6px;display:flex;gap:3px}
+.dcorner .ut{font-size:10px;font-weight:700;letter-spacing:.02em;padding:2px 5px;border:1px solid var(--line);background:#F1EBDD;color:var(--ink-3);border-radius:6px;cursor:pointer}
+.dcorner .ut.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .dialrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* hedonic */
 .hedonic{display:flex;gap:5px;justify-content:space-between;margin:6px 0 4px}
@@ -264,7 +271,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 /* ============ store ============ */
 const KEY='carta.v1';           // legacy single-user key — migrated to per-user keys on first boot
 const USERS_KEY='carta.users';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafeFavs:[],deleted:[],createdAt:new Date().toISOString()};
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafeFavs:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dataKey=id=>KEY+'.'+id;
 function loadUsers(){
@@ -286,8 +293,11 @@ function loadUsers(){
 let USERS=loadUsers();
 let viewingUserId=USERS.activeId;   // whose ledger is on screen; ≠ activeId means read-only
 let D=load();
-function load(){try{const r=localStorage.getItem(dataKey(viewingUserId));return r?JSON.parse(r):clone(blank)}catch(e){return clone(blank)}}
+function load(){try{const r=localStorage.getItem(dataKey(viewingUserId));const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};return d}catch(e){return clone(blank)}}
 function save(){if(readOnly())return;localStorage.setItem(dataKey(viewingUserId),JSON.stringify(D));markDirty()}
+// per-user presentation/input preferences (temp unit, timer visibility) — part of the ledger, so they export and sync
+const getPref=(k,dflt)=>{const p=D.prefs||{};return p[k]==null?dflt:p[k]};
+function setPref(k,v){if(readOnly())return;D.prefs=D.prefs||{};D.prefs[k]=v;save()}
 function saveUsers(){localStorage.setItem(USERS_KEY,JSON.stringify(USERS))}
 const userById=id=>USERS.users.find(u=>u.id===id);
 const viewingUser=()=>userById(viewingUserId)||remoteUserById(viewingUserId);
@@ -326,6 +336,13 @@ const bagById=id=>D.bags.find(b=>b.id===id);
 const cupById=id=>D.cups.find(c=>c.id===id);
 const brewsOf=bagId=>D.brews.filter(x=>x.bagId===bagId).sort(byNew);
 const fmtTime=s=>s==null?'—':`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
+// temperature: stored canonically in °C; display/entry unit is a preference
+const c2f=c=>c*9/5+32, f2c=f=>(f-32)*5/9;
+const tempUnit=()=>getPref('tempUnit','C')==='F'?'F':'C';
+// parse "m:ss" or plain seconds into seconds
+const parseTime=str=>{const s=String(str).trim();if(!s)return null;
+  if(s.includes(':')){const[m,sec]=s.split(':');return Math.round((Number(m)||0)*60+(Number(sec)||0))}
+  return Math.round(Number(s))};
 const DESCRIPTORS=['floral','citrus','berry','stone fruit','tropical','chocolate','nutty','caramel','honey','spice','tea-like','fermented','roasted','vegetal'];
 const INSTR=['measured','estimated','recalled'];
 const CAFE_STYLES=['Espresso','Milk','Filter','Other'];
@@ -344,10 +361,17 @@ const roasterList=()=>[...new Set([...D.bags.map(b=>b.roaster),...cafeCups().map
 const jsq=s=>`'${String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;')}'`;
 
 /* ============ version tracker ============ */
-const APP_VERSION='1.3.0';
+const APP_VERSION='1.4.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'1.4.0',date:'Jul 16, 2026',title:'The dials, quicker',items:[
+    'Tap any number on the brew screen to type it exactly — no more tapping to a target from across the range.',
+    'Press and hold − or + to accelerate: fly across a wide grind range, ease off for the fine end.',
+    'Grind scale, per Setup. Tell a Setup your grinder\'s range and step (Lido OG: 0–2000, step 5) and its dial moves the way the grinder actually does.',
+    'Switch °C / °F right on the Temp dial, remembered — whole-degree steps, stored canonically so the record stays comparable.',
+    'Time on your machine or scale? Hide the stopwatch in Preferences and just type the time (m:ss) and weight. Time in Carta is a record, not a chore.',
+  ]},
   {v:'1.3.0',date:'Jul 16, 2026',title:'The record, everywhere',items:[
     'Server sync. Connect to a CARTA sync server (run your own — one file, zero dependencies) and your ledger follows you across devices.',
     'Everyone on the server appears under Users — view any of their ledgers, read only, live from the server.',
@@ -524,6 +548,7 @@ function vSetups(){
       <strong>${esc(s.name)}</strong>
       <div class="muted small">${esc([s.grinder,s.brewer,s.basket].filter(Boolean).join(' · '))}</div>
       ${s.water?`<div class="muted small">water: ${esc(s.water)}</div>`:''}
+      ${s.grindMin!=null&&s.grindMin!==''&&s.grindMax!=null&&s.grindMax!==''?`<div class="muted small num">grind ${s.grindMin}–${s.grindMax}${s.grindStep?` · step ${s.grindStep}`:''}</div>`:''}
       <div class="muted" style="font-size:11px" class="num">${D.brews.filter(x=>x.setupId===s.id).length} brews on this Setup</div>
     </div>`).join('') : `<div class="empty">Define the assembly — grinder, brewer, basket, papers, water — before the first brew.</div>`}`;
 }
@@ -568,6 +593,7 @@ function vLedger(){
   <div class="muted small serif" style="font-style:italic;margin:10px 2px">Your ledger is yours — full export, open schema, no lock-in. If we die, you keep everything, readable.</div>
   <button class="btn btn-graphite" onclick="exportJSON()">Export ledger (JSON)</button>
   ${readOnly()?'':`<button class="btn btn-quiet" onclick="document.getElementById('importInput').click()">Import ledger</button>`}
+  ${readOnly()?'':vPrefsSection()}
   ${readOnly()?'':vUsersSection()}
   ${readOnly()?'':vSyncSection()}
   <h2>Phase 0</h2>
@@ -579,6 +605,23 @@ function vLedger(){
   <button class="btn btn-quiet" onclick="openWhatsNew(false)">What's new</button>
   <div class="muted small serif" style="font-style:italic;text-align:center;margin:12px 2px 2px">CARTA v${APP_VERSION} — we keep the record.</div>`;
 }
+// Preferences — presentation/input, not data. Two controls, phase-0 minimal.
+function vPrefsSection(){
+  const u=tempUnit(),hide=getPref('hideTimer',false);
+  return `<h2>Preferences</h2>
+  <div class="card">
+    <div class="kv"><span class="k">Temperature</span><span class="v">
+      <span class="seg" style="margin:0;display:inline-flex;width:auto">
+        <button class="${u==='C'?'on':''}" onclick="prefSet('tempUnit','C')">°C</button>
+        <button class="${u==='F'?'on':''}" onclick="prefSet('tempUnit','F')">°F</button></span></span></div>
+    <div class="kv"><span class="k">Brew stopwatch</span><span class="v">
+      <span class="seg" style="margin:0;display:inline-flex;width:auto">
+        <button class="${!hide?'on':''}" onclick="prefSet('hideTimer',false)">Show</button>
+        <button class="${hide?'on':''}" onclick="prefSet('hideTimer',true)">Hide</button></span></span></div>
+  </div>
+  <div class="muted small">Switch °C/°F anytime — right on the Temp dial too. Hide the stopwatch if you time on your machine or scale; just type the time and weight in.</div>`;
+}
+function prefSet(k,v){setPref(k,v);render()}
 
 /* ============ sheet plumbing ============ */
 function openSheet(html){const s=document.getElementById('sheet');
@@ -649,23 +692,106 @@ function closeSheet(){document.getElementById('sheet').classList.remove('open');
 const val=id=>{const e=document.getElementById(id);return e?e.value.trim():''};
 const numv=id=>{const v=val(id);return v===''?null:Number(v)};
 
-/* ============ dial component ============ */
+/* ============ dial component ============
+ * A stepper you can drive three ways, so a wide range is never a wall of taps:
+ *   · tap − / +           one step (fine)
+ *   · press-and-hold      auto-repeats and accelerates — fly across 0–2000
+ *   · tap the number      type an exact value (numeric keypad; m:ss for time)
+ * opts: {kind:'time'} m:ss entry · {hint} scale caption top-right ·
+ *       {corner} a control pinned top-right (the °C/°F toggle). */
 const dialState={};
-function dial(id,label,unit,value,step,min,max,dp){
-  dialState[id]={v:value,step,min,max,dp:dp??(String(step).includes('.')?1:0)};
-  return `<div class="dial"><div class="l">${label}</div>
-    <div class="v num" id="dv_${id}">${fmtDial(id)}<span class="u">${unit}</span></div>
+let editingDial=null,holdInt=null,holdTO=null;
+function dial(id,label,unit,value,step,min,max,dp,opts){
+  opts=opts||{};
+  dialState[id]={v:value,step,min,max,dp:dp??(String(step).includes('.')?1:0),unit,kind:opts.kind||null};
+  const corner=opts.corner?`<div class="dcorner">${opts.corner}</div>`:(opts.hint?`<div class="ticks">${opts.hint}</div>`:'');
+  return `<div class="dial">${corner}<div class="l">${label}</div>
+    <div class="v num tapedit" id="dv_${id}" onclick="editDial('${id}')">${fmtDial(id)}<span class="u">${unit}</span></div>
     <div class="ctl">
-      <button onclick="nudge('${id}',-1)">−</button>
-      <button onclick="nudge('${id}',1)">+</button>
+      <button type="button" onpointerdown="holdStart(event,'${id}',-1)">−</button>
+      <button type="button" onpointerdown="holdStart(event,'${id}',1)">+</button>
     </div></div>`;
 }
-function fmtDial(id){const s=dialState[id];return s.v==null?'—':s.v.toFixed(s.dp)}
-function nudge(id,dir){const s=dialState[id]; s.v=(s.v==null?(s.min??0):s.v)+dir*s.step;
-  if(s.min!=null)s.v=Math.max(s.min,s.v); if(s.max!=null)s.v=Math.min(s.max,s.v);
-  s.v=Number(s.v.toFixed(s.dp));
-  document.getElementById('dv_'+id).innerHTML=fmtDial(id)+`<span class="u">${document.getElementById('dv_'+id).querySelector('.u').textContent}</span>`;
-  if(navigator.vibrate)navigator.vibrate(3);
+function fmtDial(id){const s=dialState[id];if(s.v==null)return '—';
+  if(s.kind==='time')return fmtTime(s.v);
+  return s.v.toFixed(s.dp).replace(/\.0+$/,'');}   // trim trailing zeros — whole numbers read clean
+function unitSpan(id){return `<span class="u">${dialState[id].unit}</span>`}
+function redrawDial(id){const el=document.getElementById('dv_'+id);if(el)el.innerHTML=fmtDial(id)+unitSpan(id)}
+function setDial(id,v){const s=dialState[id];
+  if(v==null||isNaN(v)){redrawDial(id);return}
+  if(s.min!=null)v=Math.max(s.min,v); if(s.max!=null)v=Math.min(s.max,v);
+  s.v=Number(v.toFixed(s.dp)); redrawDial(id);}
+function nudge(id,dir,mult){const s=dialState[id];
+  setDial(id,(s.v==null?(s.min??0):s.v)+dir*s.step*(mult||1));
+  if(navigator.vibrate)navigator.vibrate(3);}
+function holdStop(){if(holdTO){clearTimeout(holdTO);holdTO=null}if(holdInt){clearInterval(holdInt);holdInt=null}
+  window.removeEventListener('pointerup',holdStop);window.removeEventListener('pointercancel',holdStop);}
+function holdStart(e,id,dir){
+  e.preventDefault();
+  if(editingDial){const de=document.getElementById('de_'+editingDial);if(de)de.blur();}
+  holdStop();
+  nudge(id,dir);                                   // the tap itself is one step
+  let n=0;
+  holdTO=setTimeout(()=>{ holdInt=setInterval(()=>{ n++;
+    const mult=n<10?1:n<20?4:n<35?10:25;           // ramp up the longer it's held
+    nudge(id,dir,mult); },60); },320);             // brief pause first, so a tap stays a tap
+  window.addEventListener('pointerup',holdStop);
+  window.addEventListener('pointercancel',holdStop);
+}
+function editDial(id){
+  if(editingDial===id)return;
+  const s=dialState[id],el=document.getElementById('dv_'+id);
+  editingDial=id;
+  const cur=s.v==null?'':(s.kind==='time'?fmtTime(s.v):fmtDial(id));
+  el.innerHTML=`<input class="dedit" id="de_${id}" inputmode="${s.kind==='time'?'text':'decimal'}" value="${cur}">`+unitSpan(id);
+  const inp=document.getElementById('de_'+id); inp.focus(); inp.select();
+  const commit=()=>{if(editingDial!==id)return; editingDial=null;
+    const raw=inp.value;
+    const v=s.kind==='time'?parseTime(raw):(raw.trim()===''?NaN:Number(raw));
+    setDial(id,v);};
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',ev=>{
+    if(ev.key==='Enter'){ev.preventDefault();inp.blur();}
+    else if(ev.key==='Escape'){editingDial=null;redrawDial(id);}});
+}
+// grind dial reads its scale from the Setup — the assembly that owns the grinder.
+// Blank Setup fields fall back to the original 0.5-step behavior.
+function grindDialHTML(setup,value){
+  const st=setup||{};
+  const num=(x,d)=>x!=null&&x!==''&&!isNaN(Number(x))?Number(x):d;
+  const step=num(st.grindStep,0.5)||0.5, min=num(st.grindMin,0), max=num(st.grindMax,null);
+  const dp=String(step).includes('.')?1:0;
+  const hint=(st.grindMin!=null&&st.grindMin!==''&&max!=null)?`${min}–${max} · ${step}`:'';
+  return dial('grind','Grind',st.grindUnit||'',value,step,min,max,dp,{hint});
+}
+function lastGrindForSetup(bagId,setupId){
+  const b=D.brews.filter(x=>x.setupId===setupId&&x.bagId===bagId).sort(byNew)[0]
+       || D.brews.filter(x=>x.setupId===setupId).sort(byNew)[0];
+  return b&&b.grind!=null?b.grind:null;
+}
+function onSetupChange(){
+  const setup=setupById(val('b_setup')),box=document.getElementById('dialbox_grind');
+  if(!box)return;
+  const prior=dialState.grind?dialState.grind.v:null;
+  const v=lastGrindForSetup(val('b_bag'),setup?setup.id:null); // grind is only comparable within a Setup
+  box.innerHTML=grindDialHTML(setup,v!=null?v:(prior!=null?prior:20));
+}
+// temp dial renders in the user's unit but the brew always stores canonical °C.
+function tempDialHTML(tempC){
+  const u=tempUnit(),F=u==='F';
+  const v=tempC==null?null:(F?Math.round(c2f(tempC)):Number(tempC.toFixed(1)));
+  return dial('temp','Temp','°'+u,v,1,F?140:60,F?212:100,F?0:1,{corner:tempCorner()});
+}
+function dialTempC(){const s=dialState.temp;if(!s||s.v==null)return null;
+  return tempUnit()==='F'?Number(f2c(s.v).toFixed(1)):s.v;}
+function tempCorner(){const u=tempUnit();
+  return `<span class="ut ${u==='C'?'on':''}" onclick="setTempUnit('C')">°C</span><span class="ut ${u==='F'?'on':''}" onclick="setTempUnit('F')">°F</span>`;}
+function setTempUnit(u){
+  if(u!=='C'&&u!=='F')return;
+  const c=dialTempC();                 // capture canonical °C before flipping
+  setPref('tempUnit',u);
+  const box=document.getElementById('dialbox_temp');
+  if(box)box.innerHTML=tempDialHTML(c);
 }
 
 /* ============ segmented + hedonic + descriptors state ============ */
@@ -772,13 +898,21 @@ function openSetupForm(id){
     <label class="f"><span class="l">Papers / screens</span><input type="text" id="s_papers" value="${esc(s.papers)}" placeholder="paper below + puck screen"></label>
   </div>
   <label class="f"><span class="l">Water recipe</span><input type="text" id="s_water" value="${esc(s.water)}" placeholder="40ppm, 2:1 Mg:Ca"></label>
+  <label class="f"><span class="l">Grind scale <span class="opt">optional — sets this grinder's dial</span></span></label>
+  <div class="grid3">
+    <label class="f"><span class="l">Min</span><input type="number" id="s_grindMin" inputmode="decimal" value="${s.grindMin??''}" placeholder="0"></label>
+    <label class="f"><span class="l">Max</span><input type="number" id="s_grindMax" inputmode="decimal" value="${s.grindMax??''}" placeholder="2000"></label>
+    <label class="f"><span class="l">Step</span><input type="number" id="s_grindStep" inputmode="decimal" value="${s.grindStep??''}" placeholder="5"></label>
+  </div>
+  <div class="muted small" style="margin:-4px 2px 10px">The increment your grinder actually moves in — Lido OG: 0–2000, step 5. Leave blank for the default half-step.</div>
   <label class="f"><span class="l">Notes</span><textarea id="s_notes">${esc(s.notes)}</textarea></label>
   <button class="btn btn-primary" onclick="saveSetup('${id||''}')">Save Setup</button>`);
 }
 function saveSetup(id){
   if(guard())return;
   const rec={name:val('s_name'),grinder:val('s_grinder'),brewer:val('s_brewer'),basket:val('s_basket'),
-    papers:val('s_papers'),water:val('s_water'),notes:val('s_notes')};
+    papers:val('s_papers'),water:val('s_water'),notes:val('s_notes'),
+    grindMin:numv('s_grindMin'),grindMax:numv('s_grindMax'),grindStep:numv('s_grindStep')};
   if(!rec.name){toast('Name the Setup');return}
   if(id){Object.assign(setupById(id),rec,{updatedAt:new Date().toISOString()})}else{D.setups.push({id:uid(),createdAt:new Date().toISOString(),...rec})}
   save();closeSheet();render();toast('Setup saved');
@@ -786,7 +920,8 @@ function saveSetup(id){
 
 /* ============ timer ============ */
 let tInt=null,tStart=null,tElapsed=0;
-function timerHTML(){return `<div class="timer">
+function timerHTML(){if(getPref('hideTimer',false))return '';   // Argos/scale users time elsewhere — just transcribe the number
+  return `<div class="timer">
   <div class="t num" id="tclock">0:00.0</div>
   <div class="ctl">
     <button class="go" id="tbtn" onclick="toggleTimer()">Start</button>
@@ -802,8 +937,7 @@ function toggleTimer(){
 function resetTimer(){stopTimer(true);tickTimer()}
 function stopTimer(zero){if(tInt){clearInterval(tInt);tInt=null}if(zero){tElapsed=0;tStart=null}else if(tStart){tElapsed+=(Date.now()-tStart)/1000;tStart=null}}
 function useTimer(){const s=tElapsed+(tStart?(Date.now()-tStart)/1000:0);
-  if(dialState.time){dialState.time.v=Math.round(s);
-    const el=document.getElementById('dv_time');if(el)el.innerHTML=fmtDial('time')+'<span class="u">s</span>';}
+  if(dialState.time){dialState.time.v=Math.round(s);redrawDial('time');}
   toast('Time captured');}
 
 /* ============ brew flow ============ */
@@ -829,7 +963,7 @@ function openBrew(bagId){
   <div class="grid2">
     <label class="f"><span class="l">Bag</span><select id="b_bag" onchange="setAccent(bagById(this.value).roastLevel)">
       ${bags.map(x=>`<option value="${x.id}" ${x.id===bag.id?'selected':''}>${esc(bagName(x))}</option>`).join('')}</select></label>
-    <label class="f"><span class="l">Setup (required)</span><select id="b_setup">
+    <label class="f"><span class="l">Setup (required)</span><select id="b_setup" onchange="onSetupChange()">
       ${D.setups.map(s=>`<option value="${s.id}" ${setup&&s.id===setup.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>
   </div>
   <label class="f"><span class="l">Technique (free text — it's a node, not an enum)</span>
@@ -837,12 +971,12 @@ function openBrew(bagId){
     <datalist id="techlist">${techs.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></label>
   ${timerHTML()}
   <div class="dialrow">
-    ${dial('grind','Grind','',last?last.grind:20,0.5,0,null,1)}
+    <div id="dialbox_grind">${grindDialHTML(setup,last?last.grind:20)}</div>
     ${dial('dose','Dose','g',last?last.doseG:18,0.1,0,null,1)}
     ${dial('water','Water / yield','g',last?last.waterG:36,1,0,null,0)}
-    ${dial('temp','Temp','°C',last?last.tempC:94,0.5,60,100,1)}
+    <div id="dialbox_temp">${tempDialHTML(last?last.tempC:94)}</div>
   </div>
-  ${dial('time','Time','s',last?last.timeSec:28,1,0,null,0)}
+  ${dial('time','Time','',last?last.timeSec:28,1,0,null,0,{kind:'time'})}
   <label class="f"><span class="l">Instrumentation</span>${seg('instr',INSTR,last?last.instrumentation||'measured':'measured')}</label>
   <label class="f"><span class="l">Brew notes</span><input type="text" id="b_notes" placeholder="optional"></label>
   <button class="btn btn-primary" onclick="saveBrew()">Save brew → impression</button>`);
@@ -853,7 +987,7 @@ function saveBrew(){
   if(!setupId){toast('Refused: a brew requires a Setup');return}
   const brew={id:uid(),createdAt:new Date().toISOString(),bagId:val('b_bag'),setupId,
     technique:val('b_technique'),grind:dialState.grind.v,doseG:dialState.dose.v,waterG:dialState.water.v,
-    tempC:dialState.temp.v,timeSec:dialState.time.v,instrumentation:segState.instr||'measured',notes:val('b_notes')};
+    tempC:dialTempC(),timeSec:dialState.time.v,instrumentation:segState.instr||'measured',notes:val('b_notes')};
   D.brews.push(brew);save();stopTimer(true);
   openImpression(brew);
 }
