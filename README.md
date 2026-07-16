@@ -2,6 +2,17 @@
 
 A beautiful, minimal coffee brewing journal. Track your setups, bags, and brews over time.
 
+## Multiple Users
+
+CARTA supports multiple users on one device. Manage them from the **Ledger** tab:
+
+- **Add a user** — each user keeps a fully separate ledger (setups, bags, brews, cups, cafés)
+- **Switch** the active user — everything you log goes to the active user's ledger
+- **View another user's ledger** — browse every tab of their record in a clearly-marked read-only mode; a banner offers "Back to mine"
+- **Import as a new user** — a friend's exported ledger file can be imported as a new user, so you can browse their record beside your own without touching yours
+
+Existing single-user data migrates automatically on first launch — nothing to do, nothing lost. Everything still lives in this browser's local storage; there is no server and no syncing between devices.
+
 ## What's Included
 
 - **index.html** — The complete app (self-contained, no build required)
@@ -30,7 +41,7 @@ The app now appears as an icon on your home screen. Tap it to open in fullscreen
 
 ## Export Your Data (IMPORTANT)
 
-Everything is stored locally in your browser. **Export monthly** using the Ledger tab → Export button. Keep backups safe.
+Everything is stored locally in your browser. **Export monthly** using the Ledger tab → Export button. Keep backups safe. Each user exports their own ledger (exports are stamped with the user's name).
 
 If you clear browser data or Safari storage fills up, your ledger is gone — there is no server.
 
