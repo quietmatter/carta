@@ -505,10 +505,15 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='2.1.0';
+const APP_VERSION='2.2.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'2.2.0',date:'Jul 16, 2026',title:'Other people\'s cups',items:[
+    'A Friends tab. Every record you can read — the users on this device, everyone on your sync server — pools into one stream of café cups, newest first.',
+    'Places worth the walk: every café your people have logged, ranked by their scores, with the usual order and the pin on the map. Read the record, steal the order, go.',
+    'You don\'t have to log a thing. Reading is a whole way to use CARTA — and a plain-words primer decodes the 1–9 scale and the again/pass verdict.',
+  ]},
   {v:'2.1.0',date:'Jul 16, 2026',title:'The café, in its own colours',items:[
     'A café\'s branding photo now dresses its whole page — paper, ink, and accent, all drawn from the picture. One photograph, a small design system.',
     'Every cup logged there is read back in that café\'s palette. The place has a look again, not just a name.',
@@ -583,6 +588,7 @@ const markVersionSeen=()=>{try{localStorage.setItem(SEEN_KEY,APP_VERSION)}catch(
 const TABS=[
   {id:'field',ic:'●',label:'Home'},
   {id:'cafes',ic:'☕',label:'Café'},
+  {id:'circle',ic:'◎',label:'Friends'},
   {id:'trace',ic:'∿',label:'Record'},
 ];
 let tab='field';
@@ -593,7 +599,7 @@ function render(){
   document.getElementById('tabs').innerHTML=TABS.map(t=>
     `<button class="${tab===t.id?'on':''}" onclick="go('${t.id}')"><span class="ic">${t.ic}</span>${t.label}</button>`).join('');
   const m=document.getElementById('main');
-  m.innerHTML=(readOnly()?viewBanner():'')+({field:vField,cafes:vCafes,bags:vBags,setups:vSetups,trace:vTrace,ledger:vLedger})[tab]();
+  m.innerHTML=(readOnly()?viewBanner():'')+({field:vField,cafes:vCafes,circle:vCircle,bags:vBags,setups:vSetups,trace:vTrace,ledger:vLedger})[tab]();
   m.scrollTop=0;window.scrollTo(0,0);
 }
 function viewBanner(){return `<div class="viewbar"><span>Viewing <strong>${esc(viewingUser().name)}</strong>'s ledger — read only${remoteStale?` · cached ${fmtAgo(remoteStale===true?null:remoteStale)}`:''}</span><button onclick="exitView()">Back to mine</button></div>`}
@@ -1902,6 +1908,209 @@ function cacheRemote(id,obj){
   }
 }
 
+/* ============ friends — other people's cups ============ */
+/* The observer's half of the app. Every ledger the active user can read —
+ * other users on this device, everyone on the sync server — pools into one
+ * stream of café cups and one ranked list of places. Strictly read-only:
+ * built for the friend who wants direction, not a diary. */
+function circleSources(){
+  const out=USERS.users.filter(u=>u.id!==USERS.activeId).map(u=>({id:u.id,name:u.name,remote:false}));
+  if(SYNC)remoteDirUsers().forEach(u=>out.push({id:u.id,name:u.name,remote:true}));
+  return out;
+}
+const circleLedger=s=>s.remote?((readJSONLS(remoteKey(s.id))||{}).ledger||null):readJSONLS(dataKey(s.id));
+function circleCups(){
+  const cups=[];
+  circleSources().forEach(s=>{const d=circleLedger(s);if(!d)return;
+    (d.cups||[]).filter(c=>c.kind==='cafe').forEach(c=>cups.push({...c,_who:s.name,_src:s.id}))});
+  return cups.sort(byNew);
+}
+// a café's page data may live on anyone's ledger — take the first profile that carries substance
+function circleProfile(shop){
+  const own=cafeProfile(shop); if(own&&(own.address||own.photo))return own;
+  for(const s of circleSources()){const d=circleLedger(s);if(!d)continue;
+    const p=(d.cafes||[]).find(c=>normName(c.name)===normName(shop));
+    if(p&&(p.address||p.photo))return p;}
+  return own;
+}
+function circlePlaces(cups){
+  const map={};
+  cups.filter(c=>c.shop).forEach(c=>{const k=normName(c.shop);(map[k]=map[k]||{shop:c.shop.trim(),cups:[]}).cups.push(c)});
+  return Object.values(map).map(p=>{
+    p.n=p.cups.length; p.avg=avgHedonic(p.cups);
+    p.people=[...new Set(p.cups.map(c=>c._who))];
+    p.city=modeOf(p.cups.map(c=>c.city).filter(Boolean));
+    p.usual=modeOf(p.cups.map(c=>c.drink).filter(Boolean));
+    p.profile=circleProfile(p.shop);
+    return p;
+  }).sort((a,b)=>(Number(b.avg)||0)-(Number(a.avg)||0)||b.n-a.n);
+}
+// Keep the stream current: re-pull the directory and any ledger whose rev moved.
+// Throttled, quiet, and offline-safe — the cached copies simply stand.
+let circleBusy=false,circleFreshAt=0;
+async function circleRefresh(){
+  if(!SYNC||!SYNC.token||circleBusy||Date.now()-circleFreshAt<60e3)return;
+  circleBusy=true;circleFreshAt=Date.now();
+  let changed=false;
+  try{
+    const dir=await api('/api/users');
+    if(dir.status===200){
+      if(JSON.stringify(dir.body.users)!==JSON.stringify(remoteDir().users))changed=true;
+      localStorage.setItem(DIR_KEY,JSON.stringify({fetchedAt:new Date().toISOString(),users:dir.body.users}));
+    }
+    for(const u of remoteDirUsers()){
+      const c=readJSONLS(remoteKey(u.id));
+      const meta=await api(`/api/ledgers/${u.id}?meta=1`);
+      if(meta.status!==200||(c&&c.rev===meta.body.rev))continue;
+      const full=await api(`/api/ledgers/${u.id}`);
+      if(full.status===200&&full.body.ledger){
+        cacheRemote(u.id,{rev:full.body.rev,updatedAt:full.body.updatedAt,fetchedAt:new Date().toISOString(),ledger:full.body.ledger});changed=true;
+      }
+    }
+  }catch(e){/* offline or signed out — the cached stream stands */}
+  finally{circleBusy=false}
+  if(changed&&tab==='circle'&&!document.getElementById('sheet').classList.contains('open'))render();
+}
+function feedRow(c){
+  const beans=[c.roaster,c.origin||c.originCountry].filter(Boolean).map(esc).join(' · ');
+  const verdict=c.again===true?' <span class="badge">again</span>':c.again===false?' <span class="badge ghost">pass</span>':'';
+  return `<div class="card tap" onclick="openCircleCup(${jsq(c._src)},${jsq(c.id)})">
+    <div style="display:flex;gap:10px">
+      ${c.photo?`<img class="rowthumb" src="${c.photo}">`:''}
+      <div style="flex:1;min-width:0">
+        <div class="row"><span class="small"><strong>${esc(c._who)}</strong><span class="muted"> · ${esc(c.shop||'a café')}${c.city?`, ${esc(c.city)}`:''}</span></span>
+          <span class="num" style="font-size:20px;font-weight:700;color:var(--accent)">${c.hedonic??'—'}</span></div>
+        <div class="muted small">${esc(c.drink||'as served')}${beans?` · ${beans}`:''}${verdict}</div>
+        ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic">${c.descriptors.map(esc).join(', ')}</div>`:''}
+        ${c.notes?`<div class="muted small serif" style="font-style:italic">"${esc(c.notes)}"</div>`:''}
+        <div class="muted" style="font-size:11px">${fmtAgo(c.createdAt)}</div>
+      </div>
+    </div>
+  </div>`;
+}
+function openCircleCup(src,id){
+  const s=circleSources().find(x=>x.id===src);if(!s)return;
+  const d=circleLedger(s);const c=d&&(d.cups||[]).find(x=>x.id===id);if(!c)return;
+  const p=c.shop?circleProfile(c.shop):null;
+  const trace=[c.originCountry,c.originRegion,c.variety,c.producer,c.process,c.lot&&('lot '+c.lot)].filter(Boolean).map(esc).join(' · ');
+  openSheet(`
+  <h3>${esc(c.shop||'A café cup')}${c.drink?` · ${esc(c.drink)}`:''}</h3>
+  <div class="sub">${esc(s.name)}'s cup · ${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${c.city?` · ${esc(c.city)}`:''}</div>
+  ${c.photo?`<img class="cupthumb" src="${c.photo}">`:''}
+  <div class="card">
+    <div class="kv"><span class="k">Their score</span><span class="v num">${c.hedonic!=null?c.hedonic+' / 9':'—'}</span></div>
+    ${c.drink||c.style?`<div class="kv"><span class="k">The order</span><span class="v">${esc([c.style,c.drink].filter(Boolean).join(' · '))}</span></div>`:''}
+    ${c.roaster||c.origin?`<div class="kv"><span class="k">Beans</span><span class="v">${[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${trace?`<div class="kv"><span class="k">Traceability</span><span class="v">${trace}</span></div>`:''}
+    ${c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
+    ${c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'would order again':'would pass'}</span></div>`:''}
+    ${p&&p.address?`<div class="kv"><span class="k">Address</span><span class="v">${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}</span></div>`:''}
+  </div>
+  ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
+  ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
+  ${c.shop?`<button class="btn btn-primary" onclick="openPlaceSheet(${jsq(c.shop)})">About this place</button>`:''}
+  <button class="btn btn-quiet" onclick="circleView(${jsq(src)})">Read ${esc(s.name)}'s whole record</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+function circleView(src){
+  const s=circleSources().find(x=>x.id===src);if(!s)return;
+  closeSheet();
+  if(s.remote)viewRemote(s.id);else viewLedger(s.id);
+}
+function placeCard(p){
+  const pr=p.profile,pal=palOf(pr),vars=pal?cafeVars(pal):''; // the café's own palette, same as the passport
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlaceSheet(${jsq(p.shop)})">
+    ${pr&&pr.photo?`<img class="brandhead" src="${pr.photo}">`:''}
+    <div class="row">
+      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}</span>`:''}</span>
+      <span class="big"${vars?' style="color:var(--accent)"':''}>${p.avg??'—'}</span>
+    </div>
+    <div class="muted small">${p.n} cup${p.n>1?'s':''} · ${p.people.length===1?esc(p.people[0]):p.people.length+' people'}${p.usual?` · they order <strong>${esc(p.usual)}</strong>`:''}${pr&&pr.address?' · pinned':''}</div>
+  </div>`;
+}
+function openPlaceSheet(shop){
+  const cups=circleCups().filter(c=>normName(c.shop)===normName(shop));
+  if(!cups.length){toast('No cups on the record for that café');return}
+  const p=circleProfile(shop);
+  const avg=avgHedonic(cups),usual=modeOf(cups.map(c=>c.drink).filter(Boolean));
+  const city=modeOf(cups.map(c=>c.city).filter(Boolean));
+  const people=[...new Set(cups.map(c=>c._who))];
+  const verdicts=cups.filter(c=>c.again!=null),again=verdicts.filter(c=>c.again===true).length;
+  const pal=palOf(p),vars=pal?cafeVars(pal):'';
+  const subline=`${city?esc(city)+' · ':''}${cups.length} cup${cups.length>1?'s':''} on your people's records`;
+  const head=p&&p.photo
+    ?`<div class="masthead"><img src="${p.photo}"><div class="scrim"></div><div class="bar"></div>
+      <div class="id"><div class="nm">${esc(shop)}</div>${city?`<div class="ct">${esc(city)}</div>`:''}</div></div>
+      <div class="sub" style="margin:10px 2px 14px">${subline}</div>`
+    :`<h3>${esc(shop)}</h3><div class="sub">${subline}</div>`;
+  openSheet(`<div class="cafe-theme"${vars?` style="${vars}"`:''}>
+  ${head}
+  <div class="card">
+    <div class="kv"><span class="k">Their average</span><span class="v num">${avg??'—'}</span></div>
+    ${usual?`<div class="kv"><span class="k">What they order</span><span class="v">${esc(usual)}</span></div>`:''}
+    ${verdicts.length?`<div class="kv"><span class="k">Would go again</span><span class="v num">${again} of ${verdicts.length}</span></div>`:''}
+    <div class="kv"><span class="k">Who's been</span><span class="v">${people.map(esc).join(', ')}</span></div>
+    ${p&&p.address?`<div class="kv"><span class="k">Address</span><span class="v">${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}</span></div>`:''}
+  </div>
+  ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
+  ${readOnly()?'':`<button class="btn btn-quiet" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Been? Log your own cup</button>`}
+  <h2>Every cup</h2>
+  ${cups.map(feedRow).join('')}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>
+  </div>`);
+}
+// The plain-words legend — for the friend who reads the record without keeping one.
+function openCupPrimer(){
+  openSheet(`
+  <h3>How to read a cup</h3>
+  <div class="sub">The record, in plain words. Everything on a cup card, decoded once.</div>
+  <div class="card">
+    <strong class="small">The score — 1 to 9</strong>
+    <div class="muted small">How much they liked it. 5 is fine, 7 is a good day, 9 almost never happens. Someone you trust posting an 8 is your cue.</div>
+    <strong class="small" style="display:block;margin-top:10px">Again / pass</strong>
+    <div class="muted small">Would they order it again. The most honest signal on the card — taste is complicated, going back isn't.</div>
+    <strong class="small" style="display:block;margin-top:10px">The words in italics</strong>
+    <div class="muted small">What they found in the cup — berry, chocolate, floral. Notes, not homework. Tasting "coffee" is also an answer.</div>
+    <strong class="small" style="display:block;margin-top:10px">Whose 8 is your 8</strong>
+    <div class="muted small">Every score is one person's. Read a few of their cups and you'll learn whose taste walks the same streets as yours.</div>
+  </div>
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">That's the whole language. Find a good score near you, order what they ordered.</div>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+function vCircle(){
+  const sources=circleSources();
+  if(!sources.length)return `
+    <div class="empty-hero">
+      <div class="eyebrow">The cup elsewhere</div>
+      <h2>Other people's cups.</h2>
+      <p>You don't have to log a thing. Read what the people you trust are drinking — and where.</p>
+      ${SYNC?'':`<button class="btn btn-primary" onclick="openSyncSheet(false)">Connect to a sync server</button>`}
+      <button class="btn ${SYNC?'btn-primary':'btn-quiet'}" onclick="openUserForm()">Add a user on this device</button>
+    </div>
+    <div class="card">
+      <strong class="small">How this works</strong>
+      <div class="muted small">One of your people runs a CARTA sync server — one file, zero dependencies. Sign in with a name and a passcode, and everyone on it can read (never edit) each other's records. Their café cups become your map.</div>
+    </div>
+    <div class="pinned">New to the language? <a class="link" onclick="openCupPrimer()">How to read a cup</a></div>
+    <div class="qm-seal">Friends<span class="em">Read the record. Steal the order. Go.</span></div>`;
+  const cups=circleCups();
+  const places=circlePlaces(cups);
+  setTimeout(circleRefresh,60); // quiet background freshness — re-renders only if something moved
+  return `
+    <div class="hero">
+      <div class="eyebrow">The cup elsewhere</div>
+      <h2>What your people are drinking.</h2>
+      <div class="origin">${sources.length} record${sources.length>1?'s':''} in reach — read only, always. <a class="link" onclick="openCupPrimer()">How to read a cup</a></div>
+    </div>
+    ${cups.length?`
+    <div class="section-head"><h2>The stream</h2><span class="n-note">n=${cups.length}</span></div>
+    ${cups.slice(0,20).map(feedRow).join('')}
+    <div class="section-head"><h2>Places worth the walk</h2><span class="n-note">n=${places.length}</span></div>
+    ${places.slice(0,8).map(placeCard).join('')}`
+    :`<div class="empty">No café cups on anyone's record yet. The stream begins with their next cup out.</div>`}
+    <div class="qm-seal">Friends<span class="em">Read the record. Steal the order. Go.</span></div>`;
+}
+
 /* ============ quick start ============ */
 const firstRun=()=>!D.setups.length&&!D.bags.length&&!D.cups.length;
 function openGuide(){
@@ -1972,6 +2181,7 @@ function openGuide(){
     ${TABS.map(t=>`<div class="gtab"><span class="ic">${t.ic}</span><span class="nm">${t.label}</span><span class="ds">${{
       field:'What you use daily. Log a brew, café cup, open bags with rest state, recent cups.',
       cafes:'Your café passport. Every shop you log, with your average, usual order, visits, and spend. Tap one for every cup you had there.',
+      circle:'Other people\'s café cups — one stream, and the places worth the walk. Read only, always. You never have to log a thing to use it.',
       bags:'Every bag, photo and rest chip. Tap one to see it, edit it, or brew it.',
       setups:'Your assemblies. Change a burr, a basket, the water — that is a <em>new</em> Setup, not an edit.',
       trace:'The dial-in, per bag. Solid line = grind. Hollow circles = hedonic.',
@@ -2015,7 +2225,7 @@ function openGuide(){
 
   <h2>Sync — the record, everywhere</h2>
   <div class="card">
-    <div class="small">Optional. Connect to a CARTA sync server from the <strong>Ledger</strong> tab (name + passcode; run your own server — one file, zero dependencies, see <code>server/README.md</code>). Your ledger then follows you across devices, and everyone on the server shows up under Users — tap to view their ledger, read only, live from the server.</div>
+    <div class="small">Optional. Connect to a CARTA sync server from the <strong>Ledger</strong> tab (name + passcode; run your own server — one file, zero dependencies, see <code>server/README.md</code>). Your ledger then follows you across devices, and everyone on the server shows up under Users — tap to view their ledger, read only, live from the server. Their café cups also pool into the <strong>Friends</strong> tab — one stream, one list of places worth the walk.</div>
     <div class="muted small" style="margin-top:6px">Offline-first, always: no server or no signal changes nothing. Edits queue and sync when the app comes back to the foreground. If two devices log at once, the record merges — both brews survive.</div>
   </div>
   <button class="btn btn-graphite" style="margin-top:10px" onclick="exportJSON()">Export ledger now</button>

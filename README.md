@@ -9,10 +9,11 @@ measured, adjusted, and made again. Café is received, experienced, and returned
 Both end in the same honest record of what was in the cup and whether it was worth
 finding again.
 
-The primary experience is deliberately only three places:
+The primary experience is deliberately only four places:
 
 - **Home** — resume the coffee in hand from the last cup.
 - **Café** — remember the last cup out and the places worth returning to.
+- **Friends** — read other people's café cups; read only, always.
 - **Record** — see one preference across both contexts.
 
 See [NORTH_STAR.md](NORTH_STAR.md) for the product thesis and restraint standard.
@@ -45,6 +46,30 @@ The **Cafés** tab is a passport of every shop you log — your average, visit c
 - **Home vs café.** When you've had the same beans at home, the café cup says so — your average out against your average in. The shape of how a preference travels, not a verdict.
 
 The café screen and the brew screen are deliberately the same shape: **Coffee → Preparation → Cup.** Both end in a hedonic 1–9 and what you found, so a cup out and a cup in are comparable.
+
+## Friends — reading without keeping
+
+Not everyone wants to keep a record. Some people just want to know where to go
+and what to order. The **Friends** tab is for them — and it requires logging
+nothing, ever.
+
+Every record the active user can read — other users on this device, everyone on
+a connected sync server — pools into:
+
+- **The stream** — every café cup your people have logged, newest first: who,
+  where, what they ordered, the score, their words, the photo. Tap a cup for the
+  full card, including the café's address and an Open in Maps link when someone
+  has pinned it.
+- **Places worth the walk** — every café across everyone's records, ranked by
+  their scores, with the cup count, who's been, the usual order, and the pin on
+  the map. Tap a place for every cup anyone has had there.
+- **How to read a cup** — a plain-words primer that decodes the hedonic 1–9
+  scale, the again/pass verdict, and the descriptors for readers who don't keep
+  a ledger of their own.
+
+The stream refreshes quietly from the server when the tab is open and falls back
+to cached copies offline. Everything is read-only — look, don't touch — and any
+cup links through to the friend's whole record via the existing read-only view.
 
 ## Multiple Users
 
