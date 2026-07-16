@@ -237,10 +237,9 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 .brandhead{width:100%;height:84px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block}
 .brandhead.lg{height:140px;margin-bottom:10px}
 .swatch{width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-left:6px;display:none;border:1px solid var(--line)}
-.lookup{display:flex;gap:6px}
-.lookup input{flex:1}
-.lookup button{flex:none;white-space:nowrap}
 .georow{padding:8px 11px;margin:6px 0 0}
+.pinned{font-size:12.5px;color:var(--ink-2);padding:6px 2px}
+.pinned .link{margin-left:8px;cursor:pointer}
 .trace-more{margin-bottom:12px}
 .trace-more>summary{font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;padding:4px 0;list-style:none}
 .trace-more>summary::-webkit-details-marker{display:none}
@@ -394,10 +393,14 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='1.5.0';
+const APP_VERSION='1.5.1';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'1.5.1',date:'Jul 16, 2026',title:'The café, found faster',items:[
+    'Look a café up by its own name. Leave the address blank and the map search uses the shop you already named — type an address only if you want to narrow it.',
+    'Fixed the café address field being squeezed off the edge of the screen. The café page reads cleanly now.',
+  ]},
   {v:'1.5.0',date:'Jul 16, 2026',title:'The café, traceable',items:[
     'Each café gets its own page. Photograph the branding — the sign, the cup, the storefront — and the café takes on a colour read straight from that photo.',
     'Look up a café\'s address online and pin it, then open it in Maps from the café\'s page. Type it by hand and it still saves — the lookup is a convenience, not a requirement.',
@@ -1270,11 +1273,12 @@ function openCafeProfile(shop){
   <div class="sub">The café's own page — the branding you walk past, the corner it's on.</div>
   <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">
     ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the branding — sign, cup, storefront'}</div>
-  <div class="muted small" style="margin:-6px 2px 12px">The café's colour is read from this photo.<span id="accentswatch" class="swatch"${photoAccent?` style="background:${photoAccent};display:inline-block"`:''}></span></div>
+  <div class="muted small" style="margin:-6px 2px 14px">Its colour is read from the photo.<span id="accentswatch" class="swatch"${photoAccent?` style="background:${photoAccent};display:inline-block"`:''}></span></div>
   <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="p_city" value="${esc(city)}" placeholder="Los Angeles"></label>
   <label class="f"><span class="l">Address <span class="opt">optional</span></span>
-    <div class="lookup"><input type="text" id="p_address" value="${esc(p.address||'')}" placeholder="type, then look it up">
-      <button class="btn btn-quiet" type="button" onclick="geoLookup()">Look up</button></div></label>
+    <input type="text" id="p_address" value="${esc(p.address||'')}" placeholder="street address — or just use the button"></label>
+  <button class="btn btn-quiet" type="button" onclick="geoLookup(${jsq(shop)})">Find ${esc(shop)} on the map</button>
+  <div class="muted small" style="margin:6px 2px 0">Looks up the address above — or the café's name, if you leave it blank. Offline, the text still saves without a pin.</div>
   <div id="georesults"></div>
   <label class="f"><span class="l">A line for the record <span class="opt">optional</span></span><input type="text" id="p_notes" value="${esc(p.notes||'')}" placeholder="the one worth the walk"></label>
   <button class="btn btn-primary" onclick="saveCafeProfileForm(${jsq(shop)})">Save café</button>
@@ -1288,25 +1292,28 @@ function saveCafeProfileForm(shop){
   save();openShopDetail(shop);toast('Café saved');
 }
 // Online geocode (OpenStreetMap Nominatim — no key). Progressive enhancement: type wins offline.
+// The query prefers a typed address, else falls back to the café's own name + city — so a lookup
+// needs no typing at all: the shop the record already knows becomes the search.
 let geoPick={address:'',lat:null,lon:null};
-async function geoLookup(){
-  const q=val('p_address')||val('p_city');
+async function geoLookup(shop){
+  const q=val('p_address')||[shop,val('p_city')].filter(Boolean).join(', ');
   const box=document.getElementById('georesults');
   if(!q){if(box)box.innerHTML='';return}
-  if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Looking up…</div>';
+  if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Searching the map…</div>';
   try{
     const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
     const list=await r.json();
     if(!box)return;
-    if(!list||!list.length){box.innerHTML='<div class="muted small" style="padding:6px 2px">Nothing found — the typed address still saves.</div>';return}
-    box.innerHTML=list.map(o=>`<div class="card tap georow" onclick="geoChoose(${jsq(o.display_name)},${jsq(String(o.lat))},${jsq(String(o.lon))})"><div class="small">${esc(o.display_name)}</div></div>`).join('');
+    if(!list||!list.length){box.innerHTML='<div class="muted small" style="padding:6px 2px">Nothing found for that. Type the address by hand — it still saves.</div>';return}
+    box.innerHTML=`<div class="muted small" style="padding:6px 2px 2px">Tap the right one:</div>`+list.map(o=>`<div class="card tap georow" onclick="geoChoose(${jsq(o.display_name)},${jsq(String(o.lat))},${jsq(String(o.lon))})"><div class="small">${esc(o.display_name)}</div></div>`).join('');
   }catch(e){if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Offline — type the address; it saves without the pin.</div>'}
 }
 function geoChoose(address,lat,lon){
   geoPick={address,lat:Number(lat),lon:Number(lon)};
   const inp=document.getElementById('p_address');if(inp)inp.value=address;
-  const box=document.getElementById('georesults');if(box)box.innerHTML=`<div class="muted small" style="padding:4px 2px">Pinned · ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}</div>`;
+  const box=document.getElementById('georesults');if(box)box.innerHTML=`<div class="pinned">Pinned · ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)} <a class="link" onclick="geoUnpin()">remove</a></div>`;
 }
+function geoUnpin(){geoPick={address:val('p_address'),lat:null,lon:null};const box=document.getElementById('georesults');if(box)box.innerHTML='';}
 
 /* ============ users ============ */
 // Peek at another user's stored ledger without loading it into the app.
