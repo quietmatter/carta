@@ -214,6 +214,30 @@ ol.steps .go{font-size:12px;color:var(--accent);font-weight:600;margin-top:5px;d
 code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1px 5px;border-radius:4px}
 .helpbtn{color:#7E776A;font-size:15px;padding:0 0 0 12px;line-height:1}
 .helpbtn:active{color:var(--paper)}
+/* café */
+.opt{text-transform:none;letter-spacing:0;color:var(--ink-3);font-weight:400;font-size:10px}
+.cafeback{background:#F1EBDD;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:8px 11px;font-size:12.5px;color:var(--ink-2);margin:2px 0 12px;font-family:var(--serif);font-style:italic}
+.cafeback strong{font-style:normal;color:var(--ink)}
+.verdict{display:flex;gap:6px}
+.verdict button{flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;background:#FBF8F0;color:var(--ink-2);font-size:13px;font-weight:600}
+.verdict button.yes.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.verdict button.no.on{background:var(--ink-2);color:var(--paper);border-color:var(--ink-2)}
+.badge{display:inline-block;font-size:10px;letter-spacing:.05em;padding:1px 7px;border-radius:99px;background:var(--accent);color:#fff;font-weight:600;vertical-align:middle}
+.badge.ghost{background:none;border:1px solid var(--line);color:var(--ink-3)}
+.shopcard .big{font-size:22px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+.cupthumb{width:100%;max-height:220px;object-fit:cover;border-radius:8px;margin:2px 0 10px;display:block}
+.rowthumb{width:44px;height:44px;object-fit:cover;border-radius:6px;flex:none}
+/* what's new / changelog */
+.rel{border-left:3px solid var(--line);padding:2px 0 2px 14px;margin:0 0 16px}
+.rel.latest{border-left-color:var(--accent)}
+.rel-h{display:flex;align-items:baseline;gap:8px}
+.rel-v{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.rel-d{font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.rel-new{font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:var(--accent);color:#fff;padding:1px 6px;border-radius:99px;font-weight:700}
+.rel-t{font-size:14px;font-weight:700;margin:2px 0 4px}
+.rel-l{list-style:none;margin:0}
+.rel-l li{font-size:13px;color:var(--ink-2);padding:2px 0 2px 14px;position:relative}
+.rel-l li::before{content:"—";position:absolute;left:0;color:var(--ink-3)}
 </style>
 </head>
 <body>
@@ -232,7 +256,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 'use strict';
 /* ============ store ============ */
 const KEY='carta.v1';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],createdAt:new Date().toISOString()};
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafeFavs:[],createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
 let D=load();
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):clone(blank)}catch(e){return clone(blank)}}
@@ -272,10 +296,53 @@ const brewsOf=bagId=>D.brews.filter(x=>x.bagId===bagId).sort(byNew);
 const fmtTime=s=>s==null?'—':`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
 const DESCRIPTORS=['floral','citrus','berry','stone fruit','tropical','chocolate','nutty','caramel','honey','spice','tea-like','fermented','roasted','vegetal'];
 const INSTR=['measured','estimated','recalled'];
+const CAFE_STYLES=['Espresso','Milk','Filter','Other'];
+const CAFE_DRINKS={
+  Espresso:['espresso','doppio','ristretto','macchiato','americano','cortado'],
+  Milk:['cortado','flat white','cappuccino','latte','piccolo','mocha'],
+  Filter:['pour over','batch brew','V60','Chemex','cold brew','Aeropress'],
+  Other:['tea','matcha','affogato','hot chocolate','other'],
+};
+const cafeCups=()=>D.cups.filter(c=>c.kind==='cafe');
+const modeOf=arr=>{if(!arr.length)return null;const m={};let best=null,bn=0;arr.forEach(v=>{m[v]=(m[v]||0)+1;if(m[v]>bn){bn=m[v];best=v}});return best};
+const avgHedonic=cups=>{const h=cups.map(c=>c.hedonic).filter(v=>v!=null);return h.length?(h.reduce((a,b)=>a+b,0)/h.length).toFixed(1):null};
+const money=n=>n==null?null:'$'+(n%1===0?String(n):n.toFixed(2));
+const roasterList=()=>[...new Set([...D.bags.map(b=>b.roaster),...cafeCups().map(c=>c.roaster)].filter(Boolean))];
+// escape a string for use inside a single-quoted JS call within a double-quoted HTML attribute
+const jsq=s=>`'${String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;')}'`;
+
+/* ============ version tracker ============ */
+const APP_VERSION='1.1.0';
+const SEEN_KEY='carta.seenVersion';
+// Newest first. Each release the record itself remembers.
+const CHANGELOG=[
+  {v:'1.1.0',date:'Jul 16, 2026',title:'Café cups, reimagined',items:[
+    'New Cafés tab — a passport of every shop you log, with your average, visit count, usual order, and spend.',
+    'Richer café logging: style, smart drink chips, the beans they poured, city, price, a cup photo, and an order-again verdict.',
+    'A shop remembers you — re-enter a café and it greets you with your visit number and your usual.',
+    'Tap any café to see every cup you have had there, and favorite the ones worth the walk.',
+    'This screen. Version notes now live in the app so you can see what changed.',
+  ]},
+  {v:'1.0.3',date:'Jul 2026',title:'Drawer handle',items:[
+    'Sheets can be pulled down by the grab handle to dismiss — flick or drag, it follows your finger.',
+  ]},
+  {v:'1.0.2',date:'Jul 2026',title:'Cup removal',items:[
+    'Remove a cup from the ledger from its detail view. The brew it came from stays on the record.',
+  ]},
+  {v:'1.0.1',date:'Jul 2026',title:'Home-screen fit',items:[
+    'Layout corrected for Safari added-to-home-screen — the tab bar now settles to the true bottom.',
+  ]},
+  {v:'1.0.0',date:'2026',title:'The record begins',items:[
+    'Setups, bags, brews, and cups. The dial-in Trace. Full JSON export. The whole ledger, yours.',
+  ]},
+];
+const lastSeenVersion=()=>{try{return localStorage.getItem(SEEN_KEY)}catch(e){return null}};
+const markVersionSeen=()=>{try{localStorage.setItem(SEEN_KEY,APP_VERSION)}catch(e){}};
 
 /* ============ router ============ */
 const TABS=[
   {id:'field',ic:'●',label:'Field'},
+  {id:'cafes',ic:'☕',label:'Cafés'},
   {id:'bags',ic:'▤',label:'Bags'},
   {id:'setups',ic:'⚙',label:'Setups'},
   {id:'trace',ic:'∿',label:'Trace'},
@@ -287,7 +354,7 @@ function render(){
   document.getElementById('tabs').innerHTML=TABS.map(t=>
     `<button class="${tab===t.id?'on':''}" onclick="go('${t.id}')"><span class="ic">${t.ic}</span>${t.label}</button>`).join('');
   const m=document.getElementById('main');
-  m.innerHTML=({field:vField,bags:vBags,setups:vSetups,trace:vTrace,ledger:vLedger})[tab]();
+  m.innerHTML=({field:vField,cafes:vCafes,bags:vBags,setups:vSetups,trace:vTrace,ledger:vLedger})[tab]();
   m.scrollTop=0;window.scrollTo(0,0);
 }
 
@@ -318,36 +385,55 @@ function vField(){
 }
 function cupRow(c){
   const b=bagById(c.bagId);
-  const what=c.kind==='cafe'?`${esc(c.shop||'café')} · ${esc(c.drink||'cup')}`:esc(bagName(b));
+  const cafe=c.kind==='cafe';
+  const what=cafe?`${esc(c.shop||'café')}${c.drink?` · ${esc(c.drink)}`:''}`:esc(bagName(b));
   const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
-  const meta=brew?`<span class="num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span>`:`<span class="chip">${c.instrumentation||'recalled'}</span>`;
+  const beans=[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ');
+  const meta=brew
+    ?`<span class="num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span>`
+    :cafe
+      ?`${c.city?esc(c.city)+(beans?' · ':''):''}${beans||(c.city?'':`<span class="chip">${c.instrumentation||'recalled'}</span>`)}`
+      :`<span class="chip">${c.instrumentation||'recalled'}</span>`;
+  const verdict=c.again===true?' <span class="badge">again</span>':c.again===false?' <span class="badge ghost">pass</span>':'';
   return `<div class="card tap" onclick="openCupDetail('${c.id}')">
-    <div class="row"><span class="small"><strong>${what}</strong></span>
-      <span class="num" style="font-size:20px;font-weight:700;color:var(--accent)">${c.hedonic??'—'}</span></div>
-    <div class="muted small">${meta}</div>
-    ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic">${c.descriptors.map(esc).join(', ')}</div>`:''}
-    <div class="muted" style="font-size:11px" >${new Date(c.createdAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+    <div style="display:flex;gap:10px">
+      ${cafe&&c.photo?`<img class="rowthumb" src="${c.photo}">`:''}
+      <div style="flex:1;min-width:0">
+        <div class="row"><span class="small"><strong>${what}</strong>${verdict}</span>
+          <span class="num" style="font-size:20px;font-weight:700;color:var(--accent)">${c.hedonic??'—'}</span></div>
+        <div class="muted small">${meta}${cafe&&c.price!=null?`<span class="num" style="float:right">${money(c.price)}</span>`:''}</div>
+        ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic">${c.descriptors.map(esc).join(', ')}</div>`:''}
+        <div class="muted" style="font-size:11px">${new Date(c.createdAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+      </div>
+    </div>
   </div>`;
 }
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
   const b=bagById(c.bagId);
-  const what=c.kind==='cafe'?`${esc(c.shop||'café')} · ${esc(c.drink||'cup')}`:esc(bagName(b));
+  const cafe=c.kind==='cafe';
+  const what=cafe?`${esc(c.shop||'café')}${c.drink?` · ${esc(c.drink)}`:''}`:esc(bagName(b));
   const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
   const setup=brew?setupById(brew.setupId):null;
   openSheet(`
   <h3>${what}</h3>
-  <div class="sub">${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+  <div class="sub">${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${cafe&&c.city?` · ${esc(c.city)}`:''}</div>
+  ${cafe&&c.photo?`<img class="cupthumb" src="${c.photo}">`:''}
   <div class="card">
     <div class="kv"><span class="k">Hedonic</span><span class="v num">${c.hedonic??'—'}</span></div>
-    <div class="kv"><span class="k">Kind</span><span class="v">${c.kind==='cafe'?'café cup':'brew'}</span></div>
+    <div class="kv"><span class="k">Kind</span><span class="v">${cafe?'café cup':'brew'}</span></div>
+    ${cafe&&c.style?`<div class="kv"><span class="k">Style</span><span class="v">${esc(c.style)}</span></div>`:''}
+    ${cafe&&(c.roaster||c.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${cafe&&c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
+    ${cafe&&c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'order again':'pass'}</span></div>`:''}
     <div class="kv"><span class="k">Instrumentation</span><span class="v">${esc(c.instrumentation)||'—'}</span></div>
     ${brew?`<div class="kv"><span class="k">Brew</span><span class="v num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span></div>`:''}
     ${setup?`<div class="kv"><span class="k">Setup</span><span class="v">${esc(setup.name)}</span></div>`:''}
   </div>
   ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
-  <div class="muted small" style="margin-bottom:10px">Removing a cup deletes this impression only. ${brew?'The brew it came from stays in the ledger.':''}</div>
+  ${cafe&&c.shop?`<button class="btn btn-quiet" onclick="logAnotherHere('${c.id}')">Log another here</button>`:''}
+  <div class="muted small" style="margin:10px 0">Removing a cup deletes this impression only. ${brew?'The brew it came from stays in the ledger.':''}</div>
   <button class="btn btn-danger" onclick="removeCup('${c.id}')">Remove from ledger</button>
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
@@ -436,7 +522,9 @@ function vLedger(){
     <div class="kv"><span class="k">Brews logged</span><span class="v num">${D.brews.length} / 40</span></div>
   </div>
   <h2>The manual</h2>
-  <button class="btn btn-quiet" onclick="openGuide()">Quick start</button>`;
+  <button class="btn btn-quiet" onclick="openGuide()">Quick start</button>
+  <button class="btn btn-quiet" onclick="openWhatsNew(false)">What's new</button>
+  <div class="muted small serif" style="font-style:italic;text-align:center;margin:12px 2px 2px">CARTA v${APP_VERSION} — we keep the record.</div>`;
 }
 
 /* ============ sheet plumbing ============ */
@@ -529,6 +617,7 @@ function nudge(id,dir){const s=dialState[id]; s.v=(s.v==null?(s.min??0):s.v)+dir
 
 /* ============ segmented + hedonic + descriptors state ============ */
 let segState={},hedState=null,descState=new Set();
+let cafeStyleState='Espresso',againState=null;
 function seg(id,options,selected){segState[id]=selected;
   return `<div class="seg" id="seg_${id}">${options.map(o=>
     `<button class="${o===selected?'on':''}" onclick="segPick('${id}','${o}',this)">${o}</button>`).join('')}</div>`;}
@@ -723,32 +812,160 @@ function openImpression(brew){
 function saveCup(kind,brewId,bagId,skip){
   if(!skip&&hedState==null&&kind==='home'){toast('One tap on the scale, or skip');return}
   const brew=brewId?D.brews.find(x=>x.id===brewId):null;
-  D.cups.push({id:uid(),createdAt:new Date().toISOString(),kind,brewId:brewId||null,bagId:bagId||null,
+  const cup={id:uid(),createdAt:new Date().toISOString(),kind,brewId:brewId||null,bagId:bagId||null,
     shop:kind==='cafe'?val('c_shop'):null,drink:kind==='cafe'?val('c_drink'):null,
     hedonic:skip?null:hedState,descriptors:skip?[]:[...descState],notes:skip?'':val('c_notes'),
-    instrumentation:kind==='cafe'?'recalled':(brew?brew.instrumentation:'measured'),blind:false,runId:null});
-  save();closeSheet();go('field');toast(skip?'Brew recorded':'Recorded. The ritual is the point.');
+    instrumentation:kind==='cafe'?'recalled':(brew?brew.instrumentation:'measured'),blind:false,runId:null};
+  if(kind==='cafe'){
+    cup.city=val('c_city');cup.style=cafeStyleState;cup.roaster=val('c_roaster');
+    cup.origin=val('c_origin');cup.price=numv('c_price');cup.photo=photoData;cup.again=againState;
+  }
+  D.cups.push(cup);save();closeSheet();
+  if(kind==='cafe'){go(cup.shop?'cafes':'field');toast('Café cup logged');}
+  else{go('field');toast(skip?'Brew recorded':'Recorded. The ritual is the point.');}
 }
 
 /* ============ café cup ============ */
-function openCafe(){
-  const shops=[...new Set(D.cups.filter(c=>c.shop).map(c=>c.shop))];
+function openCafe(pre){
+  pre=pre||{};
+  const shops=[...new Set(cafeCups().map(c=>c.shop).filter(Boolean))];
+  const cities=[...new Set(cafeCups().map(c=>c.city).filter(Boolean))];
+  photoData=null;cafeStyleState='Espresso';againState=null;
   openSheet(`
   <h3>Café cup</h3>
-  <div class="sub">8 seconds. Valid record, flagged low-instrumentation, down-weighted honestly.</div>
+  <div class="sub">Fast by default — a shop and a tap is a valid record. Add as much as the cup deserves.</div>
+  <div id="cafehint"></div>
   <div class="grid2">
-    <label class="f"><span class="l">Shop</span><input type="text" id="c_shop" list="shoplist" placeholder="Kumquat">
+    <label class="f"><span class="l">Shop</span><input type="text" id="c_shop" list="shoplist" value="${esc(pre.shop||'')}" placeholder="Kumquat" oninput="cafeShopHint()">
       <datalist id="shoplist">${shops.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
-    <label class="f"><span class="l">Drink</span><input type="text" id="c_drink" placeholder="pour over / espresso"></label>
+    <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="c_city" list="citylist" value="${esc(pre.city||'')}" placeholder="Los Angeles">
+      <datalist id="citylist">${cities.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
   </div>
+  <label class="f"><span class="l">Style</span>
+    <div class="seg" id="cafestyleseg">${CAFE_STYLES.map(o=>`<button class="${o===cafeStyleState?'on':''}" onclick="cafeStylePick('${o}',this)">${o}</button>`).join('')}</div></label>
+  <label class="f"><span class="l">Drink</span>
+    <input type="text" id="c_drink" placeholder="tap one below, or type your own">
+    <div class="desc" id="cafedrinks">${cafeDrinkChips(cafeStyleState)}</div></label>
+  <div class="grid2">
+    <label class="f"><span class="l">Beans <span class="opt">optional</span></span><input type="text" id="c_roaster" list="roasterlist" placeholder="roaster">
+      <datalist id="roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
+    <label class="f"><span class="l">Origin <span class="opt">optional</span></span><input type="text" id="c_origin" placeholder="Ethiopia / blend"></label>
+  </div>
+  <div class="grid2">
+    <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" placeholder="$"></label>
+    <label class="f"><span class="l">Order again?</span>
+      <div class="verdict" id="verdict">
+        <button class="yes" onclick="pickAgain(true,this)">Again</button>
+        <button class="no" onclick="pickAgain(false,this)">Pass</button>
+      </div></label>
+  </div>
+  <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">Photograph the cup <span class="opt">optional</span></div>
   <label class="f"><span class="l">Hedonic (1–9)</span>${hedonicRow()}</label>
   <label class="f"><span class="l">What you found (optional)</span>${descRow()}</label>
   <label class="f"><span class="l">A line for the record (optional)</span><input type="text" id="c_notes"></label>
-  <button class="btn btn-primary" onclick="saveCafeCup()">Done</button>`);
+  <button class="btn btn-primary" onclick="saveCafeCup()">Log this cup</button>`);
+  cafeShopHint();
 }
+function cafeDrinkChips(style){return (CAFE_DRINKS[style]||[]).map(d=>`<button onclick="pickDrink('${d}',this)">${d}</button>`).join('')}
+function cafeStylePick(style,el){cafeStyleState=style;
+  el.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===el));
+  const box=document.getElementById('cafedrinks');if(box)box.innerHTML=cafeDrinkChips(style);}
+function pickDrink(d,el){const inp=document.getElementById('c_drink');if(inp)inp.value=d;
+  el.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===el));}
+function pickAgain(v,el){againState=(againState===v)?null:v;
+  el.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+  if(againState!==null)el.classList.add('on');}
+function cafeShopHint(){
+  const el=document.getElementById('cafehint');if(!el)return;
+  const v=val('c_shop').toLowerCase();
+  if(!v){el.innerHTML='';return;}
+  const past=cafeCups().filter(c=>(c.shop||'').trim().toLowerCase()===v);
+  if(!past.length){el.innerHTML='';return;}
+  const usual=modeOf(past.map(c=>c.drink).filter(Boolean));
+  const avg=avgHedonic(past);
+  el.innerHTML=`<div class="cafeback">Welcome back — visit ${past.length+1}.${usual?` Usual: <strong>${esc(usual)}</strong>.`:''}${avg?` You average <strong>${avg}</strong> here.`:''}</div>`;
+}
+function logAnotherHere(id){const c=cupById(id);closeSheet();openCafe({shop:c?c.shop:'',city:c?c.city:''});}
+function cafeHere(shop,city){closeSheet();openCafe({shop,city});}
 function saveCafeCup(){
   if(!val('c_shop')&&hedState==null){toast('A shop or a score — give it one');return}
   saveCup('cafe',null,null,false);
+}
+
+/* ============ café passport ============ */
+function isCafeFav(shop){return (D.cafeFavs||[]).some(x=>x.toLowerCase()===(shop||'').trim().toLowerCase())}
+function toggleCafeFav(shop){
+  D.cafeFavs=D.cafeFavs||[];
+  const i=D.cafeFavs.findIndex(x=>x.toLowerCase()===shop.trim().toLowerCase());
+  const was=i>=0;
+  if(was)D.cafeFavs.splice(i,1);else D.cafeFavs.push(shop.trim());
+  save();openShopDetail(shop);toast(was?'Removed from favorites':'Favorited');
+}
+function shopAgg(){
+  const map={};
+  cafeCups().filter(c=>c.shop).forEach(c=>{const k=c.shop.trim();(map[k]=map[k]||{shop:k,cups:[]}).cups.push(c)});
+  return Object.values(map).map(s=>{
+    const cups=s.cups;
+    s.visits=cups.length;
+    s.avg=avgHedonic(cups);
+    s.usual=modeOf(cups.map(c=>c.drink).filter(Boolean));
+    s.city=modeOf(cups.map(c=>c.city).filter(Boolean));
+    s.spend=cups.reduce((a,c)=>a+(c.price||0),0);
+    s.best=cups.reduce((m,c)=>Math.max(m,c.hedonic||0),0);
+    s.last=cups.slice().sort(byNew)[0].createdAt;
+    s.fav=isCafeFav(s.shop);
+    return s;
+  }).sort((a,b)=>(b.fav-a.fav)||b.last.localeCompare(a.last));
+}
+function shopCard(s){
+  return `<div class="card tap shopcard" onclick="openShopDetail(${jsq(s.shop)})">
+    <div class="row">
+      <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">★</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}</span>`:''}</span>
+      <span class="big">${s.avg??'—'}</span>
+    </div>
+    <div class="muted small">${s.visits} visit${s.visits>1?'s':''}${s.usual?` · usual <strong>${esc(s.usual)}</strong>`:''}${s.spend?` · ${money(s.spend)}`:''}</div>
+  </div>`;
+}
+function vCafes(){
+  const all=cafeCups();
+  const shops=shopAgg();
+  const cities=[...new Set(all.map(c=>c.city).filter(Boolean))];
+  const spend=all.reduce((a,c)=>a+(c.price||0),0);
+  const top=shops.filter(s=>s.visits>=2&&s.avg!=null).sort((a,b)=>(b.avg-a.avg))[0];
+  return `<button class="btn btn-primary" onclick="openCafe()">Log a café cup</button>
+  ${all.length?`
+  <div class="loop" style="margin-top:12px">
+    <div class="s"><div class="k">Cafés</div><div class="v num">${shops.length}</div></div>
+    <div class="s"><div class="k">Cups</div><div class="v num">${all.length}</div></div>
+    <div class="s"><div class="k">Cities</div><div class="v num">${cities.length}</div></div>
+    <div class="s"><div class="k">Spend</div><div class="v num">${spend?money(spend):'—'}</div></div>
+  </div>`:''}
+  ${top?`<div class="muted small serif" style="font-style:italic;margin:4px 2px 2px">Your bench: <strong>${esc(top.shop)}</strong>${top.city?`, ${esc(top.city)}`:''} — averaging ${top.avg} across ${top.visits} visits.</div>`:''}
+  <h2>Cafés <span class="n-note">n=${shops.length}</span></h2>
+  ${shops.length?shops.map(shopCard).join(''):`<div class="empty">No café cups yet. Log the next flat white you have out — a shop, a style, one tap on the scale.</div>`}`;
+}
+function openShopDetail(shop){
+  const cups=cafeCups().filter(c=>(c.shop||'').trim()===shop.trim()).sort(byNew);
+  if(!cups.length){go('cafes');return}
+  const avg=avgHedonic(cups),usual=modeOf(cups.map(c=>c.drink).filter(Boolean));
+  const city=modeOf(cups.map(c=>c.city).filter(Boolean));
+  const spend=cups.reduce((a,c)=>a+(c.price||0),0);
+  const best=cups.reduce((m,c)=>Math.max(m,c.hedonic||0),0);
+  const fav=isCafeFav(shop);
+  openSheet(`
+  <h3>${esc(shop)}</h3>
+  <div class="sub">${city?esc(city)+' · ':''}${cups.length} cup${cups.length>1?'s':''} on the record</div>
+  <div class="card">
+    <div class="kv"><span class="k">Average</span><span class="v num">${avg??'—'}</span></div>
+    <div class="kv"><span class="k">Best cup</span><span class="v num">${best||'—'}</span></div>
+    <div class="kv"><span class="k">Your usual</span><span class="v">${usual?esc(usual):'—'}</span></div>
+    ${spend?`<div class="kv"><span class="k">Total spend</span><span class="v num">${money(spend)}</span></div>`:''}
+    <div class="kv"><span class="k">Last visit</span><span class="v">${new Date(cups[0].createdAt).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}</span></div>
+  </div>
+  <button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Log a cup here</button>
+  <button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'★ Remove from favorites':'☆ Add to favorites'}</button>
+  <h2>Every cup</h2>
+  ${cups.map(cupRow).join('')}`);
 }
 
 /* ============ export / import ============ */
@@ -830,18 +1047,19 @@ function openGuide(){
   <div class="card">
     <strong class="small">The cup — hedonic 1–9</strong>
     <div class="muted small">One tap, optional descriptors, optional line. No opinion? Hit <strong>Skip impression</strong> — the brew still records. Don't invent a score to satisfy a form.</div>
-    <strong class="small" style="display:block;margin-top:10px">Café cup — 8 seconds</strong>
-    <div class="muted small">Shop, drink, one tap. Auto-flagged <span class="chip">recalled</span> and down-weighted honestly. Log it even when you know nothing — a low-instrumentation record beats a missing one.</div>
+    <strong class="small" style="display:block;margin-top:10px">Café cup — as fast or as full as you like</strong>
+    <div class="muted small">A shop and one tap is a valid record — always auto-flagged <span class="chip">recalled</span> and down-weighted honestly. But there's room now: style and a drink chip, the beans they poured, city, price, a photo of the cup, and an <em>order-again</em> verdict. Every café you log builds up in the <strong>Cafés</strong> tab — your passport, with your average, your usual, and what you've spent, per shop.</div>
   </div>
 
-  <h2>The five tabs</h2>
+  <h2>The tabs</h2>
   <div class="card">
     ${TABS.map(t=>`<div class="gtab"><span class="ic">${t.ic}</span><span class="nm">${t.label}</span><span class="ds">${{
       field:'What you use daily. Log a brew, café cup, open bags with rest state, recent cups.',
+      cafes:'Your café passport. Every shop you log, with your average, usual order, visits, and spend. Tap one for every cup you had there.',
       bags:'Every bag, photo and rest chip. Tap one to see it, edit it, or brew it.',
       setups:'Your assemblies. Change a burr, a basket, the water — that is a <em>new</em> Setup, not an edit.',
       trace:'The dial-in, per bag. Solid line = grind. Hollow circles = hedonic.',
-      ledger:'Counts, export, import, and the day-60 gate.'}[t.id]}</span></div>`).join('')}
+      ledger:'Counts, export, import, the day-60 gate, and the changelog.'}[t.id]}</span></div>`).join('')}
   </div>
 
   <h2>The rest chip</h2>
@@ -889,10 +1107,34 @@ function openGuide(){
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
 
+/* ============ what's new ============ */
+function relBlock(r,latest){
+  return `<div class="rel${latest?' latest':''}">
+    <div class="rel-h"><span class="rel-v">v${r.v}</span><span class="rel-d">${esc(r.date)}</span>${latest?'<span class="rel-new">new</span>':''}</div>
+    <div class="rel-t">${esc(r.title)}</div>
+    <ul class="rel-l">${r.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+  </div>`;
+}
+function openWhatsNew(auto){
+  markVersionSeen();
+  openSheet(`
+  <h3>What's new</h3>
+  <div class="sub">CARTA v${APP_VERSION} · the record, better kept${auto?' — here is what changed since you were last in.':''}</div>
+  ${CHANGELOG.map((r,i)=>relBlock(r,i===0)).join('')}
+  <div class="empty" style="margin-top:2px">We do not sell coffee. We keep the record.</div>
+  <button class="btn btn-primary" onclick="closeSheet()">Got it</button>`);
+}
+
 /* ============ boot ============ */
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
 render();
+// Version tracker: greet returning users with the changelog on a version bump.
+// Brand-new users get onboarding instead — just mark this version as seen for them.
+if(lastSeenVersion()!==APP_VERSION){
+  if(firstRun())markVersionSeen();
+  else setTimeout(()=>openWhatsNew(true),350);
+}
 </script>
 </body>
 </html>
