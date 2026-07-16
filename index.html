@@ -216,8 +216,8 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .wc-top{display:flex;justify-content:space-between;align-items:center}
 .wc-mark{font-family:var(--sans);font-size:12px;letter-spacing:.42em;font-weight:600;color:var(--ink)}
 .wc-prog{display:flex;gap:6px;align-items:center}
-.wc-prog i{width:18px;height:2px;background:var(--line-strong);opacity:.22;transition:opacity .35s,background .35s}
-.wc-prog i.on{opacity:1;background:var(--accent)}
+.wc-prog i{width:18px;height:1px;background:var(--ink);opacity:.18;transition:opacity .35s}
+.wc-prog i.on{opacity:1}
 .wc-body{padding:34px 0 8px}
 .wc-eyebrow{font-family:var(--sans);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);font-weight:650;margin-bottom:14px}
 .wc-head{font-family:var(--serif);font-size:42px;line-height:1.0;letter-spacing:-.04em;font-weight:600;color:var(--ink);margin:0 0 18px;max-width:13ch}
@@ -227,15 +227,15 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .wc-note{font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-top:16px;line-height:1.5;max-width:36ch}
 .wc-foot{margin-top:auto;padding-top:22px}
 .wc-seal{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3);text-align:center;margin-top:18px}
-.wc-choice{width:100%;text-align:left;display:flex;gap:15px;align-items:center;
-  border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--paper-card);
-  padding:16px;margin-bottom:10px;transition:background .15s,transform .1s}
-.wc-choice:active{background:var(--paper-2);transform:scale(.99)}
-.wc-choice .g{font-size:21px;line-height:1;color:var(--accent);width:24px;text-align:center;flex:none}
-.wc-choice .tt{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);display:block}
-.wc-choice .dd{font-family:var(--sans);font-size:13px;color:var(--ink-3);margin-top:3px;line-height:1.45;display:block}
-.wc-choice .tag{font-family:var(--sans);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:650;margin-top:7px;display:inline-block}
-.wc-arrow{margin-left:auto;align-self:center;color:var(--ink-3);font-size:17px;flex:none}
+.wc-list{margin-top:28px}
+.wc-item{width:100%;text-align:left;display:flex;align-items:baseline;gap:16px;
+  padding:19px 2px;border-top:1px solid var(--line);transition:background .15s}
+.wc-item:last-of-type{border-bottom:1px solid var(--line)}
+.wc-item:active{background:var(--paper-2)}
+.wc-item .tx{flex:1;min-width:0}
+.wc-item .tt{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.01em;color:var(--ink);display:block}
+.wc-item .dd{font-family:var(--sans);font-size:13px;color:var(--ink-3);margin-top:5px;line-height:1.5;display:block}
+.wc-item .go{align-self:center;color:var(--ink-3);font-size:15px;flex:none}
 .wc-skip{font-family:var(--sans);font-size:12px;color:var(--ink-3);text-decoration:underline;text-underline-offset:3px;text-align:center;width:100%;margin-top:14px;min-height:26px}
 @keyframes wc-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .wc-rise{opacity:0;animation:wc-rise .55s cubic-bezier(.22,.61,.36,1) forwards}
@@ -2333,19 +2333,19 @@ function wcCover(){return `
   </div>`;}
 
 function wcFunnel(){
-  const c=(intent,g,tt,dd,tag,d)=>`<div class="wc-rise" style="animation-delay:${d}s">
-    <button class="wc-choice" onclick="wcPick('${intent}')">
-      <span class="g">${g}</span>
-      <span style="flex:1;min-width:0"><span class="tt">${tt}</span><span class="dd">${dd}</span>${tag?`<span class="tag">${tag}</span>`:''}</span>
-      <span class="wc-arrow">→</span></button></div>`;
+  const c=(intent,tt,dd,d)=>`<button class="wc-item wc-rise" style="animation-delay:${d}s" onclick="wcPick('${intent}')">
+      <span class="tx"><span class="tt">${tt}</span><span class="dd">${dd}</span></span>
+      <span class="go">&rarr;</span></button>`;
   return `
   <div class="wc-top"><span class="wc-mark">CARTA</span>${wcProg(1)}</div>
   <div class="wc-body">
     <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">Where you'll start</div>
     <h1 class="wc-head sm wc-rise" style="animation-delay:.10s">What brings you in?</h1>
-    ${c('home','&#9679;','The cup at home','Dial it in. Change one thing, log it, watch the line move.',null,'.20')}
-    ${c('cafe','&#9749;','The cup away','Remember the café — and the order worth ordering again.',null,'.27')}
-    ${c('both','&#8734;','Both','One taste, two rooms.','the whole idea','.34')}
+    <div class="wc-list">
+      ${c('home','The cup at home','Dial it in. Change one thing, log it, watch the line move.','.20')}
+      ${c('cafe','The cup away','Remember the café — and the order worth ordering again.','.27')}
+      ${c('both','Both','One taste, two rooms — the whole idea.','.34')}
+    </div>
     <div class="wc-note wc-rise" style="animation-delay:.42s">Nothing here is locked — this only picks your first screen. You can log either kind of cup any time.</div>
   </div>
   <div class="wc-foot"><button class="wc-skip" onclick="wcGo(0)">&larr; Back</button></div>`;
