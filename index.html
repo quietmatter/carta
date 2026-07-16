@@ -139,9 +139,23 @@ nav.tabs button.on{color:var(--paper)}
   background:var(--paper);border-radius:16px 16px 0 0;z-index:50;
   max-height:92vh;max-height:92dvh;overflow-y:auto;display:none;
   padding:10px 18px calc(20px + env(safe-area-inset-bottom));
+  transition:transform .3s cubic-bezier(.32,.72,0,1);
 }
 .sheet.open{display:block}
-.sheet .grab{width:36px;height:4px;background:var(--line);border-radius:2px;margin:4px auto 12px}
+/* Grab handle: the visible pill is drawn with ::before, but the element itself
+   is a tall, full-width, touch-action:none target so the drag-to-dismiss
+   gesture is easy to catch and never fights the browser's own scrolling. */
+.sheet .grab{
+  height:26px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;
+  cursor:grab;touch-action:none;
+}
+.sheet .grab::before{
+  content:"";width:36px;height:4px;background:var(--line);border-radius:2px;
+  transition:background .15s,width .15s;
+}
+.sheet.dragging{transition:none}
+.sheet.dragging .grab{cursor:grabbing}
+.sheet.dragging .grab::before{background:var(--ink-3);width:46px}
 .sheet h3{font-size:16px;font-weight:700;margin-bottom:2px}
 .sheet .sub{font-family:var(--serif);font-style:italic;color:var(--ink-3);font-size:13px;margin-bottom:14px}
 /* misc */
@@ -426,10 +440,71 @@ function vLedger(){
 }
 
 /* ============ sheet plumbing ============ */
-function openSheet(html){document.getElementById('sheet').innerHTML='<div class="grab"></div>'+html;
-  document.getElementById('sheet').classList.add('open');document.getElementById('sheetbg').classList.add('open');
-  document.getElementById('sheet').scrollTop=0;}
+function openSheet(html){const s=document.getElementById('sheet');
+  s.innerHTML='<div class="grab" aria-hidden="true"></div>'+html;
+  s.classList.remove('dragging');s.style.transform='';document.getElementById('sheetbg').style.opacity='';
+  s.classList.add('open');document.getElementById('sheetbg').classList.add('open');
+  s.scrollTop=0;}
 function closeSheet(){document.getElementById('sheet').classList.remove('open');document.getElementById('sheetbg').classList.remove('open');stopTimer(false)}
+
+/* ============ sheet drag-to-dismiss ============ *
+ * The grab handle (and the sheet body when scrolled to the top) can be pulled
+ * down to dismiss. Follow the finger; on release, snap closed if dragged far
+ * enough or flicked quickly, otherwise snap back. Tapping the backdrop still
+ * works too — this just makes the handle behave like a real handle.          */
+(function initSheetDrag(){
+  const sheet=document.getElementById('sheet');
+  const bg=document.getElementById('sheetbg');
+  let startY=0,dy=0,active=false,dragging=false,startT=0;
+  const yOf=e=>e.touches?e.touches[0].clientY:e.clientY;
+  const onGrab=e=>!!(e.target.closest&&e.target.closest('.grab'));
+
+  function down(e){
+    if(!sheet.classList.contains('open'))return;
+    // Only begin a dismiss-drag from the handle, or from the body when the
+    // sheet is already scrolled to the top — otherwise let content scroll.
+    if(!onGrab(e)&&sheet.scrollTop>0)return;
+    active=true;dragging=false;dy=0;startY=yOf(e);startT=Date.now();
+  }
+  function move(e){
+    if(!active)return;
+    dy=yOf(e)-startY;
+    if(dy<=0){ // pulling up: hand control back to native scroll
+      if(dragging){sheet.classList.remove('dragging');sheet.style.transform='';bg.style.opacity='';}
+      dragging=false;dy=0;return;
+    }
+    dragging=true;
+    sheet.classList.add('dragging');
+    if(e.cancelable)e.preventDefault(); // suppress native scroll while pulling down
+    sheet.style.transform=`translateX(-50%) translateY(${dy}px)`;
+    bg.style.opacity=String(Math.max(0,1-dy/(sheet.offsetHeight||600)));
+  }
+  function up(){
+    if(!active)return;
+    active=false;
+    const h=sheet.offsetHeight||600;
+    const velocity=dy/Math.max(1,Date.now()-startT); // px per ms
+    sheet.classList.remove('dragging'); // restore the snap transition
+    if(dragging&&(dy>h*0.28||velocity>0.55)){
+      sheet.style.transform='translateX(-50%) translateY(100%)';
+      bg.style.opacity='';
+      setTimeout(()=>{closeSheet();sheet.style.transform='';bg.style.opacity='';},300);
+    }else{
+      sheet.style.transform='';
+      bg.style.opacity='';
+    }
+    dragging=false;dy=0;
+  }
+
+  sheet.addEventListener('touchstart',down,{passive:true});
+  sheet.addEventListener('touchmove',move,{passive:false});
+  sheet.addEventListener('touchend',up);
+  sheet.addEventListener('touchcancel',up);
+  sheet.addEventListener('mousedown',down);
+  window.addEventListener('mousemove',move);
+  window.addEventListener('mouseup',up);
+})();
+
 const val=id=>{const e=document.getElementById(id);return e?e.value.trim():''};
 const numv=id=>{const v=val(id);return v===''?null:Number(v)};
 
