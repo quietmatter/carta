@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- macOS LaunchAgent: keeps the CARTA sync server running and restarts it on
+     login / after a crash. Setup steps are in server/README.md → "Run on a Mac
+     laptop (Tailscale)". Replace YOUR_USERNAME below, and confirm the node path
+     with `which node` (Apple Silicon Homebrew: /opt/homebrew/bin/node;
+     Intel: /usr/local/bin/node; nvm: ~/.nvm/versions/node/<ver>/bin/node). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.carta.sync</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/YOUR_USERNAME/carta/server/server.js</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/YOUR_USERNAME/carta/server</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PORT</key>
+    <string>8787</string>
+    <key>CARTA_DATA</key>
+    <string>/Users/YOUR_USERNAME/carta-data</string>
+    <!-- Public (Tailscale Funnel)? Require a shared code to sign up — uncomment: -->
+    <!-- <key>CARTA_REGISTER_CODE</key><string>our-shared-code</string> -->
+  </dict>
+
+  <!-- Start at login and keep it alive (relaunch if it ever exits). -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Logs (and the data dir) live here; tail this file to debug. -->
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/carta-data/server.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/carta-data/server.log</string>
+</dict>
+</plist>

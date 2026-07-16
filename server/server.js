@@ -28,6 +28,8 @@ const crypto = require('node:crypto');
 const PORT = Number(process.env.PORT) || 8787;
 const DATA = path.resolve(process.env.CARTA_DATA || './data');
 const MAX_BODY = Number(process.env.CARTA_MAX_BODY) || 20 * 1024 * 1024;
+// Optional shared secret required to register. Empty = open registration.
+const REGISTER_CODE = process.env.CARTA_REGISTER_CODE || '';
 const LEDGERS = path.join(DATA, 'ledgers');
 const USERS_FILE = path.join(DATA, 'users.json');
 
@@ -52,6 +54,14 @@ const userByName = name => db.users.find(u => u.nameLower === String(name).trim(
 /* ---------- auth ---------- */
 function hashPass(passcode, salt) {
   return crypto.scryptSync(String(passcode), salt, 64).toString('hex');
+}
+// Constant-time check of the shared registration code. Hashing both sides to a
+// fixed length keeps the compare timing-safe and leaks neither length nor value.
+function registerCodeOk(supplied) {
+  if (!REGISTER_CODE) return true;
+  const a = crypto.createHash('sha256').update(String(supplied || '')).digest();
+  const b = crypto.createHash('sha256').update(REGISTER_CODE).digest();
+  return crypto.timingSafeEqual(a, b);
 }
 function makeToken(userId) {
   const token = crypto.randomBytes(32).toString('hex');
@@ -129,6 +139,10 @@ function readBody(req, res, cb) {
 function handleRegister(req, res, ip) {
   if (limited(ip)) return err(res, 429, 'rate-limited', 'Too many attempts — try later');
   readBody(req, res, body => {
+    // Checked before anything else so a caller without the code can't even
+    // probe which names are taken (409).
+    if (!registerCodeOk(body.registerCode))
+      return err(res, 403, 'bad-register-code', 'A valid registration code is required to sign up');
     const name = String(body.name || '').trim();
     const passcode = String(body.passcode || '');
     if (!name || name.length > 40) return err(res, 400, 'bad-input', 'Name must be 1–40 characters');
@@ -232,4 +246,5 @@ server.listen(PORT, () => {
   console.log(`CARTA sync server listening on :${PORT}`);
   console.log(`  data: ${DATA}`);
   console.log(`  users: ${db.users.length}`);
+  console.log(`  registration: ${REGISTER_CODE ? 'code required' : 'open'}`);
 });

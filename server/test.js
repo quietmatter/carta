@@ -46,6 +46,10 @@ async function waitUp() {
 let n = 0;
 const ok = name => console.log(`PASS  ${++n}. ${name}`);
 
+// Second server instance (registration-code gate) — declared here so the
+// failure handler can clean it up too.
+let srv2 = null, DATA2 = null;
+
 (async () => {
   await waitUp();
 
@@ -148,6 +152,38 @@ const ok = name => console.log(`PASS  ${++n}. ${name}`);
   assert.equal(r.status, 404);
   ok('unknown user id is 404');
 
+  // ---- registration code gate (separate server instance) ----
+  DATA2 = fs.mkdtempSync(path.join(os.tmpdir(), 'carta-sync-test2-'));
+  const BASE2 = `http://127.0.0.1:${PORT + 1}`;
+  srv2 = spawn(process.execPath, [path.join(__dirname, 'server.js')], {
+    env: { ...process.env, PORT: String(PORT + 1), CARTA_DATA: DATA2, CARTA_REGISTER_CODE: 'letmein' },
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  const req2 = (method, p, body) => fetch(BASE2 + p, {
+    method, headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }).then(async res => ({ status: res.status, body: await res.json().catch(() => null) }));
+  for (let i = 0; i < 50; i++) { try { await fetch(BASE2 + '/health'); break; } catch (e) { await new Promise(r => setTimeout(r, 100)); } }
+
+  let r2 = await req2('POST', '/api/register', { name: 'Gated', passcode: 'beans' });
+  assert.equal(r2.status, 403); assert.equal(r2.body.error, 'bad-register-code');
+  ok('registration without the code is rejected (403)');
+
+  r2 = await req2('POST', '/api/register', { name: 'Gated', passcode: 'beans', registerCode: 'nope' });
+  assert.equal(r2.status, 403);
+  ok('registration with the wrong code is rejected (403)');
+
+  r2 = await req2('POST', '/api/register', { name: 'Gated', passcode: 'beans', registerCode: 'letmein' });
+  assert.equal(r2.status, 201); assert.ok(r2.body.token);
+  ok('registration with the correct code succeeds (201)');
+
+  r2 = await req2('POST', '/api/login', { name: 'Gated', passcode: 'beans' });
+  assert.equal(r2.status, 200);
+  ok('login is not gated by the registration code');
+
+  srv2.kill(); srv2 = null;
+  fs.rmSync(DATA2, { recursive: true, force: true }); DATA2 = null;
+
   // no temp files left behind
   const leftovers = fs.readdirSync(DATA).concat(fs.readdirSync(path.join(DATA, 'ledgers')))
     .filter(f => f.includes('.tmp.'));
@@ -160,5 +196,7 @@ const ok = name => console.log(`PASS  ${++n}. ${name}`);
 })().catch(e => {
   console.error('\nFAIL:', e.message);
   srv.kill(); fs.rmSync(DATA, { recursive: true, force: true });
+  if (srv2) srv2.kill();
+  if (DATA2) fs.rmSync(DATA2, { recursive: true, force: true });
   process.exit(1);
 });
