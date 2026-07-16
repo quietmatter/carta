@@ -227,6 +227,13 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 .shopcard .big{font-size:22px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
 .cupthumb{width:100%;max-height:220px;object-fit:cover;border-radius:8px;margin:2px 0 10px;display:block}
 .rowthumb{width:44px;height:44px;object-fit:cover;border-radius:6px;flex:none}
+/* multi-user */
+.viewbar{
+  background:var(--graphite);color:var(--paper);border-radius:var(--radius);
+  padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;
+  font-size:13px;gap:10px;
+}
+.viewbar button{background:var(--accent);color:var(--accent-ink);border-radius:99px;padding:5px 13px;font-size:12px;font-weight:600;flex:none}
 /* what's new / changelog */
 .rel{border-left:3px solid var(--line);padding:2px 0 2px 14px;margin:0 0 16px}
 .rel.latest{border-left-color:var(--accent)}
@@ -242,7 +249,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 </head>
 <body>
 <header class="app"><h1>CARTA</h1>
-<div style="display:flex;align-items:baseline"><div class="sub">we keep the record</div>
+<div style="display:flex;align-items:baseline"><div class="sub" id="who">we keep the record</div>
 <button class="helpbtn" onclick="openGuide()" aria-label="Quick start">?</button></div></header>
 <main id="main"></main>
 <nav class="tabs" id="tabs"></nav>
@@ -255,12 +262,37 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 <script>
 'use strict';
 /* ============ store ============ */
-const KEY='carta.v1';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafeFavs:[],createdAt:new Date().toISOString()};
+const KEY='carta.v1';           // legacy single-user key — migrated to per-user keys on first boot
+const USERS_KEY='carta.users';
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafeFavs:[],deleted:[],createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
+const dataKey=id=>KEY+'.'+id;
+function loadUsers(){
+  try{
+    const r=localStorage.getItem(USERS_KEY);
+    if(r){const u=JSON.parse(r); if(u&&u.users&&u.users.length&&u.users.some(x=>x.id===u.activeId))return u;}
+  }catch(e){}
+  // First multi-user boot: adopt any existing single-user ledger as user "Me".
+  // Fixed id so a partial migration (quota mid-write) retries onto the same key.
+  const u={version:1,users:[{id:'u1',name:'Me',createdAt:new Date().toISOString()}],activeId:'u1'};
+  try{
+    const legacy=localStorage.getItem(KEY);
+    if(legacy!=null)localStorage.setItem(dataKey('u1'),legacy);
+    localStorage.setItem(USERS_KEY,JSON.stringify(u));
+    if(legacy!=null)localStorage.removeItem(KEY);
+  }catch(e){}
+  return u;
+}
+let USERS=loadUsers();
+let viewingUserId=USERS.activeId;   // whose ledger is on screen; ≠ activeId means read-only
 let D=load();
-function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):clone(blank)}catch(e){return clone(blank)}}
-function save(){localStorage.setItem(KEY,JSON.stringify(D))}
+function load(){try{const r=localStorage.getItem(dataKey(viewingUserId));return r?JSON.parse(r):clone(blank)}catch(e){return clone(blank)}}
+function save(){if(readOnly())return;localStorage.setItem(dataKey(viewingUserId),JSON.stringify(D));markDirty()}
+function saveUsers(){localStorage.setItem(USERS_KEY,JSON.stringify(USERS))}
+const userById=id=>USERS.users.find(u=>u.id===id);
+const viewingUser=()=>userById(viewingUserId)||remoteUserById(viewingUserId);
+const readOnly=()=>viewingUserId!==USERS.activeId;
+function guard(){if(readOnly()){toast(`Read only — this is ${viewingUser().name}'s ledger`);return true}return false}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>new Date().toISOString().slice(0,10);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -312,10 +344,24 @@ const roasterList=()=>[...new Set([...D.bags.map(b=>b.roaster),...cafeCups().map
 const jsq=s=>`'${String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;')}'`;
 
 /* ============ version tracker ============ */
-const APP_VERSION='1.1.0';
+const APP_VERSION='1.3.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'1.3.0',date:'Jul 16, 2026',title:'The record, everywhere',items:[
+    'Server sync. Connect to a CARTA sync server (run your own — one file, zero dependencies) and your ledger follows you across devices.',
+    'Everyone on the server appears under Users — view any of their ledgers, read only, live from the server.',
+    'Offline-first, as always: no server, no signal, nothing changes. Changes queue and sync when the app wakes.',
+    'Conflicts merge by record — log on your phone and your laptop, keep both.',
+    'Viewed ledgers are cached, so a friend\'s record is still browsable when the server isn\'t reachable.',
+  ]},
+  {v:'1.2.0',date:'Jul 16, 2026',title:'More than one of you',items:[
+    'Users. Add the people who share this device — each keeps a fully separate ledger.',
+    'View another user\'s ledger — every tab, read only, clearly marked. Look, don\'t touch.',
+    'Switch the active user from the Ledger tab.',
+    'Import grew a second door: bring a friend\'s exported ledger in as a new user instead of replacing your own.',
+    'Your existing ledger migrates automatically — nothing to do, nothing lost.',
+  ]},
   {v:'1.1.0',date:'Jul 16, 2026',title:'Café cups, reimagined',items:[
     'New Cafés tab — a passport of every shop you log, with your average, visit count, usual order, and spend.',
     'Richer café logging: style, smart drink chips, the beans they poured, city, price, a cup photo, and an order-again verdict.',
@@ -351,12 +397,15 @@ const TABS=[
 let tab='field';
 function go(t){tab=t;render()}
 function render(){
+  document.getElementById('who').textContent=
+    readOnly()?`viewing ${viewingUser().name}`:(USERS.users.length>1?viewingUser().name:'we keep the record');
   document.getElementById('tabs').innerHTML=TABS.map(t=>
     `<button class="${tab===t.id?'on':''}" onclick="go('${t.id}')"><span class="ic">${t.ic}</span>${t.label}</button>`).join('');
   const m=document.getElementById('main');
-  m.innerHTML=({field:vField,cafes:vCafes,bags:vBags,setups:vSetups,trace:vTrace,ledger:vLedger})[tab]();
+  m.innerHTML=(readOnly()?viewBanner():'')+({field:vField,cafes:vCafes,bags:vBags,setups:vSetups,trace:vTrace,ledger:vLedger})[tab]();
   m.scrollTop=0;window.scrollTo(0,0);
 }
+function viewBanner(){return `<div class="viewbar"><span>Viewing <strong>${esc(viewingUser().name)}</strong>'s ledger — read only${remoteStale?` · cached ${fmtAgo(remoteStale===true?null:remoteStale)}`:''}</span><button onclick="exitView()">Back to mine</button></div>`}
 
 /* ============ views ============ */
 function vField(){
@@ -371,8 +420,8 @@ function vField(){
   </div>
   <div class="empty">The record begins with the next cup.</div>`;
   return `
-  <button class="btn btn-primary" onclick="openBrew()">Log a brew</button>
-  <button class="btn btn-quiet" onclick="openCafe()">Café cup</button>
+  ${readOnly()?'':`<button class="btn btn-primary" onclick="openBrew()">Log a brew</button>
+  <button class="btn btn-quiet" onclick="openCafe()">Café cup</button>`}
   <h2>Open bags</h2>
   ${bags.length? bags.map(b=>`
     <div class="card tap" onclick="openBrew('${b.id}')">
@@ -432,12 +481,13 @@ function openCupDetail(id){
   </div>
   ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
-  ${cafe&&c.shop?`<button class="btn btn-quiet" onclick="logAnotherHere('${c.id}')">Log another here</button>`:''}
-  <div class="muted small" style="margin:10px 0">Removing a cup deletes this impression only. ${brew?'The brew it came from stays in the ledger.':''}</div>
-  <button class="btn btn-danger" onclick="removeCup('${c.id}')">Remove from ledger</button>
+  ${!readOnly()&&cafe&&c.shop?`<button class="btn btn-quiet" onclick="logAnotherHere('${c.id}')">Log another here</button>`:''}
+  ${readOnly()?'':`<div class="muted small" style="margin:10px 0">Removing a cup deletes this impression only. ${brew?'The brew it came from stays in the ledger.':''}</div>
+  <button class="btn btn-danger" onclick="removeCup('${c.id}')">Remove from ledger</button>`}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
 function removeCup(id){
+  if(guard())return;
   const c=cupById(id); if(!c)return;
   const b=bagById(c.bagId);
   const what=c.kind==='cafe'?`${c.shop||'café'} · ${c.drink||'cup'}`:bagName(b);
@@ -445,12 +495,13 @@ function removeCup(id){
   const i=D.cups.findIndex(x=>x.id===id);
   if(i<0)return;
   D.cups.splice(i,1);
+  (D.deleted=D.deleted||[]).push({id,at:new Date().toISOString()}); // tombstone: survives sync merges
   save();closeSheet();render();toast('Cup removed');
 }
 
 function vBags(){
   const bags=D.bags.slice().sort(byNew);
-  return `<button class="btn btn-primary" onclick="openBagForm()">Capture a bag</button>
+  return `${readOnly()?'':`<button class="btn btn-primary" onclick="openBagForm()">Capture a bag</button>`}
   <h2>All bags <span class="n-note">n=${bags.length}</span></h2>
   ${bags.length? bags.map(b=>`
     <div class="card tap" onclick="openBagDetail('${b.id}')">
@@ -465,7 +516,7 @@ function vBags(){
 }
 
 function vSetups(){
-  return `<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>
+  return `${readOnly()?'':`<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>`}
   <div class="muted small serif" style="font-style:italic;margin:10px 2px">A grind setting without a Setup is not a number, it's a rumour. Grind settings are only comparable within a Setup.</div>
   <h2>Setups <span class="n-note">n=${D.setups.length}</span></h2>
   ${D.setups.length? D.setups.slice().sort(byNew).map(s=>`
@@ -512,11 +563,13 @@ function traceCard(b){
 function vLedger(){
   const counts=[['Bags',D.bags.length],['Setups',D.setups.length],['Brews',D.brews.length],['Cups',D.cups.length]];
   return `
-  <h2>Your ledger</h2>
+  <h2>${readOnly()?esc(viewingUser().name)+"'s ledger":'Your ledger'}</h2>
   <div class="card">${counts.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>
   <div class="muted small serif" style="font-style:italic;margin:10px 2px">Your ledger is yours — full export, open schema, no lock-in. If we die, you keep everything, readable.</div>
   <button class="btn btn-graphite" onclick="exportJSON()">Export ledger (JSON)</button>
-  <button class="btn btn-quiet" onclick="document.getElementById('importInput').click()">Import ledger</button>
+  ${readOnly()?'':`<button class="btn btn-quiet" onclick="document.getElementById('importInput').click()">Import ledger</button>`}
+  ${readOnly()?'':vUsersSection()}
+  ${readOnly()?'':vSyncSection()}
   <h2>Phase 0</h2>
   <div class="card small muted">Kill gate, day 60: fewer than 40 brews logged → stop.
     <div class="kv"><span class="k">Brews logged</span><span class="v num">${D.brews.length} / 40</span></div>
@@ -648,6 +701,7 @@ document.getElementById('photoInput').addEventListener('change',e=>{
 
 /* ============ bag form ============ */
 function openBagForm(id){
+  if(guard())return;
   const b=id?bagById(id):{};
   photoData=b.photo||null;
   openSheet(`
@@ -674,15 +728,16 @@ function openBagForm(id){
   ${id?`<button class="btn btn-danger" onclick="archiveBag('${id}')">${b.archived?'Unarchive':'Archive'} bag</button>`:''}`);
 }
 function saveBag(id){
+  if(guard())return;
   const roastLevel=ROAST_LEVELS.indexOf(segState.roast);
   const rec={roaster:val('f_roaster'),name:val('f_name'),originCountry:val('f_country'),originRegion:val('f_region'),
     producer:val('f_producer'),variety:val('f_variety'),process:val('f_process'),roastDate:val('f_roastDate'),
     boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),photo:photoData};
   if(!rec.roaster&&!rec.name){toast('Give it a roaster or a name');return}
-  if(id){Object.assign(bagById(id),rec)}else{D.bags.push({id:uid(),createdAt:new Date().toISOString(),archived:false,...rec})}
+  if(id){Object.assign(bagById(id),rec,{updatedAt:new Date().toISOString()})}else{D.bags.push({id:uid(),createdAt:new Date().toISOString(),archived:false,...rec})}
   save();setAccent(roastLevel);closeSheet();go('bags');toast('Bag recorded');
 }
-function archiveBag(id){const b=bagById(id);b.archived=!b.archived;save();closeSheet();render();toast(b.archived?'Archived':'Restored')}
+function archiveBag(id){if(guard())return;const b=bagById(id);b.archived=!b.archived;b.updatedAt=new Date().toISOString();save();closeSheet();render();toast(b.archived?'Archived':'Restored')}
 function openBagDetail(id){
   const b=bagById(id),r=restState(b),brews=brewsOf(id);
   openSheet(`
@@ -698,12 +753,13 @@ function openBagDetail(id){
     <div class="kv"><span class="k">Brews</span><span class="v num">${brews.length}</span></div>
   </div>
   ${b.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${esc(b.notes)}</div>`:''}
-  <button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
-  <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`);
+  ${readOnly()?`<button class="btn btn-quiet" onclick="closeSheet()">Close</button>`:`<button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
+  <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`}`);
 }
 
 /* ============ setup form ============ */
 function openSetupForm(id){
+  if(guard())return;
   const s=id?setupById(id):{};
   openSheet(`
   <h3>${id?'Edit Setup':'New Setup'}</h3>
@@ -720,10 +776,11 @@ function openSetupForm(id){
   <button class="btn btn-primary" onclick="saveSetup('${id||''}')">Save Setup</button>`);
 }
 function saveSetup(id){
+  if(guard())return;
   const rec={name:val('s_name'),grinder:val('s_grinder'),brewer:val('s_brewer'),basket:val('s_basket'),
     papers:val('s_papers'),water:val('s_water'),notes:val('s_notes')};
   if(!rec.name){toast('Name the Setup');return}
-  if(id){Object.assign(setupById(id),rec)}else{D.setups.push({id:uid(),createdAt:new Date().toISOString(),...rec})}
+  if(id){Object.assign(setupById(id),rec,{updatedAt:new Date().toISOString()})}else{D.setups.push({id:uid(),createdAt:new Date().toISOString(),...rec})}
   save();closeSheet();render();toast('Setup saved');
 }
 
@@ -756,6 +813,7 @@ function lastBrewFor(bagId,setupId){
       || D.brews.slice().sort(byNew)[0] || null;
 }
 function openBrew(bagId){
+  if(guard())return;
   const bags=D.bags.filter(b=>!b.archived).sort(byNew);
   if(!bags.length){toast('Capture a bag first');go('bags');return}
   if(!D.setups.length){toast('Define a Setup first — grind needs one');go('setups');openSetupForm();return}
@@ -790,6 +848,7 @@ function openBrew(bagId){
   <button class="btn btn-primary" onclick="saveBrew()">Save brew → impression</button>`);
 }
 function saveBrew(){
+  if(guard())return;
   const setupId=val('b_setup');
   if(!setupId){toast('Refused: a brew requires a Setup');return}
   const brew={id:uid(),createdAt:new Date().toISOString(),bagId:val('b_bag'),setupId,
@@ -810,6 +869,7 @@ function openImpression(brew){
   <button class="btn btn-quiet" onclick="saveCup('home','${brew.id}','${brew.bagId}',true)">Skip impression</button>`);
 }
 function saveCup(kind,brewId,bagId,skip){
+  if(guard())return;
   if(!skip&&hedState==null&&kind==='home'){toast('One tap on the scale, or skip');return}
   const brew=brewId?D.brews.find(x=>x.id===brewId):null;
   const cup={id:uid(),createdAt:new Date().toISOString(),kind,brewId:brewId||null,bagId:bagId||null,
@@ -827,6 +887,7 @@ function saveCup(kind,brewId,bagId,skip){
 
 /* ============ café cup ============ */
 function openCafe(pre){
+  if(guard())return;
   pre=pre||{};
   const shops=[...new Set(cafeCups().map(c=>c.shop).filter(Boolean))];
   const cities=[...new Set(cafeCups().map(c=>c.city).filter(Boolean))];
@@ -895,6 +956,7 @@ function saveCafeCup(){
 /* ============ café passport ============ */
 function isCafeFav(shop){return (D.cafeFavs||[]).some(x=>x.toLowerCase()===(shop||'').trim().toLowerCase())}
 function toggleCafeFav(shop){
+  if(guard())return;
   D.cafeFavs=D.cafeFavs||[];
   const i=D.cafeFavs.findIndex(x=>x.toLowerCase()===shop.trim().toLowerCase());
   const was=i>=0;
@@ -932,7 +994,7 @@ function vCafes(){
   const cities=[...new Set(all.map(c=>c.city).filter(Boolean))];
   const spend=all.reduce((a,c)=>a+(c.price||0),0);
   const top=shops.filter(s=>s.visits>=2&&s.avg!=null).sort((a,b)=>(b.avg-a.avg))[0];
-  return `<button class="btn btn-primary" onclick="openCafe()">Log a café cup</button>
+  return `${readOnly()?'':`<button class="btn btn-primary" onclick="openCafe()">Log a café cup</button>`}
   ${all.length?`
   <div class="loop" style="margin-top:12px">
     <div class="s"><div class="k">Cafés</div><div class="v num">${shops.length}</div></div>
@@ -962,29 +1024,373 @@ function openShopDetail(shop){
     ${spend?`<div class="kv"><span class="k">Total spend</span><span class="v num">${money(spend)}</span></div>`:''}
     <div class="kv"><span class="k">Last visit</span><span class="v">${new Date(cups[0].createdAt).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}</span></div>
   </div>
-  <button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Log a cup here</button>
-  <button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'★ Remove from favorites':'☆ Add to favorites'}</button>
+  ${readOnly()?'':`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Log a cup here</button>
+  <button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'★ Remove from favorites':'☆ Add to favorites'}</button>`}
   <h2>Every cup</h2>
   ${cups.map(cupRow).join('')}`);
 }
 
+/* ============ users ============ */
+// Peek at another user's stored ledger without loading it into the app.
+function peek(id){
+  if(id===viewingUserId)return{bags:D.bags.length,brews:D.brews.length,cups:D.cups.length};
+  try{const r=localStorage.getItem(dataKey(id));if(!r)return{bags:0,brews:0,cups:0};
+    const d=JSON.parse(r);return{bags:(d.bags||[]).length,brews:(d.brews||[]).length,cups:(d.cups||[]).length};
+  }catch(e){return{bags:0,brews:0,cups:0}}
+}
+function vUsersSection(){
+  return `
+  <h2>Users <span class="n-note">n=${USERS.users.length}</span></h2>
+  ${USERS.users.map(u=>{const active=u.id===USERS.activeId,p=peek(u.id);
+    return `<div class="card tap" onclick="openUserSheet('${u.id}')">
+      <div class="row"><strong>${esc(u.name)}</strong>${active?'<span class="badge">you</span>':''}</div>
+      <div class="muted small num">${p.bags} bags · ${p.brews} brews · ${p.cups} cups</div>
+    </div>`}).join('')}
+  ${remoteDirUsers().map(u=>`<div class="card tap" onclick="openRemoteUserSheet('${u.id}')">
+    <div class="row"><strong>${esc(u.name)}</strong><span class="badge ghost">server</span></div>
+    <div class="muted small num">${u.counts.bags} bags · ${u.counts.brews} brews · ${u.counts.cups} cups</div>
+  </div>`).join('')}
+  <button class="btn btn-quiet" onclick="openUserForm()">Add a user</button>
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">Everyone who shares this device keeps their own ledger. Tap a user to view their record or make them the active user.</div>`;
+}
+function openUserSheet(id){
+  const u=userById(id); if(!u)return;
+  const active=u.id===USERS.activeId,p=peek(id);
+  openSheet(`
+  <h3>${esc(u.name)}</h3>
+  <div class="sub">keeping the record since ${new Date(u.createdAt).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}</div>
+  <div class="card">
+    <div class="kv"><span class="k">Bags</span><span class="v num">${p.bags}</span></div>
+    <div class="kv"><span class="k">Brews</span><span class="v num">${p.brews}</span></div>
+    <div class="kv"><span class="k">Cups</span><span class="v num">${p.cups}</span></div>
+  </div>
+  ${active?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">This is the active user — the ledger currently being written.</div>`
+          :`<button class="btn btn-primary" onclick="viewLedger('${u.id}')">View their ledger</button>
+  <button class="btn btn-graphite" onclick="switchUser('${u.id}')">Make active user</button>`}
+  <button class="btn btn-quiet" onclick="openUserForm('${u.id}')">Rename</button>
+  ${!active?`<button class="btn btn-danger" onclick="deleteUser('${u.id}')">Delete user &amp; ledger</button>`:''}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+function openUserForm(id){
+  const u=id?userById(id):{};
+  openSheet(`
+  <h3>${id?'Rename user':'Add a user'}</h3>
+  <div class="sub">${id?'A new name, same record.':'A fresh, empty ledger of their own.'}</div>
+  <label class="f"><span class="l">Name</span><input type="text" id="u_name" value="${esc(u.name)}" placeholder="Alex"></label>
+  <button class="btn btn-primary" onclick="saveUser('${id||''}')">${id?'Save':'Add user'}</button>`);
+}
+function saveUser(id){
+  const name=val('u_name');
+  if(!name){toast('Give them a name');return}
+  if(id){userById(id).name=name}
+  else{USERS.users.push({id:uid(),name,createdAt:new Date().toISOString()})}
+  saveUsers();closeSheet();render();toast(id?'Renamed':`${name} added`);
+}
+function switchUser(id){
+  const u=userById(id); if(!u)return;
+  USERS.activeId=id;saveUsers();
+  viewingUserId=id;D=load();
+  const lb=D.bags.slice().sort(byNew)[0];setAccent(lb?lb.roastLevel:3);
+  closeSheet();go('field');toast(`Switched to ${u.name}`);
+}
+function viewLedger(id){
+  const u=userById(id); if(!u)return;
+  viewingUserId=id;D=load();
+  closeSheet();go('field');toast(`Viewing ${u.name}'s ledger`);
+}
+function exitView(){
+  viewingUserId=USERS.activeId;D=load();remoteStale=false;
+  const lb=D.bags.slice().sort(byNew)[0];setAccent(lb?lb.roastLevel:3);
+  render();
+}
+function deleteUser(id){
+  const u=userById(id); if(!u)return;
+  if(id===USERS.activeId){toast('Cannot delete the active user');return}
+  const p=peek(id);
+  if(!confirm(`Delete ${u.name} and their entire ledger?\n\n${p.bags} bags, ${p.brews} brews, ${p.cups} cups.\n\nThis cannot be undone.`))return;
+  try{localStorage.removeItem(dataKey(id))}catch(e){}
+  USERS.users=USERS.users.filter(x=>x.id!==id);saveUsers();
+  if(viewingUserId===id){viewingUserId=USERS.activeId;D=load();}
+  closeSheet();render();toast('User removed');
+}
+
 /* ============ export / import ============ */
 function exportJSON(){
-  const out={...D,exportedAt:new Date().toISOString(),schema:'carta-phase0-v1'};
+  const out={...D,exportedAt:new Date().toISOString(),user:viewingUser().name,schema:'carta-phase0-v1'};
   const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`carta-ledger-${today()}.json`;a.click();URL.revokeObjectURL(a.href);
+  const slug=viewingUser().name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'ledger';
+  a.download=`carta-ledger-${slug}-${today()}.json`;a.click();URL.revokeObjectURL(a.href);
   toast('Ledger exported');
 }
+let pendingImport=null;
 document.getElementById('importInput').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   f.text().then(t=>{const d=JSON.parse(t);
     if(!d.bags||!d.brews){toast('Not a CARTA ledger');return}
-    if(confirm(`Replace current ledger with import? (${d.bags.length} bags, ${d.brews.length} brews)`)){
-      D=d;save();render();toast('Ledger imported');}
+    pendingImport=d;
+    openSheet(`
+    <h3>Import ledger</h3>
+    <div class="sub">${d.user?esc(d.user)+"'s record — ":''}${d.bags.length} bags, ${d.brews.length} brews, ${(d.cups||[]).length} cups.</div>
+    <div class="muted small" style="margin-bottom:12px">Two doors. Bring it in as a <strong>new user</strong> — their ledger sits beside yours, viewable any time. Or <strong>replace</strong> your own ledger with it, wholesale.</div>
+    <label class="f"><span class="l">Name (if adding as a user)</span><input type="text" id="u_name" value="${esc(d.user||'')}" placeholder="Alex"></label>
+    <button class="btn btn-primary" onclick="importAsUser()">Add as a new user</button>
+    <button class="btn btn-danger" onclick="importReplace()">Replace ${esc(userById(USERS.activeId).name)}'s ledger</button>
+    <button class="btn btn-quiet" onclick="pendingImport=null;closeSheet()">Cancel</button>`);
   }).catch(()=>toast('Could not read file'));
   e.target.value='';
 });
+function importAsUser(){
+  if(!pendingImport)return;
+  const name=val('u_name');
+  if(!name){toast('Give them a name');return}
+  const nu={id:uid(),name,createdAt:new Date().toISOString()};
+  try{localStorage.setItem(dataKey(nu.id),JSON.stringify(pendingImport))}
+  catch(e){toast('Storage full — could not import');return}
+  USERS.users.push(nu);saveUsers();
+  pendingImport=null;closeSheet();
+  viewLedger(nu.id);
+}
+function importReplace(){
+  if(!pendingImport)return;
+  if(guard())return;
+  const me=userById(USERS.activeId).name;
+  if(!confirm(`Replace ${me}'s current ledger with the import?\n\nThis cannot be undone.`))return;
+  D=pendingImport;pendingImport=null;save();closeSheet();render();toast('Ledger imported');
+}
+
+/* ============ sync ============ */
+/* Optional server sync. Offline-first: localStorage stays the source of truth;
+ * the server (server/README.md) keeps {rev, ledger} per user. Push carries
+ * baseRev; a 409 means someone else pushed first — pull, merge by record id,
+ * re-push. Any authenticated user can READ every ledger; writes are owner-only. */
+const SYNC_KEY='carta.sync', DIR_KEY='carta.remoteDir';
+const remoteKey=id=>'carta.remote.'+id;
+let SYNC=loadSync();               // {url,token,userId,name,localId,rev,dirty,lastSyncAt} | null
+let syncBusy=false,pushTimer=null,syncState='idle',remoteStale=false;   // idle|syncing|offline|auth
+function loadSync(){return readJSONLS(SYNC_KEY)}
+function saveSync(){if(SYNC)localStorage.setItem(SYNC_KEY,JSON.stringify(SYNC));else localStorage.removeItem(SYNC_KEY)}
+function readJSONLS(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch(e){return null}}
+const remoteDir=()=>readJSONLS(DIR_KEY)||{users:[]};
+const isRemoteView=()=>String(viewingUserId).startsWith('r:');
+function remoteUserById(vid){
+  if(!String(vid).startsWith('r:'))return null;
+  const u=remoteDir().users.find(x=>x.id===String(vid).slice(2));
+  return {id:vid,name:u?u.name:'server user',createdAt:(u&&u.updatedAt)||''};
+}
+const syncedHere=()=>!!(SYNC&&SYNC.token&&USERS.activeId===SYNC.localId);
+function markDirty(){if(!syncedHere()||viewingUserId!==USERS.activeId)return;SYNC.dirty=true;saveSync();schedulePush()}
+function schedulePush(){clearTimeout(pushTimer);pushTimer=setTimeout(()=>syncNow(false),2000)}
+
+/* merge: union by record id per collection; edited records carry updatedAt and
+ * the newer one wins (ties → local). Tombstones in `deleted` subtract removed
+ * cups so a removal survives merging. Output is canonical (sorted) so both
+ * devices converge on an identical serialization. */
+function mergeColl(loc,rem){
+  const m=new Map();(rem||[]).forEach(r=>m.set(r.id,r));
+  (loc||[]).forEach(l=>{const r=m.get(l.id);if(!r||((l.updatedAt||'')>=(r.updatedAt||'')))m.set(l.id,l)});
+  return [...m.values()].sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||'')||String(a.id).localeCompare(String(b.id)));
+}
+function mergeLedgers(loc,rem){
+  if(!rem)return loc;
+  const out=clone(blank);
+  const dead=new Map();[...(rem.deleted||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
+  out.deleted=[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  ['setups','bags','brews','cups'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
+  const f=new Map();[...(rem.cafeFavs||[]),...(loc.cafeFavs||[])].forEach(x=>f.set(String(x).toLowerCase(),x));
+  out.cafeFavs=[...f.values()].sort((a,b)=>a.localeCompare(b));
+  out.version=loc.version||1;
+  out.createdAt=[loc.createdAt,rem.createdAt].filter(Boolean).sort()[0]||out.createdAt;
+  return out;
+}
+
+async function api(path,method,body){
+  let r;
+  try{
+    r=await fetch(SYNC.url.replace(/\/+$/,'')+path,{method:method||'GET',
+      headers:{'Content-Type':'application/json',...(SYNC.token?{Authorization:'Bearer '+SYNC.token}:{})},
+      body:body===undefined?undefined:JSON.stringify(body)});
+  }catch(e){throw{offline:true}}
+  const data=await r.json().catch(()=>null);
+  if(r.status===401){authLost();throw{auth:true}}
+  return {status:r.status,body:data};
+}
+function authLost(){if(!SYNC)return;SYNC.token=null;saveSync();syncState='auth';paintSync();toast('Sync signed out — sign in again from the Ledger tab')}
+
+// Operate on the synced user's stored ledger directly, so sync stays correct
+// even while the screen is showing someone else's ledger read-only.
+function readOwnStored(){return readJSONLS(dataKey(SYNC.localId))||clone(blank)}
+function writeOwnStored(led){
+  localStorage.setItem(dataKey(SYNC.localId),JSON.stringify(led));
+  if(viewingUserId===SYNC.localId){D=led;render()}
+}
+async function syncNow(manual){
+  if(!SYNC||!SYNC.url)return;
+  if(!SYNC.token){if(manual)openSyncSheet(true);return}
+  if(!syncedHere()||syncBusy)return;
+  syncBusy=true;syncState='syncing';paintSync();
+  try{
+    let local=readOwnStored();
+    const meta=await api(`/api/ledgers/${SYNC.userId}?meta=1`);
+    if(meta.status===200&&meta.body.rev>SYNC.rev){
+      const full=await api(`/api/ledgers/${SYNC.userId}`);
+      if(full.status===200&&full.body.ledger){
+        const merged=mergeLedgers(local,full.body.ledger);
+        SYNC.rev=full.body.rev;
+        if(JSON.stringify(merged)!==JSON.stringify(full.body.ledger))SYNC.dirty=true;
+        local=merged;writeOwnStored(local);
+        toast('Ledger updated from server');
+      }
+    }
+    let tries=0;
+    while(SYNC.dirty&&tries<3){
+      tries++;
+      const r=await api(`/api/ledgers/${SYNC.userId}`,'PUT',{baseRev:SYNC.rev,ledger:local});
+      if(r.status===200){SYNC.rev=r.body.rev;SYNC.dirty=false}
+      else if(r.status===409){local=mergeLedgers(local,r.body.ledger);SYNC.rev=r.body.rev;writeOwnStored(local)}
+      else break;
+    }
+    if(SYNC.dirty&&manual)toast('Sync conflict — will retry');
+    try{
+      const dir=await api('/api/users');
+      if(dir.status===200)localStorage.setItem(DIR_KEY,JSON.stringify({fetchedAt:new Date().toISOString(),users:dir.body.users}));
+    }catch(e){}
+    SYNC.lastSyncAt=new Date().toISOString();syncState='idle';
+  }catch(e){
+    if(!(e&&e.auth)){syncState='offline';if(manual)toast('Server unreachable — working locally')}
+  }finally{syncBusy=false;saveSync();paintSync()}
+}
+
+/* --- sync UI --- */
+function fmtAgo(iso){
+  if(!iso)return 'never';
+  const s=(Date.now()-new Date(iso))/1000;
+  if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';
+}
+function syncLineHTML(){
+  if(!SYNC.token)return `<span style="color:var(--danger)">●</span> signed out`;
+  if(syncState==='syncing')return `<span style="color:var(--accent)">●</span> syncing…`;
+  if(syncState==='offline')return `<span style="color:var(--ink-3)">●</span> offline — working locally`;
+  return `<span style="color:var(--accent)">●</span> synced ${fmtAgo(SYNC.lastSyncAt)} · rev ${SYNC.rev}${SYNC.dirty?' · changes pending':''}`;
+}
+function paintSync(){const el=document.getElementById('syncline');if(el)el.innerHTML=syncLineHTML()}
+function vSyncSection(){
+  if(!SYNC)return `
+  <h2>Sync</h2>
+  <div class="muted small serif" style="font-style:italic;margin:2px 2px 10px">Optional. Connect to a CARTA sync server and your ledger follows you across devices — and everyone on the server can view (never edit) each other's records.</div>
+  <button class="btn btn-quiet" onclick="openSyncSheet(false)">Connect to a sync server</button>`;
+  if(USERS.activeId!==SYNC.localId)return `
+  <h2>Sync</h2>
+  <div class="card small muted">Sync on this device is connected as <strong>${esc(SYNC.name)}</strong> — a different user. Switch to them to sync.</div>`;
+  return `
+  <h2>Sync</h2>
+  <div class="card">
+    <div class="kv"><span class="k">Server</span><span class="v" style="font-family:var(--mono);font-size:12px">${esc(SYNC.url)}</span></div>
+    <div class="kv"><span class="k">Account</span><span class="v">${esc(SYNC.name)}</span></div>
+    <div class="kv"><span class="k">Status</span><span class="v" id="syncline">${syncLineHTML()}</span></div>
+  </div>
+  <button class="btn btn-graphite" onclick="syncNow(true)">Sync now</button>
+  <button class="btn btn-quiet" onclick="disconnectSync()">Disconnect</button>`;
+}
+function openSyncSheet(loginOnly){
+  const me=userById(USERS.activeId);
+  openSheet(`
+  <h3>${loginOnly?'Sign in to sync':'Connect to a sync server'}</h3>
+  <div class="sub">Your ledger, on every device. Everyone on the server can view — never edit — each other's records.</div>
+  <label class="f"><span class="l">Server URL</span><input type="text" id="sy_url" value="${esc(SYNC?SYNC.url:'')}" placeholder="https://sync.example.com" inputmode="url" autocapitalize="off" autocorrect="off"></label>
+  <div class="grid2">
+    <label class="f"><span class="l">Name</span><input type="text" id="sy_name" value="${esc(SYNC?SYNC.name:(me?me.name:''))}" autocapitalize="off"></label>
+    <label class="f"><span class="l">Passcode</span><input type="password" id="sy_pass" placeholder="min 4 characters"></label>
+  </div>
+  <div class="muted small" style="margin-bottom:10px">Servers must be <strong>https</strong> (localhost is fine for testing). Run your own with one command — see <code>server/README.md</code> in the CARTA repo.</div>
+  ${loginOnly?'':`<button class="btn btn-primary" onclick="connectSync('register')">Create account &amp; sync</button>`}
+  <button class="btn ${loginOnly?'btn-primary':'btn-quiet'}" onclick="connectSync('login')">Sign in</button>`);
+}
+async function connectSync(mode){
+  let url=val('sy_url').replace(/\/+$/,'');
+  const name=val('sy_name'),pass=(document.getElementById('sy_pass')||{}).value||'';
+  if(!url){toast('Server URL required');return}
+  if(!/^https?:\/\//.test(url))url='https://'+url;
+  if(/^http:\/\//.test(url)&&!/^http:\/\/(localhost|127\.0\.0\.1)/.test(url)){toast('Plain http only works for localhost — use https');return}
+  if(!name||pass.length<4){toast('Name and a passcode of 4+ characters');return}
+  let r;
+  try{
+    const res=await fetch(url+'/api/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,passcode:pass})});
+    r={status:res.status,body:await res.json().catch(()=>null)};
+  }catch(e){toast('Could not reach that server');return}
+  if(r.status===409){toast('Name taken — sign in instead');return}
+  if(r.status===401){toast('Wrong name or passcode');return}
+  if(r.status!==200&&r.status!==201){toast((r.body&&r.body.message)||'Server refused');return}
+  SYNC={url,token:r.body.token,userId:r.body.userId,name:r.body.name,
+    localId:USERS.activeId,rev:0,dirty:true,lastSyncAt:null};
+  const me=userById(USERS.activeId);if(me){me.remoteId=r.body.userId;saveUsers()}
+  saveSync();closeSheet();render();toast('Connected — syncing');
+  syncNow(true);
+}
+function disconnectSync(){
+  if(!confirm('Disconnect from the sync server?\n\nYour ledger stays on this device (and on the server). Only the connection is removed.'))return;
+  SYNC=null;saveSync();
+  try{
+    localStorage.removeItem(DIR_KEY);
+    Object.keys(localStorage).filter(k=>k.startsWith('carta.remote.')).forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
+  render();toast('Sync disconnected');
+}
+
+/* --- remote users: directory + read-only viewing --- */
+function remoteDirUsers(){
+  if(!SYNC)return[];
+  const bound=new Set(USERS.users.map(u=>u.remoteId).filter(Boolean));
+  return remoteDir().users.filter(u=>u.id!==SYNC.userId&&!bound.has(u.id));
+}
+function openRemoteUserSheet(id){
+  const u=remoteDir().users.find(x=>x.id===id);if(!u)return;
+  openSheet(`
+  <h3>${esc(u.name)}</h3>
+  <div class="sub">on the sync server${u.updatedAt?` · last push ${fmtAgo(u.updatedAt)}`:''}</div>
+  <div class="card">
+    <div class="kv"><span class="k">Bags</span><span class="v num">${u.counts.bags}</span></div>
+    <div class="kv"><span class="k">Brews</span><span class="v num">${u.counts.brews}</span></div>
+    <div class="kv"><span class="k">Cups</span><span class="v num">${u.counts.cups}</span></div>
+  </div>
+  <button class="btn btn-primary" onclick="viewRemote('${id}')">View their ledger</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+async function viewRemote(id){
+  if(!SYNC||!SYNC.token){toast('Connect to sync first');return}
+  let led=null,stale=false;
+  try{
+    const r=await api(`/api/ledgers/${id}`);
+    if(r.status===200&&r.body.ledger){
+      led=r.body.ledger;
+      cacheRemote(id,{rev:r.body.rev,updatedAt:r.body.updatedAt,fetchedAt:new Date().toISOString(),ledger:led});
+    }
+    else if(r.status===200){toast('No ledger on the server yet');return}
+    else{toast('Could not fetch their ledger');return}
+  }catch(e){
+    if(e&&e.auth)return;
+    const c=readJSONLS(remoteKey(id));
+    if(c&&c.ledger){led=c.ledger;stale=c.fetchedAt||true}
+    else{toast('Server unreachable and no cached copy');return}
+  }
+  remoteStale=stale;
+  viewingUserId='r:'+id;D=led;closeSheet();go('field');
+  toast(`Viewing ${viewingUser().name}'s ledger`);
+}
+// Cache a remote ledger for offline re-viewing; photos make these heavy, so on
+// quota pressure evict other remote caches and, failing that, skip the cache —
+// the in-memory view still works.
+function cacheRemote(id,obj){
+  const k=remoteKey(id),s=JSON.stringify(obj);
+  try{localStorage.setItem(k,s)}
+  catch(e){
+    try{
+      Object.keys(localStorage).filter(x=>x.startsWith('carta.remote.')&&x!==k).forEach(x=>localStorage.removeItem(x));
+      localStorage.setItem(k,s);
+    }catch(e2){}
+  }
+}
 
 /* ============ quick start ============ */
 const firstRun=()=>!D.setups.length&&!D.bags.length&&!D.cups.length;
@@ -1059,7 +1465,7 @@ function openGuide(){
       bags:'Every bag, photo and rest chip. Tap one to see it, edit it, or brew it.',
       setups:'Your assemblies. Change a burr, a basket, the water — that is a <em>new</em> Setup, not an edit.',
       trace:'The dial-in, per bag. Solid line = grind. Hollow circles = hedonic.',
-      ledger:'Counts, export, import, the day-60 gate, and the changelog.'}[t.id]}</span></div>`).join('')}
+      ledger:'Counts, users, sync, export, import, the day-60 gate, and the changelog.'}[t.id]}</span></div>`).join('')}
   </div>
 
   <h2>The rest chip</h2>
@@ -1088,9 +1494,20 @@ function openGuide(){
   <h2>Export. Actually do it.</h2>
   <div class="warn">
     <div class="t">The one that will hurt</div>
-    <div class="b">Everything — bags, photos, brews, cups — lives in this browser's local storage under <code>carta.v1</code>. Clearing site data, a browser reset, a private window, or a storage overflow from bag photos takes the whole ledger. There is no server. There is no undo.</div>
+    <div class="b">Everything — bags, photos, brews, cups, every user's ledger — lives in this browser's local storage. Clearing site data, a browser reset, a private window, or a storage overflow from bag photos takes the whole ledger. Unless you've connected a sync server, there is no copy anywhere else. There is no undo.</div>
   </div>
-  <div class="small">Export monthly, and after any session you'd hate to lose. Open schema, readable forever, yours. Import <em>replaces</em> the ledger wholesale — it asks first, but read the dialog.</div>
+  <div class="small">Export monthly, and after any session you'd hate to lose. Open schema, readable forever, yours. Import has two doors: bring a file in as a <em>new user</em> beside your own record, or <em>replace</em> your ledger wholesale — read the dialog.</div>
+
+  <h2>Users</h2>
+  <div class="card">
+    <div class="small">Share the device, not the record. Add users in the <strong>Ledger</strong> tab — each keeps a fully separate ledger. Tap a user to <strong>view</strong> their record (every tab, read only, clearly banner-marked) or to <strong>make them active</strong>. And a friend's exported ledger can be imported as a new user, so you can browse their record beside yours.</div>
+  </div>
+
+  <h2>Sync — the record, everywhere</h2>
+  <div class="card">
+    <div class="small">Optional. Connect to a CARTA sync server from the <strong>Ledger</strong> tab (name + passcode; run your own server — one file, zero dependencies, see <code>server/README.md</code>). Your ledger then follows you across devices, and everyone on the server shows up under Users — tap to view their ledger, read only, live from the server.</div>
+    <div class="muted small" style="margin-top:6px">Offline-first, always: no server or no signal changes nothing. Edits queue and sync when the app comes back to the foreground. If two devices log at once, the record merges — both brews survive.</div>
+  </div>
   <button class="btn btn-graphite" style="margin-top:10px" onclick="exportJSON()">Export ledger now</button>
 
   <h2>Phase 0 · the only gate that matters</h2>
@@ -1135,6 +1552,11 @@ if(lastSeenVersion()!==APP_VERSION){
   if(firstRun())markVersionSeen();
   else setTimeout(()=>openWhatsNew(true),350);
 }
+// Sync: on boot, when the network returns, and when the app comes back to the
+// foreground (iOS PWAs get no background time — this is the sync heartbeat).
+if(SYNC)setTimeout(()=>syncNow(false),400);
+window.addEventListener('online',()=>syncNow(false));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow(false)});
 </script>
 </body>
 </html>
