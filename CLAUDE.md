@@ -89,7 +89,9 @@ server/
 - **brew flow** — `openBrew` → `saveBrew` → `openImpression` → `saveCup`.
 - **café** — logging café cups (`openCafe`/`saveCafeCup`, with optional
   structured traceability), the café passport (`shopAgg`, `vCafes`, favorites),
-  and per-café profiles (`openCafeProfile`: branding photo → derived `accent`,
+  and per-café profiles (`openCafeProfile`: a branding photo → a signature colour
+  via `derivePalette`, from which `cafeColors`/`cafeVars` build a whole themed
+  surface — the café's detail page and every cup in it wear that palette; plus an
   online address lookup `geoLookup` via OpenStreetMap Nominatim). The home-vs-café
   comparison is `crossContext`.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
@@ -120,9 +122,12 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   `originCountry`, `originRegion`, `producer`, `variety`, `lot`, `process`).
   `hedonic` (1–9), `descriptors[]`, `notes`.
 - **cafes** — per-café profiles keyed by shop name (`cafeProfile`/
-  `saveCafeProfile`): branding `photo`, an `accent` colour **derived from that
-  photo** (`dominantAccent`), and location (`address`, `lat`, `lon`, from the
-  optional online lookup). Merged in sync like any other collection.
+  `saveCafeProfile`): branding `photo`; a `palette` **derived from that photo**
+  (`derivePalette` → `{h,s,l,brand,dark}`) that themes the whole café surface via
+  `cafeColors`/`cafeVars`; a legacy `accent` string kept for back-compat (old
+  records with only `accent` are re-themed through `palOf`); and location
+  (`address`, `lat`, `lon`, from the optional online lookup). Merged in sync like
+  any other collection.
 - **cafeFavs** — favorited café shop names.
 - **deleted** — tombstones so removed records stay removed across a sync merge.
 - **prefs** — per-user preferences (`tempUnit`, `hideTimer`, …) via

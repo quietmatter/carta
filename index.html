@@ -299,6 +299,19 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 .brandhead{width:100%;height:84px;object-fit:cover;border-radius:var(--radius);margin-bottom:10px;display:block}
 .brandhead.lg{height:150px;margin-bottom:12px}
 .swatch{width:11px;height:11px;border-radius:var(--chipr);vertical-align:-1px;margin-left:6px;display:none;border:1px solid var(--line)}
+/* café theme — a whole surface derived from one branding photo. The vars are set inline. */
+.cafe-theme{background:var(--paper);color:var(--ink);margin:0 -18px;padding:6px 18px 8px}
+.masthead{position:relative;border-radius:var(--radius);overflow:hidden;margin:2px 0 4px;border:1px solid var(--line)}
+.masthead>img{width:100%;height:172px;object-fit:cover;display:block}
+.masthead .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,14,10,0) 32%,rgba(18,14,10,.74) 100%)}
+.masthead .bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--accent)}
+.masthead .id{position:absolute;left:16px;right:16px;bottom:15px;color:#fff}
+.masthead .id .nm{font-family:var(--serif);font-size:25px;font-weight:600;line-height:1.02;letter-spacing:-.02em;text-shadow:0 1px 14px rgba(0,0,0,.55)}
+.masthead .id .ct{font-family:var(--sans);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-top:6px;opacity:.92;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+/* the derived palette, shown while setting a café's branding */
+.palette{display:flex;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);margin:2px 0 0}
+.palette span{flex:1;height:36px}
+.brandmark{width:14px;height:14px;border-radius:var(--chipr);display:inline-block;vertical-align:-2px;border:1px solid var(--line)}
 .georow{padding:8px 11px;margin:6px 0 0}
 .pinned{font-family:var(--sans);font-size:12px;color:var(--ink-2);padding:6px 2px}
 .pinned .link{margin-left:8px;cursor:pointer}
@@ -449,8 +462,38 @@ function saveCafeProfile(name,rec){
   const c={id:uid(),createdAt:new Date().toISOString(),name:String(name).trim(),...rec};
   D.cafes.push(c);return c;
 }
-// clamp any hue into CARTA's earthy register so a brand colour harmonises with the roast accent
-const muteAccent=(h,s,l)=>`hsl(${Math.round(h)},${Math.round(Math.max(28,Math.min(58,s)))}%,${Math.round(Math.max(34,Math.min(52,l)))}%)`;
+// A café's branding photo yields one signature colour (see derivePalette). From it we build a whole
+// legible surface — paper, ink, lines, accent — tinted toward that hue: a mini design system, one
+// per café. cafeColors respects the app's light/dusk mode so a café keeps its hue in either light.
+const parseHSL=str=>{const m=/hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/.exec(str||'');return m?[+m[1],+m[2],+m[3]]:null};
+// Resolve a café record to a palette object. New records store one; older records only kept a
+// single `accent` string — parse it back so their pages theme too.
+function palOf(p){
+  if(!p)return null;
+  if(p.palette&&p.palette.h!=null)return p.palette;
+  const hsl=parseHSL(p.accent);
+  return hsl?{h:Math.round(hsl[0]),s:Math.round(hsl[1]),l:Math.round(hsl[2]),brand:p.accent,dark:hsl[2]<45}:null;
+}
+function cafeColors(pal){
+  if(!pal||pal.h==null)return null;
+  const h=pal.h,ts=Math.min(pal.s,44),A=pal.brand; // ts: surface tint saturation — kept restrained
+  const dusk=document.documentElement.getAttribute('data-theme')==='dusk';
+  return dusk?{
+    paper:`hsl(${h},${Math.round(ts*.5)}%,9%)`,card:`hsl(${h},${Math.round(ts*.5)}%,13%)`,
+    paper2:`hsl(${h},${Math.round(ts*.5)}%,17%)`,paper3:`hsl(${h},${Math.round(ts*.5)}%,22%)`,
+    ink:`hsl(${h},14%,92%)`,ink2:`hsl(${h},12%,74%)`,ink3:`hsl(${h},10%,56%)`,inkd:`hsl(${h},8%,40%)`,
+    line:`hsla(${h},20%,90%,.14)`,line2:`hsl(${h},10%,20%)`,lineStrong:`hsl(${h},14%,92%)`,
+    accent:A,accentInk:`hsl(${h},${Math.round(ts*.5)}%,9%)`
+  }:{
+    paper:`hsl(${h},${Math.round(ts*.55)}%,95%)`,card:`hsl(${h},${Math.round(ts*.6)}%,97%)`,
+    paper2:`hsl(${h},${Math.round(ts*.5)}%,90%)`,paper3:`hsl(${h},${Math.round(ts*.5)}%,84%)`,
+    ink:`hsl(${h},26%,15%)`,ink2:`hsl(${h},18%,32%)`,ink3:`hsl(${h},14%,46%)`,inkd:`hsl(${h},10%,72%)`,
+    line:`hsla(${h},28%,18%,.14)`,line2:`hsl(${h},14%,86%)`,lineStrong:`hsl(${h},26%,15%)`,
+    accent:A,accentInk:'#fffaf1'
+  };
+}
+function cafeVars(pal){const c=cafeColors(pal);return c?`--paper:${c.paper};--paper-card:${c.card};--paper-2:${c.paper2};--paper-3:${c.paper3};--ink:${c.ink};--ink-2:${c.ink2};--ink-3:${c.ink3};--ink-d:${c.inkd};--line:${c.line};--line-2:${c.line2};--line-strong:${c.lineStrong};--accent:${c.accent};--accent-ink:${c.accentInk}`:'';}
+function paletteSwatches(pal){const c=cafeColors(pal);return c?[c.paper,c.card,c.accent,c.ink].map(col=>`<span style="background:${col}"></span>`).join(''):'';}
 // home vs café: same coffee (roaster / origin), two contexts. An honest little comparison, not a claim.
 function crossContext(key){
   const k={roaster:normName(key.roaster),origin:normName(key.origin||key.originCountry),variety:normName(key.variety)};
@@ -462,10 +505,15 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='2.0.0';
+const APP_VERSION='2.1.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'2.1.0',date:'Jul 16, 2026',title:'The café, in its own colours',items:[
+    'A café\'s branding photo now dresses its whole page — paper, ink, and accent, all drawn from the picture. One photograph, a small design system.',
+    'Every cup logged there is read back in that café\'s palette. The place has a look again, not just a name.',
+    'Light and dusk both keep their footing — the café holds its hue in either.',
+  ]},
   {v:'2.0.0',date:'Jul 16, 2026',title:'The next cup',items:[
     'CARTA is now one cup in two contexts: the cup you make and the cup you are served.',
     'The daily path is three places — Home, Café, Record. Everything operational moved out of the way.',
@@ -916,7 +964,7 @@ function descRow(){descState=new Set();return `<div class="desc">${DESCRIPTORS.m
 function descPick(d,el){descState.has(d)?descState.delete(d):descState.add(d);el.classList.toggle('on')}
 
 /* ============ photo ============ */
-let photoTarget=null,photoData=null,photoAccent=null;
+let photoTarget=null,photoData=null,photoAccent=null,photoPalette=null;
 document.getElementById('photoInput').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return;
   const img=new Image(); img.onload=()=>{
@@ -924,28 +972,35 @@ document.getElementById('photoInput').addEventListener('change',e=>{
     const c=document.createElement('canvas');c.width=img.width*r;c.height=img.height*r;
     c.getContext('2d').drawImage(img,0,0,c.width,c.height);
     photoData=c.toDataURL('image/jpeg',0.65);
-    photoAccent=dominantAccent(c); paintAccentSwatch();
+    photoPalette=derivePalette(c); photoAccent=photoPalette&&photoPalette.brand; paintBrandPreview();
     const z=document.getElementById('photozone');
     if(z)z.innerHTML=`<img class="bagphoto" src="${photoData}" style="margin:0">`;
     URL.revokeObjectURL(img.src);
   };
   img.src=URL.createObjectURL(f); e.target.value='';
 });
-// Derive one brand accent from a branding photo. Colourful pixels are weighted over the
-// paper-white / grey backgrounds most storefront shots carry, then muted into CARTA's register.
-function dominantAccent(srcCanvas){
+// Read a café's identity from a branding photo: its signature colour, and whether the material
+// reads dark. Colourful pixels are binned and weighted by chroma², so the sign's ink outvotes the
+// paper-white and grey most storefront shots carry. That one colour seeds the whole café surface
+// (see cafeColors) — a mini design system from a photograph.
+function derivePalette(srcCanvas){
   try{
-    const N=16,s=document.createElement('canvas');s.width=s.height=N;
-    s.getContext('2d').drawImage(srcCanvas,0,0,N,N);
-    const px=s.getContext('2d').getImageData(0,0,N,N).data;
-    let R=0,G=0,B=0,W=0,pr=0,pg=0,pb=0,pn=0;
+    const N=24,s=document.createElement('canvas');s.width=s.height=N;
+    const cx=s.getContext('2d');cx.drawImage(srcCanvas,0,0,N,N);
+    const px=cx.getImageData(0,0,N,N).data;
+    const bins={};let lum=0,n=0;
     for(let i=0;i<px.length;i+=4){
-      const r=px[i],g=px[i+1],b=px[i+2],chroma=Math.max(r,g,b)-Math.min(r,g,b);
-      pr+=r;pg+=g;pb+=b;pn++; const w=chroma*chroma; R+=r*w;G+=g*w;B+=b*w;W+=w;
+      const r=px[i],g=px[i+1],b=px[i+2];
+      lum+=.299*r+.587*g+.114*b; n++;
+      const w=Math.pow(Math.max(r,g,b)-Math.min(r,g,b),2); if(w<300)continue; // skip near-greys
+      const k=(r>>5)+','+(g>>5)+','+(b>>5),bin=bins[k]||(bins[k]={r:0,g:0,b:0,w:0});
+      bin.r+=r*w;bin.g+=g*w;bin.b+=b*w;bin.w+=w;
     }
-    const[r,g,b]=W>500?[R/W,G/W,B/W]:[pr/pn,pg/pn,pb/pn];
-    const[h,sa,l]=rgb2hsl(r,g,b);
-    return muteAccent(h,sa,l);
+    const dark=lum/n<118,top=Object.values(bins).sort((a,b)=>b.w-a.w)[0];
+    if(!top){const l=dark?60:38;return{h:28,s:8,l,brand:`hsl(28,8%,${l}%)`,dark,mono:true}} // no colour to read — an honest neutral
+    const[h,sa,l]=rgb2hsl(top.r/top.w,top.g/top.w,top.b/top.w),H=Math.round(h);
+    const S=Math.round(Math.min(80,Math.max(42,sa))),L=Math.round(Math.min(58,Math.max(38,l)));
+    return {h:H,s:S,l:L,brand:`hsl(${H},${S}%,${L}%)`,dark};
   }catch(e){return null}
 }
 function rgb2hsl(r,g,b){
@@ -954,7 +1009,18 @@ function rgb2hsl(r,g,b){
   const l=(mx+mn)/2,sa=d?d/(1-Math.abs(2*l-1)):0;
   return [h,sa*100,l*100];
 }
-function paintAccentSwatch(){const el=document.getElementById('accentswatch');if(el&&photoAccent){el.style.background=photoAccent;el.style.display='inline-block'}}
+// Live preview inside the café branding sheet: the derived palette, and a themed sample cup so the
+// transform is visible before it's saved. A no-op anywhere the preview slot isn't on screen.
+function paintBrandPreview(){const el=document.getElementById('brandpreview');if(el)el.innerHTML=photoPalette?brandPreviewHTML(photoPalette):'';}
+function brandPreviewHTML(pal){
+  return `<div class="palette">${paletteSwatches(pal)}</div>
+  <div class="cafe-theme" style="${cafeVars(pal)};margin:8px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius)">
+    <div class="muted" style="font-size:10px;letter-spacing:.14em;text-transform:uppercase">A cup here</div>
+    <div class="row" style="margin-top:5px"><span class="small"><strong>Every cup, in these colours</strong></span>
+      <span class="num" style="font-size:20px;font-weight:700;color:var(--accent)">8</span></div>
+    <div class="btn btn-primary" style="margin-top:10px">Log a cup here</div>
+  </div>`;
+}
 
 /* ============ bag form ============ */
 function openBagForm(id){
@@ -1260,12 +1326,12 @@ function shopAgg(){
   }).sort((a,b)=>(b.fav-a.fav)||b.last.localeCompare(a.last));
 }
 function shopCard(s){
-  const p=s.profile,ac=p&&p.accent;
-  return `<div class="card tap shopcard"${ac?` style="border-left:3px solid ${ac}"`:''} onclick="openShopDetail(${jsq(s.shop)})">
+  const p=s.profile,pal=palOf(p),vars=pal?cafeVars(pal):''; // each card previews its café's own palette
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openShopDetail(${jsq(s.shop)})">
     ${p&&p.photo?`<img class="brandhead" src="${p.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}</span>`:''}</span>
-      <span class="big">${s.avg??'—'}</span>
+      <span class="big"${vars?' style="color:var(--accent)"':''}>${s.avg??'—'}</span>
     </div>
     <div class="muted small">${s.visits} visit${s.visits>1?'s':''}${s.usual?` · usual <strong>${esc(s.usual)}</strong>`:''}${s.spend?` · ${money(s.spend)}`:''}</div>
   </div>`;
@@ -1278,15 +1344,21 @@ function openShopDetail(shop){
   const spend=cups.reduce((a,c)=>a+(c.price||0),0);
   const best=cups.reduce((m,c)=>Math.max(m,c.hedonic||0),0);
   const fav=isCafeFav(shop);
-  const p=cafeProfile(shop),ac=p&&p.accent;
+  const p=cafeProfile(shop),pal=palOf(p),vars=pal?cafeVars(pal):'';
   const roaster=modeOf(cups.map(c=>c.roaster).filter(Boolean));
   const origin=modeOf(cups.map(c=>c.origin||c.originCountry).filter(Boolean));
   const x=roaster||origin?crossContext({roaster,origin}):null;
-  openSheet(`
-  ${p&&p.photo?`<img class="brandhead lg" src="${p.photo}">`:''}
-  <h3>${esc(shop)}</h3>
-  <div class="sub">${city?esc(city)+' · ':''}${cups.length} cup${cups.length>1?'s':''} on the record</div>
-  <div class="card"${ac?` style="border-left:3px solid ${ac}"`:''}>
+  const subline=`${city?esc(city)+' · ':''}${cups.length} cup${cups.length>1?'s':''} on the record`;
+  // With a branding photo the whole page is themed and topped by a masthead cut from that photo;
+  // without one it falls back to the plain heading. Either way the palette wraps every cup below.
+  const head=p&&p.photo
+    ?`<div class="masthead"><img src="${p.photo}"><div class="scrim"></div><div class="bar"></div>
+      <div class="id"><div class="nm">${esc(shop)}</div>${city?`<div class="ct">${esc(city)}</div>`:''}</div></div>
+      <div class="sub" style="margin:10px 2px 14px">${subline}</div>`
+    :`<h3>${esc(shop)}</h3><div class="sub">${subline}</div>`;
+  openSheet(`<div class="cafe-theme"${vars?` style="${vars}"`:''}>
+  ${head}
+  <div class="card">
     <div class="kv"><span class="k">Average</span><span class="v num">${avg??'—'}</span></div>
     <div class="kv"><span class="k">Best cup</span><span class="v num">${best||'—'}</span></div>
     <div class="kv"><span class="k">Your usual</span><span class="v">${usual?esc(usual):'—'}</span></div>
@@ -1300,21 +1372,23 @@ function openShopDetail(shop){
   <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.photo||p.address||p.notes)?'Edit café':'Add café branding'}</button>
   <button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`}
   <h2>Every cup</h2>
-  ${cups.map(cupRow).join('')}`);
+  ${cups.map(cupRow).join('')}
+  </div>`);
 }
-// The café's own screen: branding photo (accent derived from it), address lookup, a note.
+// The café's own screen: branding photo (a whole palette derived from it), address lookup, a note.
 function openCafeProfile(shop){
   if(guard())return;
   const p=cafeProfile(shop)||{};
   const city=p.city||modeOf(cafeCups().filter(c=>(c.shop||'').trim()===shop.trim()).map(c=>c.city).filter(Boolean))||'';
-  photoData=p.photo||null; photoAccent=p.accent||null;
+  photoData=p.photo||null; photoPalette=palOf(p); photoAccent=(photoPalette&&photoPalette.brand)||p.accent||null;
   geoPick={address:p.address||'',lat:p.lat!=null?p.lat:null,lon:p.lon!=null?p.lon:null};
   openSheet(`
   <h3>${esc(shop)}</h3>
-  <div class="sub">The café's own page — the branding you walk past, the corner it's on.</div>
+  <div class="sub">Photograph the branding. Its colours dress this café and every cup you log in it.</div>
   <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">
-    ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the branding — sign, cup, storefront'}</div>
-  <div class="muted small" style="margin:-6px 2px 14px">Its colour is read from the photo.<span id="accentswatch" class="swatch"${photoAccent?` style="background:${photoAccent};display:inline-block"`:''}></span></div>
+    ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the branding — a sign, a cup, a menu'}</div>
+  <div id="brandpreview">${photoPalette?brandPreviewHTML(photoPalette):''}</div>
+  <div class="muted small" style="margin:8px 2px 16px">The palette is read from the photo — one signature colour, a whole surface built from it.</div>
   <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="p_city" value="${esc(city)}" placeholder="Los Angeles"></label>
   <label class="f"><span class="l">Address <span class="opt">optional</span></span>
     <input type="text" id="p_address" value="${esc(p.address||'')}" placeholder="street address — or just use the button"></label>
@@ -1328,7 +1402,7 @@ function openCafeProfile(shop){
 function saveCafeProfileForm(shop){
   if(guard())return;
   const addr=val('p_address'),pinned=addr&&geoPick.address===addr; // coords only survive if they still match the typed address
-  saveCafeProfile(shop,{name:shop.trim(),city:val('p_city'),notes:val('p_notes'),photo:photoData,accent:photoAccent,
+  saveCafeProfile(shop,{name:shop.trim(),city:val('p_city'),notes:val('p_notes'),photo:photoData,accent:photoAccent,palette:photoPalette,
     address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null});
   save();openShopDetail(shop);toast('Café saved');
 }
