@@ -1,6 +1,21 @@
 # CARTA Coffee Ledger
 
-A beautiful, minimal coffee brewing journal. Track your setups, bags, and brews over time.
+A personal memory of coffee at home and in cafés.
+
+**One cup. Two contexts. Your taste is the through-line.**
+
+CARTA gives equal weight to the cup you make and the cup you are served. Home is
+measured, adjusted, and made again. Café is received, experienced, and returned to.
+Both end in the same honest record of what was in the cup and whether it was worth
+finding again.
+
+The primary experience is deliberately only three places:
+
+- **Home** — resume the coffee in hand from the last cup.
+- **Café** — remember the last cup out and the places worth returning to.
+- **Record** — see one preference across both contexts.
+
+See [NORTH_STAR.md](NORTH_STAR.md) for the product thesis and restraint standard.
 
 ## Logging a brew
 
@@ -18,7 +33,7 @@ If you time and weigh on your machine or a Bluetooth scale (e.g. the Argos app),
 
 ## Appearance
 
-CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, hierarchy from weight and space rather than colour. Two themes — **Paper** and **Dusk** — switch in **Ledger → Preferences**, remembered per user. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
+CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, and one ember-red signal for the current action and the cup’s score. Two themes — **Paper** and **Dusk** — switch under **More → Preferences**, remembered per user. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
 
 ## Café cups
 

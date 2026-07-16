@@ -1,22 +1,23 @@
 {
   "name": "CARTA Coffee Ledger",
   "short_name": "CARTA",
+  "description": "One cup, two contexts. A personal record of coffee at home and in cafés.",
   "start_url": "/carta/",
   "display": "standalone",
-  "background_color": "#fafaf8",
-  "theme_color": "#fafaf8",
+  "background_color": "#f2eee6",
+  "theme_color": "#f2eee6",
   "scope": "/carta/",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-192.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-512.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any"
     }
   ]
