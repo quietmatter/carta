@@ -2,6 +2,20 @@
 
 A beautiful, minimal coffee brewing journal. Track your setups, bags, and brews over time.
 
+## Logging a brew
+
+The brew screen opens as your last brew — turn the one dial you actually changed. Each numeric dial can be driven three ways:
+
+- **Tap − / +** for one step.
+- **Press and hold** − or + to accelerate across a wide range (fly through a 0–2000 grinder, ease off for the fine end).
+- **Tap the number** to type an exact value on the numeric keypad — time accepts `m:ss`.
+
+Give each **Setup** its grinder's real **grind scale** (min / max / step — e.g. a Lido OG is 0–2000, step 5) and that Setup's grind dial moves the way the grinder does. Grind is only ever comparable within one Setup.
+
+Temperature has a **°C / °F** switch right on the dial (whole-degree steps), remembered per user and stored canonically as °C so the record stays comparable.
+
+If you time and weigh on your machine or a Bluetooth scale (e.g. the Argos app), hide CARTA's stopwatch in **Ledger → Preferences** and simply type the time and weight in. CARTA keeps the record; it doesn't need to be the timer.
+
 ## Multiple Users
 
 CARTA supports multiple users on one device. Manage them from the **Ledger** tab:
