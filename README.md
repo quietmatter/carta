@@ -18,6 +18,19 @@ The primary experience is deliberately only four places:
 
 See [NORTH_STAR.md](NORTH_STAR.md) for the product thesis and restraint standard.
 
+## First run
+
+The first time you open CARTA it says what it is before it asks anything of you —
+one cup, two contexts, the record yours. Then it asks where you'd like to start:
+
+- **The cup at home** — dial it in; you land on Home and define a Setup.
+- **The cup away** — remember cafés; you land on Café and log your first cup.
+- **Both** — the whole idea; start with a Setup, log a café cup any time.
+
+Your choice sets which screen greets you afterward and picks the one first action
+to take — nothing you can't change. Replay the welcome any time from
+**Ledger → The manual → Replay the welcome**.
+
 ## Logging a brew
 
 The brew screen opens as your last brew — turn the one dial you actually changed. Each numeric dial can be driven three ways:
