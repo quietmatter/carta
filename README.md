@@ -13,7 +13,7 @@ The primary experience is deliberately only four places:
 
 - **Home** — resume the coffee in hand from the last cup.
 - **Café** — remember the last cup out and the places worth returning to.
-- **Friends** — read other people's café cups; read only, always.
+- **Friends** — find the next cup: search, sort by who's near, and follow the people whose taste is closest to yours; read only, always.
 - **Record** — see one preference across both contexts.
 
 See [NORTH_STAR.md](NORTH_STAR.md) for the product thesis and restraint standard.
@@ -79,34 +79,50 @@ branding photo and derived palette, a line for the record.
   entry remembers who entered it first and who amended it last.
 - **Lookup and discovery.** The café cup form looks the shop up against the
   Register as you type — "In the Register — Los Angeles · pinned, first entered
-  by Jane." And the Café tab lists Register entries you haven't been to: other
-  people's finds, with the pin, waiting. In search of better cups, the
+  by Jane." The Café and Friends tabs surface Register entries you haven't been
+  to, ranked as recommendations (below). In search of better cups, the
   consistent record of the place is the map.
 
 Cups stay personal, per ledger. Only the place is common knowledge.
 
-## Friends — reading without keeping
+## Friends — finding the next cup
 
 Not everyone wants to keep a record. Some people just want to know where to go
 and what to order. The **Friends** tab is for them — and it requires logging
-nothing, ever.
+nothing, ever. It pools every record the active user can read — other users on
+this device, everyone on a connected sync server — plus the shared Register, and
+turns them into a discovery loop: *search → near you → whose taste matches yours
+→ worth the walk → save it → go.*
 
-Every record the active user can read — other users on this device, everyone on
-a connected sync server — pools into:
-
-- **The stream** — every café cup your people have logged, newest first: who,
-  where, what they ordered, the score, their words, the photo. Tap a cup for the
-  full card, including the café's address and an Open in Maps link when someone
-  has pinned it.
-- **Places worth the walk** — every café across everyone's records, ranked by
-  their scores, with the cup count, who's been, the usual order, and the pin on
-  the map. Tap a place for every cup anyone has had there.
+- **Search** — one field over the whole pooled record. Type a café, a city, a
+  roaster, an origin, a descriptor or a note and matching **places**, **beans**
+  and **cups** surface at once.
+- **Near you** — say where you are (optional; asked only when you tap it, and
+  kept on the device — never stored or synced) and the pinned cafés your people
+  kept sort by distance, closest first, each showing how far.
+- **Worth the walk, for you** — cafés you haven't kept, ranked by your circle's
+  scores and weighted toward the people whose taste runs closest to yours; the
+  card says who rated it and why. A city filter or the "near you" lens re-scopes
+  the list.
+- **Whose palate matches yours** — on the cafés you've both kept, how close your
+  scores land on the 1–9 scale. The shape of an agreement, not a verdict —
+  read the people who walk your streets.
+- **The stream** — every café cup your people have logged, newest first (scoped
+  to the active city lens): who, where, what they ordered, the score, their
+  words, the photo. Tap a cup for the full card, including the address and an
+  Open in Maps link when someone has pinned it.
+- **Beans worth chasing** — the roasters and origins your circle scored, best
+  average first.
+- **Want to go** — save any place from anyone's record to a shortlist that waits
+  under Friends and on the Café tab, and steps aside once you've logged a cup
+  there. (The one thing Friends writes to your own ledger; it syncs like the
+  rest.)
 - **How to read a cup** — a plain-words primer that decodes the hedonic 1–9
   scale, the again/pass verdict, and the descriptors for readers who don't keep
   a ledger of their own.
 
 The stream refreshes quietly from the server when the tab is open and falls back
-to cached copies offline. Everything is read-only — look, don't touch — and any
+to cached copies offline. Discovery is read-only — look, don't touch — and any
 cup links through to the friend's whole record via the existing read-only view.
 
 ## Multiple Users
