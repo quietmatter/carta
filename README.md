@@ -51,8 +51,9 @@ CARTA reads like a printed record: a serif for what you tasted, a sans for what 
 
 ## Café cups
 
-The **Cafés** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays fast by default: a shop and one tap on the scale is a whole record. Add as much as the cup deserves.
+The **Cafés** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, a photo, the order-again verdict, traceability — waits behind one line, to add now or later.
 
+- **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put).
 - **Each café wears its own colours.** Photograph the branding — a sign, a cup, a menu — and CARTA reads one signature colour from it, then builds a whole surface around it: the café's page and every cup logged there take on that palette. A small design system from a photograph, held in light and dusk alike.
 - **Pin it on the map.** Look up a café's address online and open it in Maps from its page. Typing the address by hand always works; the lookup is a convenience, not a requirement, and the app stays fully offline without it.
 - **Traceability, aligned to your bags.** A café cup can carry the same fields a bag does — country, region, producer, variety, lot, process — tucked behind one optional tap. Bags gained a lot number too, so a café cup and the bag on your shelf finally line up.
