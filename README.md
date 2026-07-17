@@ -140,7 +140,7 @@ Existing single-user data migrates automatically on first launch — nothing to 
 
 CARTA can synchronize ledgers through a tiny self-hosted server, so your record follows you across devices and everyone on the server can **view** (never edit) each other's ledgers — live, from the Users list in the Ledger tab.
 
-- Run the server: `node server/server.js` — one file, zero dependencies, JSON storage. See **[server/README.md](server/README.md)** for deployment, the HTTPS requirement, and the API.
+- Run the server: `node server/server.js` — one file, zero dependencies, JSON storage. Or skip the hardware entirely: the same server deploys serverless to Cloudflare's free plan with one command. See **[server/README.md](server/README.md)** for deployment, the HTTPS requirement, and the API.
 - Connect from the app: Ledger tab → Sync → **Connect to a sync server** (server URL, name, passcode).
 - Offline-first: with no server configured or reachable, nothing changes. Edits queue and sync when the app comes back to the foreground.
 - Conflicts merge by record — logging on two devices keeps both entries; removed cups stay removed (tombstones).

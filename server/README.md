@@ -8,12 +8,15 @@ node server/server.js
 
 Node 18+ (no `npm install` — there are no dependencies). From `server/` you can also use `npm start` and `npm test`.
 
+Prefer not to run a machine at all? The same server exists as a serverless port for Cloudflare's free plan — `worker.mjs`, one `npx wrangler deploy`, no hardware, no files, HTTPS included. See [Run on Cloudflare Workers](#run-on-cloudflare-workers-free-serverless).
+
 ## Deploy
 
 The server speaks plain HTTP; the [HTTPS requirement](#️-https-required-read-this-first) below means you either pick a host that terminates TLS for you (fly.io) or put a TLS proxy in front (Caddy/nginx). Pick one:
 
 | Target | Files | Quickstart |
 |---|---|---|
+| **Cloudflare Workers** (free, serverless, TLS included) | `worker.mjs`, `wrangler.toml` | `cd server && npx wrangler deploy` — see [below](#run-on-cloudflare-workers-free-serverless). URL: `https://carta-sync.<subdomain>.workers.dev` |
 | **fly.io** (TLS included) | `fly.toml`, `Dockerfile` | `fly launch --no-deploy --copy-config` → `fly volumes create carta_data --size 1` → `fly deploy`. URL: `https://<app>.fly.dev` |
 | **Mac laptop + Tailscale** | `com.carta.sync.plist.example` | Auto-start with launchd + `tailscale funnel` for HTTPS — see [below](#run-on-a-mac-laptop-tailscale). Great for a small, trusted group when you're OK with the server going offline while the laptop sleeps |
 | **Docker / any VPS** | `Dockerfile`, `docker-compose.yml` | `docker compose up -d` (serves `:8787`; add a TLS proxy) |
@@ -23,6 +26,35 @@ The server speaks plain HTTP; the [HTTPS requirement](#️-https-required-read-t
 Each config file's header comments carry the full step-by-step. Whichever you use, the data directory (`CARTA_DATA`) must be on **persistent storage** — a Docker/fly volume, or a real path on a VPS — or ledgers vanish on restart.
 
 Once it's reachable over https, connect from the app: **Ledger → Sync → Connect to a sync server** and paste the URL.
+
+## Run on Cloudflare Workers (free, serverless)
+
+The lightest way to get the server off your own hardware. `server/worker.mjs` is a port of `server.js` — same API, same auth, same sync protocol — that runs as a Cloudflare Worker with all data in one strongly-consistent [Durable Object](https://developers.cloudflare.com/durable-objects/). Free plan, always on, HTTPS included, no machine to keep awake, no volume to provision, no OS to patch.
+
+**1. Deploy** — needs Node 18+ and a free [Cloudflare account](https://dash.cloudflare.com/sign-up). Nothing is installed into the repo; `wrangler` runs via `npx`:
+
+```bash
+cd server
+npx wrangler deploy        # first run opens a browser to sign in
+```
+
+The deploy prints your URL: `https://carta-sync.<your-subdomain>.workers.dev`.
+
+**2. Gate sign-ups.** The URL is public, so set a registration code (stored as an encrypted secret, applied on the next request — no redeploy needed):
+
+```bash
+npx wrangler secret put CARTA_REGISTER_CODE
+```
+
+**3. Connect the app:** paste the URL into **Ledger → Sync → Connect to a sync server**. Hand the code to your people out-of-band; each registers a name + passcode as usual.
+
+**Notes for the Workers deployment**
+
+- **Storage** is a SQLite-backed Durable Object, not files — the free plan allows 1 GB for it, which holds a great many ledgers even with photos. There is no data directory; the "backup" is the app itself (offline-first — every device holds its user's full record, and **Ledger → Export** produces the canonical JSON).
+- **Moving from another server** (the laptop, fly.io): connect each device to the new URL and register again. Local data is the source of truth, so the first sync pushes everything back up. Accounts and tokens don't carry over.
+- **Config** maps from env vars to wrangler: `CARTA_REGISTER_CODE` is a secret (above); `CARTA_MAX_BODY` is a `[vars]` entry in `wrangler.toml`; `PORT` and `CARTA_DATA` don't apply.
+- **Consistency** is preserved: the single Durable Object serializes every request, so the rev/409 protocol works exactly as it does on the Node server. Ledgers larger than the object store's 2 MB value cap are chunked transparently.
+- To take it down: `npx wrangler delete`.
 
 ## Run on a Mac laptop (Tailscale)
 
@@ -72,6 +104,8 @@ The CARTA app is served over **https** (e.g. GitHub Pages). Browsers block an ht
 The one exception: `http://localhost` is allowed by browsers, so local development works without TLS.
 
 ## Configuration
+
+These apply to the Node server (`server.js`). For the Workers deployment, `CARTA_REGISTER_CODE` becomes a wrangler secret and `CARTA_MAX_BODY` a `[vars]` entry — see [above](#run-on-cloudflare-workers-free-serverless).
 
 | Env var | Default | Meaning |
 |---|---|---|
@@ -137,7 +171,8 @@ The café Register (`/api/cafes`) follows the same protocol with one difference:
 ## Tests
 
 ```
-node server/test.js
+node server/test.js           # the Node server
+node server/test-worker.js    # the Workers port
 ```
 
-Zero-dependency test script — spawns the server on an ephemeral port with a temp data dir and exercises the full endpoint/authorization/conflict matrix.
+Zero-dependency test scripts (`npm test` runs both). `test.js` spawns the server on an ephemeral port with a temp data dir and exercises the full endpoint/authorization/conflict matrix. `test-worker.js` runs the same matrix against `worker.mjs` in plain Node with an in-memory Durable Object storage mock — no wrangler required — plus cases for the chunked large-ledger storage. If you change the API, change both servers and keep both scripts passing.
