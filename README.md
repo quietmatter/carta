@@ -9,6 +9,13 @@ measured, adjusted, and made again. Café is received, experienced, and returned
 Both end in the same honest record of what was in the cup and whether it was worth
 finding again.
 
+> **Design lineage.** Carta is a **sub-brand of the Quiet Matter design system**
+> (`quietmatter/quiet-matter`). It inherits Quiet Matter's typefaces, type scale,
+> label system, token architecture and voice, and overrides its palette, adds an
+> ember signal, an editorial display scale and a per-café colour engine. The full
+> charter — what is inherited, what may be overridden, how the two stay in sync —
+> is in [SUBBRAND.md](SUBBRAND.md).
+
 The primary experience is deliberately only four places:
 
 - **Home** — resume the coffee in hand from the last cup.
