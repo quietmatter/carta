@@ -1,0 +1,41 @@
+# fly.io deployment. Fly terminates TLS for you (the required https), so no
+# separate proxy is needed. First-time setup:
+#
+#   fly launch --no-deploy --copy-config --name carta-sync   # or edit `app` below
+#   fly volumes create carta_data --size 1                    # persistent ledger storage
+#   fly deploy
+#
+# Your sync URL is then https://<app>.fly.dev — paste that into
+# CARTA → Ledger → Sync → Connect to a sync server.
+
+app = "carta-sync"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8787"
+  CARTA_DATA = "/data"
+
+[mounts]
+  source = "carta_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "30s"
+    timeout = "3s"
+    grace_period = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

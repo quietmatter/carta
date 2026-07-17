@@ -1,0 +1,29 @@
+# systemd unit for running the sync server on a VPS (behind Caddy/nginx for TLS).
+#
+#   1. Put the repo at /opt/carta (or edit paths below).
+#   2. sudo useradd --system --home /var/lib/carta --create-home carta
+#   3. sudo cp server/carta-sync.service.example /etc/systemd/system/carta-sync.service
+#   4. sudo systemctl daemon-reload && sudo systemctl enable --now carta-sync
+#   5. sudo systemctl status carta-sync   # confirm it's listening on :8787
+
+[Unit]
+Description=CARTA sync server
+After=network.target
+
+[Service]
+Type=simple
+User=carta
+WorkingDirectory=/opt/carta
+Environment=PORT=8787
+Environment=CARTA_DATA=/var/lib/carta/data
+ExecStart=/usr/bin/node /opt/carta/server/server.js
+Restart=on-failure
+RestartSec=2
+# Hardening — the process only needs to read the repo and write its data dir.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/carta
+
+[Install]
+WantedBy=multi-user.target

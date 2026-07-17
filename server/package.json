@@ -1,0 +1,21 @@
+{
+  "name": "carta-sync-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tiny zero-dependency sync server for CARTA coffee ledgers.",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "server.js",
+  "bin": {
+    "carta-sync": "server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js && node test-worker.js",
+    "test:server": "node test.js",
+    "test:worker": "node test-worker.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
