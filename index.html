@@ -594,10 +594,17 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='3.0.0';
+const APP_VERSION='3.1.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'3.1.0',date:'Jul 17, 2026',title:'Log light, fill in later',items:[
+    'Every cup is editable. Open one from the record and revise it — add the beans, the price, a photo, the order-again verdict, whenever you have the time. It keeps its place and hour.',
+    'Café cups start minimal: a shop, a style, a tap on the scale. Everything else waits behind one line — add the rest now, or come back to it.',
+    'Brews open the same way — the dials up front, instrumentation and notes folded away until you want them.',
+    'A bag is a photo and a name. Origin, roast date and price fill in when they earn their place.',
+    'Correct a brew after the fact — fix a dose or a time, and the cup it carries stays put.',
+  ]},
   {v:'3.0.0',date:'Jul 17, 2026',title:'Find the next cup',items:[
     'Friends is now a way to find coffee, not only to read about it. Search every record you can reach — a café, a city, a roaster, a note — and the places, beans and cups that match surface at once.',
     'Near you. Say where you are and the cafés your people kept sort by distance, closest first — the pin on the map finally does more than open Maps. Optional, asked only when you tap it, kept on the device.',
@@ -766,6 +773,7 @@ function openCupDetail(id){
   ${x&&x.home.n?`<div class="cafeback">You have had beans like these at home — <strong>${x.home.avg}</strong> across ${x.home.n} home cup${x.home.n>1?'s':''} vs <strong>${x.cafe.avg}</strong> out. How the preference travels.</div>`:''}
   ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
+  ${readOnly()?'':`<button class="btn btn-primary" onclick="editCup('${c.id}')">Edit this cup</button>`}
   ${!readOnly()&&cafe&&c.shop?`<button class="btn btn-quiet" onclick="logAnotherHere('${c.id}')">Log another here</button>`:''}
   ${readOnly()?'':`<div class="muted small" style="margin:10px 0">Removing a cup deletes this impression only. ${brew?'The brew it came from stays in the ledger.':''}</div>
   <button class="btn btn-danger" onclick="removeCup('${c.id}')">Remove from ledger</button>`}
@@ -1070,12 +1078,12 @@ function seg(id,options,selected){segState[id]=selected;
   return `<div class="seg" id="seg_${id}">${options.map(o=>
     `<button class="${o===selected?'on':''}" onclick="segPick('${id}','${o}',this)">${o}</button>`).join('')}</div>`;}
 function segPick(id,o,el){segState[id]=o;el.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===el))}
-function hedonicRow(){hedState=null;return `<div class="hedonic" id="hed">${[1,2,3,4,5,6,7,8,9].map(i=>
-  `<button class="num" onclick="hedPick(${i},this)">${i}</button>`).join('')}</div>
+function hedonicRow(init){hedState=(init==null?null:init);return `<div class="hedonic" id="hed">${[1,2,3,4,5,6,7,8,9].map(i=>
+  `<button class="num ${init===i?'on':''}" onclick="hedPick(${i},this)">${i}</button>`).join('')}</div>
   <div class="muted" style="display:flex;justify-content:space-between;font-size:10px"><span>poor</span><span>extraordinary</span></div>`;}
 function hedPick(i,el){hedState=i;document.getElementById('hed').querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',j===i-1))}
-function descRow(){descState=new Set();return `<div class="desc">${DESCRIPTORS.map(d=>
-  `<button onclick="descPick('${d}',this)">${d}</button>`).join('')}</div>`;}
+function descRow(init){descState=new Set(init||[]);return `<div class="desc">${DESCRIPTORS.map(d=>
+  `<button class="${descState.has(d)?'on':''}" onclick="descPick('${d}',this)">${d}</button>`).join('')}</div>`;}
 function descPick(d,el){descState.has(d)?descState.delete(d):descState.add(d);el.classList.toggle('on')}
 
 /* ============ photo ============ */
@@ -1142,27 +1150,32 @@ function openBagForm(id){
   if(guard())return;
   const b=id?bagById(id):{};
   photoData=b.photo||null;
+  const more=!!(b.originCountry||b.originRegion||b.producer||b.variety||b.process||b.lot||b.roastDate||b.boughtAt||b.price!=null||b.notes);
   openSheet(`
   <h3>${id?'Edit bag':'Capture a bag'}</h3>
-  <div class="sub">30 seconds. Free text is fine — resolution comes later.</div>
+  <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'A photo and a name is a bag. Resolution comes later.'}</div>
   <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">
     ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the bag'}</div>
   <div class="grid2">
     <label class="f"><span class="l">Roaster</span><input type="text" id="f_roaster" value="${esc(b.roaster)}" placeholder="Sey"></label>
     <label class="f"><span class="l">Coffee</span><input type="text" id="f_name" value="${esc(b.name)}" placeholder="Gesha Village"></label>
-    <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry)}" placeholder="Ethiopia"></label>
-    <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion)}" placeholder="Bench Maji"></label>
-    <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer)}" placeholder="free text"></label>
-    <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety)}" placeholder="Gesha 1931"></label>
-    <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process)}" placeholder="washed"></label>
-    <label class="f"><span class="l">Lot no.</span><input type="text" id="f_lot" value="${esc(b.lot)}" placeholder="free text"></label>
-    <label class="f"><span class="l">Roast date</span><input type="date" id="f_roastDate" value="${esc(b.roastDate)}"></label>
-    <label class="f"><span class="l">Bought at</span><input type="text" id="f_boughtAt" value="${esc(b.boughtAt)}" placeholder="Kumquat, LA"></label>
-    <label class="f"><span class="l">Price</span><input type="number" id="f_price" value="${b.price??''}" placeholder="$" inputmode="decimal"></label>
   </div>
   <label class="f"><span class="l">Roast level</span>
     ${seg('roast',ROAST_LEVELS.slice(1),ROAST_LEVELS[b.roastLevel]||'Medium')}</label>
-  <label class="f"><span class="l">Notes</span><textarea id="f_notes">${esc(b.notes)}</textarea></label>
+  <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">origin, roast date, price — now or later</span></summary>
+    <div class="grid2">
+      <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry)}" placeholder="Ethiopia"></label>
+      <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion)}" placeholder="Bench Maji"></label>
+      <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety)}" placeholder="Gesha 1931"></label>
+      <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process)}" placeholder="washed"></label>
+      <label class="f"><span class="l">Lot no.</span><input type="text" id="f_lot" value="${esc(b.lot)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Roast date</span><input type="date" id="f_roastDate" value="${esc(b.roastDate)}"></label>
+      <label class="f"><span class="l">Bought at</span><input type="text" id="f_boughtAt" value="${esc(b.boughtAt)}" placeholder="Kumquat, LA"></label>
+      <label class="f"><span class="l">Price</span><input type="number" id="f_price" value="${b.price??''}" placeholder="$" inputmode="decimal"></label>
+    </div>
+    <label class="f"><span class="l">Notes</span><textarea id="f_notes">${esc(b.notes)}</textarea></label>
+  </details>
   <button class="btn btn-primary" onclick="saveBag('${id||''}')">Save bag</button>
   ${id?`<button class="btn btn-danger" onclick="archiveBag('${id}')">${b.archived?'Unarchive':'Archive'} bag</button>`:''}`);
 }
@@ -1259,20 +1272,23 @@ function lastBrewFor(bagId,setupId){
       || D.brews.filter(x=>x.setupId===setupId).sort(byNew)[0]
       || D.brews.slice().sort(byNew)[0] || null;
 }
-function openBrew(bagId){
+function openBrew(bagId,editId){
   if(guard())return;
   const bags=D.bags.filter(b=>!b.archived).sort(byNew);
   if(!bags.length){toast('Capture a bag first');go('bags');return}
   if(!D.setups.length){toast('Define a Setup first — grind needs one');go('setups');openSetupForm();return}
+  const editing=editId?D.brews.find(x=>x.id===editId):null;
   const lastAny=D.brews.slice().sort(byNew)[0];
-  const bag=bagId?bagById(bagId):(lastAny?bagById(lastAny.bagId):bags[0])||bags[0];
+  const bag=editing?bagById(editing.bagId):(bagId?bagById(bagId):(lastAny?bagById(lastAny.bagId):bags[0]))||bags[0];
   setAccent(bag.roastLevel);
-  const last=lastBrewFor(bag.id, null);
-  const setup=last?setupById(last.setupId):D.setups[D.setups.length-1];
+  const last=editing||lastBrewFor(bag.id, null);
+  const setup=editing?setupById(editing.setupId):(last?setupById(last.setupId):D.setups[D.setups.length-1]);
   const techs=[...new Set(D.brews.map(x=>x.technique).filter(Boolean))];
+  // In edit mode the fold opens if there's already something to see under it.
+  const moreOpen=!!(editing&&((last.instrumentation&&last.instrumentation!=='measured')||last.notes));
   openSheet(`
-  <h3>Log a brew</h3>
-  <div class="sub">${last?'Opened as last time — turn one dial.':'First brew. Set your starting point.'}</div>
+  <h3>${editing?'Edit brew':'Log a brew'}</h3>
+  <div class="sub">${editing?'Correct the record — the cup it carries stays put.':(last?'Opened as last time — turn one dial.':'First brew. Set your starting point.')}</div>
   <div class="grid2">
     <label class="f"><span class="l">Bag</span><select id="b_bag" onchange="setAccent(bagById(this.value).roastLevel)">
       ${bags.map(x=>`<option value="${x.id}" ${x.id===bag.id?'selected':''}>${esc(bagName(x))}</option>`).join('')}</select></label>
@@ -1282,7 +1298,7 @@ function openBrew(bagId){
   <label class="f"><span class="l">Technique (free text — it's a node, not an enum)</span>
     <input type="text" id="b_technique" list="techlist" value="${esc(last?last.technique:'')}" placeholder="V60 · 9-bar · turbo · soup">
     <datalist id="techlist">${techs.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></label>
-  ${timerHTML()}
+  ${editing?'':timerHTML()}
   <div class="dialrow">
     <div id="dialbox_grind">${grindDialHTML(setup,last?last.grind:20)}</div>
     ${dial('dose','Dose','g',last?last.doseG:18,0.1,0,null,1)}
@@ -1290,17 +1306,22 @@ function openBrew(bagId){
     <div id="dialbox_temp">${tempDialHTML(last?last.tempC:94)}</div>
   </div>
   ${dial('time','Time','',last?last.timeSec:28,1,0,null,0,{kind:'time'})}
-  <label class="f"><span class="l">Instrumentation</span>${seg('instr',INSTR,last?last.instrumentation||'measured':'measured')}</label>
-  <label class="f"><span class="l">Brew notes</span><input type="text" id="b_notes" placeholder="optional"></label>
-  <button class="btn btn-primary" onclick="saveBrew()">Save brew → impression</button>`);
+  <details class="trace-more" ${moreOpen?'open':''}><summary>Instrumentation &amp; notes <span class="opt">how you knew — optional</span></summary>
+    <label class="f"><span class="l">Instrumentation</span>${seg('instr',INSTR,last?last.instrumentation||'measured':'measured')}</label>
+    <label class="f"><span class="l">Brew notes</span><input type="text" id="b_notes" value="${esc(editing?editing.notes:'')}" placeholder="optional"></label>
+  </details>
+  <button class="btn btn-primary" onclick="saveBrew('${editId||''}')">${editing?'Save changes':'Save brew → impression'}</button>`);
 }
-function saveBrew(){
+function saveBrew(editId){
   if(guard())return;
   const setupId=val('b_setup');
   if(!setupId){toast('Refused: a brew requires a Setup');return}
-  const brew={id:uid(),createdAt:new Date().toISOString(),bagId:val('b_bag'),setupId,
+  const fields={bagId:val('b_bag'),setupId,
     technique:val('b_technique'),grind:dialState.grind.v,doseG:dialState.dose.v,waterG:dialState.water.v,
     tempC:dialTempC(),timeSec:dialState.time.v,instrumentation:segState.instr||'measured',notes:val('b_notes')};
+  const ex=editId?D.brews.find(x=>x.id===editId):null;
+  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});save();stopTimer(true);closeSheet();go('field');toast('Brew updated');return}
+  const brew={id:uid(),createdAt:new Date().toISOString(),...fields};
   D.brews.push(brew);save();stopTimer(true);
   openImpression(brew);
 }
@@ -1315,79 +1336,85 @@ function openImpression(brew){
   <button class="btn btn-primary" onclick="saveCup('home','${brew.id}','${brew.bagId}')">Done</button>
   <button class="btn btn-quiet" onclick="saveCup('home','${brew.id}','${brew.bagId}',true)">Skip impression</button>`);
 }
-function saveCup(kind,brewId,bagId,skip){
+function saveCup(kind,brewId,bagId,skip,editId){
   if(guard())return;
   if(!skip&&hedState==null&&kind==='home'){toast('One tap on the scale, or skip');return}
-  const brew=brewId?D.brews.find(x=>x.id===brewId):null;
-  const cup={id:uid(),createdAt:new Date().toISOString(),kind,brewId:brewId||null,bagId:bagId||null,
+  const ex=editId?cupById(editId):null; // edit path: keep the cup's id, place and hour; revise the rest
+  const brew=brewId?D.brews.find(x=>x.id===brewId):(ex&&ex.brewId?D.brews.find(x=>x.id===ex.brewId):null);
+  const fields={kind,brewId:brewId||(ex?ex.brewId:null)||null,bagId:bagId||(ex?ex.bagId:null)||null,
     shop:kind==='cafe'?val('c_shop'):null,drink:kind==='cafe'?val('c_drink'):null,
     hedonic:skip?null:hedState,descriptors:skip?[]:[...descState],notes:skip?'':val('c_notes'),
     instrumentation:kind==='cafe'?'recalled':(brew?brew.instrumentation:'measured'),blind:false,runId:null};
   if(kind==='cafe'){
-    cup.city=val('c_city');cup.style=cafeStyleState;cup.roaster=val('c_roaster');
-    cup.origin=val('c_origin');cup.price=numv('c_price');cup.photo=photoData;cup.again=againState;
+    fields.city=val('c_city');fields.style=cafeStyleState;fields.roaster=val('c_roaster');
+    fields.origin=val('c_origin');fields.price=numv('c_price');fields.photo=photoData;fields.again=againState;
     // structured traceability, aligned to the bag schema — the café's aspiration toward the exact coffee
-    cup.originCountry=val('c_country');cup.originRegion=val('c_region');cup.producer=val('c_producer');
-    cup.variety=val('c_variety');cup.lot=val('c_lot');cup.process=val('c_process');
-    if(cup.shop)regUpsert(cup.shop,{city:cup.city},activeName()); // a sighting — the café enters the Register
-    if(cup.shop&&D.cafeWants){const i=D.cafeWants.findIndex(x=>normName(x)===normName(cup.shop));if(i>=0)D.cafeWants.splice(i,1)} // been now — off the want list
+    fields.originCountry=val('c_country');fields.originRegion=val('c_region');fields.producer=val('c_producer');
+    fields.variety=val('c_variety');fields.lot=val('c_lot');fields.process=val('c_process');
+    if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
+    if(fields.shop&&D.cafeWants){const i=D.cafeWants.findIndex(x=>normName(x)===normName(fields.shop));if(i>=0)D.cafeWants.splice(i,1)} // been now — off the want list
   }
-  D.cups.push(cup);save();closeSheet();
-  if(kind==='cafe'){go(cup.shop?'cafes':'field');toast('Café cup logged');}
-  else{go('field');toast(skip?'Brew recorded':'Recorded. The ritual is the point.');}
+  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()})}
+  else{D.cups.push({id:uid(),createdAt:new Date().toISOString(),...fields})}
+  editingCupId=null;
+  save();closeSheet();
+  if(kind==='cafe'){go(fields.shop?'cafes':'field');toast(ex?'Café cup updated':'Café cup logged');}
+  else{go('field');toast(ex?'Cup updated':(skip?'Brew recorded':'Recorded. The ritual is the point.'));}
 }
 
 /* ============ café cup ============ */
-function openCafe(pre){
+function openCafe(pre,editId){
   if(guard())return;
   pre=pre||{};
+  editingCupId=editId||null;
+  if(editId){const c=cupById(editId);if(c)pre=c;} // revising an existing cup — prefill from the record
   // the shop field looks up the Register too — every café anyone has named
   const shops=[...new Set([...cafeCups().map(c=>c.shop).filter(Boolean),...REG.entries.map(e=>e.name)])];
   const cities=[...new Set(cafeCups().map(c=>c.city).filter(Boolean))];
-  photoData=null;photoAccent=null;cafeStyleState='Espresso';againState=null;
+  photoData=pre.photo||null;photoAccent=null;cafeStyleState=pre.style||'Espresso';againState=(pre.again==null?null:pre.again);
+  // The fold opens on edit only if the cup already carries something under it.
+  const more=!!(pre.city||pre.roaster||pre.origin||pre.price!=null||pre.again!=null||pre.photo||pre.originCountry||pre.originRegion||pre.producer||pre.variety||pre.lot||pre.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
   openSheet(`
-  <h3>Café cup</h3>
-  <div class="sub">Fast by default — a shop and a tap is a valid record. Add as much as the cup deserves.</div>
+  <h3>${editId?'Edit café cup':'Café cup'}</h3>
+  <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and a tap is a whole record. The rest waits until you have time.'}</div>
   <div id="cafehint"></div>
-  <div class="grid2">
-    <label class="f"><span class="l">Shop</span><input type="text" id="c_shop" list="shoplist" value="${esc(pre.shop||'')}" placeholder="Kumquat" oninput="cafeShopHint()">
-      <datalist id="shoplist">${shops.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
-    <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="c_city" list="citylist" value="${esc(pre.city||'')}" placeholder="Los Angeles">
-      <datalist id="citylist">${cities.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
-  </div>
+  <label class="f"><span class="l">Shop</span><input type="text" id="c_shop" list="shoplist" value="${esc(pre.shop||'')}" placeholder="Kumquat" oninput="cafeShopHint()">
+    <datalist id="shoplist">${shops.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
   <label class="f"><span class="l">Style</span>
     <div class="seg" id="cafestyleseg">${CAFE_STYLES.map(o=>`<button class="${o===cafeStyleState?'on':''}" onclick="cafeStylePick('${o}',this)">${o}</button>`).join('')}</div></label>
-  <label class="f"><span class="l">Drink</span>
-    <input type="text" id="c_drink" placeholder="tap one below, or type your own">
+  <label class="f"><span class="l">Drink <span class="opt">optional</span></span>
+    <input type="text" id="c_drink" value="${esc(pre.drink||'')}" placeholder="tap one below, or type your own">
     <div class="desc" id="cafedrinks">${cafeDrinkChips(cafeStyleState)}</div></label>
-  <div class="grid2">
-    <label class="f"><span class="l">Beans <span class="opt">optional</span></span><input type="text" id="c_roaster" list="roasterlist" placeholder="roaster">
-      <datalist id="roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
-    <label class="f"><span class="l">Origin <span class="opt">optional</span></span><input type="text" id="c_origin" placeholder="Ethiopia / blend"></label>
-  </div>
-  <details class="trace-more"><summary>Traceability <span class="opt">optional — the same fields a bag carries</span></summary>
+  <label class="f"><span class="l">Hedonic (1–9)</span>${hedonicRow(pre.hedonic)}</label>
+  <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">beans, price, a photo — now or later</span></summary>
+    <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="c_city" list="citylist" value="${esc(pre.city||'')}" placeholder="Los Angeles">
+      <datalist id="citylist">${cities.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
     <div class="grid2">
-      <label class="f"><span class="l">Country</span><input type="text" id="c_country" placeholder="Ethiopia"></label>
-      <label class="f"><span class="l">Region</span><input type="text" id="c_region" placeholder="Bench Maji"></label>
-      <label class="f"><span class="l">Producer / station</span><input type="text" id="c_producer" placeholder="free text"></label>
-      <label class="f"><span class="l">Variety</span><input type="text" id="c_variety" placeholder="Gesha 1931"></label>
-      <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" placeholder="free text"></label>
-      <label class="f"><span class="l">Process</span><input type="text" id="c_process" placeholder="washed"></label>
+      <label class="f"><span class="l">Beans <span class="opt">optional</span></span><input type="text" id="c_roaster" list="roasterlist" value="${esc(pre.roaster||'')}" placeholder="roaster">
+        <datalist id="roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
+      <label class="f"><span class="l">Origin <span class="opt">optional</span></span><input type="text" id="c_origin" value="${esc(pre.origin||'')}" placeholder="Ethiopia / blend"></label>
     </div>
+    <div class="grid2">
+      <label class="f"><span class="l">Country</span><input type="text" id="c_country" value="${esc(pre.originCountry||'')}" placeholder="Ethiopia"></label>
+      <label class="f"><span class="l">Region</span><input type="text" id="c_region" value="${esc(pre.originRegion||'')}" placeholder="Bench Maji"></label>
+      <label class="f"><span class="l">Producer / station</span><input type="text" id="c_producer" value="${esc(pre.producer||'')}" placeholder="free text"></label>
+      <label class="f"><span class="l">Variety</span><input type="text" id="c_variety" value="${esc(pre.variety||'')}" placeholder="Gesha 1931"></label>
+      <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" value="${esc(pre.lot||'')}" placeholder="free text"></label>
+      <label class="f"><span class="l">Process</span><input type="text" id="c_process" value="${esc(pre.process||'')}" placeholder="washed"></label>
+    </div>
+    <div class="grid2">
+      <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" value="${pre.price??''}" placeholder="$"></label>
+      <label class="f"><span class="l">Order again?</span>
+        <div class="verdict" id="verdict">
+          <button class="yes ${againState===true?'on':''}" onclick="pickAgain(true,this)">Again</button>
+          <button class="no ${againState===false?'on':''}" onclick="pickAgain(false,this)">Pass</button>
+        </div></label>
+    </div>
+    <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the cup <span class="opt">optional</span>'}</div>
+    <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow(pre.descriptors)}</label>
+    <label class="f"><span class="l">A line for the record <span class="opt">optional</span></span><input type="text" id="c_notes" value="${esc(pre.notes||'')}"></label>
   </details>
-  <div class="grid2">
-    <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" placeholder="$"></label>
-    <label class="f"><span class="l">Order again?</span>
-      <div class="verdict" id="verdict">
-        <button class="yes" onclick="pickAgain(true,this)">Again</button>
-        <button class="no" onclick="pickAgain(false,this)">Pass</button>
-      </div></label>
-  </div>
-  <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">Photograph the cup <span class="opt">optional</span></div>
-  <label class="f"><span class="l">Hedonic (1–9)</span>${hedonicRow()}</label>
-  <label class="f"><span class="l">What you found (optional)</span>${descRow()}</label>
-  <label class="f"><span class="l">A line for the record (optional)</span><input type="text" id="c_notes"></label>
-  <button class="btn btn-primary" onclick="saveCafeCup()">Log this cup</button>`);
+  <button class="btn btn-primary" onclick="saveCafeCup()">${editId?'Save changes':'Log this cup'}</button>`);
   cafeShopHint();
 }
 function cafeDrinkChips(style){return (CAFE_DRINKS[style]||[]).map(d=>`<button onclick="pickDrink('${d}',this)">${d}</button>`).join('')}
@@ -1417,7 +1444,21 @@ function logAnotherHere(id){const c=cupById(id);closeSheet();openCafe({shop:c?c.
 function cafeHere(shop,city){closeSheet();openCafe({shop,city});}
 function saveCafeCup(){
   if(!val('c_shop')&&hedState==null){toast('A shop or a score — give it one');return}
-  saveCup('cafe',null,null,false);
+  saveCup('cafe',null,null,false,editingCupId);
+}
+// Editing a cup after the fact — the point of a record you can return to.
+let editingCupId=null;
+function editCup(id){const c=cupById(id);if(!c)return;closeSheet();
+  if(c.kind==='cafe')openCafe(null,id);else editHomeCup(id);}
+function editHomeCup(id){const c=cupById(id);if(!c)return;const b=bagById(c.bagId);
+  openSheet(`
+  <h3>Edit the cup</h3>
+  <div class="sub">${esc(bagName(b))} — the impression, revised. Its brew stays put.</div>
+  <label class="f"><span class="l">Hedonic (1–9)</span>${hedonicRow(c.hedonic)}</label>
+  <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow(c.descriptors)}</label>
+  <label class="f"><span class="l">A line for the record <span class="opt">optional</span></span><input type="text" id="c_notes" value="${esc(c.notes||'')}"></label>
+  <button class="btn btn-primary" onclick="saveCup('home','${c.brewId||''}','${c.bagId||''}',false,'${id}')">Save changes</button>
+  ${c.brewId?`<button class="btn btn-quiet" onclick="closeSheet();openBrew('${c.bagId||''}','${c.brewId}')">Edit the brew</button>`:''}`);
 }
 
 /* ============ café passport ============ */
