@@ -100,6 +100,9 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 .chip.window{border-color:var(--line-strong);color:var(--ink);font-weight:500}
 .chip.resting{color:var(--ink-3)}
 .chip.past{color:var(--ink-3);border-style:dashed}
+.chip.on{background:var(--ink);color:var(--accent-ink);border-color:var(--ink)}
+.lens{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
+.lens .chip{cursor:pointer;padding:5px 11px}
 
 /* ===== buttons ===== */
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
@@ -398,7 +401,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 /* ============ store ============ */
 const KEY='carta.v1';           // legacy single-user key — migrated to per-user keys on first boot
 const USERS_KEY='carta.users';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafes:[],cafeFavs:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafes:[],cafeFavs:[],cafeWants:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dataKey=id=>KEY+'.'+id;
 function loadUsers(){
@@ -591,10 +594,17 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='2.4.0';
+const APP_VERSION='3.0.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'3.0.0',date:'Jul 17, 2026',title:'Find the next cup',items:[
+    'Friends is now a way to find coffee, not only to read about it. Search every record you can reach — a café, a city, a roaster, a note — and the places, beans and cups that match surface at once.',
+    'Near you. Say where you are and the cafés your people kept sort by distance, closest first — the pin on the map finally does more than open Maps. Optional, asked only when you tap it, kept on the device.',
+    'Whose palate matches yours. On the cafés you have both kept, the record shows how close your scores land — the shape of an agreement, not a verdict. Read the people who walk your streets.',
+    'Worth the walk, for you. Cafés you have not kept, ranked toward the people whose taste runs closest to yours. Other people\'s finds, weighed by whether you\'d agree.',
+    'A want-to-go list. Save a place from anyone\'s record; it waits under Friends and on the Café tab, and steps aside once you have been.',
+  ]},
   {v:'2.4.0',date:'Jul 16, 2026',title:'The Register',items:[
     'One entry per café, kept once and shared — every keeper on this device and on your sync server reads the same record of a place. Jane\'s Fighting Ships, for cafés.',
     'Name a shop and it enters the Register. Photograph its branding, pin its address — every user then sees the same café, in the same colours.',
@@ -691,6 +701,7 @@ const TABS=[
 let tab='field';
 function go(t){tab=t;render()}
 function render(){
+  _affCache=null; // affinity is recomputed once per paint, from the current record
   document.getElementById('who').textContent=
     readOnly()?`viewing ${viewingUser().name}`:(USERS.users.length>1?viewingUser().name:'one cup · two contexts');
   document.getElementById('tabs').innerHTML=TABS.map(t=>
@@ -1319,6 +1330,7 @@ function saveCup(kind,brewId,bagId,skip){
     cup.originCountry=val('c_country');cup.originRegion=val('c_region');cup.producer=val('c_producer');
     cup.variety=val('c_variety');cup.lot=val('c_lot');cup.process=val('c_process');
     if(cup.shop)regUpsert(cup.shop,{city:cup.city},activeName()); // a sighting — the café enters the Register
+    if(cup.shop&&D.cafeWants){const i=D.cafeWants.findIndex(x=>normName(x)===normName(cup.shop));if(i>=0)D.cafeWants.splice(i,1)} // been now — off the want list
   }
   D.cups.push(cup);save();closeSheet();
   if(kind==='cafe'){go(cup.shop?'cafes':'field');toast('Café cup logged');}
@@ -1417,6 +1429,29 @@ function toggleCafeFav(shop){
   const was=i>=0;
   if(was)D.cafeFavs.splice(i,1);else D.cafeFavs.push(shop.trim());
   save();openShopDetail(shop);toast(was?'Removed from favorites':'Favorited');
+}
+// the want-to-go shortlist — places you mean to try, saved from anyone's record.
+// A list of shop names, mirroring cafeFavs; union-merged in sync, no tombstone.
+function isWant(shop){return (D.cafeWants||[]).some(x=>normName(x)===normName(shop))}
+function toggleWant(shop){
+  if(guard())return;
+  D.cafeWants=D.cafeWants||[];
+  const i=D.cafeWants.findIndex(x=>normName(x)===normName(shop));
+  const was=i>=0;
+  if(was)D.cafeWants.splice(i,1);else D.cafeWants.push(String(shop).trim());
+  save();toast(was?'Off the want-to-go list':'Saved to want-to-go');
+}
+function wantBtn(shop){ // a full-width toggle for the sheets; hidden read-only
+  if(readOnly())return'';
+  const on=isWant(shop);
+  return `<button class="btn ${on?'btn-graphite':'btn-quiet'}" onclick="toggleWant(${jsq(shop)});reopenFor(${jsq(shop)})">${on?'On your want-to-go list — remove':'Save to want-to-go'}</button>`;
+}
+// re-open whichever sheet named this café, so a want-toggle refreshes in place
+function reopenFor(shop){
+  if(cafeCups().some(c=>normName(c.shop)===normName(shop)))openShopDetail(shop);
+  else if(circleCups().some(c=>normName(c.shop)===normName(shop)))openPlaceSheet(shop);
+  else if(regByName(shop))openRegisterSheet(shop);
+  else toast('That café has left the record');
 }
 function shopAgg(){
   const map={};
@@ -1544,12 +1579,8 @@ function geoChoose(address,lat,lon){
 }
 function geoUnpin(){geoPick={address:val('p_address'),lat:null,lon:null};const box=document.getElementById('georesults');if(box)box.innerHTML='';}
 
-/* --- the Register, on screen: entries you haven't visited are the discovery list --- */
-function regUnvisited(){
-  const mine=new Set(cafeCups().map(c=>normName(c.shop)).filter(Boolean));
-  return REG.entries.filter(e=>!mine.has(normName(e.name)))
-    .sort((a,b)=>(b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
-}
+/* --- the Register, on screen: a card for an entry, and its read-only sheet.
+ * Discovery of unvisited places now runs through recommendations() in Friends. --- */
 function regCard(e){
   const pal=palOf(e),vars=pal?cafeVars(pal):''; // a Register entry carries the café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openRegisterSheet(${jsq(e.name)})">
@@ -1587,6 +1618,7 @@ function openRegisterSheet(shop){
   ${e.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(e.notes)}"</div>`:''}
   ${mine.length?`<button class="btn btn-graphite" onclick="openShopDetail(${jsq(e.name)})">Your page here — ${mine.length} cup${mine.length>1?'s':''}</button>`:''}
   ${readOnly()?'':`<button class="btn btn-primary" onclick="cafeHere(${jsq(e.name)},${jsq(e.city||'')})">Log a cup here</button>
+  ${wantBtn(e.name)}
   <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(e.name)})">Amend the entry</button>`}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>
   </div>`);
@@ -1653,7 +1685,8 @@ function vField(){
 function vCafes(){
   const cups=cafeCups().slice().sort(byNew);
   const shops=shopAgg();
-  const unvisited=regUnvisited();
+  const recs=recommendations();
+  const wants=(D.cafeWants||[]).slice();
   const last=cups[0]||null;
   const top=shops.filter(s=>s.visits>=2&&s.avg!=null).sort((a,b)=>b.avg-a.avg)[0]||null;
   const lastNotes=last&&(last.notes||((last.descriptors||[]).join(' · ')));
@@ -1674,9 +1707,11 @@ function vCafes(){
     ${readOnly()?'':`<button class="btn btn-primary" onclick="openCafe()">${last?'Log a café cup':'Remember the next cup'}</button>`}
     <div class="section-head"><h2>Places</h2><span class="n-note">n=${shops.length}</span></div>
     ${shops.length?shops.slice(0,4).map(shopCard).join(''):`<div class="empty">The café half begins with the next cup you are served.</div>`}
-    ${REG.entries.length?`<div class="section-head"><h2>The Register</h2><span class="n-note">n=${REG.entries.length}</span></div>
-    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">One entry per café, kept once for every keeper. ${unvisited.length?'Places on the record you haven\'t been:':'Every entry is already on your passport.'}</div>
-    ${unvisited.slice(0,5).map(regCard).join('')}`:''}
+    ${recs.length?`<div class="section-head"><h2>Worth the walk</h2><button class="text-action" onclick="go('circle')">Discover</button></div>
+    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">Places on the record you haven't been — the best your people found. More in Friends.</div>
+    ${recs.slice(0,3).map(recCard).join('')}`:''}
+    ${wants.length?`<div class="section-head"><h2>Want to go</h2><span class="n-note">n=${wants.length}</span></div>
+    ${wants.slice(0,3).map(wantCard).join('')}`:''}
     ${cups.length?`<div class="section-head"><h2>Recent away</h2><button class="text-action" onclick="go('trace')">Full record</button></div>${cups.slice(0,3).map(cupRow).join('')}`:''}`;
 }
 
@@ -1872,6 +1907,8 @@ function mergeLedgers(loc,rem){
   ['setups','bags','brews','cups','cafes'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
   const f=new Map();[...(rem.cafeFavs||[]),...(loc.cafeFavs||[])].forEach(x=>f.set(String(x).toLowerCase(),x));
   out.cafeFavs=[...f.values()].sort((a,b)=>a.localeCompare(b));
+  const w=new Map();[...(rem.cafeWants||[]),...(loc.cafeWants||[])].forEach(x=>w.set(String(x).toLowerCase(),x));
+  out.cafeWants=[...w.values()].sort((a,b)=>a.localeCompare(b));
   out.version=loc.version||1;
   out.createdAt=[loc.createdAt,rem.createdAt].filter(Boolean).sort()[0]||out.createdAt;
   return out;
@@ -2168,6 +2205,168 @@ function circlePlaces(cups){
     return p;
   }).sort((a,b)=>(Number(b.avg)||0)-(Number(a.avg)||0)||b.n-a.n);
 }
+
+/* --- the discovery engine: search, a lens on the map, whose taste to trust,
+ * and what's worth the walk. All read-side over the pooled record; the only
+ * thing it writes is the want-to-go list. Works solo too — the Register stands
+ * in for a circle of one. --- */
+
+// where you are, if you say so — in memory only, never stored or synced.
+let myGeo=null,nearOn=false,cityLens=null,circleQuery='';
+function haversine(la1,lo1,la2,lo2){const R=6371,r=Math.PI/180;
+  const dla=(la2-la1)*r,dlo=(lo2-lo1)*r;
+  const a=Math.sin(dla/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dlo/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));}
+const fmtDist=km=>km==null?'':km<1?`${Math.round(km*1000)} m`:km<10?`${km.toFixed(1)} km`:`${Math.round(km)} km`;
+const distTo=p=>(!nearOn||!myGeo||!p||p.lat==null||p.lon==null)?null:haversine(myGeo.lat,myGeo.lon,p.lat,p.lon);
+function requestGeo(){
+  if(!navigator.geolocation){toast('No location on this device — the city filter still works');return}
+  toast('Finding you…');
+  navigator.geolocation.getCurrentPosition(
+    pos=>{myGeo={lat:pos.coords.latitude,lon:pos.coords.longitude};nearOn=true;cityLens=null;render()},
+    ()=>{nearOn=false;toast('Location unavailable — the city filter still works')},
+    {enableHighAccuracy:false,timeout:8000,maximumAge:3e5});
+}
+function toggleNear(){if(nearOn){nearOn=false;render()}else requestGeo()}
+// the cities your circle keeps — a lens to scope the whole tab to one town.
+function circleCities(){
+  const m={};const add=(c,w)=>{if(c&&c.trim())m[c.trim()]=(m[c.trim()]||0)+w};
+  circleCups().forEach(c=>add(c.city,1));cafeCups().forEach(c=>add(c.city,1));
+  REG.entries.forEach(e=>add(e.city,.5)); // a pin with no cups still counts, lighter
+  return Object.keys(m).sort((a,b)=>m[b]-m[a]);
+}
+function setCityLens(c){cityLens=(normName(cityLens)===normName(c)?null:c);nearOn=false;render()}
+const inLens=city=>!cityLens||normName(city)===normName(cityLens);
+
+// whose 8 is your 8 — for each person you can read, how close your scores land
+// on the cafés you have both kept. Mean absolute difference on the 1–9 scale;
+// quiet until you share at least two places. Shape, not verdict.
+let _affCache=null;
+function tasteAffinity(){
+  const myAvg={};
+  cafeCups().forEach(c=>{if(c.shop&&c.hedonic!=null){const k=normName(c.shop);(myAvg[k]=myAvg[k]||[]).push(c.hedonic)}});
+  Object.keys(myAvg).forEach(k=>myAvg[k]=myAvg[k].reduce((a,b)=>a+b,0)/myAvg[k].length);
+  const out=[];
+  circleSources().forEach(s=>{const d=circleLedger(s);if(!d)return;
+    const theirs={};(d.cups||[]).forEach(c=>{if(c.kind==='cafe'&&c.shop&&c.hedonic!=null){const k=normName(c.shop);(theirs[k]=theirs[k]||[]).push(c.hedonic)}});
+    const shared=Object.keys(theirs).filter(k=>myAvg[k]!=null);
+    if(shared.length<2)return;
+    let sum=0;shared.forEach(k=>{const t=theirs[k].reduce((a,b)=>a+b,0)/theirs[k].length;sum+=Math.abs(t-myAvg[k])});
+    const delta=sum/shared.length;
+    out.push({src:s.id,name:s.name,shared:shared.length,delta,
+      close:delta<=1?'close':delta<=2?'aligned':'differs',w:Math.max(0,1-delta/4)});
+  });
+  return out.sort((a,b)=>a.delta-b.delta);
+}
+function affinityOf(srcId){
+  if(!_affCache)_affCache=Object.fromEntries(tasteAffinity().map(a=>[a.src,a.w]));
+  return _affCache[srcId]!=null?_affCache[srcId]:0;
+}
+// beans worth chasing — roasters and origins the circle scored, best average first.
+function circleBeans(){
+  const m={};
+  circleCups().forEach(c=>{const label=(c.roaster||c.origin||c.originCountry||'').trim();
+    if(!label||c.hedonic==null)return;const k=normName(label);
+    (m[k]=m[k]||{label,cups:[],who:new Set()});m[k].cups.push(c);m[k].who.add(c._who)});
+  return Object.values(m).map(b=>({label:b.label,n:b.cups.length,avg:avgHedonic(b.cups),people:[...b.who]}))
+    .sort((a,b)=>(Number(b.avg)||0)-(Number(a.avg)||0)||b.n-a.n);
+}
+// worth the walk, for you — cafés you haven't kept, ranked by the circle's scores
+// weighted toward the people whose taste is close to yours; near mode sorts by
+// distance and register-only pins join the tail as pure discovery.
+function recommendations(){
+  const mine=new Set(cafeCups().map(c=>normName(c.shop)).filter(Boolean));
+  const byShop={};
+  circleCups().filter(c=>c.shop).forEach(c=>{const k=normName(c.shop);(byShop[k]=byShop[k]||{shop:c.shop.trim(),cups:[]}).cups.push(c)});
+  const recs=[];
+  Object.values(byShop).forEach(p=>{
+    if(mine.has(normName(p.shop)))return;
+    const prof=circleProfile(p.shop);
+    const city=modeOf(p.cups.map(c=>c.city).filter(Boolean))||(prof&&prof.city)||'';
+    if(!inLens(city))return;
+    let ws=0,wsum=0;const raters={};
+    p.cups.forEach(c=>{if(c.hedonic==null)return;const a=affinityOf(c._src),w=.5+.5*a;ws+=c.hedonic*w;wsum+=w;
+      if(!raters[c._who]||c.hedonic>raters[c._who].h)raters[c._who]={h:c.hedonic,a}});
+    if(!wsum)return;
+    const best=Object.entries(raters).map(([who,v])=>({who,...v})).sort((x,y)=>y.h-x.h)[0];
+    recs.push({shop:p.shop,city,profile:prof,n:p.cups.length,avg:avgHedonic(p.cups),score:ws/wsum,
+      dist:distTo(prof),best,again:p.cups.filter(c=>c.again===true).length});
+  });
+  REG.entries.forEach(e=>{const k=normName(e.name);if(mine.has(k)||byShop[k])return;if(!inLens(e.city||''))return;
+    if(nearOn&&e.lat==null)return;
+    recs.push({shop:e.name,city:e.city||'',profile:e,n:0,avg:null,score:0,dist:distTo(e),best:null,again:0,reg:true})});
+  return recs.sort((a,b)=>{
+    if(nearOn){const da=a.dist==null?1e9:a.dist,db=b.dist==null?1e9:b.dist;if(da!==db)return da-db}
+    return (b.score-a.score)||(b.n-a.n);
+  });
+}
+// free-text across the whole pooled record — places, beans, and single cups.
+function circleSearch(q){
+  const toks=normName(q).split(/\s+/).filter(Boolean);
+  if(!toks.length)return null;
+  const match=s=>toks.every(t=>s.includes(t));
+  const hay=c=>normName([c.shop,c.city,c.drink,c.style,c.roaster,c.origin,c.originCountry,c.originRegion,c.variety,c.producer,c.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '));
+  const cups=circleCups().filter(c=>match(hay(c)));
+  const places=circlePlaces(cups);
+  const regHits=REG.entries.filter(e=>match(normName([e.name,e.city,e.notes].filter(Boolean).join(' '))))
+    .filter(e=>!places.some(p=>normName(p.shop)===normName(e.name)));
+  const beans=circleBeans().filter(b=>match(normName(b.label)));
+  return {cups,places,regHits,beans};
+}
+function circleSearchInput(){
+  const inp=document.getElementById('circleSearch');if(!inp)return;
+  circleQuery=inp.value;
+  const box=document.getElementById('circleResults');if(box)box.innerHTML=circleResultsHTML(circleQuery);
+}
+function circleResultsHTML(q){
+  const r=circleSearch(q);if(!r)return'';
+  const{places,regHits,cups,beans}=r;
+  if(!places.length&&!regHits.length&&!cups.length&&!beans.length)
+    return `<div class="empty">Nothing on the record for "${esc(q)}". Try a city, a roaster, or a place.</div>`;
+  let h='';
+  if(places.length||regHits.length)h+=`<div class="section-head"><h2>Places</h2><span class="n-note">n=${places.length+regHits.length}</span></div>`+places.slice(0,8).map(placeCard).join('')+regHits.slice(0,6).map(regCard).join('');
+  if(beans.length)h+=`<div class="section-head"><h2>Beans</h2><span class="n-note">n=${beans.length}</span></div>`+beans.slice(0,6).map(beanRow).join('');
+  if(cups.length)h+=`<div class="section-head"><h2>Cups</h2><span class="n-note">n=${cups.length}</span></div>`+cups.slice(0,12).map(feedRow).join('');
+  return h;
+}
+function beanRow(b){
+  return `<div class="card">
+    <div class="row"><span class="small"><strong>${esc(b.label)}</strong></span><span class="num" style="font-size:18px;font-weight:700;color:var(--accent)">${b.avg??'—'}</span></div>
+    <div class="muted small">${b.n} cup${b.n>1?'s':''} · ${b.people.length===1?esc(b.people[0]):b.people.length+' people'}</div>
+  </div>`;
+}
+function recCard(r){
+  const pal=palOf(r.profile),vars=pal?cafeVars(pal):'';
+  const why=r.reg
+    ?`in the Register${r.profile&&r.profile.firstBy?` · first entered by ${esc(r.profile.firstBy)}`:''}`
+    :`${r.best?`${esc(r.best.who)}${r.best.a>=.75?' — close to your taste':''} · ${r.best.h}/9`:''}${r.n>1?` · ${r.n} cups`:''}${r.again?` · ${r.again} would return`:''}`;
+  const dist=r.dist!=null?` <span class="badge ghost">${fmtDist(r.dist)}</span>`:'';
+  const star=readOnly()?'':`<button onclick="event.stopPropagation();toggleWant(${jsq(r.shop)});render()" style="position:absolute;top:12px;right:13px;font-size:19px;line-height:1;color:var(--accent);background:none;border:none;padding:2px">${isWant(r.shop)?'★':'☆'}</button>`;
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent);position:relative"`:' style="position:relative"'} onclick="openRecSheet(${jsq(r.shop)})">
+    ${r.profile&&r.profile.photo?`<img class="brandhead" src="${r.profile.photo}">`:''}
+    <div class="row">
+      <span class="small"><strong>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}</span>`:''}${dist}</span>
+      <span class="big"${vars?' style="color:var(--accent)"':''}>${r.avg??(r.reg?'·':'—')}</span>
+    </div>
+    <div class="muted small" style="padding-right:22px">${why}</div>
+  </div>`;
+}
+function openRecSheet(shop){
+  if(circleCups().some(c=>normName(c.shop)===normName(shop)))openPlaceSheet(shop);
+  else openRegisterSheet(shop);
+}
+function wantCard(name){
+  const pr=cafeProfile(name),pal=palOf(pr),vars=pal?cafeVars(pal):'';
+  const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
+  const city=pr&&pr.city?pr.city:'';
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="reopenFor(${jsq(name)})">
+    ${pr&&pr.photo?`<img class="brandhead" src="${pr.photo}">`:''}
+    <div class="row"><span class="small"><strong>${esc(name)}</strong>${city?`<span class="muted"> · ${esc(city)}</span>`:''}${dist}</span>
+      ${pr&&pr.address?'<span class="badge ghost">pinned</span>':''}</div>
+    ${pr&&pr.address?`<div class="muted small">${esc(pr.address)}</div>`:''}
+  </div>`;
+}
+
 // Keep the stream current: re-pull the directory and any ledger whose rev moved.
 // Throttled, quiet, and offline-safe — the cached copies simply stand.
 let circleBusy=false,circleFreshAt=0;
@@ -2193,7 +2392,7 @@ async function circleRefresh(){
   }catch(e){/* offline or signed out — the cached stream stands */}
   finally{circleBusy=false}
   if(changed)regSeed(); // fresh ledgers may carry cafés the Register hasn't met
-  if(changed&&tab==='circle'&&!document.getElementById('sheet').classList.contains('open'))render();
+  if(changed&&tab==='circle'&&!document.getElementById('sheet').classList.contains('open')&&document.activeElement!==document.getElementById('circleSearch'))render();
 }
 function feedRow(c){
   const beans=[c.roaster,c.origin||c.originCountry].filter(Boolean).map(esc).join(' · ');
@@ -2233,6 +2432,7 @@ function openCircleCup(src,id){
   ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
   ${c.shop?`<button class="btn btn-primary" onclick="openPlaceSheet(${jsq(c.shop)})">About this place</button>`:''}
+  ${c.shop?wantBtn(c.shop):''}
   <button class="btn btn-quiet" onclick="circleView(${jsq(src)})">Read ${esc(s.name)}'s whole record</button>
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
@@ -2243,10 +2443,11 @@ function circleView(src){
 }
 function placeCard(p){
   const pr=p.profile,pal=palOf(pr),vars=pal?cafeVars(pal):''; // the café's own palette, same as the passport
+  const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlaceSheet(${jsq(p.shop)})">
     ${pr&&pr.photo?`<img class="brandhead" src="${pr.photo}">`:''}
     <div class="row">
-      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}</span>`:''}</span>
+      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}</span>`:''}${dist}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${p.avg??'—'}</span>
     </div>
     <div class="muted small">${p.n} cup${p.n>1?'s':''} · ${p.people.length===1?esc(p.people[0]):p.people.length+' people'}${p.usual?` · they order <strong>${esc(p.usual)}</strong>`:''}${pr&&pr.address?' · pinned':''}</div>
@@ -2277,7 +2478,8 @@ function openPlaceSheet(shop){
     ${p&&p.address?`<div class="kv"><span class="k">Address</span><span class="v">${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}</span></div>`:''}
   </div>
   ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
-  ${readOnly()?'':`<button class="btn btn-quiet" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Been? Log your own cup</button>`}
+  ${readOnly()?'':`<button class="btn btn-quiet" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Been? Log your own cup</button>
+  ${wantBtn(shop)}`}
   <h2>Every cup</h2>
   ${cups.map(feedRow).join('')}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>
@@ -2303,11 +2505,12 @@ function openCupPrimer(){
 }
 function vCircle(){
   const sources=circleSources();
-  if(!sources.length)return `
+  // Nothing to read and no places on the record — the way in stays a pitch.
+  if(!sources.length&&!REG.entries.length)return `
     <div class="empty-hero">
       <div class="eyebrow">The cup elsewhere</div>
-      <h2>Other people's cups.</h2>
-      <p>You don't have to log a thing. Read what the people you trust are drinking — and where.</p>
+      <h2>Find the next good cup.</h2>
+      <p>You don't have to log a thing. Read what the people you trust are drinking — search it, sort it by who's near, steal the order.</p>
       ${SYNC?'':`<button class="btn btn-primary" onclick="openSyncSheet(false)">Connect to a sync server</button>`}
       <button class="btn ${SYNC?'btn-primary':'btn-quiet'}" onclick="openUserForm()">Add a user on this device</button>
     </div>
@@ -2317,21 +2520,47 @@ function vCircle(){
     </div>
     <div class="pinned">New to the language? <a class="link" onclick="openCupPrimer()">How to read a cup</a></div>
     <div class="qm-seal">Friends<span class="em">Read the record. Steal the order. Go.</span></div>`;
-  const cups=circleCups();
-  const places=circlePlaces(cups);
   setTimeout(circleRefresh,60); // quiet background freshness — re-renders only if something moved
-  return `
+  const q=(circleQuery||'').trim();
+  const cities=circleCities();
+  const lens=cities.length||nearOn?`<div class="lens">
+    <button class="chip${nearOn?' on':''}" onclick="toggleNear()">Near you</button>
+    ${cities.slice(0,8).map(c=>`<button class="chip${normName(cityLens)===normName(c)&&!nearOn?' on':''}" onclick="setCityLens(${jsq(c)})">${esc(c)}</button>`).join('')}
+  </div>`:'';
+  const head=`
     <div class="hero">
       <div class="eyebrow">The cup elsewhere</div>
-      <h2>What your people are drinking.</h2>
-      <div class="origin">${sources.length} record${sources.length>1?'s':''} in reach — read only, always. <a class="link" onclick="openCupPrimer()">How to read a cup</a></div>
+      <h2>Find the next good cup.</h2>
+      <div class="origin">${nearOn?'Near you now':cityLens?esc(cityLens):`${sources.length} record${sources.length===1?'':'s'} in reach`} — read only, always. <a class="link" onclick="openCupPrimer()">How to read a cup</a></div>
     </div>
-    ${cups.length?`
-    <div class="section-head"><h2>The stream</h2><span class="n-note">n=${cups.length}</span></div>
-    ${cups.slice(0,20).map(feedRow).join('')}
-    <div class="section-head"><h2>Places worth the walk</h2><span class="n-note">n=${places.length}</span></div>
-    ${places.slice(0,8).map(placeCard).join('')}`
-    :`<div class="empty">No café cups on anyone's record yet. The stream begins with their next cup out.</div>`}
+    <input type="text" id="circleSearch" value="${esc(circleQuery)}" oninput="circleSearchInput()" placeholder="Search a café, a city, a roaster, a note" autocapitalize="off" style="border:1px solid var(--line-strong);padding:11px 13px;margin:2px 0 10px;font-family:var(--sans);font-size:15px">
+    ${lens}
+    <div id="circleResults">${q?circleResultsHTML(circleQuery):''}</div>`;
+  if(q)return head+`<div class="qm-seal">Friends<span class="em">Read the record. Steal the order. Go.</span></div>`;
+  // the discovery surface, scoped to the active lens
+  const recs=recommendations();
+  const aff=tasteAffinity();
+  const cups=circleCups().filter(c=>inLens(c.city));
+  const beans=circleBeans();
+  const wants=(D.cafeWants||[]).slice();
+  return head+`
+    ${recs.length?`<div class="section-head"><h2>Worth the walk, for you</h2><span class="n-note">n=${recs.length}</span></div>
+    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">${nearOn?'Nearest first — cafés you haven\'t kept.':'Cafés you haven\'t kept, ranked toward the people whose taste runs closest to yours.'}</div>
+    ${recs.slice(0,8).map(recCard).join('')}`:''}
+    ${aff.length?`<div class="section-head"><h2>Whose palate matches yours</h2></div>
+    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">On the cafés you've both kept — the shape of an agreement, not a verdict.</div>
+    ${aff.slice(0,4).map(a=>`<div class="card tap" onclick="circleView(${jsq(a.src)})">
+      <div class="row"><span class="small"><strong>${esc(a.name)}</strong> <span class="badge${a.close==='close'?'':' ghost'}">${a.close}</span></span><span class="num muted small">±${a.delta.toFixed(1)} · ${a.shared} shared</span></div>
+      <div class="muted small">You land within ${a.delta.toFixed(1)} of each other across ${a.shared} shared café${a.shared>1?'s':''} — read their record.</div>
+    </div>`).join('')}`:''}
+    ${cups.length?`<div class="section-head"><h2>The stream</h2><span class="n-note">n=${cups.length}</span></div>
+    ${cups.slice(0,20).map(feedRow).join('')}`
+    :`<div class="empty">${cityLens?`No café cups in ${esc(cityLens)} yet.`:'No café cups on anyone\'s record yet. The stream begins with their next cup out.'}</div>`}
+    ${beans.length?`<div class="section-head"><h2>Beans worth chasing</h2><span class="n-note">n=${beans.length}</span></div>
+    ${beans.slice(0,6).map(beanRow).join('')}`:''}
+    ${wants.length?`<div class="section-head"><h2>Want to go</h2><span class="n-note">n=${wants.length}</span></div>
+    ${wants.map(wantCard).join('')}`:`<div class="section-head"><h2>Want to go</h2></div>
+    <div class="empty">Saved places land here. Open a café worth the walk and keep it for later.</div>`}
     <div class="qm-seal">Friends<span class="em">Read the record. Steal the order. Go.</span></div>`;
 }
 
