@@ -11,7 +11,9 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node test.js"
+    "test": "node test.js && node test-worker.js",
+    "test:server": "node test.js",
+    "test:worker": "node test-worker.js"
   },
   "engines": {
     "node": ">=18"

@@ -1,0 +1,32 @@
+# CARTA sync server on Cloudflare Workers — free plan, serverless, HTTPS
+# included, no machine to keep awake. See worker.mjs for the code and
+# README.md ("Run on Cloudflare Workers") for the full walkthrough.
+#
+# Deploy — needs Node 18+ and a free Cloudflare account; nothing is installed
+# into the repo (wrangler runs via npx):
+#
+#   cd server
+#   npx wrangler deploy                            # first run opens a browser to sign in
+#   npx wrangler secret put CARTA_REGISTER_CODE    # recommended: gate sign-ups
+#
+# The deploy prints your URL: https://carta-sync.<subdomain>.workers.dev
+# Paste it into Ledger → Sync → Connect to a sync server.
+
+name = "carta-sync"
+main = "worker.mjs"
+compatibility_date = "2025-06-01"
+compatibility_flags = ["nodejs_compat"]   # for node:crypto scrypt — needs a 2024-09-23+ date
+
+# All data lives in one SQLite-backed Durable Object: strongly consistent,
+# available on the free plan (1 GB per object), no files to manage.
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "CartaStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CartaStore"]       # sqlite variant — the kv-backed one is paid-only
+
+# Optional overrides:
+# [vars]
+# CARTA_MAX_BODY = "20971520"             # max request body in bytes (default 20 MB)

@@ -31,7 +31,10 @@ icon-512.svg
 README.md             User-facing app docs
 server/
   server.js           The sync server — one file, zero deps, JSON-on-disk storage
+  worker.mjs          The same server as a Cloudflare Worker — one Durable Object, chunked storage
+  wrangler.toml       Workers deploy config (npx wrangler deploy; nothing installed into the repo)
   test.js             Zero-dep endpoint tests (spawns server on ephemeral port + temp dir)
+  test-worker.js      Same matrix against worker.mjs, run in plain Node with a storage mock
   package.json        npm start / npm test scripts; engines: node >=18
   README.md           Server deployment + API docs
   Dockerfile          node:22-alpine, non-root, /data volume, /health healthcheck
@@ -168,6 +171,12 @@ by all users on the device and synced as one group-writable document.
 
 - **Zero dependencies, one file.** Pure Node.js `node:` built-ins (http, fs,
   path, crypto). Do not add npm dependencies — keep `npm install` unnecessary.
+- **Two homes, one API.** `server.js` (Node process, JSON files on disk) and
+  `worker.mjs` (Cloudflare Worker, one SQLite-backed Durable Object, documents
+  chunked under the 2 MB value cap) implement the identical API and protocol.
+  An API change must land in both, with both test scripts kept passing.
+  `worker.mjs` uses only Web APIs + `node:crypto`, so it runs — and is tested —
+  in plain Node; wrangler is deploy tooling only, never a dependency.
 - Storage is JSON on disk: `users.json` (accounts + tokens, held in memory) and
   `ledgers/<id>.json` (one per user, read on demand). Writes are atomic (temp
   file + rename).
@@ -205,12 +214,15 @@ Pages under `/carta/` (hence the manifest `scope`/`start_url`).
 ```bash
 node server/server.js          # starts on :8787 (PORT env to change), data in ./data
 cd server && npm start         # same
-cd server && npm test          # or: node server/test.js — endpoint/auth/conflict tests
+cd server && npm test          # both suites: node test.js + node test-worker.js
+cd server && npx wrangler deploy   # the serverless variant (worker.mjs) to Cloudflare
 ```
 
-The test script is the frontend-less part's safety net. **If you change
-`server/server.js`, run `node server/test.js` and keep it passing**; add cases
-for new endpoints or behaviors. There is no automated test harness for the app
+The test scripts are the frontend-less part's safety net. **If you change
+`server/server.js` or `server/worker.mjs`, run `node server/test.js` and
+`node server/test-worker.js` and keep both passing**; add cases for new
+endpoints or behaviors — to both suites, since the two servers must stay
+in lockstep. There is no automated test harness for the app
 itself — verify frontend changes by loading the page.
 
 ### HTTPS constraint (server)
