@@ -1,0 +1,52 @@
+<!-- @dsCard group="Foundations" name="Space, shape & glyphs" subtitle="Radius, chip rounding, touch minimum, hairlines, the glyph set" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Space, shape & glyphs</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Foundations</div>
+  <h1 class="ds-title">Space, shape &amp; glyphs</h1>
+  <p class="ds-lede">Square by default, flat, hairline rules, no shadows — inherited from Quiet Matter. Two sanctioned exceptions: 2px chip rounding, and a small set of typographic glyphs.</p>
+
+  <div class="ds-sec">Shape</div>
+  <div class="ds-stage ds-cluster" style="gap:20px">
+    <div style="text-align:center">
+      <div style="width:88px;height:56px;border:1px solid var(--border-strong);border-radius:var(--radius)"></div>
+      <span class="ds-sw" style="border:none;background:none"><span class="vl" style="font-family:var(--mono);font-size:11px;color:var(--text-subtle)">--radius: 0</span></span>
+    </div>
+    <div style="text-align:center">
+      <div style="width:88px;height:56px;border:1px solid var(--border-strong);border-radius:var(--chipr)"></div>
+      <span class="vl" style="font-family:var(--mono);font-size:11px;color:var(--text-subtle)">--chipr: 2px</span>
+    </div>
+  </div>
+  <p class="ds-note">--radius is 0 everywhere. --chipr (2px) is the one sanctioned rounding — chips and inline code only.</p>
+
+  <div class="ds-sec">Hairlines</div>
+  <div class="ds-stage">
+    <div style="border-top:1px solid var(--border-hairline);padding-top:8px;font-family:var(--sans);font-size:12px;color:var(--text-subtle)">--border-hairline · translucent rule between rows</div>
+    <div style="border-top:1px solid var(--border-strong);padding-top:8px;margin-top:14px;font-family:var(--sans);font-size:12px;color:var(--text-subtle)">--border-strong · the full-ink rule used for controls &amp; emphasis</div>
+  </div>
+
+  <div class="ds-sec">Touch minimum</div>
+  <div class="ds-stage ds-cluster">
+    <div style="min-width:var(--touch-min);min-height:var(--touch-min);border:1px dashed var(--border-control);display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-size:11px;color:var(--text-subtle)">44&times;44</div>
+    <span class="ds-note" style="margin:0">--touch-min · 44px, WCAG 2.5.5. Every tappable target clears it.</span>
+  </div>
+
+  <div class="ds-sec">Glyphs — carried by type, never an icon font</div>
+  <div class="ds-stage">
+    <div style="font-size:26px;letter-spacing:.18em;color:var(--text-primary)">● ☕ ▤ ⚙ ∿ ≡ ★ ☆</div>
+    <p class="ds-note" style="margin-top:12px">The complete sanctioned set. Quiet Matter uses no icons; Carta bends the rule but keeps its spirit — these are glyphs in the running text, not an icon system.</p>
+  </div>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

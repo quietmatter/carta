@@ -1,0 +1,66 @@
+/* CARTA design-system preview harness.
+   Not part of the app — this styles the specimen pages only: a pane-friendly
+   body (replaces the app's fixed 480px shell), plus the spec scaffolding
+   (swatch grids, spec rows, dividers) that frames each token/component. All of
+   it consumes the same roles as the app, so light + dusk come for free. */
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--surface-page);
+  color:var(--text-primary);
+  font-family:var(--serif);
+  font-size:16px;line-height:1.5;
+  padding:28px 24px 40px;
+  -webkit-font-smoothing:antialiased;
+}
+.ds{max-width:520px;margin:0 auto}
+
+/* specimen header */
+.ds-eyebrow{
+  font-family:var(--sans);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--signal);font-weight:600;margin-bottom:8px;
+}
+.ds-title{font-family:var(--serif);font-size:30px;line-height:1.05;letter-spacing:-.02em;font-weight:600;margin-bottom:6px}
+.ds-lede{font-family:var(--serif);font-style:italic;color:var(--text-subtle);font-size:15px;max-width:44ch;margin-bottom:24px}
+
+/* section label — same shape as the app's h2 */
+.ds-sec{
+  font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-subtle);font-weight:500;margin:28px 0 12px;
+}
+.ds-note{font-family:var(--sans);font-size:12px;color:var(--text-subtle);line-height:1.5;margin:6px 0 0;max-width:52ch}
+
+/* a bordered stage to sit components on */
+.ds-stage{border:1px solid var(--border-hairline);background:var(--surface-card);padding:18px 16px;margin-bottom:12px}
+.ds-stage.plain{background:transparent;border:none;padding:0}
+.ds-cluster{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* colour swatches */
+.ds-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+.ds-sw{border:1px solid var(--border-hairline);border-radius:var(--radius);overflow:hidden;background:var(--surface-card)}
+.ds-sw .chip{display:block;height:56px;border:none;border-radius:0}
+.ds-sw .meta{padding:7px 9px}
+.ds-sw .nm{font-family:var(--sans);font-size:11px;font-weight:500;color:var(--text-primary);display:block;line-height:1.3}
+.ds-sw .vl{font-family:var(--mono);font-size:11px;color:var(--text-subtle);display:block;margin-top:2px}
+.ds-sw .rl{font-family:var(--sans);font-size:10px;color:var(--text-subtle);display:block;margin-top:3px;letter-spacing:.02em}
+
+/* spec rows — a label/value ledger, reusing the app's .kv rhythm */
+.ds-spec{width:100%;border-collapse:collapse;font-size:13px}
+.ds-spec td{padding:8px 0;border-bottom:1px solid var(--border-hairline);vertical-align:baseline}
+.ds-spec tr:last-child td{border-bottom:none}
+.ds-spec .k{font-family:var(--sans);font-size:12px;color:var(--text-subtle);white-space:nowrap;padding-right:16px}
+.ds-spec .tok{font-family:var(--mono);font-size:11px;color:var(--text-subtle)}
+
+/* type specimen rows */
+.ds-type-row{padding:12px 0;border-bottom:1px solid var(--border-hairline)}
+.ds-type-row:last-child{border-bottom:none}
+.ds-type-row .lab{font-family:var(--mono);font-size:11px;color:var(--text-subtle);display:block;margin-bottom:4px}
+
+/* theme toggle — a small ember-free control, top-right */
+.ds-theme{position:fixed;top:14px;right:14px;z-index:5;display:flex;border:1px solid var(--border-strong);border-radius:var(--radius);overflow:hidden}
+.ds-theme button{
+  font-family:var(--sans);font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;
+  padding:6px 10px;background:transparent;color:var(--text-secondary);border:none;border-right:1px solid var(--border-strong);cursor:pointer;
+}
+.ds-theme button:last-child{border-right:none}
+.ds-theme button.on{background:var(--fill-strong);color:var(--text-on-fill)}

@@ -1,0 +1,67 @@
+<!-- @dsCard group="Foundations" name="Colour" subtitle="Paper + ink ramps, the ember, night ramp, semantic roles" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Colour</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Foundations</div>
+  <h1 class="ds-title">Colour</h1>
+  <p class="ds-lede">Warm stock, roasted ink, and one ember. Rules consume the semantic roles; the ramps below are primitives the roles point at. Toggle Dusk to see the roles remap while the primitives hold.</p>
+
+  <div class="ds-sec">Paper ramp — the surfaces</div>
+  <div class="ds-swatches">
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-paper-0)"></span><div class="meta"><span class="nm">Lifted paper</span><span class="vl">#f8f5ee</span><span class="rl">--ca-paper-0 · surface-card</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-paper-50)"></span><div class="meta"><span class="nm">The page</span><span class="vl">#f2eee6</span><span class="rl">--ca-paper-50 · surface-page</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-paper-100)"></span><div class="meta"><span class="nm">Sunk surface</span><span class="vl">#e9e3d8</span><span class="rl">--ca-paper-100 · surface-sunk</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-paper-200)"></span><div class="meta"><span class="nm">Opaque hairline</span><span class="vl">#ddd5c7</span><span class="rl">--ca-paper-200</span></div></div>
+  </div>
+
+  <div class="ds-sec">Ink ramp — the text</div>
+  <div class="ds-swatches">
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-ink-900)"></span><div class="meta"><span class="nm">Roasted ink</span><span class="vl">#241d18</span><span class="rl">--ca-ink-900 · text-primary</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-ink-600)"></span><div class="meta"><span class="nm">Operational</span><span class="vl">#554a41</span><span class="rl">--ca-ink-600 · text-secondary</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-ink-450)"></span><div class="meta"><span class="nm">Subtle (AA)</span><span class="vl">#776b60</span><span class="rl">--ca-ink-450 · text-subtle</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-ink-300)"></span><div class="meta"><span class="nm">Disabled</span><span class="vl">#b8b5b0</span><span class="rl">--ca-ink-300 · text-disabled</span></div></div>
+  </div>
+  <p class="ds-note">Subtle ink holds ≥ 4.5:1 on paper — the footer-contrast discipline inherited from Quiet Matter (≈ QM #6e6c6a).</p>
+
+  <div class="ds-sec">The signal — one warm accent</div>
+  <div class="ds-swatches">
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-ember)"></span><div class="meta"><span class="nm">Ember (day)</span><span class="vl">#a63f2b</span><span class="rl">--ca-ember · signal</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-ember-dusk)"></span><div class="meta"><span class="nm">Ember (dusk)</span><span class="vl">#e06b4f</span><span class="rl">--ca-ember-dusk</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-ember-ink)"></span><div class="meta"><span class="nm">On ember</span><span class="vl">#fffaf1</span><span class="rl">--ca-ember-ink · signal-ink</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-danger)"></span><div class="meta"><span class="nm">Danger</span><span class="vl">#8c3b34</span><span class="rl">--ca-danger · status-danger</span></div></div>
+  </div>
+  <p class="ds-note">The ember is the deepest break from Quiet Matter, which admits no colour on customer surfaces. It marks the current action and the cup's score — a signal, never decoration or fields of colour. Danger is functional only, always paired with a text label.</p>
+
+  <div class="ds-sec">Night ramp — paper at night</div>
+  <div class="ds-swatches">
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-night-900)"></span><div class="meta"><span class="nm">Page</span><span class="vl">#171310</span><span class="rl">--ca-night-900</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-night-800)"></span><div class="meta"><span class="nm">Card</span><span class="vl">#211b17</span><span class="rl">--ca-night-800</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-night-700)"></span><div class="meta"><span class="nm">Sunk</span><span class="vl">#2d241f</span><span class="rl">--ca-night-700</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-roastlight-100)"></span><div class="meta"><span class="nm">Primary text</span><span class="vl">#f0e9dd</span><span class="rl">--ca-roastlight-100</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-roastlight-300)"></span><div class="meta"><span class="nm">Secondary</span><span class="vl">#c8bcae</span><span class="rl">--ca-roastlight-300</span></div></div>
+    <div class="ds-sw"><span class="chip" style="background:var(--ca-roastlight-500)"></span><div class="meta"><span class="nm">Subtle</span><span class="vl">#9f9183</span><span class="rl">--ca-roastlight-500</span></div></div>
+  </div>
+
+  <div class="ds-sec">Semantic roles — what rules actually consume</div>
+  <table class="ds-spec">
+    <tr><td class="k">text-primary</td><td><span class="chip" style="background:var(--text-primary);width:22px;height:14px;padding:0;vertical-align:-2px"></span> body copy</td><td class="tok">--text-primary</td></tr>
+    <tr><td class="k">text-subtle</td><td><span class="chip" style="background:var(--text-subtle);width:22px;height:14px;padding:0;vertical-align:-2px"></span> labels, footers</td><td class="tok">--text-subtle</td></tr>
+    <tr><td class="k">surface-page</td><td><span class="chip" style="background:var(--surface-page);width:22px;height:14px;padding:0;vertical-align:-2px;border:1px solid var(--border-hairline)"></span> the page</td><td class="tok">--surface-page</td></tr>
+    <tr><td class="k">surface-card</td><td><span class="chip" style="background:var(--surface-card);width:22px;height:14px;padding:0;vertical-align:-2px;border:1px solid var(--border-hairline)"></span> lifted cards</td><td class="tok">--surface-card</td></tr>
+    <tr><td class="k">border-hairline</td><td>hairline rules</td><td class="tok">--border-hairline</td></tr>
+    <tr><td class="k">signal</td><td><span class="chip" style="background:var(--signal);width:22px;height:14px;padding:0;vertical-align:-2px"></span> action + score</td><td class="tok">--signal</td></tr>
+  </table>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!-- @dsCard group="Components" name="Forms" subtitle="Underline fields, labels, selects, textarea, photo zone" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Forms</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components</div>
+  <h1 class="ds-title">Forms</h1>
+  <p class="ds-lede">Fields are underlines, not boxes — serif input on the page, a hairline that darkens to full ink on focus. Labels are the operational label system.</p>
+
+  <div class="ds-sec">Fields</div>
+  <div class="ds-stage">
+    <label class="f"><span class="l">Roaster</span><input type="text" value="Quiet Matter Roasting"></label>
+    <label class="f"><span class="l">Coffee</span><input type="text" placeholder="e.g. Kiamugumo AA"></label>
+    <div class="grid2">
+      <label class="f"><span class="l">Roast date</span><input type="date"></label>
+      <label class="f"><span class="l">Price</span><input type="number" placeholder="0.00"></label>
+    </div>
+    <label class="f"><span class="l">Process</span>
+      <select><option>Washed</option><option>Natural</option><option>Honey</option></select>
+    </label>
+    <label class="f"><span class="l">Notes</span><textarea placeholder="What did the cup say?"></textarea></label>
+  </div>
+
+  <div class="ds-sec">Photo zone</div>
+  <div class="ds-stage plain">
+    <div class="photozone">Tap to add a bag photo</div>
+  </div>
+  <p class="ds-note">Placeholders are italic subtle ink. The focus signal is the underline going to full ink — no glow, no ring fill.</p>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!-- @dsCard group="Components" name="Sheet" subtitle="Bottom-sheet modal with drag handle" viewport-height="640" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Sheet</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+<style>
+  /* Preview-only: pin the sheet inside the specimen frame rather than the
+     viewport, so the card shows the whole component at rest. */
+  .ds-sheetframe{position:relative;height:520px;border:1px solid var(--border-hairline);background:var(--surface-sunk);overflow:hidden;border-radius:var(--radius)}
+  .ds-sheetframe .sheet-bg{position:absolute;display:block}
+  .ds-sheetframe .sheet{position:absolute;display:block;max-width:none}
+</style>
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components</div>
+  <h1 class="ds-title">Sheet</h1>
+  <p class="ds-lede">The one modal surface. Rises from the bottom, drag-to-dismiss handle, hairline top edge — every form and detail view lives here.</p>
+
+  <div class="ds-sec">Bottom sheet</div>
+  <div class="ds-sheetframe">
+    <div class="sheet-bg open"></div>
+    <div class="sheet open">
+      <div class="grab"></div>
+      <h3>Log a café cup</h3>
+      <div class="sub">Where you drank it, and whether it earned a return.</div>
+      <label class="f"><span class="l">Café</span><input type="text" value="Quiet Matter, Kreuzberg"></label>
+      <label class="f"><span class="l">Drink</span><input type="text" placeholder="Cortado"></label>
+      <div class="hedonic" style="margin-bottom:16px">
+        <button>5</button><button>6</button><button>7</button><button class="on">8</button><button>9</button>
+      </div>
+      <button class="btn btn-primary">Save cup</button>
+      <button class="btn btn-quiet">Cancel</button>
+    </div>
+  </div>
+  <p class="ds-note">In the app the sheet is <code>position:fixed</code> to the viewport with a drag handle that widens and inks up while dragging; here it's pinned inside the frame so the card shows it at rest.</p>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

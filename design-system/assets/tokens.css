@@ -1,0 +1,144 @@
+/* ============================================================================
+ * CARTA — the token layer  (sub-brand of Quiet Matter)
+ * ----------------------------------------------------------------------------
+ * Extracted verbatim from index.html. The single source of truth for the app
+ * remains index.html; this copy exists so the Design System pane can render the
+ * tokens and components in isolation. When the app's token layer changes, this
+ * file changes in the same pass. Charter: ../../SUBBRAND.md.
+ *
+ * The structure, exactly as QM's static/qm.css:
+ *   1. Inherited primitives   — values TRACKED against Quiet Matter, unchanged.
+ *   2. Carta brand primitives — the sanctioned overrides (see SUBBRAND.md).
+ *   3. Semantic roles         — QM-compatible names; every rule consumes ONLY
+ *                               roles, never primitives (as QM does).
+ *   4. Legacy aliases         — old flat names (--ink/--paper/--accent…) mapped
+ *                               onto the roles, so existing rules keep working.
+ *   5. Dusk                   — remaps ONLY the roles to the night primitives;
+ *                               primitives never change (QM D1).
+ * ========================================================================== */
+
+:root{
+  /* ── 1. Inherited primitives — tracked to Quiet Matter, values identical ──
+     These already match QM byte-for-byte. Declaring them here makes the shared
+     inheritance a RULE, not a coincidence. When QM moves one, move it here. */
+
+  /* Type scale — the sanctioned steps 11/13/15/16/18. 1rem = 16px. */
+  --s11:0.6875rem; --s13:0.8125rem; --s15:0.9375rem; --s16:1rem; --s18:1.125rem;
+  /* Tracking + weights */
+  --track-label:0.12em; --track-foot:0.04em;
+  --w-regular:400; --w-medium:500; --w-semibold:600;
+  /* Measures + touch minimum */
+  --measure:37ch;
+  --measure-editorial:56ch;
+  --touch-min:44px;                 /* WCAG 2.5.5 */
+  /* Faces — Spectral (interpretive) + Libre Franklin (operational), as QM. */
+  --serif:'Spectral',Georgia,'Times New Roman',serif;
+  --sans:'Libre Franklin',system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,monospace;   /* Carta addition: code */
+
+  /* ── 2. Carta brand primitives — the sanctioned sub-brand overrides ───────
+     Documented departures from QM. See SUBBRAND.md §"Sanctioned overrides".
+     Both the day (paper) and night (roast) ramps exist as fixed primitives;
+     the theme block below only ever repoints ROLES between them. */
+
+  /* Paper ramp — warm stock, warmer + darker than QM's #fafaf8 */
+  --ca-paper-0:#f8f5ee;    /* lifted paper (card) */
+  --ca-paper-50:#f2eee6;   /* the page — warm stock */
+  --ca-paper-100:#e9e3d8;  /* sunk surface */
+  --ca-paper-200:#ddd5c7;  /* opaque hairline */
+  /* Ink ramp — roasted, warm brown-black (QM is neutral #1a1a1a) */
+  --ca-ink-900:#241d18;    /* roasted ink — body */
+  --ca-ink-600:#554a41;    /* operational */
+  --ca-ink-450:#776b60;    /* subtle / footer — ≥4.5:1 on paper (≈ QM #6e6c6a) */
+  --ca-ink-300:#b8b5b0;    /* disabled/placeholder only */
+  /* Hairlines */
+  --ca-line-ink:rgba(36,29,24,.13);
+  --ca-line-paper:rgba(236,233,227,.14);
+  /* The ember — Carta's one warm signal: current action and the cup's score.
+     THE core break from QM, which admits no colour on customer surfaces. */
+  --ca-ember:#a63f2b;
+  --ca-ember-ink:#fffaf1;
+  /* Functional destructive — always paired with a text label */
+  --ca-danger:#8c3b34;
+
+  /* Night ramp — "paper at night", warm off-black (QM night is #161513) */
+  --ca-night-900:#171310;    /* page at night */
+  --ca-night-800:#211b17;    /* card at night */
+  --ca-night-700:#2d241f;    /* sunk surface at night */
+  --ca-night-600:#342923;    /* opaque hairline at night */
+  --ca-roastlight-100:#f0e9dd;   /* primary text on night */
+  --ca-roastlight-300:#c8bcae;   /* secondary text on night */
+  --ca-roastlight-500:#9f9183;   /* subtle text on night */
+  --ca-roastlight-700:#5b574f;   /* disabled on night */
+  --ca-ember-dusk:#e06b4f;   /* the ember, lifted for the dark surface */
+
+  /* Shape — square by default; the one sanctioned rounding is 2px (chips/code) */
+  --radius:0;
+  --chipr:2px;
+
+  /* ── 3. Semantic roles — QM-compatible. Rules consume ONLY these. ─────────── */
+  --text-primary:var(--ca-ink-900);
+  --text-secondary:var(--ca-ink-600);
+  --text-subtle:var(--ca-ink-450);
+  --text-disabled:var(--ca-ink-300);
+  --text-on-fill:var(--ca-ember-ink);
+  --surface-page:var(--ca-paper-50);
+  --surface-card:var(--ca-paper-0);
+  --surface-sunk:var(--ca-paper-100);
+  --border-hairline:var(--ca-line-ink);
+  --border-strong:var(--ca-ink-900);
+  --border-control:var(--ca-ink-450);
+  --link:var(--ca-ink-600);
+  --link-hover:var(--ca-ink-900);
+  --focus-ring:var(--ca-ink-900);
+  --fill-strong:var(--ca-ink-900);
+  --fill-strong-hover:var(--ca-ink-600);
+  /* Carta-only roles — the sanctioned extensions QM has no equivalent for */
+  --signal:var(--ca-ember);       /* action + score */
+  --signal-ink:var(--ca-ember-ink);
+  --status-danger:var(--ca-danger);
+
+  /* ── 4. Legacy aliases — keep existing index.html rules working ───────────
+     Old flat names now point at roles. Migrate rules onto the role names over
+     time, then delete this block. Nothing else in the file needs to change. */
+  --ink:var(--text-primary);
+  --ink-2:var(--text-secondary);
+  --ink-3:var(--text-subtle);
+  --ink-d:var(--text-disabled);
+  --paper:var(--surface-page);
+  --paper-card:var(--surface-card);
+  --paper-2:var(--surface-sunk);
+  --paper-3:var(--ca-paper-200);     /* opaque hairline primitive */
+  --line:var(--border-hairline);
+  --line-2:var(--ca-paper-200);
+  --line-strong:var(--border-strong);
+  --accent:var(--signal);
+  --accent-ink:var(--signal-ink);
+  --danger:var(--status-danger);
+}
+
+/* ── 5. Dusk — "paper at night". Remaps ONLY roles to the night primitives;
+   primitives never change (QM D1). Legacy aliases follow for free, because
+   they point at the roles, not at the primitives. ─────────────────────────── */
+html[data-theme="dusk"]{
+  --text-primary:var(--ca-roastlight-100);
+  --text-secondary:var(--ca-roastlight-300);
+  --text-subtle:var(--ca-roastlight-500);
+  --text-disabled:var(--ca-roastlight-700);
+  --text-on-fill:var(--ca-night-900);
+  --surface-page:var(--ca-night-900);
+  --surface-card:var(--ca-night-800);
+  --surface-sunk:var(--ca-night-700);
+  --border-hairline:var(--ca-line-paper);
+  --border-strong:var(--ca-roastlight-100);
+  --border-control:var(--ca-roastlight-500);
+  --link:var(--ca-roastlight-300);
+  --link-hover:var(--ca-roastlight-100);
+  --focus-ring:var(--ca-roastlight-100);
+  --fill-strong:var(--ca-roastlight-100);
+  --fill-strong-hover:var(--ca-roastlight-300);
+  --signal:var(--ca-ember-dusk);
+  --signal-ink:var(--ca-night-900);
+  --line-2:var(--ca-night-700);      /* legacy alias override (opaque) */
+  --paper-3:var(--ca-night-600);     /* legacy alias override (opaque) */
+}
