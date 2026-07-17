@@ -1,0 +1,57 @@
+<!-- @dsCard group="Components" name="Café surface" subtitle="Masthead, derived palette strip, per-café theming" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Café surface</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+<style>
+  /* Stand-in for a café's branding photo — the app derives the signature colour
+     from a real uploaded image via derivePalette(). */
+  .ds-photo{background:linear-gradient(135deg,#3a2a20 0%,#6b4a34 55%,#a2643f 100%)}
+</style>
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components · sanctioned override</div>
+  <h1 class="ds-title">Café surface</h1>
+  <p class="ds-lede">The per-café palette engine — an entire feature built on colour, impossible inside Quiet Matter's law, core to Carta's product. A café's branding photo derives a signature colour that themes its whole surface.</p>
+
+  <div class="ds-sec">Masthead</div>
+  <div class="ds-stage plain">
+    <div class="masthead">
+      <div class="ds-photo" style="width:100%;height:172px"></div>
+      <div class="scrim"></div>
+      <div class="bar"></div>
+      <div class="id">
+        <div class="nm">Quiet Matter</div>
+        <div class="ct">Kreuzberg · Berlin</div>
+      </div>
+    </div>
+  </div>
+  <p class="ds-note">The photo, a bottom scrim for legibility, an ember bar at the base, and the café's name in the editorial serif. In the app the bar and accents take the café's <em>derived</em> colour, not the global ember.</p>
+
+  <div class="ds-sec">Derived palette</div>
+  <div class="ds-stage plain">
+    <div class="palette">
+      <span style="background:#2a1d14"></span>
+      <span style="background:#6b4a34"></span>
+      <span style="background:#a2643f"></span>
+      <span style="background:#c98a5b"></span>
+      <span style="background:#e6c7a5"></span>
+    </div>
+    <p class="ds-note" style="margin-top:12px">derivePalette(photo) → {h,s,l,brand,dark}. From it, cafeColors / cafeVars build a whole themed surface — the café's detail page and every cup logged there wear this palette. Shown while setting a café's branding.</p>
+  </div>
+
+  <div class="ds-sec">Café note</div>
+  <div class="ds-stage plain">
+    <div class="cafeback">Last time here you had a <strong>cortado</strong> and gave it <strong>8/9</strong>.</div>
+  </div>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

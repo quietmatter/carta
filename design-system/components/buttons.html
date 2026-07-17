@@ -1,0 +1,43 @@
+<!-- @dsCard group="Components" name="Buttons" subtitle="Primary, quiet, graphite, danger, text actions & links" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Buttons</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components</div>
+  <h1 class="ds-title">Buttons</h1>
+  <p class="ds-lede">Full-width, uppercase sans, square. The ember-filled primary is reserved for the one current action; graphite and quiet carry everything else.</p>
+
+  <div class="ds-sec">Block buttons</div>
+  <div class="ds-stage">
+    <button class="btn btn-primary">Log this cup</button>
+    <button class="btn btn-graphite">Save setup</button>
+    <button class="btn btn-quiet">Add a bag</button>
+    <button class="btn btn-danger">Delete brew</button>
+  </div>
+  <table class="ds-spec">
+    <tr><td class="k">Primary</td><td>the single current action / commit</td><td class="tok">.btn-primary</td></tr>
+    <tr><td class="k">Graphite</td><td>strong secondary, ink-filled</td><td class="tok">.btn-graphite</td></tr>
+    <tr><td class="k">Quiet</td><td>outlined, low-commitment</td><td class="tok">.btn-quiet</td></tr>
+    <tr><td class="k">Danger</td><td>destructive, always labelled</td><td class="tok">.btn-danger</td></tr>
+  </table>
+
+  <div class="ds-sec">Text action &amp; link</div>
+  <div class="ds-stage ds-cluster" style="gap:22px">
+    <span class="text-action">Edit</span>
+    <span class="link">See all 14 brews</span>
+    <span class="helpbtn">What's this?</span>
+  </div>
+  <p class="ds-note">The word, underlined, is the interface — inherited from Quiet Matter. .text-action and .link differ only in face and weight; .helpbtn is the quietest.</p>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

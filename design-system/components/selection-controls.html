@@ -1,0 +1,64 @@
+<!-- @dsCard group="Components" name="Selection controls" subtitle="Segmented, hedonic 1–9, descriptors, verdict" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Selection controls</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components</div>
+  <h1 class="ds-title">Selection controls</h1>
+  <p class="ds-lede">One selection idiom, four shapes: the selected state is always the ink fill (--fill-strong on --text-on-fill). No colour, no toggle chrome.</p>
+
+  <div class="ds-sec">Segmented</div>
+  <div class="ds-stage">
+    <div class="seg">
+      <button class="on">Home</button>
+      <button>Café</button>
+    </div>
+    <div class="seg">
+      <button>Espresso</button>
+      <button class="on">Pour-over</button>
+      <button>Immersion</button>
+    </div>
+  </div>
+
+  <div class="ds-sec">Hedonic — 1 to 9</div>
+  <div class="ds-stage">
+    <div class="hedonic">
+      <button>1</button><button>2</button><button>3</button><button>4</button>
+      <button>5</button><button>6</button><button class="on">7</button><button>8</button><button>9</button>
+    </div>
+    <p class="ds-note" style="margin-top:10px">The nine-point liking scale. Selected sits in the ink fill; the score itself is echoed in the ember on hero surfaces.</p>
+  </div>
+
+  <div class="ds-sec">Descriptors — multi-select</div>
+  <div class="ds-stage">
+    <div class="desc">
+      <button class="on">stone fruit</button>
+      <button>cocoa</button>
+      <button class="on">floral</button>
+      <button>citrus</button>
+      <button>caramel</button>
+      <button>nutty</button>
+    </div>
+  </div>
+
+  <div class="ds-sec">Verdict — would you again?</div>
+  <div class="ds-stage">
+    <div class="verdict">
+      <button class="yes on">Again</button>
+      <button class="no">Not again</button>
+    </div>
+    <p class="ds-note" style="margin-top:10px">"Not again", when chosen, strikes itself through — the record disagreeing with itself in plain type.</p>
+  </div>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

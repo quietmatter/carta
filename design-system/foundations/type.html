@@ -1,0 +1,68 @@
+<!-- @dsCard group="Foundations" name="Type" subtitle="Spectral + Libre Franklin, the 11–18 scale, labels, editorial display" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Type</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Foundations</div>
+  <h1 class="ds-title">Type</h1>
+  <p class="ds-lede">Two faces, split by job. Spectral carries interpretation and body; Libre Franklin carries operation and labels. Inherited from Quiet Matter, verbatim.</p>
+
+  <div class="ds-sec">The two faces</div>
+  <div class="ds-stage">
+    <div class="ds-type-row">
+      <span class="lab">--serif · Spectral · interpretive layer</span>
+      <div style="font-family:var(--serif);font-size:24px;font-weight:400">Interpretation and body <em style="font-style:italic">and its italic</em> <strong style="font-weight:600">and its semibold</strong></div>
+    </div>
+    <div class="ds-type-row">
+      <span class="lab">--sans · Libre Franklin · operational layer</span>
+      <div style="font-family:var(--sans);font-size:20px;font-weight:400">Operation and labels <span style="font-weight:500">medium</span> <span style="font-weight:600">semibold</span></div>
+    </div>
+    <div class="ds-type-row">
+      <span class="lab">--mono · code (Carta addition)</span>
+      <div style="font-family:var(--mono);font-size:16px"><code>tempC · doseG · waterG</code></div>
+    </div>
+  </div>
+
+  <div class="ds-sec">Type scale — 11 / 13 / 15 / 16 / 18</div>
+  <div class="ds-stage">
+    <div class="ds-type-row"><span class="lab">--s18 · 1.125rem</span><div style="font-family:var(--serif);font-size:var(--s18)">A washed apricot acidity — the interpretive body.</div></div>
+    <div class="ds-type-row"><span class="lab">--s16 · 1rem · base</span><div style="font-family:var(--serif);font-size:var(--s16)">A washed apricot acidity, then cocoa on the finish.</div></div>
+    <div class="ds-type-row"><span class="lab">--s15 · 0.9375rem</span><div style="font-family:var(--serif);font-size:var(--s15)">A washed apricot acidity, then cocoa on the finish.</div></div>
+    <div class="ds-type-row"><span class="lab">--s13 · 0.8125rem</span><div style="font-family:var(--sans);font-size:var(--s13)">Operational detail — recipe, timings, metadata.</div></div>
+    <div class="ds-type-row"><span class="lab">--s11 · 0.6875rem</span><div style="font-family:var(--sans);font-size:var(--s11)">Smallest operational text.</div></div>
+  </div>
+  <p class="ds-note">Weights are 400 / 500 / 600 only — no display weights. The operational body stays on this scale.</p>
+
+  <div class="ds-sec">The label system</div>
+  <div class="ds-stage">
+    <h2 style="margin:0">Section label</h2>
+    <p class="ds-note" style="margin-top:8px">11px · uppercase · 0.12em tracking (--track-label) · sans-medium · subtle ink. The one recurring operational mark.</p>
+  </div>
+
+  <div class="ds-sec">Editorial display — sanctioned override</div>
+  <div class="ds-stage">
+    <div style="font-family:var(--serif);font-size:42px;line-height:1;letter-spacing:-.04em;font-weight:600;max-width:13ch">The cup you almost forgot.</div>
+    <p class="ds-note" style="margin-top:12px">Serif to 34–42px with negative tracking, above QM's 18px customer ceiling. Reserved for arrival and hero moments only — never operational surfaces.</p>
+  </div>
+
+  <div class="ds-sec">Roles &amp; measures</div>
+  <table class="ds-spec">
+    <tr><td class="k">Body</td><td>Spectral, interpretation + reading</td><td class="tok">--serif</td></tr>
+    <tr><td class="k">Operation</td><td>Libre Franklin, labels + numerics</td><td class="tok">--sans</td></tr>
+    <tr><td class="k">Body measure</td><td>37ch</td><td class="tok">--measure</td></tr>
+    <tr><td class="k">Editorial measure</td><td>56ch</td><td class="tok">--measure-editorial</td></tr>
+    <tr><td class="k">Label tracking</td><td>0.12em</td><td class="tok">--track-label</td></tr>
+  </table>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

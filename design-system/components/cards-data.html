@@ -1,0 +1,66 @@
+<!-- @dsCard group="Components" name="Cards & data display" subtitle="Cards, key/value rows, section heads, empty states, toast" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Cards & data display</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components</div>
+  <h1 class="ds-title">Cards &amp; data display</h1>
+  <p class="ds-lede">Lifted paper, one hairline, no shadow. The record is the ornament.</p>
+
+  <div class="ds-sec">Card</div>
+  <div class="ds-stage plain">
+    <div class="card">
+      <div class="row">
+        <strong>Kiamugumo AA</strong>
+        <span class="chip window">day 9</span>
+      </div>
+      <div class="muted">Quiet Matter · washed · Kenya</div>
+    </div>
+    <div class="card tap">
+      <div class="row">
+        <strong>Hario Switch · Comandante</strong>
+        <span class="muted small">4 brews</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ds-sec">Key / value ledger</div>
+  <div class="ds-stage">
+    <div class="kv"><span class="k">Dose</span><span class="v num">18.0 g</span></div>
+    <div class="kv"><span class="k">Water</span><span class="v num">300 g</span></div>
+    <div class="kv"><span class="k">Ratio</span><span class="v num">1 : 16.7</span></div>
+    <div class="kv"><span class="k">Temperature</span><span class="v num">94 °C</span></div>
+    <div class="kv"><span class="k">Time</span><span class="v num">2:38</span></div>
+  </div>
+
+  <div class="ds-sec">Section head with action</div>
+  <div class="ds-stage plain">
+    <div class="section-head">
+      <h2>Recent brews</h2>
+      <span class="text-action">See all</span>
+    </div>
+    <div class="card"><div class="row"><strong>Saturday, quietly</strong><span class="muted small">7</span></div></div>
+  </div>
+
+  <div class="ds-sec">Empty state</div>
+  <div class="ds-stage plain">
+    <div class="empty">No cups yet. The first one starts the record.</div>
+  </div>
+
+  <div class="ds-sec">Toast</div>
+  <div class="ds-stage plain" style="position:relative;min-height:52px">
+    <span class="toast show" style="position:static;transform:none;display:inline-block">Cup logged</span>
+  </div>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

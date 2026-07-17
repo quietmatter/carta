@@ -1,0 +1,53 @@
+<!-- @dsCard group="Components" name="Chips & badges" subtitle="Rest-window chips, selectable lens chips, badges" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Chips & badges</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components</div>
+  <h1 class="ds-title">Chips &amp; badges</h1>
+  <p class="ds-lede">Square-ish (2px, the one sanctioned rounding), monochrome. Weight and border carry the meaning — never colour.</p>
+
+  <div class="ds-sec">Status chips</div>
+  <div class="ds-stage ds-cluster">
+    <span class="chip">neutral</span>
+    <span class="chip window">rest window</span>
+    <span class="chip resting">resting</span>
+    <span class="chip past">past peak</span>
+    <span class="chip on">selected</span>
+  </div>
+  <table class="ds-spec">
+    <tr><td class="k">.chip.window</td><td>in the rest window — strong border, full ink</td><td class="tok">--border-strong</td></tr>
+    <tr><td class="k">.chip.resting</td><td>still resting — subtle</td><td class="tok">--text-subtle</td></tr>
+    <tr><td class="k">.chip.past</td><td>past peak — dashed border</td><td class="tok">dashed</td></tr>
+    <tr><td class="k">.chip.on</td><td>selected — ink fill</td><td class="tok">--fill-strong</td></tr>
+  </table>
+
+  <div class="ds-sec">Lens chips — selectable</div>
+  <div class="ds-stage">
+    <div class="lens">
+      <span class="chip on">All</span>
+      <span class="chip">Espresso</span>
+      <span class="chip">Filter</span>
+      <span class="chip">Café</span>
+    </div>
+  </div>
+
+  <div class="ds-sec">Badges</div>
+  <div class="ds-stage ds-cluster">
+    <span class="badge">Single origin</span>
+    <span class="badge ghost">decaf</span>
+  </div>
+  <p class="ds-note">.badge is uppercase, strong-bordered; .badge.ghost softens to a hairline for lesser facts.</p>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

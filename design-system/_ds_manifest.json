@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "name": "CARTA",
+  "cards": [
+    {
+      "path": "foundations/color.html",
+      "group": "Foundations",
+      "name": "Colour",
+      "subtitle": "Paper + ink ramps, the ember, night ramp, semantic roles"
+    },
+    {
+      "path": "foundations/space-shape.html",
+      "group": "Foundations",
+      "name": "Space, shape & glyphs",
+      "subtitle": "Radius, chip rounding, touch minimum, hairlines, the glyph set"
+    },
+    {
+      "path": "foundations/type.html",
+      "group": "Foundations",
+      "name": "Type",
+      "subtitle": "Spectral + Libre Franklin, the 11–18 scale, labels, editorial display"
+    },
+    {
+      "path": "components/buttons.html",
+      "group": "Components",
+      "name": "Buttons",
+      "subtitle": "Primary, quiet, graphite, danger, text actions & links"
+    },
+    {
+      "path": "components/cafe-surface.html",
+      "group": "Components",
+      "name": "Café surface",
+      "subtitle": "Masthead, derived palette strip, per-café theming"
+    },
+    {
+      "path": "components/cards-data.html",
+      "group": "Components",
+      "name": "Cards & data display",
+      "subtitle": "Cards, key/value rows, section heads, empty states, toast"
+    },
+    {
+      "path": "components/chips-badges.html",
+      "group": "Components",
+      "name": "Chips & badges",
+      "subtitle": "Rest-window chips, selectable lens chips, badges"
+    },
+    {
+      "path": "components/dials-timer.html",
+      "group": "Components",
+      "name": "Dials & timer",
+      "subtitle": "Numeric brew dials, °C/°F corner toggle, the brew timer"
+    },
+    {
+      "path": "components/forms.html",
+      "group": "Components",
+      "name": "Forms",
+      "subtitle": "Underline fields, labels, selects, textarea, photo zone"
+    },
+    {
+      "path": "components/hero-loop.html",
+      "group": "Components",
+      "name": "Hero & the daily loop",
+      "subtitle": "Home hero, continuation card, eyebrow, best-line"
+    },
+    {
+      "path": "components/selection-controls.html",
+      "group": "Components",
+      "name": "Selection controls",
+      "subtitle": "Segmented, hedonic 1–9, descriptors, verdict"
+    },
+    {
+      "path": "components/sheet.html",
+      "group": "Components",
+      "name": "Sheet",
+      "subtitle": "Bottom-sheet modal with drag handle"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+<!-- @dsCard group="Components" name="Dials & timer" subtitle="Numeric brew dials, °C/°F corner toggle, the brew timer" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Dials & timer</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components</div>
+  <h1 class="ds-title">Dials &amp; timer</h1>
+  <p class="ds-lede">The field tools — the one place the type scale is deliberately broken for legibility mid-brew. Big tabular numerics, big tap targets, flattened chrome.</p>
+
+  <div class="ds-sec">Brew dials</div>
+  <div class="ds-stage">
+    <div class="dialrow">
+      <div class="dial">
+        <div class="l">Dose</div>
+        <div class="v">18.0<span class="u">g</span></div>
+        <div class="ctl"><button>−</button><button>+</button></div>
+      </div>
+      <div class="dial">
+        <div class="l">Water</div>
+        <div class="v">300<span class="u">g</span></div>
+        <div class="ctl"><button>−</button><button>+</button></div>
+      </div>
+    </div>
+    <div class="dial">
+      <div class="dcorner"><span class="ut on">°C</span><span class="ut">°F</span></div>
+      <div class="l">Temperature</div>
+      <div class="v">94<span class="u">°C</span></div>
+      <div class="ctl"><button>−</button><button>+</button></div>
+    </div>
+  </div>
+  <p class="ds-note">Tap to step, hold to accelerate, tap the number to type. Grind dials scale per-Setup — grind is only comparable within one Setup. Temperature is stored canonically in °C; the corner toggle is display only.</p>
+
+  <div class="ds-sec">Timer</div>
+  <div class="ds-stage plain">
+    <div class="timer">
+      <div class="t">2:38</div>
+      <div class="ctl">
+        <button class="go">Start</button>
+        <button>Lap</button>
+        <button>Reset</button>
+      </div>
+    </div>
+  </div>
+  <p class="ds-note">Sits on the sunk surface, flattened chrome, 40px tabular numerics. The "go" control takes the ink fill.</p>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>
