@@ -27,6 +27,12 @@
       "subtitle": "Primary, quiet, graphite, danger, text actions & links"
     },
     {
+      "path": "components/cafe-classification.html",
+      "group": "Components",
+      "name": "Café classification",
+      "subtitle": "The reach — four depths, badge states, the primer"
+    },
+    {
       "path": "components/cafe-surface.html",
       "group": "Components",
       "name": "Café surface",
