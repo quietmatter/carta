@@ -65,6 +65,13 @@ Temperature has a **°C / °F** switch right on the dial (whole-degree steps), r
 
 If you time and weigh on your machine or a Bluetooth scale (e.g. the Argos app), hide CARTA's stopwatch in **More → Preferences** and simply type the time and weight in. CARTA keeps the record; it doesn't need to be the timer.
 
+A bag can read itself off the web. Give it the roaster's or the bag's **website**
+and CARTA takes the roaster it states, a line, and the bag's own **colours** — the
+palette then dresses the bag's page and its place on the shelf. It fills only
+what's still blank; offline, or a silent site, you type it in by hand and it all
+still saves. No photograph is captured or stored — a brand is its colours and its
+words, kept small and offline.
+
 When a bag is finished, **put it away** from Home — it waits under *Put away*
 with your best cup, and restores with everything you learned when you buy it
 again.
@@ -75,12 +82,13 @@ CARTA reads like a printed record: a serif for what you tasted, a sans for what 
 
 ## Café cups
 
-The **Café** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, a photo, the order-again verdict, traceability — waits behind one line, to add now or later.
+The **Café** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, the order-again verdict, traceability — waits behind one line, to add now or later.
 
 - **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put).
 - **Each café wears its own colours.** Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — and builds a whole surface from that one signature colour: the café's page and every cup logged there take on the palette. A small design system, held in light and dusk alike. Only the palette is kept, never a hotlinked image, so the record stays offline and yours.
 - **One read fills the rest.** The same website read pulls more than colour — the site's own description becomes the café's line, the name it states is surfaced, and the map lookup opens on its address — so you retype nothing the site already knows. It fills only what's still blank, and offline you fill it in by hand.
 - **Pin it on the map.** Look up a café's address online and open it in Maps from its page. Typing the address by hand always works; the lookup is a convenience, not a requirement, and the app stays fully offline without it.
+- **The beans, read from the roaster.** Give a café cup the roaster's website and CARTA reads its brand the same way a café or a bag does — the roaster it states and a line fill what's blank, and the cup carries the colours it read. Less to type at the counter.
 - **Traceability, aligned to your bags.** A café cup can carry the same fields a bag does — country, region, producer, variety, lot, process — tucked behind one optional tap. Bags gained a lot number too, so a café cup and the bag on your shelf finally line up.
 - **Home vs café.** When you've had the same beans at home, the café cup says so — your average out against your average in. The shape of how a preference travels, not a verdict.
 
@@ -135,8 +143,8 @@ you → whose taste matches yours → worth the walk → save it → go.*
   read the people who walk your streets.
 - **The stream** — every café cup your people have logged, newest first (scoped
   to the active city lens): who, where, what they ordered, the score, their
-  words, the photo. Tap a cup for the full card, including the address and an
-  Open in Maps link when someone has pinned it.
+  words, and the beans' colours when they read them. Tap a cup for the full card,
+  including the address and an Open in Maps link when someone has pinned it.
 - **Beans worth chasing** — the roasters and origins your circle scored, best
   average first.
 - **Want to go** — save any place from anyone's record to a shortlist that waits
