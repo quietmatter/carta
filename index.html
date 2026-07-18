@@ -670,9 +670,10 @@ function saveCafeProfile(name,rec){
   const c={id:uid(),createdAt:new Date().toISOString(),name:String(name).trim(),...rec};
   D.cafes.push(c);return c;
 }
-// A café's branding photo yields one signature colour (see derivePalette). From it we build a whole
-// legible surface — paper, ink, lines, accent — tinted toward that hue: a mini design system, one
-// per café. cafeColors respects the app's light/dusk mode so a café keeps its hue in either light.
+// A café's branding — its website's declared colours (paletteFromColors) or a photo (derivePalette) —
+// yields one signature colour. From it we build a whole legible surface — paper, ink, lines, accent —
+// tinted toward that hue: a mini design system, one per café. cafeColors respects the app's light/dusk
+// mode so a café keeps its hue in either light.
 const parseHSL=str=>{const m=/hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/.exec(str||'');return m?[+m[1],+m[2],+m[3]]:null};
 // Resolve a café record to a palette object. New records store one; older records only kept a
 // single `accent` string — parse it back so their pages theme too.
@@ -713,10 +714,15 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.0.0';
+const APP_VERSION='4.1.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.1.0',date:'Jul 18, 2026',title:'A café’s colours, from its website',items:[
+    'Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — then dresses the café’s page and every cup you log in it. The same surface as before, sourced from the site instead of a photograph.',
+    'The photo still works, and still overrides. Offline, or a site that won’t answer, falls back to it without a fuss.',
+    'What CARTA keeps is the palette, not the page — a handful of colours, held on the device, the record still yours and still offline.',
+  ]},
   {v:'4.0.0',date:'Jul 18, 2026',title:'A room at a time',items:[
     'CARTA now opens a room at a time — Reading, Remembering, Making, Keeping. Start by reading other people\'s cups; step deeper whenever you\'re ready. Nothing is ever taken away.',
     'Friends is now Find. Same record, sharper question: where is the next good cup? Recommendations, taste affinity, the stream, the beans worth chasing — and a door to the next room at the bottom.',
@@ -1316,6 +1322,22 @@ function rgb2hsl(r,g,b){
   const l=(mx+mn)/2,sa=d?d/(1-Math.abs(2*l-1)):0;
   return [h,sa*100,l*100];
 }
+// A hex string ('#rgb' or '#rrggbb') to [r,g,b], or null. The website read speaks in hex.
+const hex2rgb=h=>{h=String(h||'').trim().replace(/^#/,'');if(h.length===3)h=h.replace(/(.)/g,'$1$1');
+  return /^[0-9a-fA-F]{6}$/.test(h)?[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]:null};
+// The website counterpart to derivePalette. A brand's site declares its colours (logo ink, background,
+// the palette around them); we pick the signature the same way the photo read does — most chromatic
+// wins, a colour outvoting the greys — held inside the same legible band so the surface always reads.
+function paletteFromColors(list){
+  let best=null,bw=-1;
+  (list||[]).forEach(c=>{const p=hex2rgb(c);if(!p)return;const w=Math.pow(Math.max(...p)-Math.min(...p),2);if(w>bw){bw=w;best=p}});
+  if(!best)return null;
+  const dark=(.299*best[0]+.587*best[1]+.114*best[2])<118;
+  if(bw<300){const L=dark?60:38;return{h:28,s:8,l:L,brand:`hsl(28,8%,${L}%)`,dark,mono:true}} // no colour to read — an honest neutral
+  const[h,sa,l]=rgb2hsl(best[0],best[1],best[2]),H=Math.round(h);
+  const S=Math.round(Math.min(80,Math.max(42,sa))),L=Math.round(Math.min(58,Math.max(38,l)));
+  return {h:H,s:S,l:L,brand:`hsl(${H},${S}%,${L}%)`,dark};
+}
 // Live preview inside the café branding sheet: the derived palette, and a themed sample cup so the
 // transform is visible before it's saved. A no-op anywhere the preview slot isn't on screen.
 function paintBrandPreview(){const el=document.getElementById('brandpreview');if(el)el.innerHTML=photoPalette?brandPreviewHTML(photoPalette):'';}
@@ -1794,7 +1816,8 @@ function vPlace(){
   ${seal(shop,'A page that writes itself, cup by cup.')}
   </div>`;
 }
-// The café's own screen: branding photo (a whole palette derived from it), address lookup, a note.
+// The café's own screen: branding read from its website (or a photo) into a whole palette, address
+// lookup, a note.
 function openCafeProfile(shop){
   if(guard())return;
   const p=cafeProfile(shop)||{};
@@ -1803,11 +1826,16 @@ function openCafeProfile(shop){
   geoPick={address:p.address||'',lat:p.lat!=null?p.lat:null,lon:p.lon!=null?p.lon:null};
   openSheet(`
   <h3>${esc(shop)}</h3>
-  <div class="sub">Photograph the branding. Its colours dress this café and every cup you log in it.</div>
-  <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">
-    ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the branding — a sign, a cup, a menu'}</div>
+  <div class="sub">Dress this café in its own colours — pulled from its website, or read from a photo. They theme its page and every cup you log here.</div>
+  <label class="f"><span class="l">Website <span class="opt">optional</span></span>
+    <input type="text" id="p_site" value="${esc(p.site||'')}" placeholder="bluebottlecoffee.com" inputmode="url" autocapitalize="off" autocorrect="off"></label>
+  <button class="btn btn-quiet" type="button" onclick="siteLookup(${jsq(shop)})">Read the brand from its website</button>
+  <div class="muted small" style="margin:6px 2px 0">Reads the site’s own colours — its logo, and the palette around it. Offline or unreadable, photograph the branding instead.</div>
+  <div id="siteresults"></div>
+  <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()" style="margin-top:14px">
+    ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Or photograph the branding — a sign, a cup, a menu'}</div>
   <div id="brandpreview">${photoPalette?brandPreviewHTML(photoPalette):''}</div>
-  <div class="muted small" style="margin:8px 2px 16px">The palette is read from the photo — one signature colour, a whole surface built from it.</div>
+  <div class="muted small" style="margin:8px 2px 16px">One signature colour — from the website or the photo — builds the whole surface. What CARTA keeps is the palette, not the page.</div>
   <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="p_city" value="${esc(city)}" placeholder="Los Angeles"></label>
   <label class="f"><span class="l">Address <span class="opt">optional</span></span>
     <input type="text" id="p_address" value="${esc(p.address||'')}" placeholder="street address — or just use the button"></label>
@@ -1823,7 +1851,7 @@ function saveCafeProfileForm(shop){
   if(guard())return;
   const addr=val('p_address'),pinned=addr&&geoPick.address===addr; // coords only survive if they still match the typed address
   const rec={name:shop.trim(),city:val('p_city'),notes:val('p_notes'),photo:photoData,accent:photoAccent,palette:photoPalette,
-    address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null};
+    site:(val('p_site')||'').trim(),address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null};
   saveCafeProfile(shop,rec);                              // the per-user copy — exports and ledger sync carry it
   regUpsert(shop,rec,activeName(),{full:true});           // the Register — the shared, canonical entry
   save();closeSheet();openPlace(shop);toast('Café saved — the Register amended');
@@ -1851,6 +1879,29 @@ function geoChoose(address,lat,lon){
   const box=document.getElementById('georesults');if(box)box.innerHTML=`<div class="pinned">Pinned · ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)} <a class="link" onclick="geoUnpin()">remove</a></div>`;
 }
 function geoUnpin(){geoPick={address:val('p_address'),lat:null,lon:null};const box=document.getElementById('georesults');if(box)box.innerHTML='';}
+// Online brand read: pull a café's design system straight from its own website. Microlink (no key,
+// CORS-open) reads the page and hands back its logo and the colours around it; paletteFromColors takes
+// the signature the same chroma-wins way the photo read does, and the whole café surface builds from
+// it. Twin to geoLookup, and progressive: offline, or a site that won't answer, and the photo still
+// wins. We keep the palette — small, offline, portable — never the hotlinked image; the record stays
+// self-contained. The logo shown here is a live confirmation, not something saved.
+async function siteLookup(shop){
+  let u=(val('p_site')||'').trim();const box=document.getElementById('siteresults');
+  if(!u){if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Type the café’s website first — then read its colours.</div>';return}
+  if(!/^https?:\/\//i.test(u))u='https://'+u;
+  let host=u;try{host=new URL(u).hostname.replace(/^www\./,'')}catch(e){}
+  if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Reading the brand…</div>';
+  try{
+    const r=await fetch('https://api.microlink.io/?palette&url='+encodeURIComponent(u));
+    const j=await r.json();if(!box)return;
+    const d=(j&&j.data)||{},lg=d.logo||{},im=d.image||{};
+    const cols=[lg.color,lg.background,...(lg.palette||[]),im.color,im.background,...(im.palette||[])].filter(Boolean);
+    const pal=paletteFromColors(cols);
+    if(!pal){box.innerHTML='<div class="muted small" style="padding:6px 2px">Couldn’t read a colour from that site. Photograph the branding instead — it still works.</div>';return}
+    photoPalette=pal;photoAccent=pal.brand;paintBrandPreview();
+    box.innerHTML=`${lg.url?`<img src="${esc(lg.url)}" alt="" style="height:30px;width:auto;max-width:120px;border-radius:6px;vertical-align:middle;margin-right:8px">`:''}<span class="muted small">Read from ${esc(host)} — the palette below. Save to keep it; a photo overrides.</span>`;
+  }catch(e){if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Offline, or the site wouldn’t answer. Photograph the branding — it still works.</div>'}
+}
 
 /* --- the Register, on screen: a card for an entry, and its read-only sheet.
  * Discovery of unvisited places now runs through recommendations() in Find. --- */

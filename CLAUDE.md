@@ -100,11 +100,12 @@ server/
 - **brew flow** — `openBrew` → `saveBrew` → `openImpression` → `saveCup`.
 - **café** — logging café cups (`openCafe`/`saveCafeCup`, with optional
   structured traceability), the café passport (`shopAgg`, `vCafes`, favorites),
-  and per-café profiles (`openCafeProfile`: a branding photo → a signature colour
-  via `derivePalette`, from which `cafeColors`/`cafeVars` build a whole themed
-  surface — the café's detail page and every cup in it wear that palette; plus an
-  online address lookup `geoLookup` via OpenStreetMap Nominatim). The home-vs-café
-  comparison is `crossContext`.
+  and per-café profiles (`openCafeProfile`: a signature colour — pulled from the
+  café's website via `siteLookup` (`paletteFromColors`) or read from a branding
+  photo via `derivePalette` — from which `cafeColors`/`cafeVars` build a whole
+  themed surface — the café's detail page and every cup in it wear that palette;
+  plus an online address lookup `geoLookup` via OpenStreetMap Nominatim). The
+  home-vs-café comparison is `crossContext`.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
 - **export / import** — JSON export (stamped with the user's name); import as a
@@ -135,11 +136,14 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 - **cafes** — per-café profiles keyed by shop name (`saveCafeProfile` writes
   them; reads via `cafeProfile` resolve **Register-first**, falling back to
   this per-user copy, which remains for export/sync back-compat and to seed
-  Registers elsewhere): branding `photo`; a `palette` **derived from that photo**
-  (`derivePalette` → `{h,s,l,brand,dark}`) that themes the whole café surface via
-  `cafeColors`/`cafeVars`; a legacy `accent` string kept for back-compat (old
-  records with only `accent` are re-themed through `palOf`); and location
-  (`address`, `lat`, `lon`, from the optional online lookup). Merged in sync like
+  Registers elsewhere): branding `photo`; the café's `site` (its website); a
+  `palette` **derived from the site's declared colours** (`paletteFromColors`) **or
+  from that photo** (`derivePalette`) → `{h,s,l,brand,dark}`, theming the whole café
+  surface via `cafeColors`/`cafeVars` — only the palette is kept, never a hotlinked
+  logo, so the record stays self-contained and offline; a legacy `accent` string
+  kept for back-compat (old records with only `accent` are re-themed through
+  `palOf`); and location (`address`, `lat`, `lon`, from the optional online
+  lookup). Merged in sync like
   any other collection.
 - **cafeFavs** — favorited café shop names.
 - **deleted** — tombstones so removed records stay removed across a sync merge.
@@ -238,10 +242,12 @@ is the one exception browsers allow, so local dev needs no TLS.
   compact, single-line helpers and inline handlers. The server is idiomatic,
   commented Node with clear section banners.
 - **Keep the app dependency-free and single-file.** Same for the server
-  (zero deps). This is a core design property, not an accident. The one network
-  call the app makes is the *optional* café address lookup (OpenStreetMap
-  Nominatim) — progressive enhancement that degrades to manual text offline; it
-  bundles nothing and must stay that way (no map tiles, no embedded library).
+  (zero deps). This is a core design property, not an accident. The app makes only
+  two network calls, both *optional* progressive enhancements that degrade offline:
+  the café address lookup (OpenStreetMap Nominatim → manual text) and the café
+  brand read (Microlink → the branding photo). Each is keyless and bundles nothing,
+  and must stay that way (no map tiles, no embedded library, no design-system SDK);
+  the brand read keeps only the derived palette, never a hotlinked image.
 - **Match the brand voice.** `VOICE.md` is the standard for every user-facing
   string — sentence case, terse, honest, no emoji, the record-keeper persona.
   Screen new copy against its gate before shipping.
