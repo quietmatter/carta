@@ -128,14 +128,22 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   Setup** — each Setup's grind dial moves the way that grinder does.
 - **bags** — a bag of coffee: `roaster`, `name`, origin fields (`originCountry`,
   `originRegion`, `producer`, `variety`, `process`, `lot`), `roastDate`,
-  `roastLevel` (index into `ROAST_LEVELS`), `price`, `photo`, `archived`.
+  `roastLevel` (index into `ROAST_LEVELS`), `price`, `archived`, plus its `site`
+  (the roaster's/bag's website) and a `palette` **read from that site**
+  (`readBrand` → `paletteFromColors`) → `{h,s,l,brand,dark}`, which themes the
+  bag's detail page and its shelf row via `cafeColors`/`cafeVars`. A legacy
+  `photo` may linger on older records but is inert (branding photos are retired —
+  no picture is captured or stored).
 - **brews** — one brew: `bagId`, `setupId`, `technique`, `grind`, `doseG`,
   `waterG`, `tempC` (stored canonically in °C), `timeSec`, `instrumentation`.
 - **cups** — a tasting. `kind` is `home` (linked to a `brewId`/`bagId`) or
   `cafe` (with `shop`, `city`, `style`, `drink`, `roaster`, `origin`, `price`,
   `again`, plus optional structured traceability aligned to bags —
   `originCountry`, `originRegion`, `producer`, `variety`, `lot`, `process`).
-  `hedonic` (1–9), `descriptors[]`, `notes`.
+  `hedonic` (1–9), `descriptors[]`, `notes`. A café cup may also carry the beans'
+  brand read from the roaster's website: its `site` and a `palette`
+  (`readBrand`), which tints the cup's row and detail. A legacy `photo` may
+  linger on older cups but is inert.
 - **cafes** — per-café profiles keyed by shop name (`saveCafeProfile` writes
   them; reads via `cafeProfile` resolve **Register-first**, falling back to
   this per-user copy, which remains for export/sync back-compat and to seed
@@ -249,11 +257,12 @@ is the one exception browsers allow, so local dev needs no TLS.
 - **Keep the app dependency-free and single-file.** Same for the server
   (zero deps). This is a core design property, not an accident. The app makes only
   two network calls, both *optional* progressive enhancements that degrade offline:
-  the café address lookup (OpenStreetMap Nominatim → manual text) and the café
-  brand read (Microlink → the site's palette, name and description). Each is
-  keyless and bundles nothing, and must stay that way (no map tiles, no embedded
-  library, no design-system SDK); the brand read keeps only the derived palette
-  and the words, never a hotlinked image.
+  the café address lookup (OpenStreetMap Nominatim → manual text) and the brand
+  read (`readBrand`: Microlink → the site's palette, name and description), shared
+  by cafés, bags and café cups — each reads its brand from a website the same way.
+  Each is keyless and bundles nothing, and must stay that way (no map tiles, no
+  embedded library, no design-system SDK); the brand read keeps only the derived
+  palette and the words, never a hotlinked image or a captured photo.
 - **Match the brand voice.** `VOICE.md` is the standard for every user-facing
   string — sentence case, terse, honest, no emoji, the record-keeper persona.
   Screen new copy against its gate before shipping.
