@@ -448,6 +448,9 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 .verdict button.no.on{background:transparent;color:var(--ink);border-color:var(--ink);text-decoration:line-through}
 .badge{display:inline-block;font-family:var(--sans);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:var(--chipr);background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:500;vertical-align:middle}
 .badge.ghost{border-color:var(--line);color:var(--ink-3)}
+/* the reach: solid says fact, dashed says state — no mark mode may collapse the two */
+.badge.dashed{border-style:dashed;border-color:var(--ink-3);color:var(--ink-3)}
+.desc button.held{border-style:dashed;border-color:var(--ink-3);color:var(--ink-3)}
 .shopcard .big{font-family:var(--sans);font-size:22px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
 .cupthumb{width:100%;max-height:220px;object-fit:cover;border-radius:var(--radius);margin:2px 0 12px;display:block}
 .rowthumb{width:44px;height:44px;object-fit:cover;border-radius:var(--radius);flex:none}
@@ -596,6 +599,263 @@ function regSeed(){
     (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&c.shop)sights.push({at:c.createdAt||'',who:s.who,name:c.shop,fields:{city:c.city}})});
   });
   sights.sort((a,b)=>a.at.localeCompare(b.at)).forEach(s=>regUpsert(s.name,s.fields,s.who,{at:s.at||null}));
+}
+
+/* ============ the reach ============ */
+/* A classification of depth, not worth — four marks for how much of a coffee's
+ * road reads from the customer's side of the counter. A Register fact, like the
+ * pin and the palette: keepers attest FACTS (the bag, what the counter showed),
+ * never depths — the reading is the deepest fact standing. Per fact the newest
+ * standing sighting carries; older lines keep their ink. Nothing erases: a later
+ * reading of your own supersedes your line, withdraw strikes it — both stay,
+ * signed. Sightings live on the entry and merge in sync as a union by id. */
+const REACH=[null,
+  {glyph:'○',word:'Counter',name:'The counter',line:'good coffee, made fast and made right. Nobody narrates.'},
+  {glyph:'◎',word:'House',name:'The house',line:'the bag is named, the menu has intent. Ask, and they answer.'},
+  {glyph:'◉',word:'Roastery',name:'The roastery',line:'the roast in the room; the grind adjusted before your cup.'},
+  {glyph:'●',word:'Origin',name:'The origin',line:'the farm in the cup: producer, lot, process, freely told.'}];
+const BAG_FACTS={unnamed:{label:'unnamed',depth:1,why:'an honest, unnamed bag'},roaster:{label:'roaster named',depth:2,why:'the bag was named'},lot:{label:'lot named',depth:3,why:'the lot was named'},farm:{label:'farm named',depth:4,why:'the farm was named'}};
+const SEEN_FACTS={inhouse:{label:'roasts in-house',depth:3,why:'the roast in the room'},methods:{label:'more than one method',depth:3,why:'more than one method'},answers:{label:'answers at the counter',depth:2,why:'answers at the counter'},story:{label:'the story, freely told',depth:4,why:'the story, freely told'}};
+const sightStanding=s=>!s.withdrawnAt&&!s.supersededAt;
+const bySight=(a,b)=>(a.at||'').localeCompare(b.at||'')||String(a.id).localeCompare(String(b.id));
+const fmtMY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',year:'numeric'}):'';
+const fmtMDY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';
+// Compile the reading. The bag is one fact with four readings — newest carries;
+// each counter fact stands while any standing sighting attests it (attest-only:
+// silence is not denial — a shallow sighting at a deep café changes nothing).
+function reachCompile(e,asOf){
+  const st=((e&&e.sightings)||[]).filter(s=>asOf?(s.at<=asOf&&(!s.withdrawnAt||s.withdrawnAt>asOf)&&(!s.supersededAt||s.supersededAt>asOf)):sightStanding(s)).sort(bySight);
+  const carry={};
+  st.forEach(s=>{if(s.bag&&BAG_FACTS[s.bag])carry.bag=s;(s.seen||[]).forEach(k=>{if(SEEN_FACTS[k])carry[k]=s})});
+  let depth=0;
+  if(carry.bag)depth=BAG_FACTS[carry.bag.bag].depth;
+  Object.keys(SEEN_FACTS).forEach(k=>{if(carry[k])depth=Math.max(depth,SEEN_FACTS[k].depth)});
+  return {depth,carry,standing:st};
+}
+const sightCarries=(e,s)=>Object.values(reachCompile(e).carry).some(x=>x.id===s.id);
+// the fact that carries the reading — the primer's why-line
+function reachWhy(e){
+  const r=reachCompile(e);if(!r.depth)return'';
+  if(r.carry.bag&&BAG_FACTS[r.carry.bag.bag].depth===r.depth)return BAG_FACTS[r.carry.bag.bag].why;
+  const k=Object.keys(SEEN_FACTS).find(k=>r.carry[k]&&SEEN_FACTS[k].depth===r.depth);
+  return k?SEEN_FACTS[k].why:'';
+}
+// Replay the record to find when the reading last moved — {depth,since,was}.
+function reachHistory(e){
+  const ss=(e&&e.sightings)||[];
+  const times=[...new Set(ss.flatMap(s=>[s.at,s.withdrawnAt,s.supersededAt]).filter(Boolean))].sort();
+  let depth=0,since=null,was=0;
+  times.forEach(t=>{const d=reachCompile(e,t).depth;if(d!==depth){was=depth;depth=d;since=t}});
+  return {depth,since,was};
+}
+// The whisper: the bag turning twice inside ninety days. It clears when a
+// reading holds the window out, or a second keeper attests the current value.
+// Never on the badge — newest still carries throughout.
+function reachContested(e){
+  const bags=((e&&e.sightings)||[]).filter(s=>sightStanding(s)&&s.bag).sort(bySight);
+  if(bags.length<3)return false;
+  const cut=new Date(Date.now()-90*864e5).toISOString();
+  let flips=0;
+  for(let i=1;i<bags.length;i++)if(bags[i].bag!==bags[i-1].bag&&bags[i].at>=cut)flips++;
+  if(flips<2)return false;
+  const cur=bags[bags.length-1].bag;
+  return new Set(bags.filter(s=>s.bag===cur).map(s=>s.by)).size<2;
+}
+// the earliest later standing sighting that re-read this line's facts
+function reReadAt(e,s){
+  const later=((e.sightings||[]).filter(x=>sightStanding(x)&&bySight(s,x)<0)).sort(bySight);
+  const hit=later.find(x=>(s.bag&&x.bag)||((s.seen||[]).some(k=>(x.seen||[]).includes(k))));
+  return (hit||later[0]||{}).at||null;
+}
+function sightLine(s){
+  const parts=[];
+  if(s.bag&&BAG_FACTS[s.bag])parts.push('The bag: '+BAG_FACTS[s.bag].label);
+  (s.seen||[]).forEach(k=>{if(SEEN_FACTS[k]){const l=SEEN_FACTS[k].label;parts.push(l[0].toUpperCase()+l.slice(1))}});
+  return parts.length?parts.join('. ')+'.':'—';
+}
+// Enter a sighting — facts only, signed and dated. {supersede} strikes the
+// keeper's own earlier line (the amend path); a fresh sighting leaves old
+// lines standing, merely no longer carrying.
+function regSight(name,facts,who,opts){
+  const e=regUpsert(name,{},who)||regByName(name);if(!e)return null;
+  const now=new Date().toISOString();
+  const s={id:uid(),by:who||'',at:now};
+  if(facts.bag&&BAG_FACTS[facts.bag])s.bag=facts.bag;
+  const seen=(facts.seen||[]).filter(k=>SEEN_FACTS[k]).sort();
+  if(seen.length)s.seen=seen;
+  if(!s.bag&&!s.seen)return null;
+  if(opts&&opts.supersede){const old=(e.sightings||[]).find(x=>x.id===opts.supersede);if(old&&old.by===s.by&&sightStanding(old))old.supersededAt=now}
+  (e.sightings=e.sightings||[]).push(s);
+  e.updatedAt=now;if(who)e.by=who;REG.dirty=true;saveReg();schedulePush();
+  return s;
+}
+// Withdrawing un-carries: the fact falls to the next line standing — to unread,
+// if none does. No confirm — the strike is visible, signed, and reversible by
+// simply sighting again. Nothing is lost.
+function reachWithdraw(shop,sid){
+  if(guard())return;
+  const e=regByName(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
+  if(!s||s.by!==activeName()||!sightStanding(s))return;
+  s.withdrawnAt=new Date().toISOString();
+  e.updatedAt=s.withdrawnAt;e.by=activeName();REG.dirty=true;saveReg();schedulePush();
+  openReachRecord(shop);render();
+}
+/* --- the mark. The tweak (Preferences) restyles depth badges only — state
+ * chips (unread, re-read, held, withdrawn) keep their words and their dashes
+ * in every mode. Monochrome always: never the ember, never a fill. --- */
+const reachMarkOf=d=>{const m=getPref('reachMark','gw'),x=REACH[d];return m==='w'?x.word:m==='g'?x.glyph:x.glyph+' '+x.word};
+function reachBadge(shop,opts){
+  opts=opts||{};
+  const e=regByName(shop);if(!e)return'';
+  const r=reachCompile(e);
+  if(!r.depth)return opts.unread?'<span class="badge dashed">unread</span>':'';
+  return `<span class="badge${opts.ghost?' ghost':''}" style="cursor:pointer" onclick="event.stopPropagation();openReachPrimer(${jsq(shop)})">${reachMarkOf(r.depth)}</span>`;
+}
+/* --- the primer — one tap from any badge. From a café's badge, its depth is
+ * lit with one line of why; the sheet teaches the general either way. --- */
+function openReachPrimer(shop){
+  const e=shop?regByName(shop):null;
+  const r=e?reachCompile(e):null;
+  const lit=r?r.depth:0;
+  const h=lit?reachHistory(e):null;
+  const why=lit?reachWhy(e):'';
+  const rows=[1,2,3,4].map(d=>{const x=REACH[d],on=d===lit,dim=lit&&!on;
+    return `<div style="display:flex;gap:14px;align-items:baseline;padding:12px ${on?'11px':'2px'};border-top:1px solid var(--line)${on?';background:var(--paper-2);border-left:2px solid var(--ink)':''}${d===4?';border-bottom:1px solid var(--line)':''}">
+      <span class="sans" style="font-size:15px;flex:none;width:22px;text-align:center${dim?';color:var(--ink-3)':''}">${x.glyph}</span>
+      <span style="font-size:14px;line-height:1.5${dim?';color:var(--ink-3)':''}"><strong${dim?' style="color:var(--ink-2)"':''}>${x.name}</strong><span style="color:var(--ink-2)"> — ${x.line}</span>${on&&why?`<span class="sans" style="display:block;font-size:11px;color:var(--ink-3);margin-top:4px">where ${esc(shop)} reads · carried by “${why}”</span>`:''}</span>
+    </div>`}).join('');
+  openSheet(`
+  <h3>How to read the reach</h3>
+  <div class="sub">${lit?`From ${esc(shop)} — it reads ${REACH[lit].glyph} ${REACH[lit].word}${h&&h.since?`, since ${fmtMY(h.since)}`:''}, ${r.standing.length} sighting${r.standing.length>1?'s':''}.`:'Four depths, no ladder — a description of the counter, not a score for it.'}</div>
+  ${rows}
+  <div class="empty" style="padding:22px 20px">No depth outranks another. The cup decides.</div>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+/* --- the sighting chips — the same eight facts behind both doors. The bag is
+ * one pick of four; the counter facts toggle. Held (dashed) marks what the
+ * record already carries; tapping a different chip is the dispute. --- */
+let sightBag=null,sightSeen=[],sightShop=null,sightHeld=false,amendFrom=null;
+function sightChipsHTML(){
+  const e=sightHeld&&sightShop?regByName(sightShop):null;
+  const c=e?reachCompile(e).carry:{};
+  const bag=Object.keys(BAG_FACTS).map(k=>{const on=sightBag===k,hold=!on&&c.bag&&c.bag.bag===k;
+    return `<button class="${on?'on':hold?'held':''}" onclick="sightBagPick('${k}')">${BAG_FACTS[k].label}${hold?' · held':''}</button>`}).join('');
+  const seen=Object.keys(SEEN_FACTS).map(k=>{const on=sightSeen.includes(k),hold=!on&&c[k];
+    return `<button class="${on?'on':hold?'held':''}" onclick="sightSeenPick('${k}')">${SEEN_FACTS[k].label}${hold?' · held':''}</button>`}).join('');
+  return {bag,seen};
+}
+function paintSightChips(){
+  const c=sightChipsHTML();
+  const b=document.getElementById('sightbag');if(b)b.innerHTML=c.bag;
+  const s=document.getElementById('sightseen');if(s)s.innerHTML=c.seen;
+  const p=document.getElementById('sightread');if(p)p.innerHTML=sightReadHTML();
+}
+function sightBagPick(k){sightBag=(sightBag===k?null:k);paintSightChips()}
+function sightSeenPick(k){const i=sightSeen.indexOf(k);if(i>=0)sightSeen.splice(i,1);else sightSeen.push(k);paintSightChips()}
+// what the record will read once this sighting lands — the carries plus yours
+function sightReadHTML(){
+  const e=sightShop?regByName(sightShop):null;
+  const r=e?reachCompile(e):{depth:0,carry:{},standing:[]};
+  let d=0;
+  const bag=sightBag||(r.carry.bag&&r.carry.bag.bag);
+  if(bag)d=BAG_FACTS[bag].depth;
+  Object.keys(SEEN_FACTS).forEach(k=>{if(sightSeen.includes(k)||r.carry[k])d=Math.max(d,SEEN_FACTS[k].depth)});
+  const note=d?((sightBag||sightSeen.length)?(r.standing.length?'— from your sighting, signed':'— the record’s first line, signed'):'— as the record stands'):'— say what you saw';
+  return `${d?`<span class="badge">${reachMarkOf(d)}</span>`:'<span class="badge dashed">unread</span>'} <span class="sans" style="font-size:11px;color:var(--ink-3)">${note}</span>`;
+}
+/* --- amend the reach — the deliberate door, from the café's page. Reading
+ * first and reading again are the same act; only the header knows. --- */
+function openReachAmend(shop,fromId){
+  if(guard())return;
+  const e=regByName(shop);
+  const r=e?reachCompile(e):{depth:0,carry:{},standing:[]};
+  const h=e?reachHistory(e):{};
+  const from=fromId&&e?(e.sightings||[]).find(x=>x.id===fromId):null;
+  amendFrom=from&&from.by===activeName()?from.id:null;
+  sightBag=from?(from.bag||null):null;
+  sightSeen=from&&from.seen?from.seen.slice():[];
+  sightShop=shop;sightHeld=true;
+  const first=!r.standing.length;
+  const keepers=new Set(r.standing.map(s=>s.by).filter(Boolean)).size;
+  const carrier=r.carry.bag;
+  const sc=sightChipsHTML();
+  openSheet(`
+  <h3>${first?'Read the reach':'Amend the reach'}</h3>
+  <div class="sub">${first?'Say what you saw. Yours will be the first line in the record.':'Say what you saw. The reading recompiles — keepers attest facts, never depths.'}</div>
+  <div class="card" style="margin-bottom:14px"><div class="row" style="align-items:baseline">
+    <span class="muted" style="flex:none">${esc(shop)} reads</span>
+    <span style="text-align:right">${r.depth?`<span class="badge">${reachMarkOf(r.depth)}</span>`:'<span class="badge dashed">unread</span>'} <span class="sans" style="font-size:11px;color:var(--ink-3)">${first?'nothing read yet — no one has said':`since ${fmtMY(h.since)} · ${r.standing.length} sighting${r.standing.length>1?'s':''}, ${keepers} keeper${keepers>1?'s':''}`}</span></span></div></div>
+  <label class="f"><span class="l">The bag</span><div class="desc" id="sightbag">${sc.bag}</div></label>
+  ${first?'<div class="cafeback">There’s no record to hold you to. Say only what you saw — blanks are honest.</div>'
+    :carrier?`<div class="cafeback">${carrier.by===activeName()?'You':esc(carrier.by||'A keeper')} read this as <strong>${BAG_FACTS[carrier.bag].label}</strong>, ${fmtMY(carrier.at)}. Yours will carry; the line stays in the record.</div>`:''}
+  <label class="f"><span class="l">Seen at the counter</span><div class="desc" id="sightseen">${sc.seen}</div></label>
+  <div class="card" style="padding:10px 12px"><div class="row" style="align-items:center">
+    <span class="serif" style="font-style:italic;font-size:14px;color:var(--ink-3)">Will read</span>
+    <span id="sightread" style="text-align:right">${sightReadHTML()}</span></div></div>
+  ${first?'':'<div class="muted" style="font-family:var(--sans);font-size:11px;line-height:1.5;margin:8px 2px 6px">Dashed chips are what the record already holds. Tapping a different chip is the dispute — named in place, resolved by the record.</div>'}
+  <button class="btn btn-primary" style="margin-top:8px" onclick="enterSighting(${jsq(shop)})">${first?'Enter the first sighting':'Enter my sighting'}</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Cancel</button>`);
+}
+function enterSighting(shop){
+  if(guard())return;
+  if(!sightBag&&!sightSeen.length){toast('Say what you saw — one chip is enough');return}
+  regSight(shop,{bag:sightBag,seen:sightSeen},activeName(),amendFrom?{supersede:amendFrom}:null);
+  sightBag=null;sightSeen=[];amendFrom=null;
+  closeSheet();render();toast('Sighted — the reading recompiled');
+}
+/* --- the record of the reach — every sighting, signed and dated. Opens from
+ * the Register line on the café's page; the history lives here, never on the
+ * badge. --- */
+function openReachRecord(shop){
+  const e=regByName(shop);if(!e)return;
+  const ss=(e.sightings||[]).slice().sort(bySight).reverse();
+  const r=reachCompile(e),h=reachHistory(e),contested=reachContested(e);
+  const me=activeName();
+  const flag=contested?'<span class="badge dashed">the bag · read two ways</span>'
+    :(h.was>0&&h.since?`<span class="badge dashed">re-read ${fmtMY(h.since)} · was ${REACH[h.was].glyph} ${REACH[h.was].word.toLowerCase()}</span>`:'');
+  const rows=ss.map(s=>{
+    const struck=!!(s.withdrawnAt||s.supersededAt);
+    const carries=!struck&&sightCarries(e,s);
+    const rr=struck?null:(!carries?reReadAt(e,s):null);
+    const chip=s.withdrawnAt?`<span class="badge dashed">withdrawn · ${fmtMY(s.withdrawnAt)}</span>`
+      :s.supersededAt?`<span class="badge dashed">superseded · ${fmtMY(s.supersededAt)}</span>`
+      :carries?'<span class="badge">carries</span>'
+      :`<span class="badge dashed">read again${rr?` · ${fmtMY(rr)}`:''}</span>`;
+    const own=!readOnly()&&s.by===me&&!struck;
+    return `<div style="padding:11px 0;border-top:1px solid var(--line)">
+      <div class="row"><span class="sans" style="font-size:13px;font-weight:500${carries?'':';color:var(--ink-3)'}${struck?';text-decoration:line-through':''}">${s.by===me?'You':esc(s.by||'a keeper')} <span class="num" style="color:var(--ink-3);font-weight:400">· ${fmtMDY(s.at)}</span></span><span style="flex:none">${chip}</span></div>
+      <div style="font-size:14px;margin-top:4px;line-height:1.5;color:${carries?'var(--ink-2)':'var(--ink-3)'}${struck?';text-decoration:line-through':''}">${esc(sightLine(s))}</div>
+      ${own?`<div style="display:flex;gap:14px;margin-top:7px">
+        <button class="text-action" onclick="openReachAmend(${jsq(shop)},'${s.id}')">amend</button>
+        <button class="text-action" onclick="reachWithdraw(${jsq(shop)},'${s.id}')">withdraw</button></div>`:''}
+    </div>`}).join('');
+  openSheet(`
+  <h3>The record of the reach</h3>
+  <div class="sub">Every sighting, signed and dated. The newest carries each fact; nothing erases.</div>
+  <div class="row" style="align-items:baseline;padding:0 0 8px">
+    <span class="muted" style="flex:none">${esc(shop)} reads</span>
+    <span style="text-align:right">${r.depth?`<span class="badge" style="cursor:pointer" onclick="openReachPrimer(${jsq(shop)})">${reachMarkOf(r.depth)}</span>`:'<span class="badge dashed">unread</span>'}${flag?' '+flag:''}</span></div>
+  ${rows||'<div class="empty">No one has read it yet. Yours would be the first line.</div>'}
+  ${contested?'<div class="empty" style="padding:18px 20px;font-size:14px">The bag has turned twice this season. The newest carries, both readings stay in ink — perhaps the counter itself changes by the week.</div>':''}
+  ${readOnly()?'':`<button class="btn btn-primary" onclick="openReachAmend(${jsq(shop)})">Say what you saw</button>`}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+// your sightings, filed beside your cups in the Record — ghost weight, never a
+// number. The "carries" chip going ghost is how you learn someone read past you.
+function mySights(who){
+  const out=[];
+  REG.entries.forEach(e=>(e.sightings||[]).forEach(s=>{if(s.by===who)out.push({e,s})}));
+  return out;
+}
+function sightRow(x){
+  const struck=!!(x.s.withdrawnAt||x.s.supersededAt);
+  const carries=!struck&&sightCarries(x.e,x.s);
+  return `<div class="card tap" onclick="openReachRecord(${jsq(x.e.name)})">
+    <div class="row"><span class="small" style="color:var(--ink-2)"><strong style="color:var(--ink-2)">You read ${esc(x.e.name)}</strong> <span class="badge ghost">sighting</span></span>
+      <span class="badge${carries?'':' ghost'}"${struck?' style="text-decoration:line-through"':''}>${x.s.withdrawnAt?'withdrawn':x.s.supersededAt?'superseded':'carries'}</span></div>
+    <div class="muted small">${esc(sightLine(x.s))}</div>
+    <div class="muted" style="font-size:11px">${new Date(x.s.at).toLocaleDateString([],{month:'short',day:'numeric'})}</div>
+  </div>`;
 }
 
 /* ============ domain ============ */
