@@ -119,7 +119,36 @@ pin, the palette derived from that website, a line for the record.
 
 Cups stay personal, per ledger. Only the place is common knowledge.
 
-## Find — the next good cup
+### The reach — four depths, no ladder
+
+Every café can be read for **depth**: how much of a coffee's road — farm, roast,
+grind — is legible from the customer's side of the counter. Four marks, carried
+by type, never colour: **○ Counter · ◎ House · ◉ Roastery · ● Origin**. A
+description of the café, never a score — the 1–9 stays yours, and no depth
+outranks another.
+
+- **Keepers attest facts, never depths.** The marks never appear as a picker.
+  You say what you saw — the bag unnamed / roaster / lot / farm named; roasts
+  in-house, more than one method, answers at the counter, the story freely
+  told — and the reading follows from the record: the deepest fact standing.
+- **Two doors.** A sighting rides the café cup form (collapsed behind "What did
+  the counter show?", three taps at most, one save) or the deliberate door on
+  the café's page. Each is signed and dated, and joins the Register.
+- **Per fact, the newest sighting carries.** Older lines keep their ink. Amend
+  your own line (a new dated line; the old one struck *superseded*) or withdraw
+  it (struck, the fact falls to the next line standing). Nothing erases —
+  sightings merge in sync as a union by id, deterministic by construction.
+- **Unread is a state, never a depth.** Where no one has read a café the badge
+  says *unread*, dashed — never a default to the shallow end. The row itself is
+  the door to reading it.
+- **A lens, never a sort.** In Find, depth filters *Worth the walk* to a mood;
+  the unread wait in a counted tail, one tap from joining ghosted. Ranking
+  stays by taste.
+- **Every badge explains itself.** One tap opens the primer — *How to read the
+  reach* — with the tapped café's depth lit and one line of why. The record of
+  the reach (every sighting, signed) opens from the Register line on the café's
+  page. A mark preference in More writes badges as glyph + word, word, or glyph
+  alone; state chips keep their words and dashes in every mode.
 
 Not everyone wants to keep a record. Some people just want to know where to go
 and what to order. The **Find** tab is for them — the room every record starts

@@ -241,8 +241,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .btn+.btn{margin-top:8px}
 
 /* ===== forms ===== */
-label.f{display:block;margin-bottom:14px}
-label.f span.l{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px;font-weight:500}
+label.f,div.f{display:block;margin-bottom:14px}
+label.f span.l,div.f span.l{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px;font-weight:500}
 input[type=text],input[type=number],input[type=date],select,textarea{
   width:100%;font-family:var(--serif);font-size:16px;padding:9px 0;
   border:none;border-bottom:1px solid var(--ink-3);border-radius:0;
@@ -386,7 +386,7 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .empty{font-family:var(--serif);font-style:italic;color:var(--ink-3);text-align:center;padding:30px 20px;font-size:15px}
 .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;gap:10px}
 .kv:last-child{border-bottom:none}
-.kv .k{color:var(--ink-3);font-family:var(--sans);font-size:13px}
+.kv .k{color:var(--ink-3);font-family:var(--sans);font-size:13px;flex:none}
 .kv .v{font-variant-numeric:tabular-nums;text-align:right}
 .n-note{font-family:var(--sans);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
 svg text{font-family:'Libre Franklin',sans-serif}
@@ -779,10 +779,10 @@ function openReachAmend(shop,fromId){
   <div class="card" style="margin-bottom:14px"><div class="row" style="align-items:baseline">
     <span class="muted" style="flex:none">${esc(shop)} reads</span>
     <span style="text-align:right">${r.depth?`<span class="badge">${reachMarkOf(r.depth)}</span>`:'<span class="badge dashed">unread</span>'} <span class="sans" style="font-size:11px;color:var(--ink-3)">${first?'nothing read yet — no one has said':`since ${fmtMY(h.since)} · ${r.standing.length} sighting${r.standing.length>1?'s':''}, ${keepers} keeper${keepers>1?'s':''}`}</span></span></div></div>
-  <label class="f"><span class="l">The bag</span><div class="desc" id="sightbag">${sc.bag}</div></label>
+  <div class="f"><span class="l">The bag</span><div class="desc" id="sightbag">${sc.bag}</div></div>
   ${first?'<div class="cafeback">There’s no record to hold you to. Say only what you saw — blanks are honest.</div>'
     :carrier?`<div class="cafeback">${carrier.by===activeName()?'You':esc(carrier.by||'A keeper')} read this as <strong>${BAG_FACTS[carrier.bag].label}</strong>, ${fmtMY(carrier.at)}. Yours will carry; the line stays in the record.</div>`:''}
-  <label class="f"><span class="l">Seen at the counter</span><div class="desc" id="sightseen">${sc.seen}</div></label>
+  <div class="f"><span class="l">Seen at the counter</span><div class="desc" id="sightseen">${sc.seen}</div></div>
   <div class="card" style="padding:10px 12px"><div class="row" style="align-items:center">
     <span class="serif" style="font-style:italic;font-size:14px;color:var(--ink-3)">Will read</span>
     <span id="sightread" style="text-align:right">${sightReadHTML()}</span></div></div>
@@ -806,7 +806,7 @@ function openReachRecord(shop){
   const r=reachCompile(e),h=reachHistory(e),contested=reachContested(e);
   const me=activeName();
   const flag=contested?'<span class="badge dashed">the bag · read two ways</span>'
-    :(h.was>0&&h.since?`<span class="badge dashed">re-read ${fmtMY(h.since)} · was ${REACH[h.was].glyph} ${REACH[h.was].word.toLowerCase()}</span>`:'');
+    :(r.depth&&h.was>0&&h.since?`<span class="badge dashed">re-read ${fmtMY(h.since)} · was ${REACH[h.was].glyph} ${REACH[h.was].word.toLowerCase()}</span>`:'');
   const rows=ss.map(s=>{
     const struck=!!(s.withdrawnAt||s.supersededAt);
     const carries=!struck&&sightCarries(e,s);
@@ -959,10 +959,16 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.3.0';
+const APP_VERSION='4.4.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.4.0',date:'Jul 18, 2026',title:'The reach',items:[
+    'Every café can now be read for depth — four marks, no ladder: ○ Counter, ◎ House, ◉ Roastery, ● Origin. How much of a coffee\'s road makes it across the counter — a description of the café, never a score. The 1–9 stays yours.',
+    'You never pick a badge. Say what you saw — the bag named, the methods on the menu — and the reading follows from the record. A sighting rides the café cup form (optional, three taps at most) or the café\'s page; each is signed, dated, and shared through the Register.',
+    'Per fact, the newest sighting carries; older lines keep their ink. Amend your own line or withdraw it — struck, signed, never erased. Where no one has read a café, it says unread — never a default to the shallow end.',
+    'Depth is a lens in Find — filter Worth the walk to a mood, never a sort. Every badge is one tap from the primer, and the record of the reach opens from the café\'s page.',
+  ]},
   {v:'4.3.0',date:'Jul 18, 2026',title:'The bag, read from its website',items:[
     'A coffee now reads itself off the web, the way a café already does. Give the bag its website and CARTA takes the roaster’s colours and the line it states — and the bag wears that palette on its page and its place on the shelf. Less to type; a shelf that finally has a face.',
     'Café cups can pull the beans’ brand the same way — the roaster’s site fills the beans and a line, and the cup carries the colours it read.',
@@ -1123,7 +1129,7 @@ let tab='circle';
 let placeView=null;   // a café name — the page currently open over the tab, or null
 function openPlace(shop){placeView=shop;render()}
 function closePlace(){placeView=null;render()}
-function go(t){tab=t;placeView=null;render()}
+function go(t){tab=t;placeView=null;if(t!=='circle'){reachLens=0;reachTail={}}render()}
 function render(){
   _affCache=null; // affinity is recomputed once per paint, from the current record
   document.getElementById('who').textContent=
@@ -1312,7 +1318,7 @@ function vMore(){
 }
 // Preferences — presentation/input, not data. Two controls, phase-0 minimal.
 function vPrefsSection(){
-  const u=tempUnit(),hide=getPref('hideTimer',false),th=getPref('theme','paper');
+  const u=tempUnit(),hide=getPref('hideTimer',false),th=getPref('theme','paper'),rm=getPref('reachMark','gw');
   return `<h2>Preferences</h2>
   <div class="card">
     <div class="kv"><span class="k">Temperature</span><span class="v">
@@ -1327,8 +1333,13 @@ function vPrefsSection(){
       <span class="seg" style="margin:0;display:inline-flex;width:auto">
         <button class="${th==='paper'?'on':''}" onclick="themeSet('paper')">Paper</button>
         <button class="${th==='dusk'?'on':''}" onclick="themeSet('dusk')">Dusk</button></span></span></div>
+    <div class="kv"><span class="k">The reach mark</span><span class="v">
+      <span class="seg" style="margin:0;display:inline-flex;width:auto">
+        <button class="${rm==='gw'?'on':''}" onclick="prefSet('reachMark','gw')">◉ Word</button>
+        <button class="${rm==='w'?'on':''}" onclick="prefSet('reachMark','w')">Word</button>
+        <button class="${rm==='g'?'on':''}" onclick="prefSet('reachMark','g')">◉</button></span></span></div>
   </div>
-  <div class="muted small">Switch °C/°F anytime — right on the Temp dial too. Hide the stopwatch if you time on your machine or scale; just type the time and weight in.</div>`;
+  <div class="muted small">Switch °C/°F anytime — right on the Temp dial too. Hide the stopwatch if you time on your machine or scale; just type the time and weight in. The reach mark styles how a café's depth is written — state chips keep their words and their dashes in every mode.</div>`;
 }
 function prefSet(k,v){setPref(k,v);render()}
 // Paper / dusk — "paper at night". A Day (or a brew) logged after sunset should not be a blinding rectangle.
@@ -1841,6 +1852,8 @@ function saveCup(kind,brewId,bagId,skip,editId){
     fields.originCountry=val('c_country');fields.originRegion=val('c_region');fields.producer=val('c_producer');
     fields.variety=val('c_variety');fields.lot=val('c_lot');fields.process=val('c_process');
     if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
+    if(fields.shop&&!ex&&(sightBag||sightSeen.length)){regSight(fields.shop,{bag:sightBag,seen:sightSeen},activeName())} // what the counter showed — one save, no second submit
+    sightBag=null;sightSeen=[];
     if(fields.shop&&D.cafeWants){const i=D.cafeWants.findIndex(x=>normName(x)===normName(fields.shop));if(i>=0)D.cafeWants.splice(i,1)} // been now — off the want list
   }
   const firstOut=kind==='cafe'&&!ex&&!cafeCups().length;
@@ -1864,6 +1877,8 @@ function openCafe(pre,editId){
   const cities=[...new Set(cafeCups().map(c=>c.city).filter(Boolean))];
   brandPalette=palOf(pre);brandAccent=(brandPalette&&brandPalette.brand)||null;cafeStyleState=pre.style||'Espresso';againState=(pre.again==null?null:pre.again);
   brandCtx={kicker:'This cup',title:'The beans, in their colours',cta:'Keep this cup'};
+  sightBag=null;sightSeen=[];sightShop=null;sightHeld=false;amendFrom=null; // the sighting rides the cup, fresh each time
+  const sc=sightChipsHTML();
   // The fold opens on edit only if the cup already carries something under it.
   const more=!!(pre.city||pre.roaster||pre.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||pre.originCountry||pre.originRegion||pre.producer||pre.variety||pre.lot||pre.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
   openSheet(`
@@ -1883,6 +1898,12 @@ function openCafe(pre,editId){
       <button class="yes ${againState===true?'on':''}" onclick="pickAgain(true,this)">again</button>
       <button class="no ${againState===false?'on':''}" onclick="pickAgain(false,this)">pass</button>
     </div></label>
+  ${editId?'':`<details class="trace-more"><summary>What did the counter show? <span class="opt">optional, always</span></summary>
+    <div class="muted small serif" style="font-style:italic;margin:2px 0 12px;max-width:40ch;line-height:1.5">Three taps at most. These read the café, not your cup — they join the Register as a sighting, signed as yours.</div>
+    <div class="f"><span class="l">The bag</span><div class="desc" id="sightbag">${sc.bag}</div></div>
+    <div class="f"><span class="l">Seen at the counter</span><div class="desc" id="sightseen">${sc.seen}</div></div>
+    <div class="muted" style="font-family:var(--sans);font-size:11px;line-height:1.5;margin:-4px 2px 12px">A sighting fills blanks and corrects facts. It never erases — every reading stays in the record.</div>
+  </details>`}
   <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">the beans, the price, a line</span></summary>
     <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="c_city" list="citylist" value="${esc(pre.city||'')}" placeholder="Los Angeles">
       <datalist id="citylist">${cities.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
@@ -2018,7 +2039,7 @@ function shopCard(s){
   const p=s.profile,pal=palOf(p),vars=pal?cafeVars(pal):''; // each card previews its café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(s.shop)})">
     <div class="row">
-      <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}</span>`:''}</span>
+      <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}</span>`:''} ${reachBadge(s.shop,{ghost:true})}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${s.avg??'—'}</span>
     </div>
     <div class="muted small">${s.visits} visit${s.visits>1?'s':''}${s.usual?` · your usual: <strong>${esc(s.usual)}</strong>`:''}${s.spend?` · ${money(s.spend)}`:''}</div>
@@ -2062,7 +2083,16 @@ function vPlace(){
   }
   if(theirAvg)kvs.push([circleOn?'The circle says':'The register says',`${theirAvg} avg · ${others.length} cup${others.length>1?'s':''}`]);
   if(p&&p.address)kvs.push(['Address',`${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}`]);
-  if(e&&e.firstBy)kvs.push(['Register',`first entered by ${esc(e.firstBy)}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}`]);
+  if(e){ // the reach — a Register fact, read beside the pin and the palette
+    const rr=reachCompile(e),rh=reachHistory(e);
+    // the re-read chip is personal and temporary: it rides only while the reach
+    // is newer than your last cup here, then retires to the record sheet
+    const reRead=rr.depth&&rh.was>0&&rh.since&&mine.length&&rh.since>mine[0].createdAt;
+    kvs.push(['The reach',rr.depth
+      ?`<span class="badge" style="cursor:pointer" onclick="openReachPrimer(${jsq(shop)})">${reachMarkOf(rr.depth)}</span>${reRead?` <span class="badge dashed" style="cursor:pointer" onclick="openReachRecord(${jsq(shop)})">re-read · was ${REACH[rh.was].glyph} ${REACH[rh.was].word.toLowerCase()}</span>`:''} <span class="link" onclick="openReachPrimer(${jsq(shop)})">what this means</span>`
+      :`<span class="badge dashed">unread</span>${readOnly()?'':` <span class="link" onclick="openReachAmend(${jsq(shop)})">read it — say what you saw</span>`}`]);
+  }
+  if(e&&e.firstBy)kvs.push(['Register',`<span${e.sightings&&e.sightings.length?` class="link" onclick="openReachRecord(${jsq(shop)})"`:''}>first entered by ${esc(e.firstBy)}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</span>`]);
   return `<div class="cafe-theme"${vars?` style="${vars}"`:''}>
   <button class="text-action" style="margin:2px 0 6px" onclick="closePlace()">← Back</button>
   ${head}
@@ -2201,7 +2231,7 @@ function regCard(e){
   const pal=palOf(e),vars=pal?cafeVars(pal):''; // a Register entry carries the café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(e.name)})">
     <div class="row">
-      <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}</span>`:''}</span>
+      <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}</span>`:''} ${reachBadge(e.name,{ghost:true,unread:true})}</span>
       ${e.lat!=null?'<span class="badge ghost">pinned</span>':''}
     </div>
     <div class="muted small">${e.firstBy?`first entered by ${esc(e.firstBy)}`:'on the record'}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</div>
@@ -2398,7 +2428,9 @@ function vTrace(){
     <div class="section-head"><h2>At home · what changed</h2></div>
     ${bags.length?bags.map(traceCard).join(''):`<div class="empty">${traceEmpty}</div>`}
     <div class="section-head"><h2>Every cup</h2><span class="n-note num">${all.length}</span></div>
-    ${all.map(c=>cupRow(c,true)).join('')}
+    ${[...all.map(c=>({t:c.createdAt,html:cupRow(c,true)})),
+       ...mySights(readOnly()?viewingUser().name:activeName()).map(x=>({t:x.s.at,html:sightRow(x)}))]
+      .sort((a,b)=>(b.t||'').localeCompare(a.t||'')).map(x=>x.html).join('')}
     ${seal('Record','One preference, two rooms.')}`;
 }
 
@@ -2585,7 +2617,20 @@ function mergeLedgers(loc,rem){
 /* Register merge: union by id, newer updatedAt wins — then collapse entries
  * that name the same café from different devices (same name, different ids):
  * the newest-amended entry stands, blanks fill from the rest, the earliest
- * provenance is kept. Both sides run the same collapse, so they converge. */
+ * provenance is kept. Both sides run the same collapse, so they converge.
+ * Sightings never race: they union by id across every copy, and a strike
+ * (withdrawn/superseded) only ever adds — deterministic, no conflicts by
+ * construction. The reach then recompiles from the merged record. */
+function mergeSightings(...lists){
+  const m=new Map();
+  lists.flat().filter(s=>s&&s.id).forEach(s=>{
+    const p=m.get(s.id);
+    if(!p){m.set(s.id,{...s});return}
+    if(s.withdrawnAt&&(!p.withdrawnAt||s.withdrawnAt<p.withdrawnAt))p.withdrawnAt=s.withdrawnAt;
+    if(s.supersededAt&&(!p.supersededAt||s.supersededAt<p.supersededAt))p.supersededAt=s.supersededAt;
+  });
+  return [...m.values()].sort(bySight);
+}
 function mergeRegister(loc,rem){
   // Same id on both sides: newer updatedAt wins; on a tie the copy carrying
   // more substance stands (a collapse fills fields without touching updatedAt,
@@ -2597,7 +2642,11 @@ function mergeRegister(loc,rem){
     return JSON.stringify(l)>=JSON.stringify(r)};
   const dead=new Map();[...((rem&&rem.deleted)||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
   const m=new Map();((rem&&rem.entries)||[]).forEach(r=>m.set(r.id,r));
-  (loc.entries||[]).forEach(l=>{const r=m.get(l.id);if(!r||beats(l,r))m.set(l.id,l)});
+  (loc.entries||[]).forEach(l=>{const r=m.get(l.id);
+    if(!r){m.set(l.id,l);return}
+    const w={...(beats(l,r)?l:r)};
+    if(l.sightings||r.sightings)w.sightings=mergeSightings(l.sightings||[],r.sightings||[]);
+    m.set(l.id,w)});
   const groups={};
   [...m.values()].filter(e=>e&&e.name&&!dead.has(e.id)).forEach(e=>{const k=normName(e.name);(groups[k]=groups[k]||[]).push(e)});
   const entries=Object.keys(groups).sort().map(k=>{
@@ -2607,6 +2656,8 @@ function mergeRegister(loc,rem){
       Object.keys(e).forEach(f=>{if(!regSubstance(w[f])&&regSubstance(e[f]))w[f]=e[f]});
       if(e.firstAt&&(!w.firstAt||e.firstAt<w.firstAt)){w.firstAt=e.firstAt;w.firstBy=e.firstBy||w.firstBy}
     });
+    const sg=mergeSightings(...g.map(e=>e.sightings||[]));
+    if(sg.length)w.sightings=sg;
     return w;
   });
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
@@ -2881,6 +2932,10 @@ function circlePlaces(cups){
 
 // where you are, if you say so — in memory only, never stored or synced.
 let myGeo=null,nearOn=false,cityLens=null,circleQuery='';
+// the depth lens and its unfolded tails — held for the visit, folded again on
+// leaving Find, so the unread never quietly become furniture.
+let reachLens=0,reachTail={};
+function setReachLens(d){reachLens=(reachLens===d?0:d);render()}
 function haversine(la1,lo1,la2,lo2){const R=6371,r=Math.PI/180;
   const dla=(la2-la1)*r,dlo=(lo2-lo1)*r;
   const a=Math.sin(dla/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dlo/2)**2;
@@ -3003,17 +3058,18 @@ function beanRow(b){
     <div class="muted small">${b.n} cup${b.n>1?'s':''} · ${b.people.length===1?esc(b.people[0]):b.people.length+' people'}</div>
   </div>`;
 }
-function recCard(r){
-  const pal=palOf(r.profile),vars=pal?cafeVars(pal):'';
-  const why=r.reg
+function recCard(r,dim){ // dim: the unread tail under a depth lens — dashed to the edge, ghosted
+  const pal=dim?null:palOf(r.profile),vars=pal?cafeVars(pal):'';
+  const why=dim?'might be what you’re after — no one has said'
+    :r.reg
     ?`in the Register${r.profile&&r.profile.firstBy?` · first entered by ${esc(r.profile.firstBy)}`:''}`
     :`${r.best?`${esc(r.best.who)}${r.best.a>=.75?' — close to your taste':''} · ${r.best.h}/9`:''}${r.n>1?` · ${r.n} cups`:''}${r.again?` · ${r.again} would return`:''}`;
   const dist=r.dist!=null?` <span class="badge ghost">${fmtDist(r.dist)}</span>`:'';
   const want=readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="event.stopPropagation();toggleWant(${jsq(r.shop)});render()">${isWant(r.shop)?'Saved — it waits under Want to go':'Save for later'}</button>`;
-  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(r.shop)})">
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:dim?' style="border-style:dashed"':''} onclick="openPlace(${jsq(r.shop)})">
     <div class="row">
-      <span class="small"><strong>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}</span>`:''}${dist}</span>
-      <span class="big"${vars?' style="color:var(--accent)"':''}>${r.avg??(r.reg?'·':'—')}</span>
+      <span class="small"><strong${dim?' style="color:var(--ink-3)"':''}>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}</span>`:''}${dist} ${reachBadge(r.shop,{ghost:true,unread:true})}</span>
+      <span class="big"${vars?' style="color:var(--accent)"':dim?' style="color:var(--ink-3)"':''}>${r.avg??(r.reg?'·':'—')}</span>
     </div>
     <div class="muted small serif" style="font-style:italic">${why}</div>
     ${want}
@@ -3024,7 +3080,7 @@ function wantCard(name){
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   const city=pr&&pr.city?pr.city:'';
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(name)})">
-    <div class="row"><span class="small"><strong>${esc(name)}</strong>${city?`<span class="muted"> · ${esc(city)}</span>`:''}${dist}</span>
+    <div class="row"><span class="small"><strong>${esc(name)}</strong>${city?`<span class="muted"> · ${esc(city)}</span>`:''}${dist} ${reachBadge(name,{ghost:true})}</span>
       ${pr&&pr.address?'<span class="badge ghost">pinned</span>':''}</div>
     ${pr&&pr.address?`<div class="muted small">${esc(pr.address)}</div>`:''}
   </div>`;
@@ -3105,7 +3161,7 @@ function placeCard(p){
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(p.shop)})">
     <div class="row">
-      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}</span>`:''}${dist}</span>
+      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}</span>`:''}${dist} ${reachBadge(p.shop,{ghost:true,unread:true})}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${p.avg??'—'}</span>
     </div>
     <div class="muted small">${p.n} cup${p.n>1?'s':''} · ${p.people.length===1?esc(p.people[0]):p.people.length+' people'}${p.usual?` · they order <strong>${esc(p.usual)}</strong>`:''}${pr&&pr.address?' · pinned':''}</div>
@@ -3177,10 +3233,25 @@ function vCircle(){
   const cups=circleCups().filter(c=>inLens(c.city));
   const beans=circleBeans();
   const wants=(D.cafeWants||[]).slice();
+  // depth as a lens — a filter, never a sort. It shows only the read; the
+  // unread wait in the tail, counted, one tap from joining ghosted.
+  const rdOf=s=>{const e=regByName(s);return e?reachCompile(e).depth:0};
+  const shown=reachLens?recs.filter(r=>rdOf(r.shop)===reachLens):recs;
+  const unreadTail=reachLens?recs.filter(r=>!rdOf(r.shop)):[];
+  const depthLens=recs.length?`<div class="lens" style="margin-bottom:10px">
+    <button class="chip${reachLens?'':' on'}" onclick="setReachLens(0)">All</button>
+    ${[1,2,3,4].map(dd=>`<button class="chip${reachLens===dd?' on':''}" onclick="setReachLens(${dd})">${REACH[dd].glyph} ${REACH[dd].word}</button>`).join('')}
+  </div>`:'';
+  const tail=reachLens&&unreadTail.length?`<div class="row" style="padding:6px 2px 10px;align-items:baseline">
+    <span class="serif" style="font-style:italic;font-size:13px;color:var(--ink-3)">${unreadTail.length} more on the record, reach unread</span>
+    ${reachTail[reachLens]?'':`<button class="text-action" onclick="reachTail[${reachLens}]=1;render()">show them</button>`}
+  </div>${reachTail[reachLens]?unreadTail.slice(0,8).map(r=>recCard(r,true)).join(''):''}`:'';
   return head+`
     ${recs.length?`<div class="section-head"><h2>Worth the walk, for you</h2><span class="n-note num">${recs.length}</span></div>
     <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">${nearOn?'Nearest first — places you haven\'t been.':circleOn?'Places you haven\'t been, put first by the people whose taste sits closest to yours.':'Places you haven\'t been, from the register.'}</div>
-    ${recs.slice(0,8).map(recCard).join('')}`:''}
+    ${depthLens}
+    ${shown.slice(0,8).map(r=>recCard(r)).join('')||(reachLens?`<div class="empty">Nothing read at ${REACH[reachLens].glyph} ${REACH[reachLens].word} yet. A lens answers what has been read, not what might be.</div>`:'')}
+    ${tail}`:''}
     <div class="section-head"><h2>Whose taste matches yours</h2></div>
     ${aff.length?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">On the cafés you've both scored — how close you land.</div>
     ${aff.slice(0,4).map(a=>`<div class="card tap" onclick="circleView(${jsq(a.src)})">
@@ -3267,6 +3338,8 @@ function openGuide(){
     <div class="muted small">A shop and one tap is a valid record — always auto-flagged <span class="chip">recalled</span> and down-weighted honestly. But there's room now: style and a drink chip, the beans they poured — give the roaster's site and CARTA reads its brand — city, price, and an <em>order-again</em> verdict. Every café you log builds up in the <strong>Cafés</strong> tab — your passport, with your average, your usual, and what you've spent, per shop.</div>
     <strong class="small" style="display:block;margin-top:10px">The Register — one entry per café</strong>
     <div class="muted small">Name a shop and it enters the Register: one shared entry per café — name, city, pin, branding — read by every keeper on this device and on your sync server. Jane's Fighting Ships, for cafés. Anyone can amend an entry; a sighting fills blanks, never erases, and the entry remembers who entered it first. Cups stay yours — only the place is common knowledge.</div>
+    <strong class="small" style="display:block;margin-top:10px">The reach — four depths, no ladder</strong>
+    <div class="muted small">○ Counter · ◎ House · ◉ Roastery · ● Origin — how far back a cup reads, from the customer's side of the counter. A description of the café, never a score. You attest facts (the bag named, the methods on the menu), the depth follows from the record, and the newest sighting carries each fact. Tap any badge for the primer.</div>
   </div>
 
   <h2>The rooms</h2>
