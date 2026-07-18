@@ -30,7 +30,7 @@ components/
   cards-data.html         cards, key/value ledger, section heads, empty states, toast
   sheet.html              the bottom-sheet modal
   hero-loop.html          home hero, continuation card, best-line, empty hero
-  cafe-surface.html       masthead, derived palette strip, per-café theming
+  cafe-surface.html       website-derived palette strip, per-café theming
 _ds_manifest.json  card index compiled from the @dsCard markers
 ```
 

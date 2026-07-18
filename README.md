@@ -78,7 +78,8 @@ CARTA reads like a printed record: a serif for what you tasted, a sans for what 
 The **Café** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, a photo, the order-again verdict, traceability — waits behind one line, to add now or later.
 
 - **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put).
-- **Each café wears its own colours.** Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — or photograph the branding and it reads one signature colour from that instead. Either way it builds a whole surface around it: the café's page and every cup logged there take on that palette. A small design system, held in light and dusk alike. Only the palette is kept, never a hotlinked image, so the record stays offline and yours; the lookup is a convenience that falls back to the photo when a site won't answer.
+- **Each café wears its own colours.** Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — and builds a whole surface from that one signature colour: the café's page and every cup logged there take on the palette. A small design system, held in light and dusk alike. Only the palette is kept, never a hotlinked image, so the record stays offline and yours.
+- **One read fills the rest.** The same website read pulls more than colour — the site's own description becomes the café's line, the name it states is surfaced, and the map lookup opens on its address — so you retype nothing the site already knows. It fills only what's still blank, and offline you fill it in by hand.
 - **Pin it on the map.** Look up a café's address online and open it in Maps from its page. Typing the address by hand always works; the lookup is a convenience, not a requirement, and the app stays fully offline without it.
 - **Traceability, aligned to your bags.** A café cup can carry the same fields a bag does — country, region, producer, variety, lot, process — tucked behind one optional tap. Bags gained a lot number too, so a café cup and the bag on your shelf finally line up.
 - **Home vs café.** When you've had the same beans at home, the café cup says so — your average out against your average in. The shape of how a preference travels, not a verdict.
@@ -90,7 +91,7 @@ The café screen and the brew screen are deliberately the same shape: **Coffee �
 Cafés get named by many people, on many devices. The **Register** keeps a single
 canonical entry for each one — *Jane's Fighting Ships*, for cafés. It is the
 single source of truth for a café's identity: name, city, website, address and map
-pin, branding photo and derived palette, a line for the record.
+pin, the palette derived from that website, a line for the record.
 
 - **Shared, not per-user.** Every user of the device reads the same Register,
   and a sync server extends it to every keeper on the server (`/api/cafes`). A
