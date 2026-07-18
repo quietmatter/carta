@@ -79,6 +79,15 @@ server/
   erase; `{full:true}` for the café editor); `regSeed` sweeps every readable
   ledger into it at boot/import/refresh. Entries carry provenance
   (`firstBy`/`firstAt`, `by`/`updatedAt`).
+- **the reach** — a café classification of depth (○ Counter · ◎ House ·
+  ◉ Roastery · ● Origin) compiled from signed `sightings` on Register entries.
+  Keepers attest *facts* (`bag`: unnamed/roaster/lot/farm; `seen`: inhouse/
+  methods/answers/story), never depths; `reachCompile` derives the reading (the
+  deepest fact standing; per fact the newest standing sighting carries).
+  `regSight` enters a line, `reachWithdraw` strikes one (no confirm — nothing
+  erases), amend supersedes your own line via `{supersede}`. UI: `reachBadge`
+  (mark pref `reachMark`), `openReachPrimer`/`openReachAmend`/`openReachRecord`
+  sheets, a depth lens in Find, sighting rows in the Record tab.
 - **domain** — pure helpers: roast levels + accent color, rest-window math
   (`restWindow`/`restState`/`daysOff`), temperature conversion (`c2f`/`f2c`),
   time parse/format (`parseTime`/`fmtTime`), descriptor/café constants, small
@@ -166,8 +175,11 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
 `{version, rev, dirty, entries, deleted}` where each entry is a canonical café
 — `id`, `name`, `city`, `address`, `lat`/`lon`, `palette`/`accent`,
-`notes`, and provenance (`firstBy`/`firstAt`, `by`/`updatedAt`). It is shared
-by all users on the device and synced as one group-writable document.
+`notes`, provenance (`firstBy`/`firstAt`, `by`/`updatedAt`), and `sightings`
+(the reach: `{id, by, at, bag?, seen?[], withdrawnAt?, supersededAt?}` — signed
+lines that only ever accumulate; strikes add a date, nothing is removed, and
+`mergeRegister` unions them by id so sync never loses a line). It is shared by
+all users on the device and synced as one group-writable document.
 
 ### Invariants to preserve
 
@@ -183,6 +195,11 @@ by all users on the device and synced as one group-writable document.
   resolve Register-first (`cafeProfile`); café writes go through `regUpsert`
   *and* the per-user `D.cafes` copy. A sighting fills blanks, never erases —
   don't let a sparse write strip a rich entry.
+- **The reach is compiled, never picked.** Keepers attest facts; the depth
+  follows from `reachCompile`. Reach sightings are append-only — withdraw and
+  supersede strike a line with a date, never delete it — and `unread` is a
+  state, never a default to ○ Counter. Depth is a filter in Find, never a sort
+  key. Badges stay monochrome: never the ember, never a fill.
 
 ## The sync server (`server/`)
 
