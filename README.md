@@ -86,6 +86,7 @@ The **Café** tab is a passport of every shop you log — your average, visit co
 
 - **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put).
 - **Each café wears its own colours.** Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — and builds a whole surface from that one signature colour: the café's page and every cup logged there take on the palette. A small design system, held in light and dusk alike. Only the palette is kept, never a hotlinked image, so the record stays offline and yours.
+- **A banner drawn from that same colour.** The café's own page opens on a gradient built from its hue — a neutral roast tone while the café is still unbranded. Just the name, on its own colour; nothing fetched, nothing photographed.
 - **One read fills the rest.** The same website read pulls more than colour — the site's own description becomes the café's line, the name it states is surfaced, and the map lookup opens on its address — so you retype nothing the site already knows. It fills only what's still blank, and offline you fill it in by hand.
 - **Pin it on the map.** Look up a café's address online and open it in Maps from its page. Typing the address by hand always works; the lookup is a convenience, not a requirement, and the app stays fully offline without it.
 - **The neighborhood, named.** The map lookup names a neighborhood along with the pin — filled in automatically when it knows one, blanks only, typed always wins. It rides next to the city everywhere a café is shown.
@@ -161,8 +162,11 @@ plus the shared Register, and turns them into a discovery loop: *search → near
 you → whose taste matches yours → worth the walk → save it → go.*
 
 - **Search** — one field over the whole pooled record. Type a café, a city, a
-  roaster, an origin, a descriptor or a note and matching **places**, **beans**
-  and **cups** surface at once.
+  roaster, an origin, a descriptor, a tag or a note and matching **places**,
+  **beans** and **cups** surface at once. Pinned results also plot on a small
+  map alongside the list — a filled dot for a place you keep, a dashed one for
+  a place you haven't yet. It's drawn from the record's own coordinates, not
+  fetched — no tiles, no street names, nothing loaded from a map provider.
 - **Near you** — say where you are (optional; asked only when you tap it, and
   kept on the device — never stored or synced) and the pinned cafés your people
   kept sort by distance, closest first, each showing how far.

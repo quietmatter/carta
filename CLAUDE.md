@@ -117,7 +117,12 @@ server/
   café's note, the name it states (`siteName`) is surfaced, and it chains
   `geoLookup` (OpenStreetMap Nominatim) so the address surfaces too — filling
   blanks only, never overwriting typed values). The home-vs-café comparison is
-  `crossContext`.
+  `crossContext`. A café's own page opens on a banner (`cafeBannerGrad`) — a
+  gradient drawn from its derived hue, or a neutral roast tone unread — never
+  the app's ember, which stays reserved for the current action and the score.
+  Find's search plots pinned results on a decorative map (`mapProject`/
+  `mapHTML`): real lat/lon scaled to fit the box, filled dot for a place you
+  keep, dashed for one you don't — no tile, no street, no library.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
 - **export / import** — JSON export (stamped with the user's name); import as a
@@ -280,7 +285,10 @@ is the one exception browsers allow, so local dev needs no TLS.
   by cafés, bags and café cups — each reads its brand from a website the same way.
   Each is keyless and bundles nothing, and must stay that way (no map tiles, no
   embedded library, no design-system SDK); the brand read keeps only the derived
-  palette and the words, never a hotlinked image or a captured photo.
+  palette and the words, never a hotlinked image or a captured photo. Find's
+  "map" (`mapHTML`) is drawn, not fetched — dots plotted from stored lat/lon on
+  a plain surface, no tile provider or map library involved; it doesn't
+  compromise this rule and shouldn't grow into one.
 - **Match the brand voice.** `VOICE.md` is the standard for every user-facing
   string — sentence case, terse, honest, no emoji, the record-keeper persona.
   Screen new copy against its gate before shipping.
