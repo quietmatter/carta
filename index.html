@@ -505,7 +505,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 <body>
 <header class="app"><h1>CARTA</h1>
 <div style="display:flex;align-items:baseline"><div class="sub" id="who">one cup · two contexts</div>
-<button class="helpbtn" onclick="go('ledger')" aria-label="Open settings and ledger">more</button></div></header>
+<button class="helpbtn" onclick="go('ledger')" aria-label="Open More">more</button></div></header>
 <main id="main"></main>
 <nav class="tabs" id="tabs"></nav>
 <div class="sheet-bg" id="sheetbg" onclick="closeSheet()"></div>
@@ -713,10 +713,18 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='3.1.0';
+const APP_VERSION='4.0.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.0.0',date:'Jul 18, 2026',title:'A room at a time',items:[
+    'CARTA now opens a room at a time — Reading, Remembering, Making, Keeping. Start by reading other people\'s cups; step deeper whenever you\'re ready. Nothing is ever taken away.',
+    'Friends is now Find. Same record, sharper question: where is the next good cup? Recommendations, taste affinity, the stream, the beans worth chasing — and a door to the next room at the bottom.',
+    'Every café is a page now, not a sheet. Your cups, the circle\'s cups, the pin, the provenance — one place per place, reached from anywhere its name appears.',
+    'The first brew asks only for your grinder and brewer, in plain words — the Setup writes itself. The full Setup editor still exists for the day you change a burr.',
+    'The bag\'s end is part of the record: put it away from Home, and it waits under Put away with your best cup. Buy it again and the first brew starts from what you learned.',
+    'The Ledger tab is now More — your record, the ladder of rooms, preferences, your circle, the manual. The welcome asks one honest question: how do you take your coffee?',
+  ]},
   {v:'3.1.0',date:'Jul 17, 2026',title:'Log light, fill in later',items:[
     'Every cup is editable. Open one from the record and revise it — add the beans, the price, a photo, the order-again verdict, whenever you have the time. It keeps its place and hour.',
     'Café cups start minimal: a shop, a style, a tap on the scale. Everything else waits behind one line — add the rest now, or come back to it.',
@@ -818,28 +826,57 @@ const lastSeenVersion=()=>{try{return localStorage.getItem(SEEN_KEY)}catch(e){re
 const markVersionSeen=()=>{try{localStorage.setItem(SEEN_KEY,APP_VERSION)}catch(e){}};
 
 /* ============ router ============ */
-const TABS=[
-  {id:'field',ic:'●',label:'Home'},
-  {id:'cafes',ic:'☕',label:'Café'},
-  {id:'circle',ic:'◎',label:'Friends'},
-  {id:'trace',ic:'∿',label:'Record'},
-];
-let tab='field';
-function go(t){tab=t;render()}
+/* The rooms open a ladder at a time — Reading (Find), Remembering (Café),
+ * Making (Home), Keeping (Record). depth() is how far this user has stepped in;
+ * the tab bar shows only the open rooms, and each room's foot holds a door to
+ * the next. Nothing is ever taken away — only added. */
+const DEPTH_NAMES=['Reading','Remembering','Making','Keeping'];
+function depth(){
+  if(readOnly())return 4;                        // a record being read shows all its rooms
+  const d=getPref('depth',null);
+  if(d)return Math.min(4,Math.max(1,d));
+  // ledgers from before the ladder — anyone with a record, or already welcomed — start fully open
+  return (getPref('onboarded',false)||D.cups.length||D.bags.length||D.setups.length)?4:1;
+}
+function tabsFor(d){
+  const t=[];
+  if(d>=3)t.push({id:'field',label:'Home'});
+  if(d>=2)t.push({id:'cafes',label:'Café'});
+  t.push({id:'circle',label:'Find'});
+  if(d>=4)t.push({id:'trace',label:'Record'});
+  return t;
+}
+const defaultTab=d=>d>=3?'field':d>=2?'cafes':'circle';
+function unlockDepth(n,t,msg){setPref('depth',n);placeView=null;go(t);toast(msg)}
+const UNLOCK={2:['cafes','Café is open — your cups have somewhere to live.'],3:['field','Home is open — the cup you make.'],4:['trace','The Record is open — the whole through-line.']};
+function doorHTML(title,body,cta,call){
+  return `<div style="border-top:1px solid var(--ink);margin-top:28px;padding:16px 2px 6px">
+    <div class="eyebrow">When you're ready</div>
+    <div style="font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-0.01em;color:var(--ink)">${title}</div>
+    <div class="muted small" style="margin:6px 0 12px;line-height:1.5">${body}</div>
+    <button class="btn btn-quiet" onclick="${call}">${cta}</button>
+  </div>`;
+}
+const seal=(name,em)=>`<div class="qm-seal">${esc(name)}<span class="em">${em}</span></div>`;
+let tab='circle';
+let placeView=null;   // a café name — the page currently open over the tab, or null
+function openPlace(shop){placeView=shop;render()}
+function closePlace(){placeView=null;render()}
+function go(t){tab=t;placeView=null;render()}
 function render(){
   _affCache=null; // affinity is recomputed once per paint, from the current record
   document.getElementById('who').textContent=
-    readOnly()?`viewing ${viewingUser().name}`:(USERS.users.length>1?viewingUser().name:'one cup · two contexts');
-  document.getElementById('tabs').innerHTML=TABS.map(t=>
-    `<button class="${tab===t.id?'on':''}" onclick="go('${t.id}')"><span class="ic">${t.ic}</span>${t.label}</button>`).join('');
+    readOnly()?`viewing ${viewingUser().name}`:(tab==='ledger'?'the rest of it':(USERS.users.length>1?viewingUser().name:'one cup · two contexts'));
+  document.getElementById('tabs').innerHTML=tabsFor(depth()).map(t=>
+    `<button class="${tab===t.id&&!placeView?'on':''}" onclick="go('${t.id}')">${t.label}</button>`).join('');
   const m=document.getElementById('main');
-  m.innerHTML=(readOnly()?viewBanner():'')+({field:vField,cafes:vCafes,circle:vCircle,bags:vBags,setups:vSetups,trace:vTrace,ledger:vLedger})[tab]();
+  m.innerHTML=(readOnly()?viewBanner():'')+(placeView?vPlace():({field:vField,cafes:vCafes,circle:vCircle,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
   m.scrollTop=0;window.scrollTo(0,0);
 }
 function viewBanner(){return `<div class="viewbar"><span>Viewing <strong>${esc(viewingUser().name)}</strong>'s ledger — read only${remoteStale?` · cached ${fmtAgo(remoteStale===true?null:remoteStale)}`:''}</span><button onclick="exitView()">Back to mine</button></div>`}
 
 /* ============ views ============ */
-function cupRow(c){
+function cupRow(c,showKind){
   const b=bagById(c.bagId);
   const cafe=c.kind==='cafe';
   const what=cafe?`${esc(c.shop||'café')}${c.drink?` · ${esc(c.drink)}`:''}`:esc(bagName(b));
@@ -850,7 +887,8 @@ function cupRow(c){
     :cafe
       ?`${c.city?esc(c.city)+(beans?' · ':''):''}${beans||(c.city?'':`<span class="chip">${c.instrumentation||'recalled'}</span>`)}`
       :`<span class="chip">${c.instrumentation||'recalled'}</span>`;
-  const verdict=c.again===true?' <span class="badge">again</span>':c.again===false?' <span class="badge ghost">pass</span>':'';
+  const verdict=(c.again===true?' <span class="badge">again</span>':c.again===false?' <span class="badge ghost">pass</span>':'')
+    +(showKind?` <span class="badge ghost">${cafe?'café':'home'}</span>`:'');
   return `<div class="card tap" onclick="openCupDetail('${c.id}')">
     <div style="display:flex;gap:10px">
       ${cafe&&c.photo?`<img class="rowthumb" src="${c.photo}">`:''}
@@ -913,8 +951,9 @@ function removeCup(id){
 
 function vBags(){
   const bags=D.bags.slice().sort(byNew);
-  return `${readOnly()?'':`<button class="btn btn-primary" onclick="openBagForm()">Capture a bag</button>`}
-  <h2>All bags <span class="n-note">n=${bags.length}</span></h2>
+  return `<button class="text-action" style="margin:2px 0 10px" onclick="go('field')">← Back</button>
+  ${readOnly()?'':`<button class="btn btn-primary" onclick="openBagForm()">Put a coffee on the shelf</button>`}
+  <h2>The shelf <span class="n-note">n=${bags.length}</span></h2>
   ${bags.length? bags.map(b=>`
     <div class="card tap" onclick="openBagDetail('${b.id}')">
       <div style="display:flex;gap:12px;align-items:center">
@@ -924,11 +963,12 @@ function vBags(){
           <div class="muted small">${esc([b.originCountry,b.producer,b.process].filter(Boolean).join(' · '))||'&nbsp;'}</div>
         </div>
       </div>
-    </div>`).join('') : `<div class="empty">30 seconds for a bag: photograph it, confirm, done.</div>`}`;
+    </div>`).join('') : `<div class="empty">Name the bag in your hand — every brew after remembers it.</div>`}`;
 }
 
 function vSetups(){
-  return `${readOnly()?'':`<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>`}
+  return `<button class="text-action" style="margin:2px 0 10px" onclick="go('ledger')">← Back</button>
+  ${readOnly()?'':`<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>`}
   <div class="muted small serif" style="font-style:italic;margin:10px 2px">A grind setting without a Setup is not a number, it's a rumour. Grind settings are only comparable within a Setup.</div>
   <h2>Setups <span class="n-note">n=${D.setups.length}</span></h2>
   ${D.setups.length? D.setups.slice().sort(byNew).map(s=>`
@@ -968,27 +1008,52 @@ function traceCard(b){
   </div>`;
 }
 
-function vLedger(){
-  const counts=[['Bags',D.bags.length],['Setups',D.setups.length],['Brews',D.brews.length],['Cups',D.cups.length]];
+// The ladder — how deep this record goes. Rooms open on request, never close.
+const LADDER=[
+  {n:1,name:'Reading',desc:'Other people’s cups. Look, read, go — you never have to keep a thing.',tab:'circle'},
+  {n:2,name:'Remembering',desc:'Your cafés, your scores, your usuals.',tab:'cafes'},
+  {n:3,name:'Making',desc:'The cup at home, dialled in one change at a time.',tab:'field'},
+  {n:4,name:'Keeping',desc:'The whole record — home and away, side by side.',tab:'trace'},
+];
+function ladderTap(n){
+  const d=depth();
+  if(d>=n){go(LADDER[n-1].tab);return}
+  const[t,m]=UNLOCK[n];unlockDepth(n,t,m);
+}
+function vMore(){
+  const d=depth();
+  const counts=[['Cups out',cafeCups().length]];
+  if(d>=3){counts.push(['Cups at home',D.cups.filter(c=>c.kind==='home').length],['Coffees',D.bags.length],['Setups',D.setups.length]);}
+  counts.push(['Places saved',(D.cafeWants||[]).length]);
+  const putAway=D.bags.filter(b=>b.archived).length;
+  if(putAway)counts.push(['Bags put away',putAway]);
   return `
-  <h2>${readOnly()?esc(viewingUser().name)+"'s ledger":'Your ledger'}</h2>
+  <h2>${readOnly()?esc(viewingUser().name)+"'s record":'Your record'}</h2>
   <div class="card">${counts.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>
-  <div class="muted small serif" style="font-style:italic;margin:10px 2px">Your ledger is yours — full export, open schema, no lock-in. If we die, you keep everything, readable.</div>
-  <button class="btn btn-graphite" onclick="exportJSON()">Export ledger (JSON)</button>
-  ${readOnly()?'':`<button class="btn btn-quiet" onclick="document.getElementById('importInput').click()">Import ledger</button>`}
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">Your record is yours — take a copy any time, readable anywhere, with or without us.</div>
+  <button class="btn btn-graphite" onclick="exportJSON()">Save a copy</button>
+  ${readOnly()?'':`<button class="btn btn-quiet" onclick="document.getElementById('importInput').click()">Read a friend's copy</button>`}
+  ${!readOnly()&&d>=3?`<div style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:8px 2px 0">
+    <button class="text-action" onclick="go('bags')">The shelf — every bag</button>
+    <button class="text-action" onclick="go('setups')">The tools — your Setups</button>
+  </div>`:''}
+  ${readOnly()?'':`
+  <h2>How deep you go</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">CARTA opens a room at a time. Step in whenever you're ready — nothing is ever taken away.</div>
+  ${LADDER.map(l=>`<button class="wc-item" onclick="ladderTap(${l.n})">
+    <span class="tx"><span class="tt" style="font-size:18px">${l.name} <span class="badge ${d>=l.n?'':'ghost'}" style="vertical-align:3px">${d>=l.n?'open':'waiting'}</span></span><span class="dd">${l.desc}</span></span>
+    <span class="go">→</span>
+  </button>`).join('')}`}
   ${readOnly()?'':vPrefsSection()}
   ${readOnly()?'':vUsersSection()}
   ${readOnly()?'':vSyncSection()}
-  <h2>Phase 0</h2>
-  <div class="card small muted">Kill gate, day 60: fewer than 40 brews logged → stop.
-    <div class="kv"><span class="k">Brews logged</span><span class="v num">${D.brews.length} / 40</span></div>
-  </div>
   <h2>The manual</h2>
+  <button class="btn btn-quiet" onclick="openCupPrimer()">How to read a cup</button>
   <button class="btn btn-quiet" onclick="openGuide()">Quick start</button>
   ${readOnly()?'':`<button class="btn btn-quiet" onclick="openWelcome()">Replay the welcome</button>`}
   <button class="btn btn-quiet" onclick="openWhatsNew(false)">What's new</button>
   <div class="qm-seal">Quiet Matter<span class="em">CARTA is a Quiet Matter record.</span></div>
-  <div class="muted small serif" style="font-style:italic;text-align:center;margin:8px 2px 2px">CARTA v${APP_VERSION} — we keep the record.</div>`;
+  <div class="muted small serif" style="font-style:italic;text-align:center;margin:8px 2px 2px">CARTA v${APP_VERSION} — we do not sell coffee. We keep the record.</div>`;
 }
 // Preferences — presentation/input, not data. Two controls, phase-0 minimal.
 function vPrefsSection(){
@@ -1199,7 +1264,7 @@ function seg(id,options,selected){segState[id]=selected;
 function segPick(id,o,el){segState[id]=o;el.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===el))}
 function hedonicRow(init){hedState=(init==null?null:init);return `<div class="hedonic" id="hed">${[1,2,3,4,5,6,7,8,9].map(i=>
   `<button class="num ${init===i?'on':''}" onclick="hedPick(${i},this)">${i}</button>`).join('')}</div>
-  <div class="muted" style="display:flex;justify-content:space-between;font-size:10px"><span>poor</span><span>extraordinary</span></div>`;}
+  <div class="muted" style="display:flex;justify-content:space-between;font-size:10px"><span>1 is a shame</span><span>9 is worth crossing town</span></div>`;}
 function hedPick(i,el){hedState=i;document.getElementById('hed').querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',j===i-1))}
 function descRow(init){descState=new Set(init||[]);return `<div class="desc">${DESCRIPTORS.map(d=>
   `<button class="${descState.has(d)?'on':''}" onclick="descPick('${d}',this)">${d}</button>`).join('')}</div>`;}
@@ -1271,8 +1336,8 @@ function openBagForm(id){
   photoData=b.photo||null;
   const more=!!(b.originCountry||b.originRegion||b.producer||b.variety||b.process||b.lot||b.roastDate||b.boughtAt||b.price!=null||b.notes);
   openSheet(`
-  <h3>${id?'Edit bag':'Capture a bag'}</h3>
-  <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'A photo and a name is a bag. Resolution comes later.'}</div>
+  <h3>${id?'Edit the coffee':'Put a coffee on the shelf'}</h3>
+  <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'The bag in your hand — two lines is plenty.'}</div>
   <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">
     ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the bag'}</div>
   <div class="grid2">
@@ -1295,8 +1360,8 @@ function openBagForm(id){
     </div>
     <label class="f"><span class="l">Notes</span><textarea id="f_notes">${esc(b.notes)}</textarea></label>
   </details>
-  <button class="btn btn-primary" onclick="saveBag('${id||''}')">Save bag</button>
-  ${id?`<button class="btn btn-danger" onclick="archiveBag('${id}')">${b.archived?'Unarchive':'Archive'} bag</button>`:''}`);
+  <button class="btn btn-primary" onclick="saveBag('${id||''}')">${id?'Save changes':'On the shelf it goes'}</button>
+  ${id?`<button class="btn btn-danger" onclick="archiveBag('${id}')">${b.archived?'Back on the shelf':'Put the bag away'}</button>`:''}`);
 }
 function saveBag(id){
   if(guard())return;
@@ -1304,11 +1369,31 @@ function saveBag(id){
   const rec={roaster:val('f_roaster'),name:val('f_name'),originCountry:val('f_country'),originRegion:val('f_region'),
     producer:val('f_producer'),variety:val('f_variety'),process:val('f_process'),lot:val('f_lot'),roastDate:val('f_roastDate'),
     boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),photo:photoData};
-  if(!rec.roaster&&!rec.name){toast('Give it a roaster or a name');return}
-  if(id){Object.assign(bagById(id),rec,{updatedAt:new Date().toISOString()})}else{D.bags.push({id:uid(),createdAt:new Date().toISOString(),archived:false,...rec})}
-  save();setAccent(roastLevel);closeSheet();go('bags');toast('Bag recorded');
+  if(!rec.roaster&&!rec.name){toast('Name the coffee — everything else is optional');return}
+  if(id){Object.assign(bagById(id),rec,{updatedAt:new Date().toISOString()});save();setAccent(roastLevel);closeSheet();render();toast('The record, revised');return}
+  const nb={id:uid(),createdAt:new Date().toISOString(),archived:false,...rec};
+  D.bags.push(nb);curBagId=nb.id;
+  save();setAccent(roastLevel);closeSheet();
+  go(depth()>=3?'field':'bags');toast('On the shelf. The first brew starts whenever you do.');
 }
-function archiveBag(id){if(guard())return;const b=bagById(id);b.archived=!b.archived;b.updatedAt=new Date().toISOString();save();closeSheet();render();toast(b.archived?'Archived':'Restored')}
+function archiveBag(id){if(guard())return;const b=bagById(id);b.archived=!b.archived;b.updatedAt=new Date().toISOString();save();closeSheet();render();toast(b.archived?'Put away — the record stays.':'Back on the shelf.')}
+// The bag's end, on the record — put it away from Home, restore it from Put away.
+function openArchiveSheet(id){
+  if(guard())return;
+  const b=bagById(id);if(!b)return;
+  const a=archivedBagLine(b);
+  openSheet(`
+  <h3>Put the bag away</h3>
+  <div class="sub">The bag goes. The record stays.</div>
+  <div class="card">
+    <div class="row"><strong class="small">${esc(bagName(b))}</strong><span class="num muted small">${a.stat}</span></div>
+    <div class="muted small">${esc([b.originCountry,b.originRegion,b.process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
+    <div class="muted small" style="margin-top:4px">${a.line}</div>
+  </div>
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">It waits under <strong>Put away</strong>. Buy the same bag again and the first brew starts where you left off — nothing to re-learn.</div>
+  <button class="btn btn-primary" onclick="archiveBag('${b.id}')">Put it away</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Not yet — there's a cup left in it</button>`);
+}
 function openBagDetail(id){
   const b=bagById(id),r=restState(b),brews=brewsOf(id);
   openSheet(`
@@ -1394,27 +1479,34 @@ function lastBrewFor(bagId,setupId){
 function openBrew(bagId,editId){
   if(guard())return;
   const bags=D.bags.filter(b=>!b.archived).sort(byNew);
-  if(!bags.length){toast('Capture a bag first');go('bags');return}
-  if(!D.setups.length){toast('Define a Setup first — grind needs one');go('setups');openSetupForm();return}
+  if(!bags.length){toast('Put a coffee on the shelf first');openBagForm();return}
+  const noSetup=!D.setups.length;   // the first brew names the tools; the Setup writes itself
   const editing=editId?D.brews.find(x=>x.id===editId):null;
   const lastAny=D.brews.slice().sort(byNew)[0];
   const bag=editing?bagById(editing.bagId):(bagId?bagById(bagId):(lastAny?bagById(lastAny.bagId):bags[0]))||bags[0];
   setAccent(bag.roastLevel);
   const last=editing||lastBrewFor(bag.id, null);
-  const setup=editing?setupById(editing.setupId):(last?setupById(last.setupId):D.setups[D.setups.length-1]);
+  const setup=noSetup?null:(editing?setupById(editing.setupId):(last?setupById(last.setupId):D.setups[D.setups.length-1]));
   const techs=[...new Set(D.brews.map(x=>x.technique).filter(Boolean))];
+  const toolsLine=setup?esc([setup.grinder?`Ground on the ${setup.grinder}`:'',setup.brewer?`brewed on the ${setup.brewer}`:''].filter(Boolean).join(' · ')||setup.name):'';
   // In edit mode the fold opens if there's already something to see under it.
   const moreOpen=!!(editing&&((last.instrumentation&&last.instrumentation!=='measured')||last.notes));
+  const bagSel=bags.length>1
+    ?`<label class="f"><span class="l">Coffee</span><select id="b_bag" onchange="setAccent(bagById(this.value).roastLevel)">
+      ${bags.map(x=>`<option value="${x.id}" ${x.id===bag.id?'selected':''}>${esc(bagName(x))}</option>`).join('')}</select></label>`
+    :`<input type="hidden" id="b_bag" value="${bag.id}">`;
+  const setupSel=noSetup
+    ?`<label class="f"><span class="l">Your grinder <span class="opt">named once, remembered always</span></span><input type="text" id="n_grinder" placeholder="Encore, Ode, a hand mill — whatever it is"></label>
+      <label class="f"><span class="l">Your brewer</span><input type="text" id="n_brewer" placeholder="V60 · 02"></label>`
+    :D.setups.length>1
+      ?`<label class="f"><span class="l">Setup</span><select id="b_setup" onchange="onSetupChange()">
+        ${D.setups.map(s=>`<option value="${s.id}" ${setup&&s.id===setup.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`
+      :`<input type="hidden" id="b_setup" value="${setup?setup.id:''}"><div class="pinned">${toolsLine} <a class="link" onclick="closeSheet();openSetupForm('${setup?setup.id:''}')">amend</a></div>`;
   openSheet(`
-  <h3>${editing?'Edit brew':'Log a brew'}</h3>
-  <div class="sub">${editing?'Correct the record — the cup it carries stays put.':(last?'Opened as last time — turn one dial.':'First brew. Set your starting point.')}</div>
-  <div class="grid2">
-    <label class="f"><span class="l">Bag</span><select id="b_bag" onchange="setAccent(bagById(this.value).roastLevel)">
-      ${bags.map(x=>`<option value="${x.id}" ${x.id===bag.id?'selected':''}>${esc(bagName(x))}</option>`).join('')}</select></label>
-    <label class="f"><span class="l">Setup (required)</span><select id="b_setup" onchange="onSetupChange()">
-      ${D.setups.map(s=>`<option value="${s.id}" ${setup&&s.id===setup.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>
-  </div>
-  <label class="f"><span class="l">Technique (free text — it's a node, not an enum)</span>
+  <h3>${editing?'Edit brew':(last?'Brew from last time':'The first brew')}</h3>
+  <div class="sub">${editing?'Correct the record — the cup it carries stays put.':(last?'It opens as your last cup. Turn the one dial you actually changed.':'No last time to lean on — these are fair defaults. Turn one dial, taste, and the next brew remembers.')}</div>
+  ${bags.length>1&&D.setups.length>1?`<div class="grid2">${bagSel}${setupSel}</div>`:bagSel+setupSel}
+  <label class="f"><span class="l">Technique <span class="opt">free text — it's a node, not an enum</span></span>
     <input type="text" id="b_technique" list="techlist" value="${esc(last?last.technique:'')}" placeholder="V60 · 9-bar · turbo · soup">
     <datalist id="techlist">${techs.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></label>
   ${editing?'':timerHTML()}
@@ -1425,15 +1517,24 @@ function openBrew(bagId,editId){
     <div id="dialbox_temp">${tempDialHTML(last?last.tempC:94)}</div>
   </div>
   ${dial('time','Time','',last?last.timeSec:28,1,0,null,0,{kind:'time'})}
-  <details class="trace-more" ${moreOpen?'open':''}><summary>Instrumentation &amp; notes <span class="opt">how you knew — optional</span></summary>
+  <details class="trace-more" ${moreOpen?'open':''}><summary>How you measured <span class="opt">and a note — optional</span></summary>
     <label class="f"><span class="l">Instrumentation</span>${seg('instr',INSTR,last?last.instrumentation||'measured':'measured')}</label>
+    <div class="muted small" style="margin:-4px 2px 12px">Recalled is a fine answer — just say so. The record stays honest.</div>
     <label class="f"><span class="l">Brew notes</span><input type="text" id="b_notes" value="${esc(editing?editing.notes:'')}" placeholder="optional"></label>
   </details>
-  <button class="btn btn-primary" onclick="saveBrew('${editId||''}')">${editing?'Save changes':'Save brew → impression'}</button>`);
+  <button class="btn btn-primary" onclick="saveBrew('${editId||''}')">${editing?'Save changes':'Save the brew'}</button>
+  ${editing?'':`<button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`}`);
 }
 function saveBrew(editId){
   if(guard())return;
-  const setupId=val('b_setup');
+  let setupId=val('b_setup');
+  if(!setupId&&!D.setups.length){
+    // first brew — the tools were just named; the Setup writes itself
+    const g=val('n_grinder'),br=val('n_brewer');
+    if(!g&&!br){toast('Name your grinder or brewer — once is enough');return}
+    const s={id:uid(),createdAt:new Date().toISOString(),name:[g,br].filter(Boolean).join(' · '),grinder:g,brewer:br};
+    D.setups.push(s);setupId=s.id;
+  }
   if(!setupId){toast('Refused: a brew requires a Setup');return}
   const fields={bagId:val('b_bag'),setupId,
     technique:val('b_technique'),grind:dialState.grind.v,doseG:dialState.dose.v,waterG:dialState.water.v,
@@ -1448,16 +1549,16 @@ function openImpression(brew){
   const b=bagById(brew.bagId);
   openSheet(`
   <h3>The cup</h3>
-  <div class="sub">${esc(bagName(b))} — three taps and you're done.</div>
-  <label class="f"><span class="l">Hedonic (how was it, 1–9)</span>${hedonicRow()}</label>
-  <label class="f"><span class="l">What you found (optional)</span>${descRow()}</label>
-  <label class="f"><span class="l">A line for the record (optional)</span><input type="text" id="c_notes" placeholder=""></label>
-  <button class="btn btn-primary" onclick="saveCup('home','${brew.id}','${brew.bagId}')">Done</button>
-  <button class="btn btn-quiet" onclick="saveCup('home','${brew.id}','${brew.bagId}',true)">Skip impression</button>`);
+  <div class="sub">${esc(bagName(b))} — one tap. Words if you have them. Skipping is honest too.</div>
+  <label class="f"><span class="l">How was it?</span>${hedonicRow()}</label>
+  <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow()}</label>
+  <label class="f"><span class="l">One line <span class="opt">optional</span></span><input type="text" id="c_notes" placeholder="what you found"></label>
+  <button class="btn btn-primary" onclick="saveCup('home','${brew.id}','${brew.bagId}')">Keep this cup</button>
+  <button class="btn btn-quiet" onclick="saveCup('home','${brew.id}','${brew.bagId}',true)">Skip — the brew still counts</button>`);
 }
 function saveCup(kind,brewId,bagId,skip,editId){
   if(guard())return;
-  if(!skip&&hedState==null&&kind==='home'){toast('One tap on the scale, or skip');return}
+  if(!skip&&hedState==null&&kind==='home'){toast('One tap — or skip, that\'s honest too');return}
   const ex=editId?cupById(editId):null; // edit path: keep the cup's id, place and hour; revise the rest
   const brew=brewId?D.brews.find(x=>x.id===brewId):(ex&&ex.brewId?D.brews.find(x=>x.id===ex.brewId):null);
   const fields={kind,brewId:brewId||(ex?ex.brewId:null)||null,bagId:bagId||(ex?ex.bagId:null)||null,
@@ -1473,12 +1574,14 @@ function saveCup(kind,brewId,bagId,skip,editId){
     if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
     if(fields.shop&&D.cafeWants){const i=D.cafeWants.findIndex(x=>normName(x)===normName(fields.shop));if(i>=0)D.cafeWants.splice(i,1)} // been now — off the want list
   }
+  const firstOut=kind==='cafe'&&!ex&&!cafeCups().length;
+  const firstHome=kind==='home'&&!ex&&!skip&&!D.cups.some(c=>c.kind==='home'&&c.hedonic!=null);
   if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()})}
   else{D.cups.push({id:uid(),createdAt:new Date().toISOString(),...fields})}
   editingCupId=null;
   save();closeSheet();
-  if(kind==='cafe'){go(fields.shop?'cafes':'field');toast(ex?'Café cup updated':'Café cup logged');}
-  else{go('field');toast(ex?'Cup updated':(skip?'Brew recorded':'Recorded. The ritual is the point.'));}
+  if(kind==='cafe'){go('cafes');toast(ex?'Cup updated':(firstOut?'Kept — your first cup out.':'Kept.'));}
+  else{go('field');toast(ex?'Cup updated':(skip?'The brew is on the record.':firstHome?'Kept — your first cup at home. The next brew starts here.':'Kept — the next brew starts here.'));}
 }
 
 /* ============ café cup ============ */
@@ -1494,18 +1597,23 @@ function openCafe(pre,editId){
   // The fold opens on edit only if the cup already carries something under it.
   const more=!!(pre.city||pre.roaster||pre.origin||pre.price!=null||pre.again!=null||pre.photo||pre.originCountry||pre.originRegion||pre.producer||pre.variety||pre.lot||pre.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
   openSheet(`
-  <h3>${editId?'Edit café cup':'Café cup'}</h3>
-  <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and a tap is a whole record. The rest waits until you have time.'}</div>
+  <h3>${editId?'Edit the cup':'Remember a cup'}</h3>
+  <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and one tap is plenty. The rest can wait.'}</div>
   <div id="cafehint"></div>
-  <label class="f"><span class="l">Shop</span><input type="text" id="c_shop" list="shoplist" value="${esc(pre.shop||'')}" placeholder="Kumquat" oninput="cafeShopHint()">
+  <label class="f"><span class="l">The place</span><input type="text" id="c_shop" list="shoplist" value="${esc(pre.shop||'')}" placeholder="Halfpence" oninput="cafeShopHint()">
     <datalist id="shoplist">${shops.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
   <label class="f"><span class="l">Style</span>
     <div class="seg" id="cafestyleseg">${CAFE_STYLES.map(o=>`<button class="${o===cafeStyleState?'on':''}" onclick="cafeStylePick('${o}',this)">${o}</button>`).join('')}</div></label>
   <label class="f"><span class="l">Drink <span class="opt">optional</span></span>
     <input type="text" id="c_drink" value="${esc(pre.drink||'')}" placeholder="tap one below, or type your own">
     <div class="desc" id="cafedrinks">${cafeDrinkChips(cafeStyleState)}</div></label>
-  <label class="f"><span class="l">Hedonic (1–9)</span>${hedonicRow(pre.hedonic)}</label>
-  <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">beans, price, a photo — now or later</span></summary>
+  <label class="f"><span class="l">How was it?</span>${hedonicRow(pre.hedonic)}</label>
+  <label class="f"><span class="l">Order it again?</span>
+    <div class="verdict" id="verdict">
+      <button class="yes ${againState===true?'on':''}" onclick="pickAgain(true,this)">again</button>
+      <button class="no ${againState===false?'on':''}" onclick="pickAgain(false,this)">pass</button>
+    </div></label>
+  <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">the beans, the price, a photo, a line</span></summary>
     <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="c_city" list="citylist" value="${esc(pre.city||'')}" placeholder="Los Angeles">
       <datalist id="citylist">${cities.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
     <div class="grid2">
@@ -1521,19 +1629,13 @@ function openCafe(pre,editId){
       <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" value="${esc(pre.lot||'')}" placeholder="free text"></label>
       <label class="f"><span class="l">Process</span><input type="text" id="c_process" value="${esc(pre.process||'')}" placeholder="washed"></label>
     </div>
-    <div class="grid2">
-      <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" value="${pre.price??''}" placeholder="$"></label>
-      <label class="f"><span class="l">Order again?</span>
-        <div class="verdict" id="verdict">
-          <button class="yes ${againState===true?'on':''}" onclick="pickAgain(true,this)">Again</button>
-          <button class="no ${againState===false?'on':''}" onclick="pickAgain(false,this)">Pass</button>
-        </div></label>
-    </div>
+    <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" value="${pre.price??''}" placeholder="$"></label>
     <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()">${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Photograph the cup <span class="opt">optional</span>'}</div>
     <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow(pre.descriptors)}</label>
-    <label class="f"><span class="l">A line for the record <span class="opt">optional</span></span><input type="text" id="c_notes" value="${esc(pre.notes||'')}"></label>
+    <label class="f"><span class="l">One line <span class="opt">what you found</span></span><input type="text" id="c_notes" value="${esc(pre.notes||'')}" placeholder="bright, a little sharp, gone too fast"></label>
   </details>
-  <button class="btn btn-primary" onclick="saveCafeCup()">${editId?'Save changes':'Log this cup'}</button>`);
+  <button class="btn btn-primary" onclick="saveCafeCup()">${editId?'Save changes':'Keep this cup'}</button>
+  ${editId?'':`<button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`}`);
   cafeShopHint();
 }
 function cafeDrinkChips(style){return (CAFE_DRINKS[style]||[]).map(d=>`<button onclick="pickDrink('${d}',this)">${d}</button>`).join('')}
@@ -1552,7 +1654,7 @@ function cafeShopHint(){
   const past=cafeCups().filter(c=>(c.shop||'').trim().toLowerCase()===v);
   if(!past.length){ // never been — but the Register may know the place
     const e=regByName(v);
-    el.innerHTML=e?`<div class="cafeback">In the Register — ${[e.city,e.lat!=null?'pinned':null].filter(Boolean).map(esc).join(' · ')||'known'}${e.firstBy?`, first entered by <strong>${esc(e.firstBy)}</strong>`:''}.</div>`:'';
+    el.innerHTML=e?`<div class="cafeback">A known place — ${[e.name,e.city,e.lat!=null?'pinned':null].filter(Boolean).map(esc).join(' · ')}${e.firstBy?`, first entered by <strong>${esc(e.firstBy)}</strong>`:''}.</div>`:'';
     return;
   }
   const usual=modeOf(past.map(c=>c.drink).filter(Boolean));
@@ -1562,7 +1664,7 @@ function cafeShopHint(){
 function logAnotherHere(id){const c=cupById(id);closeSheet();openCafe({shop:c?c.shop:'',city:c?c.city:''});}
 function cafeHere(shop,city){closeSheet();openCafe({shop,city});}
 function saveCafeCup(){
-  if(!val('c_shop')&&hedState==null){toast('A shop or a score — give it one');return}
+  if(!val('c_shop')&&hedState==null){toast('A place or a score — give it one');return}
   saveCup('cafe',null,null,false,editingCupId);
 }
 // Editing a cup after the fact — the point of a record you can return to.
@@ -1588,7 +1690,7 @@ function toggleCafeFav(shop){
   const i=D.cafeFavs.findIndex(x=>x.toLowerCase()===shop.trim().toLowerCase());
   const was=i>=0;
   if(was)D.cafeFavs.splice(i,1);else D.cafeFavs.push(shop.trim());
-  save();openShopDetail(shop);toast(was?'Removed from favorites':'Favorited');
+  save();render();toast(was?'Removed from favorites':'Favorited');
 }
 // the want-to-go shortlist — places you mean to try, saved from anyone's record.
 // A list of shop names, mirroring cafeFavs; union-merged in sync, no tombstone.
@@ -1600,18 +1702,6 @@ function toggleWant(shop){
   const was=i>=0;
   if(was)D.cafeWants.splice(i,1);else D.cafeWants.push(String(shop).trim());
   save();toast(was?'Off the want-to-go list':'Saved to want-to-go');
-}
-function wantBtn(shop){ // a full-width toggle for the sheets; hidden read-only
-  if(readOnly())return'';
-  const on=isWant(shop);
-  return `<button class="btn ${on?'btn-graphite':'btn-quiet'}" onclick="toggleWant(${jsq(shop)});reopenFor(${jsq(shop)})">${on?'On your want-to-go list — remove':'Save to want-to-go'}</button>`;
-}
-// re-open whichever sheet named this café, so a want-toggle refreshes in place
-function reopenFor(shop){
-  if(cafeCups().some(c=>normName(c.shop)===normName(shop)))openShopDetail(shop);
-  else if(circleCups().some(c=>normName(c.shop)===normName(shop)))openPlaceSheet(shop);
-  else if(regByName(shop))openRegisterSheet(shop);
-  else toast('That café has left the record');
 }
 function shopAgg(){
   const map={};
@@ -1632,54 +1722,77 @@ function shopAgg(){
 }
 function shopCard(s){
   const p=s.profile,pal=palOf(p),vars=pal?cafeVars(pal):''; // each card previews its café's own palette
-  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openShopDetail(${jsq(s.shop)})">
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(s.shop)})">
     ${p&&p.photo?`<img class="brandhead" src="${p.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}</span>`:''}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${s.avg??'—'}</span>
     </div>
-    <div class="muted small">${s.visits} visit${s.visits>1?'s':''}${s.usual?` · usual <strong>${esc(s.usual)}</strong>`:''}${s.spend?` · ${money(s.spend)}`:''}</div>
+    <div class="muted small">${s.visits} visit${s.visits>1?'s':''}${s.usual?` · your usual: <strong>${esc(s.usual)}</strong>`:''}${s.spend?` · ${money(s.spend)}`:''}</div>
   </div>`;
 }
-function openShopDetail(shop){
-  const cups=cafeCups().filter(c=>(c.shop||'').trim()===shop.trim()).sort(byNew);
-  if(!cups.length){closeSheet();if(regByName(shop))openRegisterSheet(shop);else go('cafes');return} // no cups of yours — the Register entry stands
-  const avg=avgHedonic(cups),usual=modeOf(cups.map(c=>c.drink).filter(Boolean));
-  const city=modeOf(cups.map(c=>c.city).filter(Boolean));
-  const spend=cups.reduce((a,c)=>a+(c.price||0),0);
-  const best=cups.reduce((m,c)=>Math.max(m,c.hedonic||0),0);
+/* --- the place page: one page per café, reached from anywhere its name appears.
+ * Your cups, the circle's cups, the Register entry — identity, provenance,
+ * actions — merged onto one surface, wearing the café's own palette. --- */
+function vPlace(){
+  const shop=placeView;
+  const e=regByName(shop);
+  const mine=cafeCups().filter(c=>normName(c.shop)===normName(shop)).sort(byNew);
+  const others=circleCups().filter(c=>normName(c.shop)===normName(shop)).sort(byNew);
+  const circleOn=circleSources().length>0;
+  const d=depth();
+  const p=circleProfile(shop)||e;
+  const pal=palOf(p),vars=pal?cafeVars(pal):'';
+  const city=(e&&e.city)||modeOf([...mine,...others].map(c=>c.city).filter(Boolean))||'';
+  const avg=avgHedonic(mine),usual=modeOf(mine.map(c=>c.drink).filter(Boolean));
+  const spend=mine.reduce((a,c)=>a+(c.price||0),0);
+  const theirAvg=avgHedonic(others);
+  const people=[...new Set(others.map(c=>c._who))];
   const fav=isCafeFav(shop);
-  const p=cafeProfile(shop),pal=palOf(p),vars=pal?cafeVars(pal):'';
-  const roaster=modeOf(cups.map(c=>c.roaster).filter(Boolean));
-  const origin=modeOf(cups.map(c=>c.origin||c.originCountry).filter(Boolean));
+  const roaster=modeOf(mine.map(c=>c.roaster).filter(Boolean));
+  const origin=modeOf(mine.map(c=>c.origin||c.originCountry).filter(Boolean));
   const x=roaster||origin?crossContext({roaster,origin}):null;
-  const subline=`${city?esc(city)+' · ':''}${cups.length} cup${cups.length>1?'s':''} on the record`;
-  // With a branding photo the whole page is themed and topped by a masthead cut from that photo;
-  // without one it falls back to the plain heading. Either way the palette wraps every cup below.
+  const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
+  const subline=city?`${esc(city)}${p&&p.lat!=null?' · pinned':''}`:(mine.length||others.length?'city unwritten':'yours alone — no one else has kept it yet');
   const head=p&&p.photo
     ?`<div class="masthead"><img src="${p.photo}"><div class="scrim"></div><div class="bar"></div>
       <div class="id"><div class="nm">${esc(shop)}</div>${city?`<div class="ct">${esc(city)}</div>`:''}</div></div>
-      <div class="sub" style="margin:10px 2px 14px">${subline}</div>`
-    :`<h3>${esc(shop)}</h3><div class="sub">${subline}</div>`;
-  openSheet(`<div class="cafe-theme"${vars?` style="${vars}"`:''}>
+      <div class="sub" style="margin:10px 2px 14px">${eyebrow.toLowerCase()} · ${subline}</div>`
+    :`<div class="hero" style="padding-top:6px">
+      <div class="eyebrow">${eyebrow}</div>
+      <h2 style="font-size:32px;max-width:13ch">${esc(shop)}</h2>
+      <div class="origin">${subline}</div>
+    </div>`;
+  const kvs=[];
+  if(mine.length){
+    if(avg)kvs.push(['Your average',`${avg} / 9`]);
+    kvs.push(['Visits',String(mine.length)]);
+    if(usual)kvs.push(['Your usual',esc(usual)]);
+    kvs.push(['Last time',mine[0].again===true?'again':mine[0].again===false?'pass':'—']);
+    if(spend)kvs.push(['Total spend',money(spend)]);
+  }
+  if(theirAvg)kvs.push([circleOn?'The circle says':'The register says',`${theirAvg} avg · ${others.length} cup${others.length>1?'s':''}`]);
+  if(p&&p.address)kvs.push(['Address',`${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}`]);
+  if(e&&e.firstBy)kvs.push(['Register',`first entered by ${esc(e.firstBy)}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}`]);
+  return `<div class="cafe-theme"${vars?` style="${vars}"`:''}>
+  <button class="text-action" style="margin:2px 0 6px" onclick="closePlace()">← Back</button>
   ${head}
-  <div class="card">
-    <div class="kv"><span class="k">Average</span><span class="v num">${avg??'—'}</span></div>
-    <div class="kv"><span class="k">Best cup</span><span class="v num">${best||'—'}</span></div>
-    <div class="kv"><span class="k">Your usual</span><span class="v">${usual?esc(usual):'—'}</span></div>
-    ${spend?`<div class="kv"><span class="k">Total spend</span><span class="v num">${money(spend)}</span></div>`:''}
-    <div class="kv"><span class="k">Last visit</span><span class="v">${new Date(cups[0].createdAt).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}</span></div>
-    ${p&&p.address?`<div class="kv"><span class="k">Address</span><span class="v">${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}</span></div>`:''}
-    ${p&&p.firstBy?`<div class="kv"><span class="k">Register</span><span class="v">first entered by ${esc(p.firstBy)}</span></div>`:''}
-  </div>
+  ${kvs.length?`<div class="card">${kvs.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>`:''}
+  ${!mine.length?`<div class="empty">${d>=2?'You haven’t been yet. The first cup you keep here starts the page.':'You haven’t been yet. Read what’s below, order what they ordered.'}</div>`:''}
   ${x&&x.home.n&&x.cafe.n?`<div class="cafeback">Same beans, two rooms: you average <strong>${x.home.avg}</strong> at home vs <strong>${x.cafe.avg}</strong> here${roaster?` on ${esc(roaster)}`:''}. The shape of a preference, not a verdict.</div>`:''}
   ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
-  ${readOnly()?'':`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Log a cup here</button>
+  ${readOnly()?'':`
+  ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}
+  ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
   <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.photo||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
-  <button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`}
-  <h2>Every cup</h2>
-  ${cups.map(cupRow).join('')}
-  </div>`);
+  ${mine.length?`<button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`:''}`}
+  ${mine.length?`<div class="section-head"><h2>Your cups here</h2></div>
+  ${mine.map(c=>cupRow(c)).join('')}`:''}
+  <div class="section-head"><h2>${circleOn?'The circle here':'The register here'}</h2></div>
+  ${others.length?others.map(feedRow).join('')
+    :`<div class="empty">${circleOn?'No one you read has kept a cup here yet. Yours would be the first.':'Nothing on the register here yet. Yours would be the first.'}</div>`}
+  ${seal(shop,'A page that writes itself, cup by cup.')}
+  </div>`;
 }
 // The café's own screen: branding photo (a whole palette derived from it), address lookup, a note.
 function openCafeProfile(shop){
@@ -1704,7 +1817,7 @@ function openCafeProfile(shop){
   <label class="f"><span class="l">A line for the record <span class="opt">optional</span></span><input type="text" id="p_notes" value="${esc(p.notes||'')}" placeholder="the one worth the walk"></label>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">The Register keeps one entry per café, shared by every keeper. This amendment is signed ${esc(activeName())}.</div>
   <button class="btn btn-primary" onclick="saveCafeProfileForm(${jsq(shop)})">Save café</button>
-  <button class="btn btn-quiet" onclick="openShopDetail(${jsq(shop)})">Cancel</button>`);
+  <button class="btn btn-quiet" onclick="closeSheet();openPlace(${jsq(shop)})">Cancel</button>`);
 }
 function saveCafeProfileForm(shop){
   if(guard())return;
@@ -1713,7 +1826,7 @@ function saveCafeProfileForm(shop){
     address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null};
   saveCafeProfile(shop,rec);                              // the per-user copy — exports and ledger sync carry it
   regUpsert(shop,rec,activeName(),{full:true});           // the Register — the shared, canonical entry
-  save();openShopDetail(shop);toast('Café saved — the Register amended');
+  save();closeSheet();openPlace(shop);toast('Café saved — the Register amended');
 }
 // Online geocode (OpenStreetMap Nominatim — no key). Progressive enhancement: type wins offline.
 // The query prefers a typed address, else falls back to the café's own name + city — so a lookup
@@ -1740,10 +1853,10 @@ function geoChoose(address,lat,lon){
 function geoUnpin(){geoPick={address:val('p_address'),lat:null,lon:null};const box=document.getElementById('georesults');if(box)box.innerHTML='';}
 
 /* --- the Register, on screen: a card for an entry, and its read-only sheet.
- * Discovery of unvisited places now runs through recommendations() in Friends. --- */
+ * Discovery of unvisited places now runs through recommendations() in Find. --- */
 function regCard(e){
   const pal=palOf(e),vars=pal?cafeVars(pal):''; // a Register entry carries the café's own palette
-  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openRegisterSheet(${jsq(e.name)})">
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(e.name)})">
     ${e.photo?`<img class="brandhead" src="${e.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}</span>`:''}</span>
@@ -1751,37 +1864,6 @@ function regCard(e){
     </div>
     <div class="muted small">${e.firstBy?`first entered by ${esc(e.firstBy)}`:'on the record'}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</div>
   </div>`;
-}
-// The entry itself: identity, provenance, and what your people made of the place.
-function openRegisterSheet(shop){
-  const e=regByName(shop); if(!e)return;
-  const pal=palOf(e),vars=pal?cafeVars(pal):'';
-  const mine=cafeCups().filter(c=>normName(c.shop)===normName(shop));
-  const others=circleCups().filter(c=>normName(c.shop)===normName(shop));
-  const people=[...new Set(others.map(c=>c._who))];
-  const avg=avgHedonic(others);
-  const head=e.photo
-    ?`<div class="masthead"><img src="${e.photo}"><div class="scrim"></div><div class="bar"></div>
-      <div class="id"><div class="nm">${esc(e.name)}</div>${e.city?`<div class="ct">${esc(e.city)}</div>`:''}</div></div>
-      <div class="sub" style="margin:10px 2px 14px">an entry in the Register</div>`
-    :`<h3>${esc(e.name)}</h3><div class="sub">an entry in the Register</div>`;
-  openSheet(`<div class="cafe-theme"${vars?` style="${vars}"`:''}>
-  ${head}
-  <div class="card">
-    ${e.city?`<div class="kv"><span class="k">City</span><span class="v">${esc(e.city)}</span></div>`:''}
-    ${e.address?`<div class="kv"><span class="k">Address</span><span class="v">${esc(e.address)}${e.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}</span></div>`:''}
-    <div class="kv"><span class="k">First entered</span><span class="v">${esc(e.firstBy)||'—'}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}`:''}</span></div>
-    ${e.by&&e.updatedAt?`<div class="kv"><span class="k">Last amended</span><span class="v">${esc(e.by)} · ${fmtAgo(e.updatedAt)}</span></div>`:''}
-    ${others.length?`<div class="kv"><span class="k">Their reading</span><span class="v num">${avg??'—'} across ${others.length} cup${others.length>1?'s':''}</span></div>
-    <div class="kv"><span class="k">Who's been</span><span class="v">${people.map(esc).join(', ')}</span></div>`:''}
-  </div>
-  ${e.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(e.notes)}"</div>`:''}
-  ${mine.length?`<button class="btn btn-graphite" onclick="openShopDetail(${jsq(e.name)})">Your page here — ${mine.length} cup${mine.length>1?'s':''}</button>`:''}
-  ${readOnly()?'':`<button class="btn btn-primary" onclick="cafeHere(${jsq(e.name)},${jsq(e.city||'')})">Log a cup here</button>
-  ${wantBtn(e.name)}
-  <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(e.name)})">Amend the entry</button>`}
-  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>
-  </div>`);
 }
 
 /* ============ v2: one cup, two contexts ============ */
@@ -1795,21 +1877,66 @@ function brewRecipe(b){
   ].filter(Boolean).join(' · ');
 }
 
+// The coffee the hero resumes — tapped from the shelf, else the last one brewed.
+let curBagId=null;
+function pickCoffee(id){curBagId=id;render()}
+function curBag(){
+  const act=D.bags.filter(b=>!b.archived);
+  return act.find(b=>b.id===curBagId)
+    ||(()=>{const l=D.brews.slice().sort(byNew).find(x=>{const b=bagById(x.bagId);return b&&!b.archived});return l?bagById(l.bagId):null})()
+    ||act.sort(byNew)[0]||null;
+}
+function archivedBagLine(b){
+  const cups=D.cups.filter(c=>c.kind==='home'&&c.bagId===b.id&&c.hedonic!=null);
+  const best=cups.length?cups.reduce((a,c)=>c.hedonic>a.hedonic?c:a):null;
+  const bb=best&&best.brewId?D.brews.find(x=>x.id===best.brewId):null;
+  const n=brewsOf(b.id).length;
+  return {stat:best?`best ${best.hedonic}/9`:'',
+    line:n?`${n} brew${n>1?'s':''} kept${bb?` · your best: ${brewRecipe(bb)}`:''}`:'no cups kept — a quiet bag'};
+}
+function restoreBag(id){
+  if(guard())return;
+  const b=bagById(id);if(!b)return;
+  b.archived=false;b.updatedAt=new Date().toISOString();
+  curBagId=id;save();go('field');toast('Back on the shelf — the record picks up where it left off.');
+}
 function vField(){
   const bags=D.bags.filter(b=>!b.archived).sort(byNew);
-  const homeCups=D.cups.filter(c=>c.kind==='home').slice().sort(byNew);
-  if(!D.setups.length||!bags.length)return `
-    <div class="empty-hero">
+  const archived=D.bags.filter(b=>b.archived).sort(byNew);
+  const d=depth();
+  const archiveSection=archived.length?`
+    <div class="section-head"><h2>Put away</h2><span class="n-note num">${archived.length}</span></div>
+    ${archived.map(b=>{const a=archivedBagLine(b);return `<div class="card">
+      <div class="row"><span class="small"><strong>${esc(bagName(b))}</strong></span><span class="num muted small">${a.stat}</span></div>
+      <div class="muted small">${a.line}</div>
+      ${readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="restoreBag('${b.id}')">Back on the shelf</button>`}
+    </div>`}).join('')}
+    <div class="muted small serif" style="font-style:italic;margin:6px 2px">Nothing is lost. Buy a bag again and it comes back with everything you learned.</div>`:'';
+  const door=(!readOnly()&&d===3)?doorHTML('See the through-line',
+    'Home and away, side by side — every cup in one record, and the shape of what you love.',
+    'Open the Record',"unlockDepth(4,'trace','The Record is open — the whole through-line.')"):'';
+  if(!bags.length)return `
+    <div class="hero">
       <div class="eyebrow">The cup at home</div>
-      <h2>Make it. Change one thing.</h2>
-      <p>Define the tools once. Add the coffee in hand. Then every cup opens where the last one left off.</p>
-      ${!D.setups.length?`<button class="btn btn-primary" onclick="openSetupForm()">Define your Setup</button>`:''}
-      ${!bags.length?`<button class="btn ${D.setups.length?'btn-primary':'btn-quiet'}" onclick="openBagForm()">Add a coffee</button>`:''}
+      ${archived.length?`<h2>The shelf is bare.</h2>
+      <div class="origin">The bags are finished. The record isn't — it's all below, waiting for the next one.</div>`
+      :`<h2 style="max-width:12ch">Nothing on the shelf yet.</h2>
+      <div class="origin">Name the bag in your hand — every brew after remembers it.</div>`}
     </div>
-    <div class="qm-seal">Home<span class="em">Measured. Adjusted. Made again.</span></div>`;
+    <div class="continuation">
+      ${archived.length?`<div class="eyebrow">Between bags</div>
+      <div class="finding">The dials remember where you left them — the first brew of the next bag starts there, not from zero.</div>`
+      :`<div class="eyebrow">How Home works</div>
+      <div class="finding">Brew, tap a score, done. The next brew opens where this one left off — change one thing at a time and the cup gets better on its own.</div>`}
+    </div>
+    ${readOnly()?'':`<button class="btn btn-primary" onclick="openBagForm()">Put a coffee on the shelf</button>`}
+    ${!archived.length?`<div class="muted small serif" style="font-style:italic;margin:10px 2px">Your grinder and brewer get named at the first brew — there's nothing else to set up.</div>`:''}
+    <div class="empty" style="margin-top:14px">Cups you make land here, each one starting from the last.</div>
+    ${archiveSection}${door}
+    ${seal('Home','Measured. Adjusted. Made again.')}`;
 
-  const lastAny=D.brews.slice().sort(byNew)[0];
-  const bag=(lastAny&&bagById(lastAny.bagId))||bags[0];
+  const bag=curBag();
+  const homeCups=D.cups.filter(c=>c.kind==='home'&&c.bagId===bag.id).slice().sort(byNew);
   const last=lastBrewFor(bag.id,null);
   const lastCup=last?D.cups.find(c=>c.brewId===last.id):null;
   const scored=brewsOf(bag.id).map(b=>({brew:b,cup:D.cups.find(c=>c.brewId===b.id)}))
@@ -1819,8 +1946,8 @@ function vField(){
   return `
     <div class="hero">
       <div class="eyebrow">The cup at home</div>
-      <h2>${esc(bagName(bag))}</h2>
-      <div class="origin">${esc([bag.originCountry,bag.originRegion,bag.process].filter(Boolean).join(' · '))||'Coffee in hand'} ${restChip(bag)}</div>
+      <h2 style="max-width:13ch">${esc(bagName(bag))}</h2>
+      <div class="origin">${esc([bag.originCountry,bag.originRegion,bag.process].filter(Boolean).join(' · '))||'origin unwritten'} ${restChip(bag)}</div>
     </div>
     ${last?`<div class="continuation">
       <div class="row">
@@ -1829,50 +1956,62 @@ function vField(){
       </div>
       ${notes?`<div class="finding">${esc(notes)}</div>`:''}
       ${best?`<div class="bestline"><span>Best on this coffee</span><strong>${best.cup.hedonic}/9 · ${brewRecipe(best.brew)}</strong></div>`:''}
-    </div>`:`<div class="continuation"><div class="eyebrow">No baseline yet</div><div class="finding">The first cup gives the next one somewhere honest to begin.</div></div>`}
-    ${readOnly()?'':`<button class="btn btn-primary" onclick="openBrew('${bag.id}')">${last?'Brew from here':'Log the first cup'}</button>`}
-    <div class="section-head"><h2>Coffees</h2><button class="text-action" onclick="go('bags')">Manage</button></div>
-    ${bags.filter(b=>b.id!==bag.id).slice(0,2).map(b=>`
-      <div class="card tap coffee-card" onclick="openBrew('${b.id}')">
+    </div>`:`<div class="continuation">
+      <div class="row">
+        <div><div class="eyebrow">First brew</div><div class="score">—</div></div>
+        <div style="text-align:right"><div class="eyebrow">A fair start</div><div class="recipe">the dials open at honest defaults</div></div>
+      </div>
+      <div class="finding">No last time yet. Start here, turn one dial, and the record takes it from there.</div>
+    </div>`}
+    ${readOnly()?'':`<button class="btn btn-primary" onclick="openBrew('${bag.id}')">${last?'Brew from here':'The first brew'}</button>`}
+    <div class="section-head"><h2>Coffees</h2><button class="text-action" onclick="go('bags')">The shelf</button></div>
+    ${bags.filter(b=>b.id!==bag.id).map(b=>`
+      <div class="card tap coffee-card" onclick="pickCoffee('${b.id}')">
         <strong>${esc(bagName(b))}</strong>
-        <div class="muted small">${esc([b.originCountry,b.process].filter(Boolean).join(' · '))||'No origin recorded'}</div>
-        <span class="count num">${brewsOf(b.id).length} cups</span>
-      </div>`).join('')||`<div class="empty">One coffee is enough.</div>`}
+        <div class="muted small">${esc([b.originCountry,b.process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
+        <span class="count num">${brewsOf(b.id).length?brewsOf(b.id).length+(brewsOf(b.id).length>1?' brews':' brew'):'no brews yet'}</span>
+      </div>`).join('')}
+    ${readOnly()?'':`<div style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:2px 0 4px">
+      <button class="text-action" onclick="openBagForm()">+ Put another coffee on the shelf</button>
+      <button class="text-action" onclick="openArchiveSheet('${bag.id}')">The bag's empty — put it away</button>
+    </div>`}
     <div class="section-head"><h2>Recent at home</h2><button class="text-action" onclick="go('trace')">Full record</button></div>
-    ${homeCups.slice(0,3).map(cupRow).join('')||`<div class="empty">The record begins with this cup.</div>`}`;
+    ${homeCups.slice(0,3).map(c=>cupRow(c)).join('')||`<div class="empty">The first cup lands here — and the second one starts from it.</div>`}
+    ${archiveSection}${door}
+    ${seal('Home','Measured. Adjusted. Made again.')}`;
 }
 
 function vCafes(){
   const cups=cafeCups().slice().sort(byNew);
   const shops=shopAgg();
-  const recs=recommendations();
   const wants=(D.cafeWants||[]).slice();
   const last=cups[0]||null;
-  const top=shops.filter(s=>s.visits>=2&&s.avg!=null).sort((a,b)=>b.avg-a.avg)[0]||null;
   const lastNotes=last&&(last.notes||((last.descriptors||[]).join(' · ')));
+  const d=depth();
+  const door=(!readOnly()&&d===2)?doorHTML('The cup you make',
+    'Bring your grinder and brewer in. Every brew opens where the last one left off — change one thing, taste, repeat.',
+    'Open Home',"unlockDepth(3,'field','Home is open — the cup you make.')"):'';
   return `
     <div class="hero">
       <div class="eyebrow">The cup away</div>
       <h2>${last?esc(last.shop||'The last café'):'Arrive without a recipe.'}</h2>
-      <div class="origin">${last?esc([last.drink,last.city].filter(Boolean).join(' · ')):'Receive it. Notice it. Remember where to return.'}</div>
+      <div class="origin">${last?'The last cup out':'Notice the cup. Remember the place.'}</div>
     </div>
     ${last?`<div class="continuation">
       <div class="row">
         <div><div class="eyebrow">Last cup out</div><div class="score">${last.hedonic??'—'}<small> / 9</small></div></div>
-        <div style="text-align:right"><div class="eyebrow">Preparation</div><div class="recipe">${esc([last.style,last.drink].filter(Boolean).join(' · '))||'As served'}</div></div>
+        <div style="text-align:right"><div class="eyebrow">The order</div><div class="recipe">${esc([last.style,last.drink].filter(Boolean).join(' · '))||'as served'}</div></div>
       </div>
       ${lastNotes?`<div class="finding">${esc(lastNotes)}</div>`:''}
-      ${top?`<div class="bestline"><span>Worth returning to</span><strong>${esc(top.shop)} · ${top.avg}/9</strong></div>`:''}
-    </div>`:`<div class="continuation"><div class="eyebrow">No cup away yet</div><div class="finding">A shop and one tap on the scale is a whole record.</div></div>`}
-    ${readOnly()?'':`<button class="btn btn-primary" onclick="openCafe()">${last?'Log a café cup':'Remember the next cup'}</button>`}
-    <div class="section-head"><h2>Places</h2><span class="n-note">n=${shops.length}</span></div>
-    ${shops.length?shops.slice(0,4).map(shopCard).join(''):`<div class="empty">The café half begins with the next cup you are served.</div>`}
-    ${recs.length?`<div class="section-head"><h2>Worth the walk</h2><button class="text-action" onclick="go('circle')">Discover</button></div>
-    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">Places on the record you haven't been — the best your people found. More in Friends.</div>
-    ${recs.slice(0,3).map(recCard).join('')}`:''}
-    ${wants.length?`<div class="section-head"><h2>Want to go</h2><span class="n-note">n=${wants.length}</span></div>
+    </div>`:`<div class="continuation"><div class="eyebrow">No cup out yet</div><div class="finding">One shop and one tap — your first memory of a cup out.</div></div>`}
+    ${readOnly()?'':`<button class="btn btn-primary" onclick="openCafe()">Remember a cup</button>`}
+    <div class="section-head"><h2>Your places</h2></div>
+    ${shops.length?shops.map(shopCard).join(''):`<div class="empty">Every place you keep builds a page of its own here — your average, your usual, the reason to go back.</div>`}
+    ${wants.length?`<div class="section-head"><h2>Want to go</h2><span class="n-note num">${wants.length}</span></div>
     ${wants.slice(0,3).map(wantCard).join('')}`:''}
-    ${cups.length?`<div class="section-head"><h2>Recent away</h2><button class="text-action" onclick="go('trace')">Full record</button></div>${cups.slice(0,3).map(cupRow).join('')}`:''}`;
+    ${cups.length?`<div class="section-head"><h2>Recent away</h2>${d>=4?`<button class="text-action" onclick="go('trace')">Full record</button>`:''}</div>${cups.slice(0,3).map(c=>cupRow(c)).join('')}`:''}
+    ${door}
+    ${seal('Café','Received. Noticed. Worth returning to.')}`;
 }
 
 function vTrace(){
@@ -1880,21 +2019,45 @@ function vTrace(){
   const away=cafeCups().slice().sort(byNew);
   const all=D.cups.slice().sort(byNew);
   const bags=D.bags.filter(b=>brewsOf(b.id).length>1).sort(byNew);
-  return `
+  const head=`
     <div class="hero">
       <div class="eyebrow">One cup · two contexts</div>
-      <h2>Your taste is the through-line.</h2>
-      <div class="origin">Prepared differently. Experienced in the same language.</div>
+      <h2 style="max-width:13ch">Your taste is the through-line.</h2>
+      <div class="origin">Made differently. Remembered in the same language.</div>
+    </div>`;
+  if(!all.length)return head+`
+    <div class="continuation">
+      <div class="eyebrow">The record starts thin</div>
+      <div class="finding">No cups yet, from either room. Keep one — anywhere — and the through-line starts drawing itself.</div>
     </div>
+    ${readOnly()?'':`<button class="btn btn-quiet" onclick="go('cafes')">Remember a cup out</button>
+    <button class="btn btn-quiet" onclick="go('field')">Brew one at home</button>`}
+    <div class="empty" style="margin-top:14px">The averages, the trace, every cup — all of it waits on the first one.</div>
+    ${seal('Record','One preference, two rooms.')}`;
+  const oneSided=!home.length||!away.length;
+  const traceN=D.brews.length;
+  const traceEmpty=traceN===2?'Two brews down — one more and the line draws itself.'
+    :traceN===1?'One brew kept. Two more and the line starts to say something.'
+    :'Cup by cup, a line draws itself here — the grind against the score.';
+  return head+`
     <div class="loop">
-      <div class="s"><div class="k">Home</div><div class="v num">${avgHedonic(home)||'—'} <span class="muted">· ${home.length}</span></div></div>
+      <div class="s"><div class="k">Home</div><div class="v num">${home.length?`${avgHedonic(home)||'—'} · ${home.length}`:'quiet'}</div></div>
       <div class="a">↔</div>
-      <div class="s"><div class="k">Café</div><div class="v num">${avgHedonic(away)||'—'} <span class="muted">· ${away.length}</span></div></div>
+      <div class="s"><div class="k">Café</div><div class="v num">${away.length?`${avgHedonic(away)||'—'} · ${away.length}`:'quiet'}</div></div>
     </div>
-    <div class="finding" style="text-align:center;margin:12px 0 22px">Not a contest. The shape of one preference in two rooms.</div>
-    ${bags.length?`<div class="section-head"><h2>At home · what changed</h2></div>${bags.map(traceCard).join('')}`:''}
-    <div class="section-head"><h2>Every cup</h2><span class="n-note">n=${all.length}</span></div>
-    ${all.map(cupRow).join('')||`<div class="empty">The record begins on either side.</div>`}`;
+    <div class="finding" style="text-align:center;margin:12px 0 22px">Not a contest — the shape of one preference in two rooms.</div>
+    ${oneSided?`<div class="card" style="margin:-8px 0 22px">
+      <strong class="small">${!home.length?'The home side is quiet':'The café side is quiet'}</strong>
+      <div class="muted small" style="margin-top:4px">${!home.length
+        ?'Every cup so far was served to you. Put a coffee on the shelf and the other room starts writing.'
+        :'Every cup so far was made at home. The next cup someone hands you can join the record.'}</div>
+      <button class="text-action" style="margin-top:7px" onclick="go('${!home.length?'field':'cafes'}')">${!home.length?'Go to Home →':'Go to Café →'}</button>
+    </div>`:''}
+    <div class="section-head"><h2>At home · what changed</h2></div>
+    ${bags.length?bags.map(traceCard).join(''):`<div class="empty">${traceEmpty}</div>`}
+    <div class="section-head"><h2>Every cup</h2><span class="n-note num">${all.length}</span></div>
+    ${all.map(c=>cupRow(c,true)).join('')}
+    ${seal('Record','One preference, two rooms.')}`;
 }
 
 /* ============ users ============ */
@@ -1907,18 +2070,19 @@ function peek(id){
 }
 function vUsersSection(){
   return `
-  <h2>Users <span class="n-note">n=${USERS.users.length}</span></h2>
+  <h2>Your circle</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Share records with people you trust. Yours follows you between your devices; theirs you can read, never change.</div>
   ${USERS.users.map(u=>{const active=u.id===USERS.activeId,p=peek(u.id);
     return `<div class="card tap" onclick="openUserSheet('${u.id}')">
       <div class="row"><strong>${esc(u.name)}</strong>${active?'<span class="badge">you</span>':''}</div>
-      <div class="muted small num">${p.bags} bags · ${p.brews} brews · ${p.cups} cups</div>
+      <div class="muted small num">${p.bags} coffees · ${p.brews} brews · ${p.cups} cups</div>
     </div>`}).join('')}
   ${remoteDirUsers().map(u=>`<div class="card tap" onclick="openRemoteUserSheet('${u.id}')">
     <div class="row"><strong>${esc(u.name)}</strong><span class="badge ghost">server</span></div>
-    <div class="muted small num">${u.counts.bags} bags · ${u.counts.brews} brews · ${u.counts.cups} cups</div>
+    <div class="muted small num">${u.counts.bags} coffees · ${u.counts.brews} brews · ${u.counts.cups} cups</div>
   </div>`).join('')}
-  <button class="btn btn-quiet" onclick="openUserForm()">Add a user</button>
-  <div class="muted small serif" style="font-style:italic;margin:10px 2px">Everyone who shares this device keeps their own ledger. Tap a user to view their record or make them the active user.</div>`;
+  <button class="btn btn-quiet" onclick="openUserForm()">Add a keeper on this device</button>
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">Everyone who shares this device keeps their own record. Tap a keeper to read their record or make them the active one.</div>`;
 }
 function openUserSheet(id){
   const u=userById(id); if(!u)return;
@@ -1956,9 +2120,9 @@ function saveUser(id){
 function switchUser(id){
   const u=userById(id); if(!u)return;
   USERS.activeId=id;saveUsers();
-  viewingUserId=id;D=load();
+  viewingUserId=id;D=load();curBagId=null;
   const lb=D.bags.slice().sort(byNew)[0];setAccent(lb?lb.roastLevel:3);
-  closeSheet();go('field');toast(`Switched to ${u.name}`);
+  closeSheet();go(defaultTab(depth()));toast(`Switched to ${u.name}`);
 }
 function viewLedger(id){
   const u=userById(id); if(!u)return;
@@ -1966,8 +2130,10 @@ function viewLedger(id){
   closeSheet();go('field');toast(`Viewing ${u.name}'s ledger`);
 }
 function exitView(){
-  viewingUserId=USERS.activeId;D=load();remoteStale=false;
+  viewingUserId=USERS.activeId;D=load();remoteStale=false;curBagId=null;
   const lb=D.bags.slice().sort(byNew)[0];setAccent(lb?lb.roastLevel:3);
+  // the viewed record may have had rooms open that yours doesn't
+  if(!tabsFor(depth()).some(t=>t.id===tab)&&tab!=='ledger')tab=defaultTab(depth());
   render();
 }
 function deleteUser(id){
@@ -2143,7 +2309,7 @@ async function api(path,method,body){
   if(r.status===401){authLost();throw{auth:true}}
   return {status:r.status,body:data};
 }
-function authLost(){if(!SYNC)return;SYNC.token=null;saveSync();syncState='auth';paintSync();toast('Sync signed out — sign in again from the Ledger tab')}
+function authLost(){if(!SYNC)return;SYNC.token=null;saveSync();syncState='auth';paintSync();toast('Sync signed out — sign in again from More')}
 
 // Operate on the synced user's stored ledger directly, so sync stays correct
 // even while the screen is showing someone else's ledger read-only.
@@ -2414,7 +2580,7 @@ function tasteAffinity(){
     let sum=0;shared.forEach(k=>{const t=theirs[k].reduce((a,b)=>a+b,0)/theirs[k].length;sum+=Math.abs(t-myAvg[k])});
     const delta=sum/shared.length;
     out.push({src:s.id,name:s.name,shared:shared.length,delta,
-      close:delta<=1?'close':delta<=2?'aligned':'differs',w:Math.max(0,1-delta/4)});
+      close:delta<=1?'close':delta<=2?'near':'differs',w:Math.max(0,1-delta/4)});
   });
   return out.sort((a,b)=>a.delta-b.delta);
 }
@@ -2501,25 +2667,22 @@ function recCard(r){
     ?`in the Register${r.profile&&r.profile.firstBy?` · first entered by ${esc(r.profile.firstBy)}`:''}`
     :`${r.best?`${esc(r.best.who)}${r.best.a>=.75?' — close to your taste':''} · ${r.best.h}/9`:''}${r.n>1?` · ${r.n} cups`:''}${r.again?` · ${r.again} would return`:''}`;
   const dist=r.dist!=null?` <span class="badge ghost">${fmtDist(r.dist)}</span>`:'';
-  const star=readOnly()?'':`<button onclick="event.stopPropagation();toggleWant(${jsq(r.shop)});render()" style="position:absolute;top:12px;right:13px;font-size:19px;line-height:1;color:var(--accent);background:none;border:none;padding:2px">${isWant(r.shop)?'★':'☆'}</button>`;
-  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent);position:relative"`:' style="position:relative"'} onclick="openRecSheet(${jsq(r.shop)})">
+  const want=readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="event.stopPropagation();toggleWant(${jsq(r.shop)});render()">${isWant(r.shop)?'Saved — it waits under Want to go':'Save for later'}</button>`;
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(r.shop)})">
     ${r.profile&&r.profile.photo?`<img class="brandhead" src="${r.profile.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}</span>`:''}${dist}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${r.avg??(r.reg?'·':'—')}</span>
     </div>
-    <div class="muted small" style="padding-right:22px">${why}</div>
+    <div class="muted small serif" style="font-style:italic">${why}</div>
+    ${want}
   </div>`;
-}
-function openRecSheet(shop){
-  if(circleCups().some(c=>normName(c.shop)===normName(shop)))openPlaceSheet(shop);
-  else openRegisterSheet(shop);
 }
 function wantCard(name){
   const pr=cafeProfile(name),pal=palOf(pr),vars=pal?cafeVars(pal):'';
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   const city=pr&&pr.city?pr.city:'';
-  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="reopenFor(${jsq(name)})">
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(name)})">
     ${pr&&pr.photo?`<img class="brandhead" src="${pr.photo}">`:''}
     <div class="row"><span class="small"><strong>${esc(name)}</strong>${city?`<span class="muted"> · ${esc(city)}</span>`:''}${dist}</span>
       ${pr&&pr.address?'<span class="badge ghost">pinned</span>':''}</div>
@@ -2591,8 +2754,8 @@ function openCircleCup(src,id){
   </div>
   ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
-  ${c.shop?`<button class="btn btn-primary" onclick="openPlaceSheet(${jsq(c.shop)})">About this place</button>`:''}
-  ${c.shop?wantBtn(c.shop):''}
+  ${c.shop?`<button class="btn btn-primary" onclick="closeSheet();openPlace(${jsq(c.shop)})">About this place</button>`:''}
+  ${c.shop&&!readOnly()?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(c.shop)});openCircleCup(${jsq(src)},${jsq(c.id)})">${isWant(c.shop)?'Saved — it waits under Want to go':'Save the place for later'}</button>`:''}
   <button class="btn btn-quiet" onclick="circleView(${jsq(src)})">Read ${esc(s.name)}'s whole record</button>
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
@@ -2604,7 +2767,7 @@ function circleView(src){
 function placeCard(p){
   const pr=p.profile,pal=palOf(pr),vars=pal?cafeVars(pal):''; // the café's own palette, same as the passport
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
-  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlaceSheet(${jsq(p.shop)})">
+  return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(p.shop)})">
     ${pr&&pr.photo?`<img class="brandhead" src="${pr.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}</span>`:''}${dist}</span>
@@ -2613,73 +2776,47 @@ function placeCard(p){
     <div class="muted small">${p.n} cup${p.n>1?'s':''} · ${p.people.length===1?esc(p.people[0]):p.people.length+' people'}${p.usual?` · they order <strong>${esc(p.usual)}</strong>`:''}${pr&&pr.address?' · pinned':''}</div>
   </div>`;
 }
-function openPlaceSheet(shop){
-  const cups=circleCups().filter(c=>normName(c.shop)===normName(shop));
-  if(!cups.length){toast('No cups on the record for that café');return}
-  const p=circleProfile(shop);
-  const avg=avgHedonic(cups),usual=modeOf(cups.map(c=>c.drink).filter(Boolean));
-  const city=modeOf(cups.map(c=>c.city).filter(Boolean));
-  const people=[...new Set(cups.map(c=>c._who))];
-  const verdicts=cups.filter(c=>c.again!=null),again=verdicts.filter(c=>c.again===true).length;
-  const pal=palOf(p),vars=pal?cafeVars(pal):'';
-  const subline=`${city?esc(city)+' · ':''}${cups.length} cup${cups.length>1?'s':''} on your people's records`;
-  const head=p&&p.photo
-    ?`<div class="masthead"><img src="${p.photo}"><div class="scrim"></div><div class="bar"></div>
-      <div class="id"><div class="nm">${esc(shop)}</div>${city?`<div class="ct">${esc(city)}</div>`:''}</div></div>
-      <div class="sub" style="margin:10px 2px 14px">${subline}</div>`
-    :`<h3>${esc(shop)}</h3><div class="sub">${subline}</div>`;
-  openSheet(`<div class="cafe-theme"${vars?` style="${vars}"`:''}>
-  ${head}
-  <div class="card">
-    <div class="kv"><span class="k">Their average</span><span class="v num">${avg??'—'}</span></div>
-    ${usual?`<div class="kv"><span class="k">What they order</span><span class="v">${esc(usual)}</span></div>`:''}
-    ${verdicts.length?`<div class="kv"><span class="k">Would go again</span><span class="v num">${again} of ${verdicts.length}</span></div>`:''}
-    <div class="kv"><span class="k">Who's been</span><span class="v">${people.map(esc).join(', ')}</span></div>
-    ${p&&p.address?`<div class="kv"><span class="k">Address</span><span class="v">${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}</span></div>`:''}
-  </div>
-  ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
-  ${readOnly()?'':`<button class="btn btn-quiet" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Been? Log your own cup</button>
-  ${wantBtn(shop)}`}
-  <h2>Every cup</h2>
-  ${cups.map(feedRow).join('')}
-  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>
-  </div>`);
-}
 // The plain-words legend — for the friend who reads the record without keeping one.
 function openCupPrimer(){
   openSheet(`
   <h3>How to read a cup</h3>
-  <div class="sub">The record, in plain words. Everything on a cup card, decoded once.</div>
+  <div class="sub">The whole language, in a minute.</div>
   <div class="card">
     <strong class="small">The score — 1 to 9</strong>
-    <div class="muted small">How much they liked it. 5 is fine, 7 is a good day, 9 almost never happens. Someone you trust posting an 8 is your cue.</div>
-    <strong class="small" style="display:block;margin-top:10px">Again / pass</strong>
-    <div class="muted small">Would they order it again. The most honest signal on the card — taste is complicated, going back isn't.</div>
-    <strong class="small" style="display:block;margin-top:10px">The words in italics</strong>
-    <div class="muted small">What they found in the cup — berry, chocolate, floral. Notes, not homework. Tasting "coffee" is also an answer.</div>
+    <div class="muted small">How much they liked it, not how fancy it was. A 5 is a fine cup. An 8 is worth crossing town.</div>
+    <strong class="small" style="display:block;margin-top:10px">Again, or pass</strong>
+    <div class="muted small">Would they order it again? The most honest question in coffee.</div>
+    <strong class="small" style="display:block;margin-top:10px">The words</strong>
+    <div class="muted small">Floral, chocolate, citrus — what they found, in their own words. No wrong answers.</div>
     <strong class="small" style="display:block;margin-top:10px">Whose 8 is your 8</strong>
     <div class="muted small">Every score is one person's. Read a few of their cups and you'll learn whose taste walks the same streets as yours.</div>
   </div>
-  <div class="muted small serif" style="font-style:italic;margin:10px 2px">That's the whole language. Find a good score near you, order what they ordered.</div>
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">That's all of it. Find a good score near you, order what they ordered.</div>
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
 function vCircle(){
   const sources=circleSources();
+  const circleOn=sources.length>0;
+  const d=depth();
+  const door=(!readOnly()&&d===1)?doorHTML('Keep a cup of your own',
+    'A shop and one tap on the scale — that\'s the whole ask. Your own places, remembered.',
+    'Open Café',"unlockDepth(2,'cafes','Café is open — your cups have somewhere to live.')"):'';
+  const findSeal=seal('Find','Read the record. Order what they ordered. Go.');
   // Nothing to read and no places on the record — the way in stays a pitch.
-  if(!sources.length&&!REG.entries.length)return `
-    <div class="empty-hero">
+  if(!circleOn&&!REG.entries.length)return `
+    <div class="hero">
       <div class="eyebrow">The cup elsewhere</div>
       <h2>Find the next good cup.</h2>
-      <p>You don't have to log a thing. Read what the people you trust are drinking — search it, sort it by who's near, steal the order.</p>
-      ${SYNC?'':`<button class="btn btn-primary" onclick="openSyncSheet(false)">Connect to a sync server</button>`}
-      <button class="btn ${SYNC?'btn-primary':'btn-quiet'}" onclick="openUserForm()">Add a user on this device</button>
+      <div class="origin">Other people's cups — real places, honest scores, the order worth stealing. You never have to keep a thing.</div>
     </div>
     <div class="card">
-      <strong class="small">How this works</strong>
-      <div class="muted small">One of your people runs a CARTA sync server — one file, zero dependencies. Sign in with a name and a passcode, and everyone on it can read (never edit) each other's records. Their café cups become your map.</div>
+      <strong class="small">No one to read yet</strong>
+      <div class="muted small" style="margin-top:4px">Share records with people you trust. Yours follows you between your devices; theirs you can read, never change. One of your people runs a CARTA sync server — a name and a passcode is the whole ask.</div>
+      ${readOnly()?'':`<button class="btn btn-quiet" style="margin-top:10px" onclick="openSyncSheet(false)">Join your circle</button>
+      <button class="btn btn-quiet" onclick="openUserForm()">Add a keeper on this device</button>`}
     </div>
     <div class="pinned">New to the language? <a class="link" onclick="openCupPrimer()">How to read a cup</a></div>
-    <div class="qm-seal">Friends<span class="em">Read the record. Steal the order. Go.</span></div>`;
+    ${door}${findSeal}`;
   setTimeout(circleRefresh,60); // quiet background freshness — re-renders only if something moved
   const q=(circleQuery||'').trim();
   const cities=circleCities();
@@ -2691,12 +2828,14 @@ function vCircle(){
     <div class="hero">
       <div class="eyebrow">The cup elsewhere</div>
       <h2>Find the next good cup.</h2>
-      <div class="origin">${nearOn?'Near you now':cityLens?esc(cityLens):`${sources.length} record${sources.length===1?'':'s'} in reach`} — read only, always. <a class="link" onclick="openCupPrimer()">How to read a cup</a></div>
+      <div class="origin">${circleOn
+        ?`What your people are drinking — theirs to write, yours to read. <a class="link" onclick="openCupPrimer()">How to read a cup</a>`
+        :`The register — every place on the record, waiting for its first cup. <a class="link" onclick="openSyncSheet(false)">Bring your people</a>`}</div>
     </div>
-    <input type="text" id="circleSearch" value="${esc(circleQuery)}" oninput="circleSearchInput()" placeholder="Search a café, a city, a roaster, a note" autocapitalize="off" style="border:1px solid var(--line-strong);padding:11px 13px;margin:2px 0 10px;font-family:var(--sans);font-size:15px">
+    <input type="text" id="circleSearch" value="${esc(circleQuery)}" oninput="circleSearchInput()" placeholder="Search a café, a city, an order" autocapitalize="off" style="border:1px solid var(--line-strong);padding:11px 13px;margin:2px 0 10px;font-family:var(--sans);font-size:15px">
     ${lens}
     <div id="circleResults">${q?circleResultsHTML(circleQuery):''}</div>`;
-  if(q)return head+`<div class="qm-seal">Friends<span class="em">Read the record. Steal the order. Go.</span></div>`;
+  if(q)return head+findSeal;
   // the discovery surface, scoped to the active lens
   const recs=recommendations();
   const aff=tasteAffinity();
@@ -2704,24 +2843,30 @@ function vCircle(){
   const beans=circleBeans();
   const wants=(D.cafeWants||[]).slice();
   return head+`
-    ${recs.length?`<div class="section-head"><h2>Worth the walk, for you</h2><span class="n-note">n=${recs.length}</span></div>
-    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">${nearOn?'Nearest first — cafés you haven\'t kept.':'Cafés you haven\'t kept, ranked toward the people whose taste runs closest to yours.'}</div>
+    ${recs.length?`<div class="section-head"><h2>Worth the walk, for you</h2><span class="n-note num">${recs.length}</span></div>
+    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">${nearOn?'Nearest first — places you haven\'t been.':circleOn?'Places you haven\'t been, put first by the people whose taste sits closest to yours.':'Places you haven\'t been, from the register.'}</div>
     ${recs.slice(0,8).map(recCard).join('')}`:''}
-    ${aff.length?`<div class="section-head"><h2>Whose palate matches yours</h2></div>
-    <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">On the cafés you've both kept — the shape of an agreement, not a verdict.</div>
+    <div class="section-head"><h2>Whose taste matches yours</h2></div>
+    ${aff.length?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">On the cafés you've both scored — how close you land.</div>
     ${aff.slice(0,4).map(a=>`<div class="card tap" onclick="circleView(${jsq(a.src)})">
-      <div class="row"><span class="small"><strong>${esc(a.name)}</strong> <span class="badge${a.close==='close'?'':' ghost'}">${a.close}</span></span><span class="num muted small">±${a.delta.toFixed(1)} · ${a.shared} shared</span></div>
-      <div class="muted small">You land within ${a.delta.toFixed(1)} of each other across ${a.shared} shared café${a.shared>1?'s':''} — read their record.</div>
-    </div>`).join('')}`:''}
-    ${cups.length?`<div class="section-head"><h2>The stream</h2><span class="n-note">n=${cups.length}</span></div>
-    ${cups.slice(0,20).map(feedRow).join('')}`
-    :`<div class="empty">${cityLens?`No café cups in ${esc(cityLens)} yet.`:'No café cups on anyone\'s record yet. The stream begins with their next cup out.'}</div>`}
-    ${beans.length?`<div class="section-head"><h2>Beans worth chasing</h2><span class="n-note">n=${beans.length}</span></div>
+      <div class="row"><span class="small"><strong>${esc(a.name)}</strong> <span class="badge${a.close==='close'?'':' ghost'}">${a.close}</span></span><span class="num muted small">±${a.delta.toFixed(1)} · ${a.shared} café${a.shared>1?'s':''}</span></div>
+      <div class="muted small">You land within ${a.delta.toFixed(1)} of each other on the places you share — read their record.</div>
+    </div>`).join('')}`
+    :circleOn?`<div class="empty">Affinity takes two records on the same café. Keep a cup somewhere your people have been.</div>`
+    :`<div class="card">
+      <strong class="small">No one to read yet</strong>
+      <div class="muted small" style="margin-top:4px">Affinity takes two records. The register tells you what's here; your circle tells you what's good <em>for you</em>. One invitation is all it takes.</div>
+      ${readOnly()?'':`<button class="btn btn-quiet" style="margin-top:10px" onclick="openSyncSheet(false)">Join your circle</button>`}
+    </div>`}
+    <div class="section-head"><h2>${circleOn?'The stream':'The register'}</h2></div>
+    ${cups.length?cups.slice(0,20).map(feedRow).join('')
+    :circleOn?`<div class="empty">${cityLens?`No café cups in ${esc(cityLens)} yet.`:'No café cups on anyone\'s record yet. The stream begins with their next cup out.'}</div>`
+    :`<div class="empty">The register knows the places. The cups arrive with your people.</div>`}
+    ${beans.length?`<div class="section-head"><h2>Beans worth chasing</h2><span class="n-note num">${beans.length}</span></div>
     ${beans.slice(0,6).map(beanRow).join('')}`:''}
-    ${wants.length?`<div class="section-head"><h2>Want to go</h2><span class="n-note">n=${wants.length}</span></div>
-    ${wants.map(wantCard).join('')}`:`<div class="section-head"><h2>Want to go</h2></div>
-    <div class="empty">Saved places land here. Open a café worth the walk and keep it for later.</div>`}
-    <div class="qm-seal">Friends<span class="em">Read the record. Steal the order. Go.</span></div>`;
+    <div class="section-head"><h2>Want to go</h2></div>
+    ${wants.length?wants.map(wantCard).join(''):`<div class="empty">Save a place from anyone's find and it waits here.</div>`}
+    ${door}${findSeal}`;
 }
 
 /* ============ quick start ============ */
@@ -2735,15 +2880,13 @@ function openGuide(){
   <h2 style="margin-top:8px">The first five minutes</h2>
   <ol class="steps">
     <li>
-      <div class="t">Define a Setup — first</div>
-      <div class="b">The assembly, not the appliance: grinder <em>including burrs</em>, brewer, basket, papers, water. Name it so future-you knows which one it was — "Home espresso · 49mm", not "espresso".<br>
-      The app refuses to log a brew until one exists. That refusal is deliberate.</div>
-      <button class="go" onclick="closeSheet();go('setups');openSetupForm()">Define one now →</button>
+      <div class="t">Put a coffee on the shelf</div>
+      <div class="b">Photograph it, fill what the label tells you. Free text is fine everywhere — resolution comes later, never at 7am. Only one field does real work: <strong>roast date</strong> drives the rest window. The rest can wait or stay blank.</div>
+      <button class="go" onclick="closeSheet();openBagForm()">Put one on now →</button>
     </li>
     <li>
-      <div class="t">Capture a bag</div>
-      <div class="b">Photograph it, fill what the label tells you. Free text is fine everywhere — resolution comes later, never at 7am. Only one field does real work: <strong>roast date</strong> drives the rest window. The rest can wait or stay blank.</div>
-      <button class="go" onclick="closeSheet();go('bags');openBagForm()">Capture one now →</button>
+      <div class="t">Brew — and name your tools, once</div>
+      <div class="b">The first brew asks for your grinder and brewer in plain words; the Setup writes itself. The assembly matters because <em>grind is only comparable within one Setup</em> — change a burr, a basket, the water, and that's a new Setup, kept under More.</div>
     </li>
     <li>
       <div class="t">Make coffee. Log it after.</div>
@@ -2791,16 +2934,15 @@ function openGuide(){
     <div class="muted small">Name a shop and it enters the Register: one shared entry per café — name, city, pin, branding — read by every keeper on this device and on your sync server. Jane's Fighting Ships, for cafés. Anyone can amend an entry; a sighting fills blanks, never erases, and the entry remembers who entered it first. Cups stay yours — only the place is common knowledge.</div>
   </div>
 
-  <h2>The tabs</h2>
+  <h2>The rooms</h2>
+  <div class="muted small" style="margin:0 2px 8px">CARTA opens a room at a time — the ladder in <strong>More</strong> opens the rest whenever you ask. Nothing is ever taken away.</div>
   <div class="card">
-    ${TABS.map(t=>`<div class="gtab"><span class="ic">${t.ic}</span><span class="nm">${t.label}</span><span class="ds">${{
-      field:'What you use daily. Log a brew, café cup, open bags with rest state, recent cups.',
-      cafes:'Your café passport — every shop you log, with your average, usual order, visits, and spend. Below it, the Register: every café on anyone\'s record, one shared entry each.',
-      circle:'Other people\'s café cups — one stream, and the places worth the walk. Read only, always. You never have to log a thing to use it.',
-      bags:'Every bag, photo and rest chip. Tap one to see it, edit it, or brew it.',
-      setups:'Your assemblies. Change a burr, a basket, the water — that is a <em>new</em> Setup, not an edit.',
-      trace:'The dial-in, per bag. Solid line = grind. Hollow circles = hedonic.',
-      ledger:'Counts, users, sync, export, import, the day-60 gate, and the changelog.'}[t.id]}</span></div>`).join('')}
+    ${[['Find','Other people\'s cups — the stream, the places worth the walk, whose taste matches yours. Read only, always. You never have to log a thing to use it.'],
+       ['Café','The cup away. Remember a place with one tap; every café you keep builds a page of its own.'],
+       ['Home','The cup you make. Every brew opens where the last one left off — change one thing at a time.'],
+       ['Record','The through-line. Home and away side by side, the dial-in trace, every cup.'],
+       ['More','Your record and its counts, the ladder of rooms, your circle, sync, export, the changelog.']]
+      .map(([nm,ds])=>`<div class="gtab"><span class="nm">${nm}</span><span class="ds">${ds}</span></div>`).join('')}
   </div>
 
   <h2>The rest chip</h2>
@@ -2835,12 +2977,12 @@ function openGuide(){
 
   <h2>Users</h2>
   <div class="card">
-    <div class="small">Share the device, not the record. Add users in the <strong>Ledger</strong> tab — each keeps a fully separate ledger. Tap a user to <strong>view</strong> their record (every tab, read only, clearly banner-marked) or to <strong>make them active</strong>. And a friend's exported ledger can be imported as a new user, so you can browse their record beside yours.</div>
+    <div class="small">Share the device, not the record. Add keepers under <strong>More → Your circle</strong> — each keeps a fully separate record. Tap a keeper to <strong>read</strong> their record (every room, read only, clearly banner-marked) or to <strong>make them active</strong>. And a friend's exported record can be imported as a new keeper, so you can browse their record beside yours.</div>
   </div>
 
   <h2>Sync — the record, everywhere</h2>
   <div class="card">
-    <div class="small">Optional. Connect to a CARTA sync server from the <strong>Ledger</strong> tab (name + passcode; run your own server — one file, zero dependencies, see <code>server/README.md</code>). Your ledger then follows you across devices, and everyone on the server shows up under Users — tap to view their ledger, read only, live from the server. Their café cups also pool into the <strong>Friends</strong> tab — one stream, one list of places worth the walk.</div>
+    <div class="small">Optional. Connect to a CARTA sync server from <strong>More</strong> (name + passcode; run your own server — one file, zero dependencies, see <code>server/README.md</code>). Your record then follows you across devices, and everyone on the server shows up in your circle — tap to read their record, live from the server. Their café cups also pool into <strong>Find</strong> — one stream, one list of places worth the walk.</div>
     <div class="muted small" style="margin-top:6px">Offline-first, always: no server or no signal changes nothing. Edits queue and sync when the app comes back to the foreground. If two devices log at once, the record merges — both brews survive.</div>
   </div>
   <button class="btn btn-graphite" style="margin-top:10px" onclick="exportJSON()">Export ledger now</button>
@@ -2878,91 +3020,61 @@ function openWhatsNew(auto){
 }
 
 /* ============ welcome — the way in (first-run home flow) ============
- * Before it asks anything, it says what CARTA is (the why), then funnels by
- * intent (home / café / both) and drops the user on the one aligned action.
- * Gated on firstRun() so returning users never see it; replayable from Ledger.
- * intent is a pref, so it exports/syncs and picks the default screen thereafter. */
-let wcStep=0,wcIntent=null;
-const INTENT_TAB={home:'field',cafe:'cafes',both:'field'};
+ * Before it asks anything, it says what CARTA is (the why), then asks the one
+ * honest question — how do you take your coffee? — and opens the matching room.
+ * The answer sets depth: Reading, Remembering, or Making. Nothing is locked;
+ * the ladder in More opens the rest. Gated on firstRun() so returning users
+ * never see it; replayable from More (a replay never closes an open room). */
+let wcStep=0;
 function needsWelcome(){return !readOnly()&&!getPref('onboarded',false)&&firstRun()}
-function openWelcome(){wcStep=0;wcIntent=getPref('intent',null);renderWelcome();
+function openWelcome(){wcStep=0;renderWelcome();
   const w=document.getElementById('welcome');w.classList.add('open');w.scrollTop=0}
 function closeWelcome(){document.getElementById('welcome').classList.remove('open')}
 function wcGo(n){wcStep=n;renderWelcome();const w=document.getElementById('welcome');if(w){w.scrollTop=0;const el=w.querySelector('.wc');if(el)el.scrollTop=0}}
-function wcPick(intent){wcIntent=intent;wcGo(2)}
-const wcProg=i=>`<div class="wc-prog">${[0,1,2].map(k=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div>`;
+const wcProg=i=>`<div class="wc-prog">${[0,1].map(k=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div>`;
 function renderWelcome(){const w=document.getElementById('welcome');if(!w)return;
-  w.innerHTML=`<div class="wc">${[wcCover,wcFunnel,wcRamp][wcStep]()}</div>`}
+  w.innerHTML=`<div class="wc">${[wcCover,wcFunnel][wcStep]()}</div>`}
 
 function wcCover(){return `
   <div class="wc-top"><span class="wc-mark">CARTA</span>${wcProg(0)}</div>
   <div class="wc-body">
-    <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">A Quiet Matter record</div>
+    <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">A coffee memory</div>
     <h1 class="wc-head wc-rise" style="animation-delay:.12s">One cup.<br>Two contexts.</h1>
-    <p class="wc-lede wc-rise" style="animation-delay:.24s">A coffee memory that gives the cup you <em>make</em> and the cup you're <em>served</em> the same weight.</p>
-    <p class="wc-lede wc-rise" style="animation-delay:.32s">Offline, single file, yours — full export, open schema, no lock-in. The product is the record.</p>
+    <p class="wc-lede wc-rise" style="animation-delay:.24s">The cup you <em>make</em> and the cup you're <em>served</em> — one record of what you love in either.</p>
+    <p class="wc-lede wc-rise" style="animation-delay:.32s">Start as light as you like. CARTA opens up as you want more of it — and never asks for more than you do.</p>
   </div>
   <div class="wc-foot wc-rise" style="animation-delay:.44s">
     <button class="btn btn-primary" onclick="wcGo(1)">Begin</button>
-    <button class="wc-skip" onclick="finishWelcome(null,null)">Skip — I'll find my way</button>
+    <button class="wc-skip" onclick="finishWelcome(1,'circle','Welcome. Look around — reading is a whole way to use CARTA.')">Skip — just show me around</button>
   </div>`;}
 
 function wcFunnel(){
-  const c=(intent,tt,dd,d)=>`<button class="wc-item wc-rise" style="animation-delay:${d}s" onclick="wcPick('${intent}')">
+  const c=(call,tt,dd,d)=>`<button class="wc-item wc-rise" style="animation-delay:${d}s" onclick="${call}">
       <span class="tx"><span class="tt">${tt}</span><span class="dd">${dd}</span></span>
       <span class="go">&rarr;</span></button>`;
   return `
   <div class="wc-top"><span class="wc-mark">CARTA</span>${wcProg(1)}</div>
   <div class="wc-body">
     <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">Where you'll start</div>
-    <h1 class="wc-head sm wc-rise" style="animation-delay:.10s">What brings you in?</h1>
+    <h1 class="wc-head sm wc-rise" style="animation-delay:.10s">How do you take your coffee?</h1>
     <div class="wc-list">
-      ${c('home','The cup at home','Dial it in. Change one thing, log it, watch the line move.','.20')}
-      ${c('cafe','The cup away','Remember the café — and the order worth ordering again.','.27')}
-      ${c('both','Both','One taste, two rooms — the whole idea.','.34')}
+      ${c(`finishWelcome(1,'circle','Welcome. Read the record — that\\'s the whole ask.')`,'Someone else makes it','Point me to a good cup — my friends’ finds, the order worth stealing.','.20')}
+      ${c(`finishWelcome(2,'cafes','Welcome. A shop and one tap is a whole record.')`,'I want to remember mine','Keep the cafés, the orders and the cups worth going back to.','.27')}
+      ${c(`finishWelcome(3,'field','Welcome. Put a coffee on the shelf and brew.')`,'I make my own','Dial in the cup at home — one change at a time, remembered.','.34')}
     </div>
-    <div class="wc-note wc-rise" style="animation-delay:.42s">Nothing here is locked — this only picks your first screen. You can log either kind of cup any time.</div>
+    <div class="wc-note wc-rise" style="animation-delay:.42s">Nothing is locked. This only sets how much of CARTA you see first — the rest opens whenever you ask.</div>
   </div>
   <div class="wc-foot"><button class="wc-skip" onclick="wcGo(0)">&larr; Back</button></div>`;
 }
 
-function wcRamp(){
-  const conf={
-    home:{eb:'First, the tools',h:'Define a Setup.',
-      b:`The assembly, not the appliance — grinder and burrs, brewer, basket, water. CARTA won't log a brew without one. That refusal is the point: a grind number without a Setup is a <em>rumour</em>.`,
-      cta:'Define your Setup &rarr;',act:'setup',skip:'Skip &mdash; take me home',alt:null},
-    cafe:{eb:'First, a cup',h:'Remember a cup.',
-      b:`A shop and one tap on the 1&ndash;9 scale is a whole record. The order, the beans, a photo, an order-again verdict &mdash; all optional, all later.`,
-      cta:'Log a café cup &rarr;',act:'cafe',skip:'Skip &mdash; take me to Café',alt:null},
-    both:{eb:'Two ways in',h:'Start with the tools.',
-      b:`Home dials the cup in; Café remembers the one worth returning to &mdash; the same 1&ndash;9 language on both. Begin with a Setup; log a café cup any time from the Café tab.`,
-      cta:'Define your Setup &rarr;',act:'setup',skip:'Skip for now',alt:'Log a café cup instead'},
-  }[wcIntent||'both'];
-  return `
-  <div class="wc-top"><span class="wc-mark">CARTA</span>${wcProg(2)}</div>
-  <div class="wc-body">
-    <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">${conf.eb}</div>
-    <h1 class="wc-head sm wc-rise" style="animation-delay:.10s">${conf.h}</h1>
-    <p class="wc-lede wc-rise" style="animation-delay:.20s">${conf.b}</p>
-  </div>
-  <div class="wc-foot wc-rise" style="animation-delay:.30s">
-    <button class="btn btn-primary" onclick="finishWelcome('${wcIntent||'both'}','${conf.act}')">${conf.cta}</button>
-    ${conf.alt?`<button class="btn btn-quiet" onclick="finishWelcome('${wcIntent||'both'}','cafe')">${conf.alt}</button>`:''}
-    <button class="wc-skip" onclick="finishWelcome('${wcIntent||'both'}',null)">${conf.skip}</button>
-    <div class="wc-seal">We do not sell coffee. We keep the record.</div>
-  </div>`;
-}
-
-// Commit the funnel choice and drop onto the one aligned action.
-function finishWelcome(intent,action){
-  if(intent)setPref('intent',intent);
+// Commit the answer: open the room, never close one already open.
+function finishWelcome(d,t,msg){
+  setPref('depth',Math.max(depth(),d));
   setPref('onboarded',true);
   markVersionSeen();                       // welcomed users skip the "what's new" bump too
   closeWelcome();
-  // Land on the screen that owns the action; otherwise the chosen intent's screen.
-  go(action==='cafe'?'cafes':action==='setup'?'field':(intent&&INTENT_TAB[intent])||'field');
-  if(action==='setup')openSetupForm();
-  else if(action==='cafe')openCafe();
+  go(t);
+  if(msg)toast(msg);
 }
 
 /* ============ boot ============ */
@@ -2970,8 +3082,8 @@ applyTheme();
 regSeed(); // the Register meets every ledger already on this device
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
-// A café-first user is served the Café screen on arrival; home/both land on Home.
-if(getPref('intent',null)==='cafe')tab='cafes';
+// The deepest open room is where the day starts — Home, else Café, else Find.
+tab=defaultTab(depth());
 render();
 // First run: the welcome flow (the why → the funnel → the one action). Returning
 // users skip it and get the changelog on a version bump instead.
