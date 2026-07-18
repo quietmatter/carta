@@ -101,11 +101,14 @@ server/
 - **café** — logging café cups (`openCafe`/`saveCafeCup`, with optional
   structured traceability), the café passport (`shopAgg`, `vCafes`, favorites),
   and per-café profiles (`openCafeProfile`: a signature colour — pulled from the
-  café's website via `siteLookup` (`paletteFromColors`) or read from a branding
-  photo via `derivePalette` — from which `cafeColors`/`cafeVars` build a whole
-  themed surface — the café's detail page and every cup in it wear that palette;
-  plus an online address lookup `geoLookup` via OpenStreetMap Nominatim). The
-  home-vs-café comparison is `crossContext`.
+  café's website via `siteLookup` (`paletteFromColors`) — from which
+  `cafeColors`/`cafeVars` build a whole themed surface — the café's detail page
+  and every cup in it wear that palette. The same `siteLookup` read also fills
+  the rest of the entry from the site: its description (`siteLine`) becomes the
+  café's note, the name it states (`siteName`) is surfaced, and it chains
+  `geoLookup` (OpenStreetMap Nominatim) so the address surfaces too — filling
+  blanks only, never overwriting typed values). The home-vs-café comparison is
+  `crossContext`.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
 - **export / import** — JSON export (stamped with the user's name); import as a
@@ -136,14 +139,16 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 - **cafes** — per-café profiles keyed by shop name (`saveCafeProfile` writes
   them; reads via `cafeProfile` resolve **Register-first**, falling back to
   this per-user copy, which remains for export/sync back-compat and to seed
-  Registers elsewhere): branding `photo`; the café's `site` (its website); a
-  `palette` **derived from the site's declared colours** (`paletteFromColors`) **or
-  from that photo** (`derivePalette`) → `{h,s,l,brand,dark}`, theming the whole café
+  Registers elsewhere): the café's `site` (its website); a
+  `palette` **derived from the site's declared colours** (`paletteFromColors`)
+  → `{h,s,l,brand,dark}`, theming the whole café
   surface via `cafeColors`/`cafeVars` — only the palette is kept, never a hotlinked
   logo, so the record stays self-contained and offline; a legacy `accent` string
   kept for back-compat (old records with only `accent` are re-themed through
-  `palOf`); and location (`address`, `lat`, `lon`, from the optional online
-  lookup). Merged in sync like
+  `palOf`); `notes` (the café's line, often filled from the site's description);
+  and location (`address`, `lat`, `lon`, from the optional online
+  lookup). A legacy `photo` may linger on older records (branding photos are no
+  longer captured or rendered) but is otherwise inert. Merged in sync like
   any other collection.
 - **cafeFavs** — favorited café shop names.
 - **deleted** — tombstones so removed records stay removed across a sync merge.
@@ -152,7 +157,7 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 
 Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
 `{version, rev, dirty, entries, deleted}` where each entry is a canonical café
-— `id`, `name`, `city`, `address`, `lat`/`lon`, `photo`, `palette`/`accent`,
+— `id`, `name`, `city`, `address`, `lat`/`lon`, `palette`/`accent`,
 `notes`, and provenance (`firstBy`/`firstAt`, `by`/`updatedAt`). It is shared
 by all users on the device and synced as one group-writable document.
 
@@ -245,9 +250,10 @@ is the one exception browsers allow, so local dev needs no TLS.
   (zero deps). This is a core design property, not an accident. The app makes only
   two network calls, both *optional* progressive enhancements that degrade offline:
   the café address lookup (OpenStreetMap Nominatim → manual text) and the café
-  brand read (Microlink → the branding photo). Each is keyless and bundles nothing,
-  and must stay that way (no map tiles, no embedded library, no design-system SDK);
-  the brand read keeps only the derived palette, never a hotlinked image.
+  brand read (Microlink → the site's palette, name and description). Each is
+  keyless and bundles nothing, and must stay that way (no map tiles, no embedded
+  library, no design-system SDK); the brand read keeps only the derived palette
+  and the words, never a hotlinked image.
 - **Match the brand voice.** `VOICE.md` is the standard for every user-facing
   string — sentence case, terse, honest, no emoji, the record-keeper persona.
   Screen new copy against its gate before shipping.

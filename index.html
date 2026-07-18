@@ -451,18 +451,9 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 .shopcard .big{font-family:var(--sans);font-size:22px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
 .cupthumb{width:100%;max-height:220px;object-fit:cover;border-radius:var(--radius);margin:2px 0 12px;display:block}
 .rowthumb{width:44px;height:44px;object-fit:cover;border-radius:var(--radius);flex:none}
-.brandhead{width:100%;height:84px;object-fit:cover;border-radius:var(--radius);margin-bottom:10px;display:block}
-.brandhead.lg{height:150px;margin-bottom:12px}
 .swatch{width:11px;height:11px;border-radius:var(--chipr);vertical-align:-1px;margin-left:6px;display:none;border:1px solid var(--line)}
-/* café theme — a whole surface derived from one branding photo. The vars are set inline. */
+/* café theme — a whole surface derived from the café's website colours. The vars are set inline. */
 .cafe-theme{background:var(--paper);color:var(--ink);margin:0 -18px;padding:6px 18px 8px}
-.masthead{position:relative;border-radius:var(--radius);overflow:hidden;margin:2px 0 4px;border:1px solid var(--line)}
-.masthead>img{width:100%;height:172px;object-fit:cover;display:block}
-.masthead .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,14,10,0) 32%,rgba(18,14,10,.74) 100%)}
-.masthead .bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--accent)}
-.masthead .id{position:absolute;left:16px;right:16px;bottom:15px;color:#fff}
-.masthead .id .nm{font-family:var(--serif);font-size:25px;font-weight:600;line-height:1.02;letter-spacing:-.02em;text-shadow:0 1px 14px rgba(0,0,0,.55)}
-.masthead .id .ct{font-family:var(--sans);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-top:6px;opacity:.92;text-shadow:0 1px 10px rgba(0,0,0,.6)}
 /* the derived palette, shown while setting a café's branding */
 .palette{display:flex;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);margin:2px 0 0}
 .palette span{flex:1;height:36px}
@@ -670,8 +661,8 @@ function saveCafeProfile(name,rec){
   const c={id:uid(),createdAt:new Date().toISOString(),name:String(name).trim(),...rec};
   D.cafes.push(c);return c;
 }
-// A café's branding — its website's declared colours (paletteFromColors) or a photo (derivePalette) —
-// yields one signature colour. From it we build a whole legible surface — paper, ink, lines, accent —
+// A café's branding — the colours its website declares (paletteFromColors) — yields one signature
+// colour. From it we build a whole legible surface — paper, ink, lines, accent —
 // tinted toward that hue: a mini design system, one per café. cafeColors respects the app's light/dusk
 // mode so a café keeps its hue in either light.
 const parseHSL=str=>{const m=/hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/.exec(str||'');return m?[+m[1],+m[2],+m[3]]:null};
@@ -714,10 +705,15 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.1.0';
+const APP_VERSION='4.2.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.2.0',date:'Jul 18, 2026',title:'The café, read from its website',items:[
+    'A café’s brand now comes from its website alone — give it the site and CARTA reads the colours straight from the source. The branding photograph is retired; the website read was always the stronger hand.',
+    'One read fills more than colour. The site’s own description becomes the café’s line, the name it states is surfaced, and the map opens on its address — so you retype nothing the site already knows. It fills only what’s still blank.',
+    'What CARTA keeps is the palette and the words, never the page — held on the device, the record yours and offline.',
+  ]},
   {v:'4.1.0',date:'Jul 18, 2026',title:'A café’s colours, from its website',items:[
     'Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — then dresses the café’s page and every cup you log in it. The same surface as before, sourced from the site instead of a photograph.',
     'The photo still works, and still overrides. Offline, or a site that won’t answer, falls back to it without a fuss.',
@@ -1285,37 +1281,12 @@ document.getElementById('photoInput').addEventListener('change',e=>{
     const c=document.createElement('canvas');c.width=img.width*r;c.height=img.height*r;
     c.getContext('2d').drawImage(img,0,0,c.width,c.height);
     photoData=c.toDataURL('image/jpeg',0.65);
-    photoPalette=derivePalette(c); photoAccent=photoPalette&&photoPalette.brand; paintBrandPreview();
     const z=document.getElementById('photozone');
     if(z)z.innerHTML=`<img class="bagphoto" src="${photoData}" style="margin:0">`;
     URL.revokeObjectURL(img.src);
   };
   img.src=URL.createObjectURL(f); e.target.value='';
 });
-// Read a café's identity from a branding photo: its signature colour, and whether the material
-// reads dark. Colourful pixels are binned and weighted by chroma², so the sign's ink outvotes the
-// paper-white and grey most storefront shots carry. That one colour seeds the whole café surface
-// (see cafeColors) — a mini design system from a photograph.
-function derivePalette(srcCanvas){
-  try{
-    const N=24,s=document.createElement('canvas');s.width=s.height=N;
-    const cx=s.getContext('2d');cx.drawImage(srcCanvas,0,0,N,N);
-    const px=cx.getImageData(0,0,N,N).data;
-    const bins={};let lum=0,n=0;
-    for(let i=0;i<px.length;i+=4){
-      const r=px[i],g=px[i+1],b=px[i+2];
-      lum+=.299*r+.587*g+.114*b; n++;
-      const w=Math.pow(Math.max(r,g,b)-Math.min(r,g,b),2); if(w<300)continue; // skip near-greys
-      const k=(r>>5)+','+(g>>5)+','+(b>>5),bin=bins[k]||(bins[k]={r:0,g:0,b:0,w:0});
-      bin.r+=r*w;bin.g+=g*w;bin.b+=b*w;bin.w+=w;
-    }
-    const dark=lum/n<118,top=Object.values(bins).sort((a,b)=>b.w-a.w)[0];
-    if(!top){const l=dark?60:38;return{h:28,s:8,l,brand:`hsl(28,8%,${l}%)`,dark,mono:true}} // no colour to read — an honest neutral
-    const[h,sa,l]=rgb2hsl(top.r/top.w,top.g/top.w,top.b/top.w),H=Math.round(h);
-    const S=Math.round(Math.min(80,Math.max(42,sa))),L=Math.round(Math.min(58,Math.max(38,l)));
-    return {h:H,s:S,l:L,brand:`hsl(${H},${S}%,${L}%)`,dark};
-  }catch(e){return null}
-}
 function rgb2hsl(r,g,b){
   r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
   let h=0;if(d){if(mx===r)h=((g-b)/d)%6;else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360}
@@ -1325,9 +1296,10 @@ function rgb2hsl(r,g,b){
 // A hex string ('#rgb' or '#rrggbb') to [r,g,b], or null. The website read speaks in hex.
 const hex2rgb=h=>{h=String(h||'').trim().replace(/^#/,'');if(h.length===3)h=h.replace(/(.)/g,'$1$1');
   return /^[0-9a-fA-F]{6}$/.test(h)?[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]:null};
-// The website counterpart to derivePalette. A brand's site declares its colours (logo ink, background,
-// the palette around them); we pick the signature the same way the photo read does — most chromatic
-// wins, a colour outvoting the greys — held inside the same legible band so the surface always reads.
+// Read a café's signature colour from the colours its website declares (logo ink, background, the
+// palette around them): most chromatic wins, a colour outvoting the greys, held inside a legible band
+// so the surface always reads. That one colour seeds the whole café surface (see cafeColors) — a mini
+// design system from a website.
 function paletteFromColors(list){
   let best=null,bw=-1;
   (list||[]).forEach(c=>{const p=hex2rgb(c);if(!p)return;const w=Math.pow(Math.max(...p)-Math.min(...p),2);if(w>bw){bw=w;best=p}});
@@ -1745,7 +1717,6 @@ function shopAgg(){
 function shopCard(s){
   const p=s.profile,pal=palOf(p),vars=pal?cafeVars(pal):''; // each card previews its café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(s.shop)})">
-    ${p&&p.photo?`<img class="brandhead" src="${p.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}</span>`:''}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${s.avg??'—'}</span>
@@ -1776,11 +1747,7 @@ function vPlace(){
   const x=roaster||origin?crossContext({roaster,origin}):null;
   const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
   const subline=city?`${esc(city)}${p&&p.lat!=null?' · pinned':''}`:(mine.length||others.length?'city unwritten':'yours alone — no one else has kept it yet');
-  const head=p&&p.photo
-    ?`<div class="masthead"><img src="${p.photo}"><div class="scrim"></div><div class="bar"></div>
-      <div class="id"><div class="nm">${esc(shop)}</div>${city?`<div class="ct">${esc(city)}</div>`:''}</div></div>
-      <div class="sub" style="margin:10px 2px 14px">${eyebrow.toLowerCase()} · ${subline}</div>`
-    :`<div class="hero" style="padding-top:6px">
+  const head=`<div class="hero" style="padding-top:6px">
       <div class="eyebrow">${eyebrow}</div>
       <h2 style="font-size:32px;max-width:13ch">${esc(shop)}</h2>
       <div class="origin">${subline}</div>
@@ -1806,7 +1773,7 @@ function vPlace(){
   ${readOnly()?'':`
   ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}
   ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
-  <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.photo||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
+  <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.site||p.palette||p.accent||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
   ${mine.length?`<button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`:''}`}
   ${mine.length?`<div class="section-head"><h2>Your cups here</h2></div>
   ${mine.map(c=>cupRow(c)).join('')}`:''}
@@ -1816,26 +1783,24 @@ function vPlace(){
   ${seal(shop,'A page that writes itself, cup by cup.')}
   </div>`;
 }
-// The café's own screen: branding read from its website (or a photo) into a whole palette, address
-// lookup, a note.
+// The café's own screen: its identity, read from its website — a whole palette, a line, an address —
+// with as little retyping as the site will allow. City, address and note stay editable by hand.
 function openCafeProfile(shop){
   if(guard())return;
   const p=cafeProfile(shop)||{};
   const city=p.city||modeOf(cafeCups().filter(c=>(c.shop||'').trim()===shop.trim()).map(c=>c.city).filter(Boolean))||'';
-  photoData=p.photo||null; photoPalette=palOf(p); photoAccent=(photoPalette&&photoPalette.brand)||p.accent||null;
+  photoPalette=palOf(p); photoAccent=(photoPalette&&photoPalette.brand)||p.accent||null;
   geoPick={address:p.address||'',lat:p.lat!=null?p.lat:null,lon:p.lon!=null?p.lon:null};
   openSheet(`
   <h3>${esc(shop)}</h3>
-  <div class="sub">Dress this café in its own colours — pulled from its website, or read from a photo. They theme its page and every cup you log here.</div>
+  <div class="sub">Give this café its website and CARTA reads it — the colours, a line, the address — then dresses its page, and every cup you log here, in its own brand. You retype nothing the site already knows.</div>
   <label class="f"><span class="l">Website <span class="opt">optional</span></span>
     <input type="text" id="p_site" value="${esc(p.site||'')}" placeholder="bluebottlecoffee.com" inputmode="url" autocapitalize="off" autocorrect="off"></label>
-  <button class="btn btn-quiet" type="button" onclick="siteLookup(${jsq(shop)})">Read the brand from its website</button>
-  <div class="muted small" style="margin:6px 2px 0">Reads the site’s own colours — its logo, and the palette around it. Offline or unreadable, photograph the branding instead.</div>
+  <button class="btn btn-quiet" type="button" onclick="siteLookup(${jsq(shop)})">Read the café from its website</button>
+  <div class="muted small" style="margin:6px 2px 0">Reads the site’s colours, the line it states, and looks it up on the map — filling only what’s still blank. Offline, fill it in by hand; it all still saves.</div>
   <div id="siteresults"></div>
-  <div class="photozone" id="photozone" onclick="document.getElementById('photoInput').click()" style="margin-top:14px">
-    ${photoData?`<img class="bagphoto" src="${photoData}" style="margin:0">`:'Or photograph the branding — a sign, a cup, a menu'}</div>
-  <div id="brandpreview">${photoPalette?brandPreviewHTML(photoPalette):''}</div>
-  <div class="muted small" style="margin:8px 2px 16px">One signature colour — from the website or the photo — builds the whole surface. What CARTA keeps is the palette, not the page.</div>
+  <div id="brandpreview" style="margin-top:14px">${photoPalette?brandPreviewHTML(photoPalette):''}</div>
+  <div class="muted small" style="margin:8px 2px 16px">One signature colour — read from the site — builds the whole surface. What CARTA keeps is the palette, not the page.</div>
   <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="p_city" value="${esc(city)}" placeholder="Los Angeles"></label>
   <label class="f"><span class="l">Address <span class="opt">optional</span></span>
     <input type="text" id="p_address" value="${esc(p.address||'')}" placeholder="street address — or just use the button"></label>
@@ -1850,7 +1815,7 @@ function openCafeProfile(shop){
 function saveCafeProfileForm(shop){
   if(guard())return;
   const addr=val('p_address'),pinned=addr&&geoPick.address===addr; // coords only survive if they still match the typed address
-  const rec={name:shop.trim(),city:val('p_city'),notes:val('p_notes'),photo:photoData,accent:photoAccent,palette:photoPalette,
+  const rec={name:shop.trim(),city:val('p_city'),notes:val('p_notes'),accent:photoAccent,palette:photoPalette,
     site:(val('p_site')||'').trim(),address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null};
   saveCafeProfile(shop,rec);                              // the per-user copy — exports and ledger sync carry it
   regUpsert(shop,rec,activeName(),{full:true});           // the Register — the shared, canonical entry
@@ -1879,28 +1844,47 @@ function geoChoose(address,lat,lon){
   const box=document.getElementById('georesults');if(box)box.innerHTML=`<div class="pinned">Pinned · ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)} <a class="link" onclick="geoUnpin()">remove</a></div>`;
 }
 function geoUnpin(){geoPick={address:val('p_address'),lat:null,lon:null};const box=document.getElementById('georesults');if(box)box.innerHTML='';}
-// Online brand read: pull a café's design system straight from its own website. Microlink (no key,
-// CORS-open) reads the page and hands back its logo and the colours around it; paletteFromColors takes
-// the signature the same chroma-wins way the photo read does, and the whole café surface builds from
-// it. Twin to geoLookup, and progressive: offline, or a site that won't answer, and the photo still
-// wins. We keep the palette — small, offline, portable — never the hotlinked image; the record stays
-// self-contained. The logo shown here is a live confirmation, not something saved.
+// The name a site states for itself, cleaned of the boilerplate page titles carry ('Home', a tagline,
+// the domain). What survives the split is usually the café's own name — surfaced so you can see the
+// site agrees with the shop you named.
+function siteName(title){
+  const parts=String(title||'').split(/\s+[|·—–]\s+|\s+-\s+/).map(s=>s.trim()).filter(Boolean);
+  return parts.filter(s=>!/^(home|welcome|official(\s+site)?|coffee|caf[eé]|menu|about)$/i.test(s))[0]||parts[0]||'';
+}
+// One line to the ledger: a meta description, collapsed and clipped to a single legible line at a word
+// boundary — never a fabricated sentence, only what the site already wrote about itself.
+function siteLine(desc){
+  const t=String(desc||'').replace(/\s+/g,' ').trim();
+  return t.length>150?t.slice(0,147).replace(/[\s.,;:–—-]+\S*$/,'')+'…':t;
+}
+// Online café read: pull as much of a café as its own website will give, in one tap — its colours
+// (paletteFromColors, the same chroma-wins signature), the name it states, the line it writes about
+// itself — then chain the map so the address surfaces too. Microlink (no key, CORS-open) reads the
+// page. Fills blanks only, never overwriting what you typed. We keep the palette and the words — small,
+// offline, portable — never the hotlinked image; the record stays self-contained. The logo shown here
+// is a live confirmation, not something saved. Progressive: offline or a silent site, and you fill it
+// in by hand.
 async function siteLookup(shop){
   let u=(val('p_site')||'').trim();const box=document.getElementById('siteresults');
-  if(!u){if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Type the café’s website first — then read its colours.</div>';return}
+  if(!u){if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Type the café’s website first — then read it.</div>';return}
   if(!/^https?:\/\//i.test(u))u='https://'+u;
   let host=u;try{host=new URL(u).hostname.replace(/^www\./,'')}catch(e){}
-  if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Reading the brand…</div>';
+  if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Reading the café…</div>';
   try{
     const r=await fetch('https://api.microlink.io/?palette&url='+encodeURIComponent(u));
     const j=await r.json();if(!box)return;
     const d=(j&&j.data)||{},lg=d.logo||{},im=d.image||{};
     const cols=[lg.color,lg.background,...(lg.palette||[]),im.color,im.background,...(im.palette||[])].filter(Boolean);
     const pal=paletteFromColors(cols);
-    if(!pal){box.innerHTML='<div class="muted small" style="padding:6px 2px">Couldn’t read a colour from that site. Photograph the branding instead — it still works.</div>';return}
-    photoPalette=pal;photoAccent=pal.brand;paintBrandPreview();
-    box.innerHTML=`${lg.url?`<img src="${esc(lg.url)}" alt="" style="height:30px;width:auto;max-width:120px;border-radius:6px;vertical-align:middle;margin-right:8px">`:''}<span class="muted small">Read from ${esc(host)} — the palette below. Save to keep it; a photo overrides.</span>`;
-  }catch(e){if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Offline, or the site wouldn’t answer. Photograph the branding — it still works.</div>'}
+    if(pal){photoPalette=pal;photoAccent=pal.brand;paintBrandPreview()}
+    const nm=siteName(d.title),line=siteLine(d.description);
+    const noteEl=document.getElementById('p_notes'); // the description fills the line, if you left it blank
+    if(line&&noteEl&&!noteEl.value.trim())noteEl.value=line;
+    const ranGeo=!val('p_address'); if(ranGeo)geoLookup(shop); // the address, from the name, without a second tap
+    if(!pal&&!nm&&!line){box.innerHTML='<div class="muted small" style="padding:6px 2px">Couldn’t read that site. Fill it in by hand — it still saves.</div>';return}
+    const got=[pal?'its colours':null,line?'a line':null,ranGeo?'the map below':null].filter(Boolean).join(', ');
+    box.innerHTML=`${lg.url?`<img src="${esc(lg.url)}" alt="" style="height:30px;width:auto;max-width:120px;border-radius:6px;vertical-align:middle;margin-right:8px">`:''}<span class="muted small">Read ${esc(host)}${nm?` — ${esc(nm)}`:''}${got?` — ${got}`:''}. Save to keep it.</span>`;
+  }catch(e){if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Offline, or the site wouldn’t answer. Fill it in by hand — it still saves.</div>'}
 }
 
 /* --- the Register, on screen: a card for an entry, and its read-only sheet.
@@ -1908,7 +1892,6 @@ async function siteLookup(shop){
 function regCard(e){
   const pal=palOf(e),vars=pal?cafeVars(pal):''; // a Register entry carries the café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(e.name)})">
-    ${e.photo?`<img class="brandhead" src="${e.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}</span>`:''}</span>
       ${e.lat!=null?'<span class="badge ghost">pinned</span>':''}
@@ -2564,10 +2547,10 @@ function circleCups(){
 // a café's page data may live on anyone's ledger — the Register first (the
 // canonical entry), then the first per-user profile that carries substance
 function circleProfile(shop){
-  const own=cafeProfile(shop); if(own&&(own.address||own.photo))return own;
+  const own=cafeProfile(shop); if(own&&(own.address||own.palette||own.accent||own.site||own.notes))return own;
   for(const s of circleSources()){const d=circleLedger(s);if(!d)continue;
     const p=(d.cafes||[]).find(c=>normName(c.name)===normName(shop));
-    if(p&&(p.address||p.photo))return p;}
+    if(p&&(p.address||p.palette||p.accent||p.site||p.notes))return p;}
   return own;
 }
 function circlePlaces(cups){
@@ -2720,7 +2703,6 @@ function recCard(r){
   const dist=r.dist!=null?` <span class="badge ghost">${fmtDist(r.dist)}</span>`:'';
   const want=readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="event.stopPropagation();toggleWant(${jsq(r.shop)});render()">${isWant(r.shop)?'Saved — it waits under Want to go':'Save for later'}</button>`;
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(r.shop)})">
-    ${r.profile&&r.profile.photo?`<img class="brandhead" src="${r.profile.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}</span>`:''}${dist}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${r.avg??(r.reg?'·':'—')}</span>
@@ -2734,7 +2716,6 @@ function wantCard(name){
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   const city=pr&&pr.city?pr.city:'';
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(name)})">
-    ${pr&&pr.photo?`<img class="brandhead" src="${pr.photo}">`:''}
     <div class="row"><span class="small"><strong>${esc(name)}</strong>${city?`<span class="muted"> · ${esc(city)}</span>`:''}${dist}</span>
       ${pr&&pr.address?'<span class="badge ghost">pinned</span>':''}</div>
     ${pr&&pr.address?`<div class="muted small">${esc(pr.address)}</div>`:''}
@@ -2819,7 +2800,6 @@ function placeCard(p){
   const pr=p.profile,pal=palOf(pr),vars=pal?cafeVars(pal):''; // the café's own palette, same as the passport
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(p.shop)})">
-    ${pr&&pr.photo?`<img class="brandhead" src="${pr.photo}">`:''}
     <div class="row">
       <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}</span>`:''}${dist}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${p.avg??'—'}</span>
