@@ -313,6 +313,22 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .eyebrow{font-family:var(--sans);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:650;margin-bottom:8px}
 .hero h2{font-family:var(--serif);font-size:36px;line-height:1.02;letter-spacing:-.035em;text-transform:none;color:var(--ink);font-weight:600;margin:0;max-width:11ch}
 .hero .origin{font-family:var(--serif);font-style:italic;color:var(--ink-3);font-size:15px;margin-top:8px}
+/* the café's own page — a gradient drawn from its derived hue (or a neutral roast
+   tone, unread), never the app's ember: that signal stays reserved for the score. */
+.cafe-banner{position:relative;overflow:hidden;border:1px solid var(--line);margin:2px 0 4px}
+.cafe-banner .grad{width:100%;height:172px}
+.cafe-banner .fade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,14,10,0) 32%,rgba(18,14,10,.74) 100%)}
+.cafe-banner .bar{position:absolute;left:0;right:0;bottom:0;height:4px}
+.cafe-banner .txt{position:absolute;left:16px;right:16px;bottom:15px;color:#fff}
+.cafe-banner .txt h2{font-family:var(--serif);font-size:25px;font-weight:600;line-height:1.02;letter-spacing:-.02em;margin:0;color:#fff;text-transform:none;text-shadow:0 1px 14px rgba(0,0,0,.55)}
+.cafe-banner .txt .city{font-family:var(--sans);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-top:6px;opacity:.92;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+/* the map — a decorative, non-geographic plot: real lat/lon scaled to fit the box,
+   never tiles or streets. A filled dot is a place you keep, a dashed one is not. */
+.cafe-map{position:relative;height:110px;background:var(--paper-2);border:1px solid var(--line);margin-bottom:8px}
+.cafe-map .pin{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--ink);cursor:pointer;transform:translate(-50%,-50%)}
+.cafe-map .pin.unread{width:7px;height:7px;border:1px dashed var(--ink-3);background:none}
+.cafe-map .pin .lbl{position:absolute;left:100%;top:50%;transform:translate(6px,-50%);font-family:var(--sans);font-size:11px;color:var(--ink);font-weight:500;white-space:nowrap}
+.cafe-map .pin.unread .lbl{color:var(--ink-3);font-weight:400}
 .continuation{border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:15px 0;margin:2px 0 16px}
 .continuation .score{font-family:var(--sans);font-size:46px;line-height:.9;color:var(--accent);font-weight:550;letter-spacing:-.05em}
 .continuation .score small{font-size:12px;letter-spacing:.04em;color:var(--ink-3);font-weight:400}
@@ -948,6 +964,38 @@ function cafeColors(pal){
 }
 function cafeVars(pal){const c=cafeColors(pal);return c?`--paper:${c.paper};--paper-card:${c.card};--paper-2:${c.paper2};--paper-3:${c.paper3};--ink:${c.ink};--ink-2:${c.ink2};--ink-3:${c.ink3};--ink-d:${c.inkd};--line:${c.line};--line-2:${c.line2};--line-strong:${c.lineStrong};--accent:${c.accent};--accent-ink:${c.accentInk}`:'';}
 function paletteSwatches(pal){const c=cafeColors(pal);return c?[c.paper,c.card,c.accent,c.ink].map(col=>`<span style="background:${col}"></span>`).join(''):'';}
+// The banner on a café's own page — its hue, drawn bold. Falls back to a neutral
+// roast gradient when no site has been read yet. Never the app's ember: that
+// signal stays reserved for the current action and the cup's score.
+function cafeBannerGrad(pal){
+  if(!pal||pal.h==null)return{grad:'linear-gradient(135deg,#3a2a20 0%,#6b4a34 55%,#a2643f 100%)',bar:'#a2643f'};
+  const h=pal.h,s=Math.max(Math.min(pal.s,70),34);
+  return{grad:`linear-gradient(135deg,hsl(${h},${s}%,16%) 0%,hsl(${h},${s}%,34%) 55%,hsl(${h},${s}%,50%) 100%)`,bar:pal.brand||`hsl(${h},${s}%,50%)`};
+}
+// The map — a decorative plot, never a tile. Real lat/lon, scaled to fill the box
+// (equirectangular; fine at the scale of one city). A single point centers with
+// nothing to scale against, so it holds the middle alone.
+function mapProject(points){
+  const pts=points.filter(p=>p.lat!=null&&p.lon!=null);
+  if(!pts.length)return[];
+  const lats=pts.map(p=>p.lat),lons=pts.map(p=>p.lon);
+  const latSpan=Math.max(Math.max(...lats)-Math.min(...lats),.001);
+  const lonSpan=Math.max(Math.max(...lons)-Math.min(...lons),.001);
+  const cos=Math.cos((lats.reduce((a,b)=>a+b,0)/lats.length)*Math.PI/180)||1;
+  const span=Math.max(latSpan,lonSpan*cos);
+  const midLat=(Math.max(...lats)+Math.min(...lats))/2,midLon=(Math.max(...lons)+Math.min(...lons))/2;
+  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  // x holds to the left two-thirds — every label reads to the right of its pin,
+  // so it needs room there rather than a true center. Not a projection to scale by.
+  return pts.map(p=>({...p,
+    x:clamp(38+((p.lon-midLon)*cos/span)*58,8,68),
+    y:clamp(50-((p.lat-midLat)/span)*70,14,86)}));
+}
+function mapHTML(points){
+  const pts=mapProject(points);
+  if(!pts.length)return'';
+  return `<div class="cafe-map">${pts.map(p=>`<div class="pin${p.read?'':' unread'}" style="left:${p.x}%;top:${p.y}%" onclick="openPlace(${jsq(p.name)})"><span class="lbl">${esc(p.name)}</span></div>`).join('')}</div>`;
+}
 // home vs café: same coffee (roaster / origin), two contexts. An honest little comparison, not a claim.
 function crossContext(key){
   const k={roaster:normName(key.roaster),origin:normName(key.origin||key.originCountry),variety:normName(key.variety)};
@@ -959,10 +1007,14 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.5.0';
+const APP_VERSION='4.6.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.6.0',date:'Jul 18, 2026',title:'A banner, and the map',items:[
+    'A café\'s own page now opens on a banner drawn from its own colours — the signature hue read from its website, or a neutral roast tone while that\'s still unread. The name rides on it; nothing else about the record changed.',
+    'Find\'s search grew a map — real pins, scaled to fit, never a tile or a street. A filled dot is a place you keep; a dashed one is still waiting for a first cup. Tap either to open the page.',
+  ]},
   {v:'4.5.0',date:'Jul 18, 2026',title:'Neighborhood and tags',items:[
     'A café can now name a neighborhood, not just a city. Looking it up on the map fills it in automatically when it knows one — blanks only, typed always wins — and it rides next to the city everywhere a café is shown.',
     'Tag a place your own way — patio, quiet, laptop-friendly, whatever you\'d tell a friend. Tags live on the café\'s page and join the pooled search in Find, so a tag turns up every place you\'ve marked with it.',
@@ -2075,11 +2127,14 @@ function vPlace(){
   const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
   const place=[city,nbhood].filter(Boolean).join(' · ');
   const subline=place?`${esc(place)}${p&&p.lat!=null?' · pinned':''}`:(mine.length||others.length?'city unwritten':'yours alone — no one else has kept it yet');
-  const head=`<div class="hero" style="padding-top:6px">
-      <div class="eyebrow">${eyebrow}</div>
-      <h2 style="font-size:32px;max-width:13ch">${esc(shop)}</h2>
-      <div class="origin">${subline}</div>
-    </div>`;
+  const banner=cafeBannerGrad(pal);
+  const head=`<div class="cafe-banner">
+      <div class="grad" style="background:${banner.grad}"></div>
+      <div class="fade"></div>
+      <div class="bar" style="background:${banner.bar}"></div>
+      <div class="txt"><h2>${esc(shop)}</h2>${place?`<div class="city">${esc(place)}</div>`:''}</div>
+    </div>
+    <div class="muted small serif" style="font-style:italic;margin:10px 2px 14px">${esc(eyebrow.charAt(0).toLowerCase()+eyebrow.slice(1))} · ${subline}</div>`;
   const kvs=[];
   if(mine.length){
     if(avg)kvs.push(['Your average',`${avg} / 9`]);
@@ -3067,13 +3122,26 @@ function circleSearchInput(){
   circleQuery=inp.value;
   const box=document.getElementById('circleResults');if(box)box.innerHTML=circleResultsHTML(circleQuery);
 }
+// The map for a set of search results — real pins, scaled to fit; filled for a
+// place you keep, dashed for one you don't. Names only; the row carries the rest.
+function searchMapPoints(places,regHits){
+  const mineSet=new Set(cafeCups().map(c=>normName(c.shop)));
+  const pts=[];
+  places.forEach(p=>{const pr=p.profile;if(pr&&pr.lat!=null)pts.push({name:p.shop,lat:pr.lat,lon:pr.lon,read:mineSet.has(normName(p.shop))})});
+  regHits.forEach(e=>{if(e.lat!=null)pts.push({name:e.name,lat:e.lat,lon:e.lon,read:mineSet.has(normName(e.name))})});
+  return pts;
+}
 function circleResultsHTML(q){
   const r=circleSearch(q);if(!r)return'';
   const{places,regHits,cups,beans}=r;
   if(!places.length&&!regHits.length&&!cups.length&&!beans.length)
     return `<div class="empty">Nothing on the record for "${esc(q)}". Try a city, a roaster, or a place.</div>`;
   let h='';
-  if(places.length||regHits.length)h+=`<div class="section-head"><h2>Places</h2><span class="n-note">n=${places.length+regHits.length}</span></div>`+places.slice(0,8).map(placeCard).join('')+regHits.slice(0,6).map(regCard).join('');
+  if(places.length||regHits.length){
+    h+=`<div class="section-head"><h2>Places</h2><span class="n-note">n=${places.length+regHits.length}</span></div>`+places.slice(0,8).map(placeCard).join('')+regHits.slice(0,6).map(regCard).join('');
+    const pts=searchMapPoints(places.slice(0,8),regHits.slice(0,6));
+    if(pts.length){h+=`<h2>The map</h2>`+mapHTML(pts)}
+  }
   if(beans.length)h+=`<div class="section-head"><h2>Beans</h2><span class="n-note">n=${beans.length}</span></div>`+beans.slice(0,6).map(beanRow).join('');
   if(cups.length)h+=`<div class="section-head"><h2>Cups</h2><span class="n-note">n=${cups.length}</span></div>`+cups.slice(0,12).map(feedRow).join('');
   return h;
