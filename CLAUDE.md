@@ -163,10 +163,11 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   logo, so the record stays self-contained and offline; a legacy `accent` string
   kept for back-compat (old records with only `accent` are re-themed through
   `palOf`); `notes` (the café's line, often filled from the site's description);
-  and location (`address`, `lat`, `lon`, from the optional online
-  lookup). A legacy `photo` may linger on older records (branding photos are no
-  longer captured or rendered) but is otherwise inert. Merged in sync like
-  any other collection.
+  location (`address`, `lat`, `lon`, from the optional online lookup) and
+  `neighborhood` (filled from that same lookup when it names one — blanks
+  only, typed wins); and `tags[]`, freely typed. A legacy `photo` may linger
+  on older records (branding photos are no longer captured or rendered) but
+  is otherwise inert. Merged in sync like any other collection.
 - **cafeFavs** — favorited café shop names.
 - **deleted** — tombstones so removed records stay removed across a sync merge.
 - **prefs** — per-user preferences (`tempUnit`, `hideTimer`, …) via
@@ -174,8 +175,8 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 
 Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
 `{version, rev, dirty, entries, deleted}` where each entry is a canonical café
-— `id`, `name`, `city`, `address`, `lat`/`lon`, `palette`/`accent`,
-`notes`, provenance (`firstBy`/`firstAt`, `by`/`updatedAt`), and `sightings`
+— `id`, `name`, `city`, `neighborhood`, `address`, `lat`/`lon`, `palette`/`accent`,
+`notes`, `tags[]`, provenance (`firstBy`/`firstAt`, `by`/`updatedAt`), and `sightings`
 (the reach: `{id, by, at, bag?, seen?[], withdrawnAt?, supersededAt?}` — signed
 lines that only ever accumulate; strikes add a date, nothing is removed, and
 `mergeRegister` unions them by id so sync never loses a line). It is shared by

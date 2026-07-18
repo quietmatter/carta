@@ -589,7 +589,7 @@ function regSeed(){
   remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
   const sights=[];
   srcs.forEach(s=>{const d=s.led;if(!d)return;
-    (d.cafes||[]).forEach(p=>{if(p&&p.name)sights.push({at:p.createdAt||'',who:s.who,name:p.name,fields:{city:p.city,address:p.address,lat:p.lat,lon:p.lon,palette:p.palette,accent:p.accent,notes:p.notes}})});
+    (d.cafes||[]).forEach(p=>{if(p&&p.name)sights.push({at:p.createdAt||'',who:s.who,name:p.name,fields:{city:p.city,neighborhood:p.neighborhood,address:p.address,lat:p.lat,lon:p.lon,palette:p.palette,accent:p.accent,notes:p.notes,tags:p.tags}})});
     (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&c.shop)sights.push({at:c.createdAt||'',who:s.who,name:c.shop,fields:{city:c.city}})});
   });
   sights.sort((a,b)=>a.at.localeCompare(b.at)).forEach(s=>regUpsert(s.name,s.fields,s.who,{at:s.at||null}));
@@ -959,10 +959,15 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.4.0';
+const APP_VERSION='4.5.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.5.0',date:'Jul 18, 2026',title:'Neighborhood and tags',items:[
+    'A café can now name a neighborhood, not just a city. Looking it up on the map fills it in automatically when it knows one — blanks only, typed always wins — and it rides next to the city everywhere a café is shown.',
+    'Tag a place your own way — patio, quiet, laptop-friendly, whatever you\'d tell a friend. Tags live on the café\'s page and join the pooled search in Find, so a tag turns up every place you\'ve marked with it.',
+    'Both are Register facts like the pin and the palette: shared by every keeper of the device, and synced to the group the same way.',
+  ]},
   {v:'4.4.0',date:'Jul 18, 2026',title:'The reach',items:[
     'Every café can now be read for depth — four marks, no ladder: ○ Counter, ◎ House, ◉ Roastery, ● Origin. How much of a coffee\'s road makes it across the counter — a description of the café, never a score. The 1–9 stays yours.',
     'You never pick a badge. Say what you saw — the bag named, the methods on the menu — and the reading follows from the record. A sighting rides the café cup form (optional, three taps at most) or the café\'s page; each is signed, dated, and shared through the Register.',
@@ -2039,7 +2044,7 @@ function shopCard(s){
   const p=s.profile,pal=palOf(p),vars=pal?cafeVars(pal):''; // each card previews its café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(s.shop)})">
     <div class="row">
-      <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}</span>`:''} ${reachBadge(s.shop,{ghost:true})}</span>
+      <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}${s.profile&&s.profile.neighborhood?` · ${esc(s.profile.neighborhood)}`:''}</span>`:''} ${reachBadge(s.shop,{ghost:true})}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${s.avg??'—'}</span>
     </div>
     <div class="muted small">${s.visits} visit${s.visits>1?'s':''}${s.usual?` · your usual: <strong>${esc(s.usual)}</strong>`:''}${s.spend?` · ${money(s.spend)}`:''}</div>
@@ -2058,6 +2063,7 @@ function vPlace(){
   const p=circleProfile(shop)||e;
   const pal=palOf(p),vars=pal?cafeVars(pal):'';
   const city=(e&&e.city)||modeOf([...mine,...others].map(c=>c.city).filter(Boolean))||'';
+  const nbhood=(p&&p.neighborhood)||'';
   const avg=avgHedonic(mine),usual=modeOf(mine.map(c=>c.drink).filter(Boolean));
   const spend=mine.reduce((a,c)=>a+(c.price||0),0);
   const theirAvg=avgHedonic(others);
@@ -2067,7 +2073,8 @@ function vPlace(){
   const origin=modeOf(mine.map(c=>c.origin||c.originCountry).filter(Boolean));
   const x=roaster||origin?crossContext({roaster,origin}):null;
   const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
-  const subline=city?`${esc(city)}${p&&p.lat!=null?' · pinned':''}`:(mine.length||others.length?'city unwritten':'yours alone — no one else has kept it yet');
+  const place=[city,nbhood].filter(Boolean).join(' · ');
+  const subline=place?`${esc(place)}${p&&p.lat!=null?' · pinned':''}`:(mine.length||others.length?'city unwritten':'yours alone — no one else has kept it yet');
   const head=`<div class="hero" style="padding-top:6px">
       <div class="eyebrow">${eyebrow}</div>
       <h2 style="font-size:32px;max-width:13ch">${esc(shop)}</h2>
@@ -2100,6 +2107,7 @@ function vPlace(){
   ${!mine.length?`<div class="empty">${d>=2?'You haven’t been yet. The first cup you keep here starts the page.':'You haven’t been yet. Read what’s below, order what they ordered.'}</div>`:''}
   ${x&&x.home.n&&x.cafe.n?`<div class="cafeback">Same beans, two rooms: you average <strong>${x.home.avg}</strong> at home vs <strong>${x.cafe.avg}</strong> here${roaster?` on ${esc(roaster)}`:''}. The shape of a preference, not a verdict.</div>`:''}
   ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
+  ${p&&p.tags&&p.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 10px">${p.tags.map(t=>`<span class="badge ghost">${esc(t)}</span>`).join('')}</div>`:''}
   ${readOnly()?'':`
   ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}
   ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
@@ -2137,16 +2145,28 @@ function openCafeProfile(shop){
   <button class="btn btn-quiet" type="button" onclick="geoLookup(${jsq(shop)})">Find ${esc(shop)} on the map</button>
   <div class="muted small" style="margin:6px 2px 0">Looks up the address above — or the café's name, if you leave it blank. Offline, the text still saves without a pin.</div>
   <div id="georesults"></div>
+  <label class="f"><span class="l">Neighborhood <span class="opt">optional</span></span>
+    <input type="text" id="p_neighborhood" value="${esc(p.neighborhood||'')}" placeholder="Silver Lake"></label>
+  <div class="muted small" style="margin:6px 2px 0">Filled from the map lookup above when it knows one — blanks only, typed wins.</div>
+  <label class="f"><span class="l">Tags <span class="opt">optional</span></span>
+    <input type="text" id="p_tags" value="${esc((p.tags||[]).join(', '))}" placeholder="patio, laptop-friendly, quiet"></label>
+  <div class="muted small" style="margin:6px 2px 16px">Comma separated. Yours to keep — the way you'd describe this place to a friend.</div>
   <label class="f"><span class="l">A line for the record <span class="opt">optional</span></span><input type="text" id="p_notes" value="${esc(p.notes||'')}" placeholder="the one worth the walk"></label>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">The Register keeps one entry per café, shared by every keeper. This amendment is signed ${esc(activeName())}.</div>
   <button class="btn btn-primary" onclick="saveCafeProfileForm(${jsq(shop)})">Save café</button>
   <button class="btn btn-quiet" onclick="closeSheet();openPlace(${jsq(shop)})">Cancel</button>`);
 }
+// Comma-separated free text → a clean list: trimmed, deduped case-insensitively, order kept.
+function parseTags(s){
+  const seen=new Set(),out=[];
+  String(s||'').split(',').map(t=>t.trim()).filter(Boolean).forEach(t=>{const k=t.toLowerCase();if(!seen.has(k)){seen.add(k);out.push(t)}});
+  return out;
+}
 function saveCafeProfileForm(shop){
   if(guard())return;
   const addr=val('p_address'),pinned=addr&&geoPick.address===addr; // coords only survive if they still match the typed address
-  const rec={name:shop.trim(),city:val('p_city'),notes:val('p_notes'),accent:brandAccent,palette:brandPalette,
-    site:(val('p_site')||'').trim(),address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null};
+  const rec={name:shop.trim(),city:val('p_city'),neighborhood:val('p_neighborhood'),notes:val('p_notes'),accent:brandAccent,palette:brandPalette,
+    site:(val('p_site')||'').trim(),address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null,tags:parseTags(val('p_tags'))};
   saveCafeProfile(shop,rec);                              // the per-user copy — exports and ledger sync carry it
   regUpsert(shop,rec,activeName(),{full:true});           // the Register — the shared, canonical entry
   save();closeSheet();openPlace(shop);toast('Café saved — the Register amended');
@@ -2155,22 +2175,28 @@ function saveCafeProfileForm(shop){
 // The query prefers a typed address, else falls back to the café's own name + city — so a lookup
 // needs no typing at all: the shop the record already knows becomes the search.
 let geoPick={address:'',lat:null,lon:null};
+// The neighbourhood a geocode names for a pin — Nominatim's own hierarchy, most specific first.
+function nbhoodOf(addr){
+  addr=addr||{};
+  return addr.neighbourhood||addr.suburb||addr.quarter||addr.city_district||addr.hamlet||addr.borough||'';
+}
 async function geoLookup(shop){
   const q=val('p_address')||[shop,val('p_city')].filter(Boolean).join(', ');
   const box=document.getElementById('georesults');
   if(!q){if(box)box.innerHTML='';return}
   if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Searching the map…</div>';
   try{
-    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
     const list=await r.json();
     if(!box)return;
     if(!list||!list.length){box.innerHTML='<div class="muted small" style="padding:6px 2px">Nothing found for that. Type the address by hand — it still saves.</div>';return}
-    box.innerHTML=`<div class="muted small" style="padding:6px 2px 2px">Tap the right one:</div>`+list.map(o=>`<div class="card tap georow" onclick="geoChoose(${jsq(o.display_name)},${jsq(String(o.lat))},${jsq(String(o.lon))})"><div class="small">${esc(o.display_name)}</div></div>`).join('');
+    box.innerHTML=`<div class="muted small" style="padding:6px 2px 2px">Tap the right one:</div>`+list.map(o=>`<div class="card tap georow" onclick="geoChoose(${jsq(o.display_name)},${jsq(String(o.lat))},${jsq(String(o.lon))},${jsq(nbhoodOf(o.address))})"><div class="small">${esc(o.display_name)}</div></div>`).join('');
   }catch(e){if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Offline — type the address; it saves without the pin.</div>'}
 }
-function geoChoose(address,lat,lon){
+function geoChoose(address,lat,lon,neighborhood){
   geoPick={address,lat:Number(lat),lon:Number(lon)};
   const inp=document.getElementById('p_address');if(inp)inp.value=address;
+  const nInp=document.getElementById('p_neighborhood');if(nInp&&neighborhood&&!nInp.value.trim())nInp.value=neighborhood; // fills blank only — typed wins
   const box=document.getElementById('georesults');if(box)box.innerHTML=`<div class="pinned">Pinned · ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)} <a class="link" onclick="geoUnpin()">remove</a></div>`;
 }
 function geoUnpin(){geoPick={address:val('p_address'),lat:null,lon:null};const box=document.getElementById('georesults');if(box)box.innerHTML='';}
@@ -2231,7 +2257,7 @@ function regCard(e){
   const pal=palOf(e),vars=pal?cafeVars(pal):''; // a Register entry carries the café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(e.name)})">
     <div class="row">
-      <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}</span>`:''} ${reachBadge(e.name,{ghost:true,unread:true})}</span>
+      <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}${e.neighborhood?` · ${esc(e.neighborhood)}`:''}</span>`:''} ${reachBadge(e.name,{ghost:true,unread:true})}</span>
       ${e.lat!=null?'<span class="badge ghost">pinned</span>':''}
     </div>
     <div class="muted small">${e.firstBy?`first entered by ${esc(e.firstBy)}`:'on the record'}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</div>
@@ -3031,7 +3057,7 @@ function circleSearch(q){
   const hay=c=>normName([c.shop,c.city,c.drink,c.style,c.roaster,c.origin,c.originCountry,c.originRegion,c.variety,c.producer,c.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '));
   const cups=circleCups().filter(c=>match(hay(c)));
   const places=circlePlaces(cups);
-  const regHits=REG.entries.filter(e=>match(normName([e.name,e.city,e.notes].filter(Boolean).join(' '))))
+  const regHits=REG.entries.filter(e=>match(normName([e.name,e.city,e.neighborhood,e.notes,...(e.tags||[])].filter(Boolean).join(' '))))
     .filter(e=>!places.some(p=>normName(p.shop)===normName(e.name)));
   const beans=circleBeans().filter(b=>match(normName(b.label)));
   return {cups,places,regHits,beans};
@@ -3068,7 +3094,7 @@ function recCard(r,dim){ // dim: the unread tail under a depth lens — dashed t
   const want=readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="event.stopPropagation();toggleWant(${jsq(r.shop)});render()">${isWant(r.shop)?'Saved — it waits under Want to go':'Save for later'}</button>`;
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:dim?' style="border-style:dashed"':''} onclick="openPlace(${jsq(r.shop)})">
     <div class="row">
-      <span class="small"><strong${dim?' style="color:var(--ink-3)"':''}>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}</span>`:''}${dist} ${reachBadge(r.shop,{ghost:true,unread:true})}</span>
+      <span class="small"><strong${dim?' style="color:var(--ink-3)"':''}>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}${r.profile&&r.profile.neighborhood?` · ${esc(r.profile.neighborhood)}`:''}</span>`:''}${dist} ${reachBadge(r.shop,{ghost:true,unread:true})}</span>
       <span class="big"${vars?' style="color:var(--accent)"':dim?' style="color:var(--ink-3)"':''}>${r.avg??(r.reg?'·':'—')}</span>
     </div>
     <div class="muted small serif" style="font-style:italic">${why}</div>
@@ -3161,7 +3187,7 @@ function placeCard(p){
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(p.shop)})">
     <div class="row">
-      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}</span>`:''}${dist} ${reachBadge(p.shop,{ghost:true,unread:true})}</span>
+      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}${pr&&pr.neighborhood?` · ${esc(pr.neighborhood)}`:''}</span>`:''}${dist} ${reachBadge(p.shop,{ghost:true,unread:true})}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${p.avg??'—'}</span>
     </div>
     <div class="muted small">${p.n} cup${p.n>1?'s':''} · ${p.people.length===1?esc(p.people[0]):p.people.length+' people'}${p.usual?` · they order <strong>${esc(p.usual)}</strong>`:''}${pr&&pr.address?' · pinned':''}</div>

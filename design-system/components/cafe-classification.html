@@ -1,0 +1,63 @@
+<!-- @dsCard group="Components" name="Café classification" subtitle="The reach — four depths, badge states, the primer" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — Café classification</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/components.css">
+<link rel="stylesheet" href="../assets/preview.css">
+</head>
+<body>
+<div class="ds">
+  <div class="ds-eyebrow">Components</div>
+  <h1 class="ds-title">Café classification</h1>
+  <p class="ds-lede">The reach — how much of a coffee's road, farm to cup, reads from the customer's side of the counter. A description of the café, never a score; badges stay monochrome, carried by type — never the ember, never a fill.</p>
+
+  <div class="ds-sec">The four depths</div>
+  <div class="ds-stage plain">
+    <table class="ds-spec">
+      <tr><td class="k">○ Counter</td><td>good coffee, made fast and made right. Nobody narrates.</td></tr>
+      <tr><td class="k">◎ House</td><td>the bag is named, the menu has intent. Ask, and they answer.</td></tr>
+      <tr><td class="k">◉ Roastery</td><td>the roast in the room; the grind adjusted before your cup.</td></tr>
+      <tr><td class="k">● Origin</td><td>the farm in the cup: producer, lot, process, freely told.</td></tr>
+    </table>
+    <p class="ds-note" style="margin-top:12px">No depth outranks another — a lens in Find, never a sort. Keepers attest facts (the bag named, what the counter showed); the reading follows: the deepest fact standing.</p>
+  </div>
+
+  <div class="ds-sec">Depth badge — three mark styles</div>
+  <div class="ds-stage ds-cluster">
+    <span class="badge">◉ Roastery</span>
+    <span class="badge">◉</span>
+    <span class="badge">Roastery</span>
+  </div>
+  <p class="ds-note">A preference in More writes every badge as glyph + word, glyph alone, or word alone — the tapped café's reading stays legible in all three.</p>
+
+  <div class="ds-sec">Badge states</div>
+  <div class="ds-stage ds-cluster">
+    <span class="badge ghost">◎ House</span>
+    <span class="badge dashed">unread</span>
+    <span class="badge dashed">re-read · was ○ Counter</span>
+  </div>
+  <table class="ds-spec">
+    <tr><td class="k">.badge</td><td>the standing reading — full ink, on the café's own page</td><td class="tok">--border-strong</td></tr>
+    <tr><td class="k">.badge.ghost</td><td>the same reading, softened for list rows</td><td class="tok">--line</td></tr>
+    <tr><td class="k">.badge.dashed</td><td>unread, or a personal re-read flag — a state, never a depth</td><td class="tok">dashed</td></tr>
+  </table>
+
+  <div class="ds-sec">The primer sheet</div>
+  <div class="ds-stage">
+    <div class="row">
+      <strong class="small">How to read the reach</strong>
+      <span class="badge">◉ Roastery</span>
+    </div>
+    <p class="muted small" style="margin-top:8px">the roast in the room; the grind adjusted before your cup.</p>
+    <p class="muted small" style="margin-top:10px">Every badge is one tap from this primer. The record beneath it — every sighting, signed and dated — opens from the Register line on the café's page.</p>
+  </div>
+  <p class="ds-note">Sightings only ever accumulate: amend supersedes your own line, withdraw strikes one — both stay, dated. Unread is a state, never a default to the shallow end.</p>
+</div>
+<script src="../assets/preview.js"></script>
+</body>
+</html>

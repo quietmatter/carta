@@ -31,6 +31,7 @@ components/
   sheet.html              the bottom-sheet modal
   hero-loop.html          home hero, continuation card, best-line, empty hero
   cafe-surface.html       website-derived palette strip, per-café theming
+  cafe-classification.html the reach — four depths, badge states, the primer
 _ds_manifest.json  card index compiled from the @dsCard markers
 ```
 
