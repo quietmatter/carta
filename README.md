@@ -16,31 +16,44 @@ finding again.
 > charter — what is inherited, what may be overridden, how the two stay in sync —
 > is in [SUBBRAND.md](SUBBRAND.md).
 
-The primary experience is deliberately only four places:
+CARTA opens **a room at a time**. The ladder is Reading → Remembering → Making →
+Keeping; each room's foot holds a door to the next, the ladder in **More** opens
+any of them on request, and nothing is ever taken away. The rooms, fully open:
 
-- **Home** — resume the coffee in hand from the last cup.
-- **Café** — remember the last cup out and the places worth returning to.
-- **Friends** — find the next cup: search, sort by who's near, and follow the people whose taste is closest to yours; read only, always.
-- **Record** — see one preference across both contexts.
+- **Find** (Reading) — other people's cups: the stream, the places worth the walk,
+  whose taste matches yours; read only, always.
+- **Café** (Remembering) — remember the last cup out and the places worth
+  returning to.
+- **Home** (Making) — resume the coffee in hand from the last cup.
+- **Record** (Keeping) — see one preference across both contexts.
+
+Every café is a **page**, not a popup — your cups, the circle's cups, the pin and
+the provenance, one place per place, reached from anywhere its name appears.
 
 See [NORTH_STAR.md](NORTH_STAR.md) for the product thesis and restraint standard.
 
 ## First run
 
 The first time you open CARTA it says what it is before it asks anything of you —
-one cup, two contexts, the record yours. Then it asks where you'd like to start:
+one cup, two contexts, the record yours. Then it asks one question — *how do you
+take your coffee?*
 
-- **The cup at home** — dial it in; you land on Home and define a Setup.
-- **The cup away** — remember cafés; you land on Café and log your first cup.
-- **Both** — the whole idea; start with a Setup, log a café cup any time.
+- **Someone else makes it** — you start in Find, reading; keeping nothing.
+- **I want to remember mine** — Café opens too; a shop and one tap is a record.
+- **I make my own** — Home opens as well; put a coffee on the shelf and brew.
 
-Your choice sets which screen greets you afterward and picks the one first action
-to take — nothing you can't change. Replay the welcome any time from
-**Ledger → The manual → Replay the welcome**.
+The answer only sets how much of CARTA you see first — the rest opens whenever
+you ask, from the doors at the foot of each room or the ladder under
+**More → How deep you go**. Replay the welcome any time from
+**More → The manual → Replay the welcome**.
 
 ## Logging a brew
 
-The brew screen opens as your last brew — turn the one dial you actually changed. Each numeric dial can be driven three ways:
+The first brew asks only for your grinder and brewer, in plain words — the Setup
+writes itself. (The full Setup editor lives under **More → The tools** for the day
+you change a burr; a grind number is only comparable within one Setup.)
+
+After that, the brew screen opens as your last brew — turn the one dial you actually changed. Each numeric dial can be driven three ways:
 
 - **Tap − / +** for one step.
 - **Press and hold** − or + to accelerate across a wide range (fly through a 0–2000 grinder, ease off for the fine end).
@@ -50,7 +63,11 @@ Give each **Setup** its grinder's real **grind scale** (min / max / step — e.g
 
 Temperature has a **°C / °F** switch right on the dial (whole-degree steps), remembered per user and stored canonically as °C so the record stays comparable.
 
-If you time and weigh on your machine or a Bluetooth scale (e.g. the Argos app), hide CARTA's stopwatch in **Ledger → Preferences** and simply type the time and weight in. CARTA keeps the record; it doesn't need to be the timer.
+If you time and weigh on your machine or a Bluetooth scale (e.g. the Argos app), hide CARTA's stopwatch in **More → Preferences** and simply type the time and weight in. CARTA keeps the record; it doesn't need to be the timer.
+
+When a bag is finished, **put it away** from Home — it waits under *Put away*
+with your best cup, and restores with everything you learned when you buy it
+again.
 
 ## Appearance
 
@@ -58,7 +75,7 @@ CARTA reads like a printed record: a serif for what you tasted, a sans for what 
 
 ## Café cups
 
-The **Cafés** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, a photo, the order-again verdict, traceability — waits behind one line, to add now or later.
+The **Café** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, a photo, the order-again verdict, traceability — waits behind one line, to add now or later.
 
 - **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put).
 - **Each café wears its own colours.** Photograph the branding — a sign, a cup, a menu — and CARTA reads one signature colour from it, then builds a whole surface around it: the café's page and every cup logged there take on that palette. A small design system from a photograph, held in light and dusk alike.
@@ -86,21 +103,21 @@ branding photo and derived palette, a line for the record.
   contributor may edit an entry ("Amend the entry" on the café's page). The
   entry remembers who entered it first and who amended it last.
 - **Lookup and discovery.** The café cup form looks the shop up against the
-  Register as you type — "In the Register — Los Angeles · pinned, first entered
-  by Jane." The Café and Friends tabs surface Register entries you haven't been
-  to, ranked as recommendations (below). In search of better cups, the
-  consistent record of the place is the map.
+  Register as you type — "A known place — Halfpence, Portland, first entered by
+  Jane." Find surfaces Register entries you haven't been to, ranked as
+  recommendations (below). In search of better cups, the consistent record of
+  the place is the map.
 
 Cups stay personal, per ledger. Only the place is common knowledge.
 
-## Friends — finding the next cup
+## Find — the next good cup
 
 Not everyone wants to keep a record. Some people just want to know where to go
-and what to order. The **Friends** tab is for them — and it requires logging
-nothing, ever. It pools every record the active user can read — other users on
-this device, everyone on a connected sync server — plus the shared Register, and
-turns them into a discovery loop: *search → near you → whose taste matches yours
-→ worth the walk → save it → go.*
+and what to order. The **Find** tab is for them — the room every record starts
+in, and it requires logging nothing, ever. It pools every record the active user
+can read — other keepers on this device, everyone on a connected sync server —
+plus the shared Register, and turns them into a discovery loop: *search → near
+you → whose taste matches yours → worth the walk → save it → go.*
 
 - **Search** — one field over the whole pooled record. Type a café, a city, a
   roaster, an origin, a descriptor or a note and matching **places**, **beans**
@@ -112,7 +129,7 @@ turns them into a discovery loop: *search → near you → whose taste matches y
   scores and weighted toward the people whose taste runs closest to yours; the
   card says who rated it and why. A city filter or the "near you" lens re-scopes
   the list.
-- **Whose palate matches yours** — on the cafés you've both kept, how close your
+- **Whose taste matches yours** — on the cafés you've both scored, how close your
   scores land on the 1–9 scale. The shape of an agreement, not a verdict —
   read the people who walk your streets.
 - **The stream** — every café cup your people have logged, newest first (scoped
@@ -122,8 +139,8 @@ turns them into a discovery loop: *search → near you → whose taste matches y
 - **Beans worth chasing** — the roasters and origins your circle scored, best
   average first.
 - **Want to go** — save any place from anyone's record to a shortlist that waits
-  under Friends and on the Café tab, and steps aside once you've logged a cup
-  there. (The one thing Friends writes to your own ledger; it syncs like the
+  under Find and on the Café tab, and steps aside once you've logged a cup
+  there. (The one thing Find writes to your own ledger; it syncs like the
   rest.)
 - **How to read a cup** — a plain-words primer that decodes the hedonic 1–9
   scale, the again/pass verdict, and the descriptors for readers who don't keep
@@ -135,21 +152,21 @@ cup links through to the friend's whole record via the existing read-only view.
 
 ## Multiple Users
 
-CARTA supports multiple users on one device. Manage them from the **Ledger** tab:
+CARTA supports multiple keepers on one device. Manage them under **More → Your circle**:
 
-- **Add a user** — each user keeps a fully separate ledger (setups, bags, brews, cups, cafés)
-- **Switch** the active user — everything you log goes to the active user's ledger
-- **View another user's ledger** — browse every tab of their record in a clearly-marked read-only mode; a banner offers "Back to mine"
-- **Import as a new user** — a friend's exported ledger file can be imported as a new user, so you can browse their record beside your own without touching yours
+- **Add a keeper** — each keeps a fully separate ledger (setups, bags, brews, cups, cafés)
+- **Switch** the active keeper — everything you log goes to the active ledger
+- **Read another keeper's record** — browse every room in a clearly-marked read-only mode; a banner offers "Back to mine"
+- **Import as a new keeper** — a friend's exported ledger file can be imported beside your own without touching yours
 
 Existing single-user data migrates automatically on first launch — nothing to do, nothing lost. Everything lives in this browser's local storage; syncing between devices is optional (below).
 
 ## Server Sync (optional)
 
-CARTA can synchronize ledgers through a tiny self-hosted server, so your record follows you across devices and everyone on the server can **view** (never edit) each other's ledgers — live, from the Users list in the Ledger tab.
+CARTA can synchronize ledgers through a tiny self-hosted server, so your record follows you across devices and everyone on the server can **view** (never edit) each other's ledgers — live, from **More → Your circle**.
 
 - Run the server: `node server/server.js` — one file, zero dependencies, JSON storage. Or skip the hardware entirely: the same server deploys serverless to Cloudflare's free plan with one command. See **[server/README.md](server/README.md)** for deployment, the HTTPS requirement, and the API.
-- Connect from the app: Ledger tab → Sync → **Connect to a sync server** (server URL, name, passcode).
+- Connect from the app: **More → Sync → Connect to a sync server** (server URL, name, passcode).
 - Offline-first: with no server configured or reachable, nothing changes. Edits queue and sync when the app comes back to the foreground.
 - Conflicts merge by record — logging on two devices keeps both entries; removed cups stay removed (tombstones).
 - Viewed ledgers are cached locally, so a friend's record remains browsable while offline (marked as a cached copy).
@@ -184,7 +201,7 @@ The app now appears as an icon on your home screen. Tap it to open in fullscreen
 
 ## Export Your Data (IMPORTANT)
 
-Everything is stored locally in your browser. **Export monthly** using the Ledger tab → Export button. Keep backups safe. Each user exports their own ledger (exports are stamped with the user's name).
+Everything is stored locally in your browser. **Export monthly** using **More → Save a copy**. Keep backups safe. Each keeper exports their own ledger (exports are stamped with the keeper's name).
 
 If you clear browser data or Safari storage fills up, your ledger is gone — there is no server.
 
