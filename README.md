@@ -78,7 +78,7 @@ again.
 
 ## Appearance
 
-CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, and one ember-red signal for the current action and the cup’s score. Two themes — **Paper** and **Dusk** — switch under **More → Preferences**, remembered per user. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
+CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, and one ember-red signal for the current action and the cup’s score. Two themes — **Paper** and **Dusk** — switch under **More → Preferences**, remembered per user. A third choice, **Auto**, follows the device's own light/dark setting (iOS Settings → Display & Brightness, etc.) and moves with it live, no reload needed. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
 
 ## Today, and the matching
 

@@ -1020,10 +1020,13 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.7.0';
+const APP_VERSION='4.8.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.8.0',date:'Jul 19, 2026',title:'Appearance, auto',items:[
+    'A third choice under Preferences → Appearance: Auto. It hands the call to your device\'s own light/dark setting and follows it live — dusk falls in when the system does, no separate switch to remember.',
+  ]},
   {v:'4.7.0',date:'Jul 19, 2026',title:'Today, and the matching',items:[
     'A new first tab: Today. The day\'s greeting, the thread you left on the map — a session holds for a week, then steps back to a plain suggestion — three matched teasers, and the record\'s recent line.',
     'The matching. Every place on the register you haven\'t kept is read against your record: the traits of the places you keep, the distance when you say where you stand (held in memory, never stored), the circle\'s cups through affinity. Every number carries its reasons — no score without its signals — and until three café cups are kept it speaks in bands, not numbers.',
@@ -1410,23 +1413,28 @@ function vPrefsSection(){
     <div class="kv"><span class="k">Appearance</span><span class="v">
       <span class="seg" style="margin:0;display:inline-flex;width:auto">
         <button class="${th==='paper'?'on':''}" onclick="themeSet('paper')">Paper</button>
-        <button class="${th==='dusk'?'on':''}" onclick="themeSet('dusk')">Dusk</button></span></span></div>
+        <button class="${th==='dusk'?'on':''}" onclick="themeSet('dusk')">Dusk</button>
+        <button class="${th==='auto'?'on':''}" onclick="themeSet('auto')">Auto</button></span></span></div>
     <div class="kv"><span class="k">The reach mark</span><span class="v">
       <span class="seg" style="margin:0;display:inline-flex;width:auto">
         <button class="${rm==='gw'?'on':''}" onclick="prefSet('reachMark','gw')">◉ Word</button>
         <button class="${rm==='w'?'on':''}" onclick="prefSet('reachMark','w')">Word</button>
         <button class="${rm==='g'?'on':''}" onclick="prefSet('reachMark','g')">◉</button></span></span></div>
   </div>
-  <div class="muted small">Switch °C/°F anytime — right on the Temp dial too. Hide the stopwatch if you time on your machine or scale; just type the time and weight in. The reach mark styles how a café's depth is written — state chips keep their words and their dashes in every mode.</div>`;
+  <div class="muted small">Switch °C/°F anytime — right on the Temp dial too. Hide the stopwatch if you time on your machine or scale; just type the time and weight in. Auto follows your device's own light/dark setting, and moves with it as the day turns. The reach mark styles how a café's depth is written — state chips keep their words and their dashes in every mode.</div>`;
 }
 function prefSet(k,v){setPref(k,v);render()}
 // Paper / dusk — "paper at night". A Day (or a brew) logged after sunset should not be a blinding rectangle.
+// Auto hands the call to the device's own setting (iOS Settings > Display & Brightness, etc.) and follows it live.
+const duskMQ=matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
-  const t=getPref('theme','paper')==='dusk'?'dusk':'paper';
+  const p=getPref('theme','paper');
+  const t=p==='auto'?(duskMQ.matches?'dusk':'paper'):(p==='dusk'?'dusk':'paper');
   document.documentElement.setAttribute('data-theme',t);
   const mc=document.querySelector('meta[name=theme-color]');
   if(mc)mc.setAttribute('content',t==='dusk'?'#171310':'#f2eee6');
 }
+duskMQ.addEventListener('change',()=>{if(getPref('theme','paper')==='auto')applyTheme()});
 function themeSet(t){setPref('theme',t);applyTheme();render()}
 /* ============ sheet plumbing ============ */
 function openSheet(html){const s=document.getElementById('sheet');
@@ -4137,7 +4145,7 @@ if(needsWelcome()){
 // foreground (iOS PWAs get no background time — this is the sync heartbeat).
 if(SYNC)setTimeout(()=>syncNow(false),400);
 window.addEventListener('online',()=>syncNow(false));
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow(false)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyTheme();syncNow(false)}});
 </script>
 </body>
 </html>
