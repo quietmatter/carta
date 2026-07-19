@@ -329,6 +329,19 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .cafe-map .pin.unread{width:7px;height:7px;border:1px dashed var(--ink-3);background:none}
 .cafe-map .pin .lbl{position:absolute;left:100%;top:50%;transform:translate(6px,-50%);font-family:var(--sans);font-size:11px;color:var(--ink);font-weight:500;white-space:nowrap}
 .cafe-map .pin.unread .lbl{color:var(--ink-3);font-weight:400}
+/* the map, read for you — ranked pins on the same decorative plot, drawn taller */
+.cafe-map.tall{height:320px;border-radius:var(--radius)}
+.cafe-map .pin.nn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-size:10px;font-weight:600;color:var(--paper);border-radius:50%;transition:width .2s,height .2s}
+.cafe-map .pin.nn.sel{width:28px;height:28px;font-size:11px}
+.cafe-map .pin.nn.dashed{background:var(--paper);border:1px dashed var(--ink-3);color:var(--ink-3)}
+.cafe-map .pin.nn.saved{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--ink)}
+.cafe-map .pin.you{width:14px;height:14px;background:none;border:1.5px solid var(--ink);border-radius:50%}
+.cafe-map .pin.you::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:var(--ink);transform:translate(-50%,-50%)}
+.cafe-map .pin .lbl.top{left:50%;top:auto;bottom:100%;transform:translate(-50%,-6px);font-weight:600}
+.hscroll{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 6px;margin:0 -2px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.hscroll>*{flex:none;scroll-snap-align:start}
+@media (prefers-reduced-motion: reduce){.cafe-map .pin.nn{transition:none}}
 .continuation{border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:15px 0;margin:2px 0 16px}
 .continuation .score{font-family:var(--sans);font-size:46px;line-height:.9;color:var(--accent);font-weight:550;letter-spacing:-.05em}
 .continuation .score small{font-size:12px;letter-spacing:.04em;color:var(--ink-3);font-weight:400}
@@ -1007,10 +1020,17 @@ function crossContext(key){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.6.0';
+const APP_VERSION='4.7.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.7.0',date:'Jul 19, 2026',title:'Today, and the matching',items:[
+    'A new first tab: Today. The day\'s greeting, the thread you left on the map — a session holds for a week, then steps back to a plain suggestion — three matched teasers, and the record\'s recent line.',
+    'The matching. Every place on the register you haven\'t kept is read against your record: the traits of the places you keep, the distance when you say where you stand (held in memory, never stored), the circle\'s cups through affinity. Every number carries its reasons — no score without its signals — and until three café cups are kept it speaks in bands, not numbers.',
+    'New to the record? Name three cafés you already love, on Today, and their traits become your signal. A place the register doesn\'t know yet enters on its name alone.',
+    'The map, read for you — from Today or Find. Pins ranked by match, a card per pin, a list view that hides nothing. Save waits under Want to go; Skip steps a place back for two weeks and fades on its own — never a veto — and "fewer like it" tips its kind down on the same curve.',
+    'The Record keeps the bookkeeping: Want to go ordered by match with a gentle ask when a save sits unvisited, standing skips, standing trait leans — every one visible, every one fading on its own.',
+  ]},
   {v:'4.6.0',date:'Jul 18, 2026',title:'A banner, and the map',items:[
     'A café\'s own page now opens on a banner drawn from its own colours — the signature hue read from its website, or a neutral roast tone while that\'s still unread. The name rides on it; nothing else about the record changed.',
     'Find\'s search grew a map — real pins, scaled to fit, never a tile or a street. A filled dot is a place you keep; a dashed one is still waiting for a first cup. Tap either to open the page.',
@@ -1163,14 +1183,14 @@ function depth(){
   return (getPref('onboarded',false)||D.cups.length||D.bags.length||D.setups.length)?4:1;
 }
 function tabsFor(d){
-  const t=[];
+  const t=[{id:'today',label:'Today'}];   // the day's surface — open at every depth
   if(d>=3)t.push({id:'field',label:'Home'});
   if(d>=2)t.push({id:'cafes',label:'Café'});
   t.push({id:'circle',label:'Find'});
   if(d>=4)t.push({id:'trace',label:'Record'});
   return t;
 }
-const defaultTab=d=>d>=3?'field':d>=2?'cafes':'circle';
+const defaultTab=d=>'today';
 function unlockDepth(n,t,msg){setPref('depth',n);placeView=null;go(t);toast(msg)}
 const UNLOCK={2:['cafes','Café is open — your cups have somewhere to live.'],3:['field','Home is open — the cup you make.'],4:['trace','The Record is open — the whole through-line.']};
 function doorHTML(title,body,cta,call){
@@ -1185,16 +1205,17 @@ const seal=(name,em)=>`<div class="qm-seal">${esc(name)}<span class="em">${em}</
 let tab='circle';
 let placeView=null;   // a café name — the page currently open over the tab, or null
 function openPlace(shop){placeView=shop;render()}
-function closePlace(){placeView=null;render()}
-function go(t){tab=t;placeView=null;if(t!=='circle'){reachLens=0;reachTail={}}render()}
+function closePlace(){placeView=null;render();if(discOn)discScrollTo(discSel,true)}
+function go(t){tab=t;placeView=null;discOn=false;discMatch=null;clearTimeout(_mt);if(t!=='circle'){reachLens=0;reachTail={}}render()}
 function render(){
   _affCache=null; // affinity is recomputed once per paint, from the current record
+  _mCache=null;   // so is the matching — signal, circle, candidates
   document.getElementById('who').textContent=
     readOnly()?`viewing ${viewingUser().name}`:(tab==='ledger'?'the rest of it':(USERS.users.length>1?viewingUser().name:'one cup · two contexts'));
   document.getElementById('tabs').innerHTML=tabsFor(depth()).map(t=>
     `<button class="${tab===t.id&&!placeView?'on':''}" onclick="go('${t.id}')">${t.label}</button>`).join('');
   const m=document.getElementById('main');
-  m.innerHTML=(readOnly()?viewBanner():'')+(placeView?vPlace():({field:vField,cafes:vCafes,circle:vCircle,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
+  m.innerHTML=(readOnly()?viewBanner():'')+(placeView?vPlace():discOn?vDiscover():({today:vToday,field:vField,cafes:vCafes,circle:vCircle,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
   m.scrollTop=0;window.scrollTo(0,0);
 }
 function viewBanner(){return `<div class="viewbar"><span>Viewing <strong>${esc(viewingUser().name)}</strong>'s ledger — read only${remoteStale?` · cached ${fmtAgo(remoteStale===true?null:remoteStale)}`:''}</span><button onclick="exitView()">Back to mine</button></div>`}
@@ -2072,8 +2093,11 @@ function toggleWant(shop){
   D.cafeWants=D.cafeWants||[];
   const i=D.cafeWants.findIndex(x=>normName(x)===normName(shop));
   const was=i>=0;
-  if(was)D.cafeWants.splice(i,1);else D.cafeWants.push(String(shop).trim());
-  save();toast(was?'Off the want-to-go list':'Saved to want-to-go');
+  const wa=getPref('wantAt',{})||{}; // when it was saved — the aging asks on the Record read this
+  if(was){D.cafeWants.splice(i,1);delete wa[normName(shop)]}
+  else{D.cafeWants.push(String(shop).trim());wa[normName(shop)]=new Date().toISOString()}
+  D.prefs=D.prefs||{};D.prefs.wantAt=wa;
+  save();toast(was?'Off the want-to-go list':'Saved — it waits under Want to go');
 }
 function shopAgg(){
   const map={};
@@ -2155,17 +2179,33 @@ function vPlace(){
       :`<span class="badge dashed">unread</span>${readOnly()?'':` <span class="link" onclick="openReachAmend(${jsq(shop)})">read it — say what you saw</span>`}`]);
   }
   if(e&&e.firstBy)kvs.push(['Register',`<span${e.sightings&&e.sightings.length?` class="link" onclick="openReachRecord(${jsq(shop)})"`:''}>first entered by ${esc(e.firstBy)}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</span>`]);
+  // the matching, on the page — a score is never shown without its signals.
+  // Not for a place that IS the signal: you keep it, or you named it.
+  const named=signalPicks().some(pk=>normName(pk.name)===normName(shop));
+  const mm=(!mine.length&&!named&&!coldNow())?matchOf(shop):null;
+  const sk=skipInfo(shop),lc=lowConf();
+  const skState=sk&&sk.active?`<div class="cafeback">Skipped — it steps back for two weeks, then fades on its own. Never a veto.${skipAsk&&normName(skipAsk.shop)===normName(shop)?`<div style="display:flex;gap:16px;margin:8px 0 2px;align-items:baseline;flex-wrap:wrap"><button class="text-action" onclick="resolveSkipAsk(false)">Just this place</button><button class="text-action" onclick="resolveSkipAsk(true)">Fewer ${esc(skipAsk.kind)} places</button></div>`:''} ${readOnly()?'':`<a class="link" onclick="discUnskip(${jsq(shop)})">undo</a>`}</div>`:'';
+  const whyHTML=mm&&!mm.thin?`
+  <div class="section-head"><h2>Why this</h2><span class="n-note num">${lc?`an early read — ${cafeCups().length} of 3 cups kept`:`${mm.score} / 100`}</span></div>
+  <div class="finding" style="margin:0 0 10px">${esc(mm.why)}</div>
+  ${mm.signals.length?`<div class="card">${mm.signals.map(sg=>`<div class="kv"><span class="k">${esc(sg.label)}</span><span class="v" style="font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-2)">${esc(sg.from||'')}</span></div>`).join('')}</div>`:''}
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">${lc
+    ?'Built from the three you named. Only kept cups end the early read — numbers arrive at your third.'
+    :`Built from the places you keep and ${cafeCups().length} cups out. Skips are remembered too, and fade.`}</div>`:'';
   return `<div class="cafe-theme"${vars?` style="${vars}"`:''}>
   <button class="text-action" style="margin:2px 0 6px" onclick="closePlace()">← Back</button>
   ${head}
+  ${skState}
   ${kvs.length?`<div class="card">${kvs.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>`:''}
   ${!mine.length?`<div class="empty">${d>=2?'You haven’t been yet. The first cup you keep here starts the page.':'You haven’t been yet. Read what’s below, order what they ordered.'}</div>`:''}
+  ${whyHTML}
   ${x&&x.home.n&&x.cafe.n?`<div class="cafeback">Same beans, two rooms: you average <strong>${x.home.avg}</strong> at home vs <strong>${x.cafe.avg}</strong> here${roaster?` on ${esc(roaster)}`:''}. The shape of a preference, not a verdict.</div>`:''}
   ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
   ${p&&p.tags&&p.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 10px">${p.tags.map(t=>`<span class="badge ghost">${esc(t)}</span>`).join('')}</div>`:''}
   ${readOnly()?'':`
   ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}
   ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
+  ${!mine.length&&!(sk&&sk.active)?`<button class="btn btn-quiet" onclick="discSkip(${jsq(shop)})">Skip — it steps back for two weeks</button>`:''}
   <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.site||p.palette||p.accent||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
   ${mine.length?`<button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`:''}`}
   ${mine.length?`<div class="section-head"><h2>Your cups here</h2></div>
@@ -2486,6 +2526,7 @@ function vTrace(){
     ${readOnly()?'':`<button class="btn btn-quiet" onclick="go('cafes')">Remember a cup out</button>
     <button class="btn btn-quiet" onclick="go('field')">Brew one at home</button>`}
     <div class="empty" style="margin-top:14px">The averages, the trace, every cup — all of it waits on the first one.</div>
+    ${recordKeepingAny()?recordKeepingHTML():''}
     ${seal('Record','One preference, two rooms.')}`;
   const oneSided=!home.length||!away.length;
   const traceN=D.brews.length;
@@ -2506,6 +2547,7 @@ function vTrace(){
         :'Every cup so far was made at home. The next cup someone hands you can join the record.'}</div>
       <button class="text-action" style="margin-top:7px" onclick="go('${!home.length?'field':'cafes'}')">${!home.length?'Go to Home →':'Go to Café →'}</button>
     </div>`:''}
+    ${recordKeepingHTML()}
     <div class="section-head"><h2>At home · what changed</h2></div>
     ${bags.length?bags.map(traceCard).join(''):`<div class="empty">${traceEmpty}</div>`}
     <div class="section-head"><h2>Every cup</h2><span class="n-note num">${all.length}</span></div>
@@ -2690,6 +2732,9 @@ function mergeLedgers(loc,rem){
   out.cafeFavs=[...f.values()].sort((a,b)=>a.localeCompare(b));
   const w=new Map();[...(rem.cafeWants||[]),...(loc.cafeWants||[])].forEach(x=>w.set(String(x).toLowerCase(),x));
   out.cafeWants=[...w.values()].sort((a,b)=>a.localeCompare(b));
+  // prefs merge shallow, local key wins — one keeper on two devices settles on
+  // the last push, and a merge no longer wipes the signal, the skips, the leans
+  out.prefs={...(rem.prefs||{}),...(loc.prefs||{})};
   out.version=loc.version||1;
   out.createdAt=[loc.createdAt,rem.createdAt].filter(Boolean).sort()[0]||out.createdAt;
   return out;
@@ -3319,6 +3364,10 @@ function vCircle(){
     </div>
     <input type="text" id="circleSearch" value="${esc(circleQuery)}" oninput="circleSearchInput()" placeholder="Search a café, a city, an order" autocapitalize="off" style="border:1px solid var(--line-strong);padding:11px 13px;margin:2px 0 10px;font-family:var(--sans);font-size:15px">
     ${lens}
+    ${REG.entries.length?`<button style="display:flex;justify-content:space-between;align-items:center;width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 13px;margin:2px 0 12px;font-family:var(--sans);font-size:14px;color:var(--ink-3);text-align:left;min-height:44px;background:transparent" onclick="openDiscover(null,true)">
+      <span><span style="color:var(--ink)">⌖</span>&nbsp; ${cityLens?esc(cityLens)+', read for you':'The register, read for you'}</span>
+      <span style="font-size:12px;color:var(--ink-2);text-decoration:underline;text-underline-offset:2px;flex:none">the map</span>
+    </button>`:''}
     <div id="circleResults">${q?circleResultsHTML(circleQuery):''}</div>`;
   if(q)return head+findSeal;
   // the discovery surface, scoped to the active lens
@@ -3368,6 +3417,495 @@ function vCircle(){
     ${wants.length?wants.map(wantCard).join(''):`<div class="empty">Save a place from anyone's find and it waits here.</div>`}
     ${door}${findSeal}`;
 }
+
+/* ============ today + the matching ============ */
+/* The Today surface and the matching behind it. Spec v1 — three weight
+ * classes: trait 60 · proximity 20 · circle 20. The traits are argued by the
+ * places you keep (and the three you name to start — the signal); proximity
+ * only counts once you've said where you stand (in memory, never stored);
+ * the circle's cups weigh in through affinity. Every number carries its
+ * reasons — no score without its signals — and until three café cups are
+ * kept the reading speaks in bands, not numbers. A save waits under Want to
+ * go; a skip steps a place back for two weeks and fades on its own — never a
+ * veto; "fewer like it" tips the place's kind down on the same curve. The
+ * bookkeeping lives in per-user prefs, so it exports and syncs. */
+const SKIP_DAYS=14,LEAN_DAYS=14,FADE_DAYS=21;
+const daysSince=iso=>iso?(Date.now()-new Date(iso))/864e5:null;
+const agoWord=iso=>{const d=Math.floor(daysSince(iso)??0);return d<=0?'today':d===1?'yesterday':d<7?d+' days ago':d<14?'a week ago':Math.round(d/7)+' weeks ago'};
+const reducedMotion=()=>!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+let _mCache=null;
+const mCache=()=>_mCache||(_mCache={});
+function signalPicks(){const s=getPref('signal',null);return(s&&s.picks)||[]}
+const coldNow=()=>!readOnly()&&!signalPicks().length&&!shopAgg().length; // no cups out, nothing named — the matching has nothing to read
+const lowConf=()=>cafeCups().length<3;                                   // the early read — bands, not numbers
+// what a place argues for itself: its tags, plus the reach facts standing on it
+function candTraits(e){
+  if(!e)return[];
+  const out=[...(e.tags||[])],r=reachCompile(e);
+  Object.keys(SEEN_FACTS).forEach(k=>{if(r.carry[k])out.push(SEEN_FACTS[k].label)});
+  return out;
+}
+// the signal — {tagNorm:{label,w,from}}; every trait remembers the place that argued it
+function signalTraits(){
+  const c=mCache();if(c.sig)return c.sig;
+  const m={};
+  const add=(t,w,from)=>{const k=normName(t);if(!k)return;const x=m[k]||(m[k]={label:t,w:0,from});x.w+=w};
+  signalPicks().forEach(p=>candTraits(regByName(p.name)).forEach(t=>add(t,2,`like ${p.name} — a place you named`)));
+  shopAgg().forEach(s=>{const good=(Number(s.avg)||0)>=6;
+    candTraits(regByName(s.shop)).forEach(t=>add(t,good?2:1,`like ${s.shop} — ${good?`your ${s.avg}/9 room`:'a place you keep'}`))});
+  return c.sig=m;
+}
+function circByShop(){
+  const c=mCache();if(c.circ)return c.circ;
+  const m={};
+  circleCups().forEach(x=>{if(x.shop&&x.hedonic!=null){const k=normName(x.shop);(m[k]=m[k]||[]).push(x)}});
+  return c.circ=m;
+}
+function activeLeans(){
+  const L=getPref('traitLeans',{})||{};
+  return Object.keys(L).map(k=>({tag:k,...L[k],age:daysSince(L[k].at)})).filter(l=>l.age<FADE_DAYS).sort((a,b)=>a.age-b.age);
+}
+function skipInfo(shop){
+  const rec=(getPref('placeSkips',{})||{})[normName(shop)];if(!rec)return null;
+  const age=daysSince(rec.at);if(age>=FADE_DAYS)return null; // fully faded — no trace on the surfaces (the Record showed it going)
+  return{...rec,age,active:age<SKIP_DAYS,back:age>=SKIP_DAYS};
+}
+const matchBand=s=>s>=84?'a strong read':s>=70?'promising':'worth a look';
+function matchOf(shop){
+  const c=mCache();c.m=c.m||{};const key=normName(shop);
+  if(c.m[key])return c.m[key];
+  const e=regByName(shop),sig=signalTraits(),traits=candTraits(e);
+  const hits=[],seen=new Set();
+  traits.forEach(t=>{const k=normName(t),s=sig[k];
+    if(s&&!seen.has(k)){seen.add(k);hits.push({label:t,w:Math.min(3,s.w),from:s.from})}});
+  hits.sort((a,b)=>b.w-a.w);
+  const t=Math.round(60*Math.min(1,hits.reduce((a,h)=>a+h.w,0)/6));
+  const km=distTo(e);
+  const p=km==null?0:Math.round(20*Math.max(0,1-km/3.2));
+  const oc=circByShop()[key]||[];
+  const circ=Math.min(20,8+oc.reduce((a,x)=>a+2+4*affinityOf(x._src),0));
+  let adj=0;const leans=[];
+  activeLeans().forEach(l=>{if(l.age<LEAN_DAYS&&traits.some(x=>normName(x)===l.tag)){adj-=Math.round(8*(1-l.age/LEAN_DAYS));leans.push(l.label)}});
+  adj=Math.max(adj,-18); // three leans of a kind is the cap — further skips deepen nothing
+  const score=Math.round(Math.max(20,Math.min(97,t+p+circ+adj)));
+  const signals=hits.slice(0,4).map(h=>({label:h.label,from:h.from}));
+  if(km!=null)signals.push({label:`${fmtDist(km)} away`,from:'from where you stand'});
+  if(oc.length){const who=[...new Set(oc.map(x=>x._who))];
+    signals.push({label:`${oc.length} cup${oc.length>1?'s':''} in the circle`,from:`${who.slice(0,2).join(', ')}${who.length>2?' and others':''} — ${avgHedonic(oc)} avg`})}
+  const whyParts=hits.slice(0,2).map(h=>h.label);
+  if(km!=null)whyParts.push(fmtDist(km));
+  const why=whyParts.length?whyParts.join(' · ')
+    :(e&&e.notes)?`"${e.notes}"`
+    :(e&&e.firstBy)?`in the Register · first entered by ${e.firstBy}`:'on the register — nothing said of it yet';
+  const thin=!hits.length&&km==null&&!oc.length;
+  return c.m[key]={score,band:matchBand(score),hits,signals,why,km,leans,thin};
+}
+/* --- the session: where you stood on the map, held for a week. Stored in
+ * prefs so a device remembers across boots; after a week it steps back to a
+ * plain suggestion — the reading keeps, the ceremony lets go. --- */
+function discSess(){return getPref('findSess',null)||{view:'map',priority:'balanced',radius:5,sel:null,at:null}}
+function saveSess(p){if(readOnly())return;setPref('findSess',{...discSess(),...p,at:new Date().toISOString()})}
+const sessFresh=s=>!!(s&&s.at&&daysSince(s.at)<7&&s.sel);
+// the candidates: every place on the record you haven't kept, scoped to the
+// active lens; a said location narrows to a radius that widens itself when thin
+function discCands(){
+  const c=mCache();if(c.cands)return c.cands;
+  // not candidates: places you keep, and the three you named — you love them already
+  const mine=new Set([...shopAgg().map(s=>normName(s.shop)),...signalPicks().map(p=>normName(p.name))]);
+  const byShop=circByShop();
+  const names=new Map();
+  REG.entries.forEach(e=>{const k=normName(e.name);if(!mine.has(k))names.set(k,e.name)});
+  Object.keys(byShop).forEach(k=>{if(!mine.has(k)&&!names.has(k))names.set(k,byShop[k][0].shop)});
+  let rows=[...names.values()].map(n=>{const e=regByName(n);return{shop:n,e,city:(e&&e.city)||'',km:distTo(e)}})
+    .filter(r=>inLens(r.city));
+  c.widened=false;
+  if(nearOn&&myGeo){
+    const within=r=>rows.filter(x=>x.km==null||x.km<=r);
+    let rad=discSess().radius||5;
+    while(within(rad).filter(x=>x.km!=null).length<3&&rad<5){rad=rad===1?2:5;c.widened=true}
+    rows=within(rad);c.radiusEff=rad;
+  }
+  rows.forEach(r=>{r.m=matchOf(r.shop);r.skip=skipInfo(r.shop)});
+  const near=discSess().priority==='near';
+  rows.sort((a,b)=>near
+    ?((a.km==null)-(b.km==null))||((a.km||0)-(b.km||0))||b.m.score-a.m.score
+    :b.m.score-a.m.score);
+  return c.cands=rows;
+}
+/* --- skips and leans: append a date, fade on a curve, nothing erased early --- */
+let skipAsk=null; // {shop,kind} — the one open question after a skip
+function discSkip(shop){
+  if(guard())return;
+  const e=regByName(shop);
+  const kind=(e&&e.tags&&e.tags[0])||'';
+  const S=getPref('placeSkips',{})||{};
+  S[normName(shop)]={name:String(shop).trim(),at:new Date().toISOString(),kind};
+  setPref('placeSkips',S);
+  skipAsk=kind?{shop,kind}:null;
+  render();
+  if(!kind)toast('Skipped — it steps back for two weeks, then fades on its own');
+}
+function resolveSkipAsk(fewer){
+  if(!skipAsk||guard())return;
+  const{shop,kind}=skipAsk;skipAsk=null;
+  if(fewer){
+    const L=getPref('traitLeans',{})||{};
+    L[normName(kind)]={label:kind,at:new Date().toISOString(),from:String(shop).trim()};
+    setPref('traitLeans',L);
+    toast(activeLeans().filter(l=>l.age<LEAN_DAYS).length>=3?`Noted — ${kind} weighs less now. Three leans is the cap.`:`Noted — ${kind} weighs less now. That fades over two weeks too.`);
+  }else toast('Just the place — its kind keeps its weight');
+  render();
+}
+function discUnskip(shop){
+  if(guard())return;
+  const S=getPref('placeSkips',{})||{};delete S[normName(shop)];setPref('placeSkips',S);
+  const L=getPref('traitLeans',{})||{};
+  Object.keys(L).forEach(k=>{if(normName(L[k].from)===normName(shop))delete L[k]});
+  setPref('traitLeans',L);
+  if(skipAsk&&normName(skipAsk.shop)===normName(shop))skipAsk=null;
+  render();
+}
+function clearLean(tag){
+  if(guard())return;
+  const L=getPref('traitLeans',{})||{};delete L[normName(tag)];setPref('traitLeans',L);
+  render();toast('Cleared — the kind reads at full weight');
+}
+function letGoWant(shop){
+  if(guard())return;
+  const i=(D.cafeWants||[]).findIndex(x=>normName(x)===normName(shop));
+  if(i>=0)D.cafeWants.splice(i,1);
+  const wa=getPref('wantAt',{})||{};delete wa[normName(shop)];
+  const wk=getPref('wantAsk',{})||{};delete wk[normName(shop)];
+  D.prefs=D.prefs||{};D.prefs.wantAt=wa;D.prefs.wantAsk=wk;
+  save();render();toast('Let go — no mark against it');
+}
+function keepWaiting(shop){
+  if(guard())return;
+  const wk=getPref('wantAsk',{})||{};const n=((wk[normName(shop)]||{}).n||0)+1;
+  wk[normName(shop)]={n,at:new Date().toISOString()};setPref('wantAsk',wk);
+  render();toast(n>=2?'It stays — no more asks; it just waits':'It stays — one last ask in four weeks');
+}
+/* --- the signal: three cafés you already love, named once against the register --- */
+let coldQ=['','',''],coldPick=[null,null,null],justSet=false;
+function coldNames(){
+  const names=new Map();
+  REG.entries.forEach(e=>names.set(normName(e.name),{name:e.name,where:[e.city,e.neighborhood].filter(Boolean).join(' · ')}));
+  Object.keys(circByShop()).forEach(k=>{if(!names.has(k)){const x=circByShop()[k][0];names.set(k,{name:x.shop,where:x.city||''})}});
+  return[...names.values()];
+}
+function coldSugHTML(i){
+  const q=coldQ[i].trim(),qs=normName(q);
+  if(!qs)return'';
+  const taken=coldPick.filter((p,j)=>p&&j!==i).map(p=>normName(p.name));
+  const sugs=coldNames().filter(r=>normName(r.name).includes(qs)&&!taken.includes(normName(r.name))).slice(0,4);
+  const exact=sugs.some(r=>normName(r.name)===qs);
+  const row=(inner,call)=>`<button style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;width:100%;text-align:left;padding:10px 12px;background:var(--paper-card);border:0;border-bottom:1px solid var(--line);cursor:pointer;font-family:var(--sans);font-size:13px;color:var(--ink);min-height:44px" onmousedown="event.preventDefault();${call}">${inner}</button>`;
+  const rows=sugs.map(r=>row(`<span><strong>${esc(r.name)}</strong>${r.where?`<span style="color:var(--ink-3)"> · ${esc(r.where)}</span>`:''}</span><span class="badge ghost" style="flex:none">on the register</span>`,`coldTake(${i},${jsq(r.name)},${jsq(r.where)})`)).join('');
+  const add=q.length>=2&&!exact?row(`<span>Keep “${esc(q)}” as written</span><span class="badge dashed" style="flex:none">new to the register</span>`,`coldTakeNew(${i})`):'';
+  return rows||add?`<div style="border:1px solid var(--line-strong);border-radius:var(--radius);overflow:hidden">${rows}${add}</div>`:'';
+}
+function coldType(i,v){coldQ[i]=v;const box=document.getElementById('coldsug'+i);if(box)box.innerHTML=coldSugHTML(i)}
+function coldTake(i,name,where){coldPick[i]={name,where};coldQ[i]='';render()}
+function coldTakeNew(i){const q=coldQ[i].trim();if(!q)return;coldPick[i]={name:q,where:'yours to enter',isNew:true};coldQ[i]='';render()}
+function coldClear(i){coldPick[i]=null;coldQ[i]='';render()}
+function finishCold(){
+  if(guard())return;
+  if(!coldPick.every(Boolean)){toast('Name all three — the register is listening');return}
+  coldPick.filter(p=>p.isNew).forEach(p=>regUpsert(p.name,{},activeName())); // a provisional entry needs only its name
+  setPref('signal',{picks:coldPick.map(p=>({name:p.name,isNew:!!p.isNew})),at:new Date().toISOString()});
+  justSet=true;render();toast('Three named — read into traits');
+}
+/* --- the map, read for you: the discover surface over Find's pooled record --- */
+let discOn=false,discSel=0,discTune=false,discMatch=null,discMatchedOnce=false,_mt=null,_sp=null;
+function openDiscover(focus,fresh){
+  discOn=true;discTune=false;placeView=null;
+  const cands=discCands();
+  let i=0;
+  const want=focus||discSess().sel;
+  if(want){const j=cands.findIndex(x=>normName(x.shop)===normName(want));if(j>=0)i=j}
+  discSel=i;
+  if(fresh&&!discMatchedOnce&&!coldNow()&&cands.length){ // the matching, shown once a visit — ceremony, not delay
+    discMatch={step:0};clearTimeout(_mt);
+    _mt=setTimeout(mStep,reducedMotion()?800:520);
+  }
+  render();discScrollTo(i,true);
+  if(cands[i])saveSess({sel:cands[i].shop});
+}
+function mStep(){
+  if(!discMatch)return;
+  if(reducedMotion()||discMatch.step>=3){discMatch=null;discMatchedOnce=true;render();discScrollTo(discSel,true);return}
+  discMatch.step++;render();
+  _mt=setTimeout(mStep,520);
+}
+function closeDiscover(){discOn=false;discMatch=null;clearTimeout(_mt);render()}
+function discScrollTo(i,instant){
+  setTimeout(()=>{const el=document.getElementById('discdrawer');if(el)el.scrollTo({left:i*310,behavior:(instant||reducedMotion())?'instant':'smooth'})},60);
+}
+function discPick(i){
+  discSel=i;const r=discCands()[i];
+  if(r)saveSess({sel:r.shop});
+  render();discScrollTo(i);
+}
+function onDrawerScroll(el){
+  const i=Math.round(el.scrollLeft/310),cands=discCands();
+  if(i!==discSel&&i>=0&&i<cands.length){
+    discSel=i;
+    const m=document.getElementById('discmap');if(m)m.innerHTML=discPinsHTML(cands); // pins only — a full paint would fight the scroll
+    clearTimeout(_sp);_sp=setTimeout(()=>{const r=discCands()[discSel];if(r)saveSess({sel:r.shop})},400);
+  }
+}
+function discToggleView(){
+  const v=discSess().view==='map'?'list':'map';
+  saveSess({view:v});render();
+  if(v==='map')discScrollTo(discSel,true);
+}
+function discSetPriority(p){saveSess({priority:p});if(p==='near'&&!nearOn)requestGeo();render()}
+function discSetRadius(r){saveSess({radius:r});render()}
+function discPinsHTML(cands){
+  const pts=[];
+  if(nearOn&&myGeo)pts.push({you:true,lat:myGeo.lat,lon:myGeo.lon});
+  cands.forEach((r,i)=>{if(r.e&&r.e.lat!=null)pts.push({i,r,lat:r.e.lat,lon:r.e.lon})});
+  const cold=coldNow();
+  return mapProject(pts).map(p=>{
+    if(p.you)return`<div class="pin you" style="left:${p.x}%;top:${p.y}%"><span class="lbl">you</span></div>`;
+    const selP=p.i===discSel,sk=p.r.skip&&p.r.skip.active;
+    return`<div class="pin nn${selP?' sel':''}${sk||cold?' dashed':''}${isWant(p.r.shop)?' saved':''}" style="left:${p.x}%;top:${p.y}%" onclick="discPick(${p.i})">${cold?'·':sk?'':p.i+1}${selP?`<span class="lbl top">${esc(p.r.shop)}</span>`:''}</div>`;
+  }).join('');
+}
+const matchScoreHTML=m=>coldNow()?`<span class="badge dashed" style="flex:none">unread</span>`
+  :lowConf()?`<span class="badge ghost" style="flex:none">${m.band}</span>`
+  :`<span class="big" style="color:var(--ink)">${m.score}<span style="display:block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);text-align:right;font-weight:500">match</span></span>`;
+function discCardInner(r,i){
+  if(r.skip&&r.skip.active){
+    const ask=skipAsk&&normName(skipAsk.shop)===normName(r.shop);
+    return`<div class="card" style="border-style:dashed;margin-bottom:0">
+      <div class="muted small serif" style="font-style:italic">Skipped — ${esc(r.shop)} steps back for two weeks, then fades on its own. Never a veto.</div>
+      ${ask?`<div class="muted small" style="margin-top:6px">The place, or its kind?</div>
+      <div style="display:flex;gap:16px;margin-top:6px;align-items:baseline;flex-wrap:wrap">
+        <button class="text-action" onclick="resolveSkipAsk(false)">Just this place</button>
+        <button class="text-action" onclick="resolveSkipAsk(true)">Fewer ${esc(skipAsk.kind)} places</button>
+      </div>`:''}
+      <button class="text-action" style="margin-top:6px" onclick="discUnskip(${jsq(r.shop)})">Undo</button>
+    </div>`;
+  }
+  const pal=palOf(r.e),vars=pal?cafeVars(pal):'';
+  const distB=r.km!=null?` <span class="badge ghost">${fmtDist(r.km)}</span>`:'';
+  const backB=r.skip&&r.skip.back?` <span class="badge dashed">back from a skip</span>`:'';
+  const why=(r.skip&&r.skip.back?'The skip faded — read it again. ':'')+r.m.why;
+  return`<div class="card tap shopcard" style="${vars}${vars?';':''}margin-bottom:0${i===discSel?';border-color:var(--ink)':''}" onclick="openPlace(${jsq(r.shop)})">
+    <div class="row"><span class="small"><strong>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}</span>`:''}${distB}${backB}</span>${matchScoreHTML(r.m)}</div>
+    <div class="muted small serif" style="font-style:italic;margin-top:2px">${esc(why)}</div>
+    ${readOnly()?'':`<div style="display:flex;gap:16px;margin-top:9px;align-items:baseline">
+      <button class="text-action" onclick="event.stopPropagation();toggleWant(${jsq(r.shop)});render()">${isWant(r.shop)?'Saved — Want to go':'Save for later'}</button>
+      <button class="text-action" onclick="event.stopPropagation();discSkip(${jsq(r.shop)})">Skip</button>
+      <button class="text-action" style="margin-left:auto" onclick="event.stopPropagation();openPlace(${jsq(r.shop)})">Why this →</button>
+    </div>`}
+  </div>`;
+}
+function vDiscover(){
+  const s=discSess(),cold=coldNow(),lc=lowConf();
+  const cands=discCands(),c=mCache();
+  if(discSel>=cands.length)discSel=Math.max(0,cands.length-1);
+  const area=`${cityLens?esc(cityLens):nearOn?`near you · ${c.radiusEff||s.radius||5} km`:'everywhere'} · ${cands.length} read`;
+  const bar=`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:2px 0 10px">
+    <button class="text-action" onclick="closeDiscover()">← Today</button>
+    <span class="n-note" style="letter-spacing:.12em;text-transform:uppercase">${area}</span>
+    <span style="display:flex;gap:14px;flex:none"><button class="text-action" onclick="discToggleView()">${s.view==='map'?'List':'Map'}</button><button class="text-action" onclick="discTune=!discTune;render()">Tune</button></span>
+  </div>`;
+  const tune=discTune?`<div style="border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 13px;margin:0 0 12px">
+    <div class="eyebrow" style="color:var(--ink-3)">Priority</div>
+    <div class="seg" style="margin-bottom:10px">
+      <button class="${s.priority!=='near'?'on':''}" onclick="discSetPriority('balanced')">Balanced</button>
+      <button class="${s.priority==='near'?'on':''}" onclick="discSetPriority('near')">Closest first</button>
+    </div>
+    <div class="eyebrow" style="color:var(--ink-3)">Where you stand</div>
+    <div class="lens" style="margin:0 0 8px">
+      <button class="chip${nearOn?' on':''}" onclick="toggleNear()">Near you</button>
+      ${nearOn?[1,2,5].map(r=>`<button class="chip${(s.radius||5)===r?' on':''}" onclick="discSetRadius(${r})">${r} km${c.widened&&(s.radius||5)===r?' — auto':''}</button>`).join(''):''}
+    </div>
+    ${nearOn?'':`<div class="muted small serif" style="font-style:italic;margin:0 0 8px">Say where you stand and distance joins the reading — held in memory, never stored.</div>`}
+    <div class="muted small serif" style="font-style:italic">The default already weighs your record — tune only if the walk matters more today.</div>
+  </div>`:'';
+  const mlines=lc?[
+    'Reading the three you named — their entries on the register.',
+    'Tags, the reach, the circle — lifted from what the register keeps.',
+    'No cups of yours yet. The reading is provisional.',
+    `${cands.length} place${cands.length===1?'':'s'} worth a look. Ranked, loosely.`]:[
+    `Reading your record — ${cafeCups().length} cups out, ${shopAgg().length} place${shopAgg().length===1?'':'s'} you keep.`,
+    'The traits of the places you keep, weighed.',
+    'Your saves remembered. Your skips too — they fade.',
+    `${cands.length} place${cands.length===1?'':'s'} worth reading. Ranked.`];
+  const overlay=discMatch?`<div style="position:absolute;inset:0;z-index:8;background:var(--paper);background:color-mix(in srgb,var(--paper) 94%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 34px;text-align:center;min-height:300px">
+    <div class="eyebrow" style="margin-bottom:14px">Matching</div>
+    <div class="serif" style="font-style:italic;font-size:15px;color:var(--ink-2);max-width:30ch;min-height:24px">${reducedMotion()?(lc?'Read against the three you named — ranked, loosely.':'Read against your record — ranked. No ceremony.'):mlines[Math.min(discMatch.step,3)]}</div>
+    <div style="width:140px;height:1px;background:var(--line-2);margin-top:18px;position:relative">
+      <div style="position:absolute;left:0;top:0;bottom:0;background:var(--accent);width:${reducedMotion()?100:Math.min(100,discMatch.step*25+10)}%;transition:${reducedMotion()?'none':'width .45s ease'}"></div>
+    </div>
+  </div>`:'';
+  const sparseNote=c.widened?`<div class="cafeback">Thin close by — the radius widened itself to ${c.radiusEff} km; the smaller rings unlock as the register grows here.</div>`:'';
+  const coldNote=cold?`<div class="card">
+    <strong class="small">The record is thin — no places kept yet.</strong>
+    <div class="muted small" style="margin-top:4px">Matching needs three cafés you already love. Name them once on Today and every pin here carries its reasons.</div>
+    <button class="text-action" style="margin-top:7px" onclick="closeDiscover()">Name three on Today →</button>
+  </div>`:'';
+  const body=!cands.length
+    ?`<div class="empty">No places to read${cityLens?` in ${esc(cityLens)}`:''} yet. The register grows with every cup — yours and your circle's.</div>`
+    :s.view==='map'
+      ?`<div class="cafe-map tall" id="discmap" style="margin-bottom:10px">${discPinsHTML(cands)}</div>
+      ${sparseNote}${coldNote}
+      <div class="hscroll" id="discdrawer" onscroll="onDrawerScroll(this)">${cands.map((r,i)=>`<div style="width:300px">${discCardInner(r,i)}</div>`).join('')}</div>`
+      :`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">The map as a list — same reading, same order, nothing hidden.</div>
+      ${sparseNote}${coldNote}
+      ${cands.map((r,i)=>`<div style="margin-bottom:10px">${discCardInner(r,i)}</div>`).join('')}`;
+  return`${bar}${tune}<div style="position:relative">${body}${overlay}</div>
+  ${seal('The map','Read against your record — reasons on every pin.')}`;
+}
+/* --- Today: the day's surface — the thread you left, and the next thing --- */
+function vToday(){
+  const now=new Date(),hr=now.getHours();
+  const greeting=hr<5?'Good evening.':hr<12?'Good morning.':hr<18?'Good afternoon.':'Good evening.';
+  const dateLine=now.toLocaleDateString([],{weekday:'long'})+' · '+now.toLocaleDateString([],{month:'short',day:'numeric'});
+  const cold=coldNow(),lc=lowConf(),s=discSess();
+  const cands=discCands();
+  const live=cands.filter(r=>!(r.skip&&r.skip.active));
+  const wants=(D.cafeWants||[]).slice();
+  const hero=`<div class="hero" style="padding-bottom:12px"><div class="eyebrow">${dateLine}</div><h2 style="font-size:32px">${greeting}</h2></div>`;
+  let signalHTML='';
+  if(cold){
+    signalHTML=`<div class="continuation">
+      <div class="eyebrow">Start the matching</div>
+      <div style="font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:-.01em;line-height:1.15;margin:4px 0 2px">Tell us three cafés you already love.</div>
+      <div class="muted small" style="margin:6px 0 12px;max-width:36ch">Their traits become your signal — every match after carries its reasons.</div>
+      ${[0,1,2].map(i=>{const p=coldPick[i];
+        return p?`<div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line-strong);padding:7px 0 8px;margin-bottom:10px">
+          <span class="eyebrow" style="margin:0;color:var(--ink-3);flex:none;width:44px">${['One','Two','Three'][i]}</span>
+          <span class="small" style="font-family:var(--sans)"><strong>${esc(p.name)}</strong><span class="muted"> · ${esc(p.where||'yours to enter')}</span></span>
+          <button class="text-action" style="margin-left:auto;flex:none" onclick="coldClear(${i})">change</button>
+        </div>`
+        :`<label class="f"><span class="l">${['One','Two','Three'][i]}</span>
+          <input type="text" value="${esc(coldQ[i])}" placeholder="${['a place you love','a place you return to','anywhere, any city'][i]}" oninput="coldType(${i},this.value)" autocapitalize="words"></label>
+        <div id="coldsug${i}" style="margin:-6px 0 10px">${coldSugHTML(i)}</div>`}).join('')}
+      <button class="btn btn-graphite" style="opacity:${coldPick.every(Boolean)?1:.45}" onclick="finishCold()">Set the signal</button>
+      <div class="muted small serif" style="font-style:italic;margin-top:6px">${coldPick.every(Boolean)?'All three against the register — the signal starts honest.':'Type a few letters — the register answers. Pick each from it, or keep it as written.'}</div>
+    </div>`;
+  }else if(justSet){
+    signalHTML=`<div class="continuation">
+      <div class="eyebrow">The signal, set</div>
+      <div style="font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:-.01em;line-height:1.15;margin:4px 0 2px">Three rooms, read into traits.</div>
+      ${signalPicks().map(p=>{const tr=candTraits(regByName(p.name));
+        return`<div style="border-bottom:1px solid var(--line);padding:9px 0 10px">
+          <div style="display:flex;align-items:baseline;gap:8px"><span class="small" style="font-family:var(--sans)"><strong>${esc(p.name)}</strong></span>${p.isNew?'<span class="badge dashed" style="flex:none">provisional</span>':''}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${(tr.length?tr.slice(0,4):[p.isNew?'a name is enough to start':'on the register — nothing said of it yet']).map(t=>`<span class="badge ghost">${esc(t)}</span>`).join('')}</div>
+        </div>`}).join('')}
+      <div class="muted small serif" style="font-style:italic;margin:8px 0 12px;max-width:40ch">These traits are the whole signal until your cups arrive — three kept cups end the early read. A provisional entry needs only its name.</div>
+      <button class="btn btn-graphite" onclick="justSet=false;openDiscover(null,true)">Read the first matches →</button>
+      <button class="text-action" style="margin-top:2px" onclick="justSet=false;render()">Later — keep Today</button>
+    </div>`;
+  }
+  const grad=(!cold&&!justSet&&signalPicks().length&&!lc&&!getPref('gradSeen',false)&&!readOnly())?`<div class="continuation">
+    <div class="eyebrow">The early read ends</div>
+    <div style="font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:-.01em;line-height:1.15;margin:4px 0 2px">Three cups kept — the numbers arrive.</div>
+    <div class="muted small serif" style="font-style:italic;margin:6px 0 12px;max-width:40ch">The bands did their work. From here every teaser, pin and page carries a number — same reasons, finer grain, weighed from your cups now, not just the three you named.</div>
+    <button class="btn btn-graphite" onclick="setPref('gradSeen',true);openDiscover(null,true)">See the numbers on the map →</button>
+    <button class="text-action" style="margin-top:2px" onclick="setPref('gradSeen',true);render()">Carry on</button>
+  </div>`:'';
+  let resume='';
+  if(!cold&&!justSet&&!lc&&s.sel){
+    const rc=live.find(r=>normName(r.shop)===normName(s.sel));
+    if(rc&&sessFresh(s)){
+      const saved=isWant(rc.shop);
+      resume=`<div class="continuation" style="cursor:pointer" onclick="openDiscover(${jsq(rc.shop)},false)">
+        <div class="eyebrow">Pick up where you left off</div>
+        <div class="row" style="align-items:baseline;margin-top:2px">
+          <div class="score">${rc.m.score}<small> match</small></div>
+          <div style="text-align:right;max-width:62%"><div class="recipe">the map · ${s.priority==='near'?'closest first':'balanced'} · ${fmtAgo(s.at)}</div></div>
+        </div>
+        <div class="finding">${saved?`${esc(rc.shop)} is saved — it waits under Want to go. The map holds ${Math.max(0,live.length-1)} more, read against your record.`:`You were reading ${esc(rc.shop)} — ${esc(rc.m.why)}. Unsaved.`}</div>
+        <div class="bestline"><span>Resume where you stood</span><strong>${s.view==='list'?'same list, same rank →':'same map, same card →'}</strong></div>
+        <div class="muted small serif" style="font-style:italic;margin-top:7px">Holds for a week — left longer, it steps back to a plain suggestion.</div>
+      </div>`;
+    }else if(rc){
+      resume=`<button style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;text-align:left;border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;margin:0 0 6px;background:transparent;cursor:pointer;min-height:44px" onclick="openDiscover(${jsq(rc.shop)},true)">
+        <span class="eyebrow">From last time</span>
+        <span class="small" style="font-family:var(--sans);color:var(--ink)"><strong>${esc(rc.shop)}</strong> still reads ${rc.m.score} — near the top of the map today.</span>
+        <span class="muted small serif" style="font-style:italic">The session let go after a week; the reading kept. →</span>
+      </button>`;
+    }
+  }
+  const teaserCard=r=>{const pal=palOf(r.e),vars=pal?cafeVars(pal):'';
+    return`<div class="card tap" style="${vars}${vars?';':''}min-width:248px;max-width:270px;margin-bottom:4px;cursor:pointer" onclick="openDiscover(${jsq(r.shop)},true)">
+      <div class="row"><span class="small"><strong>${esc(r.shop)}</strong></span>${matchScoreHTML(r.m)}</div>
+      <div class="muted small">${esc(r.city||'city unwritten')}${r.km!=null?` · ${fmtDist(r.km)}`:''}</div>
+      <div class="muted small serif" style="font-style:italic;margin-top:4px">${esc(r.m.why)}</div>
+      ${isWant(r.shop)?`<div style="margin-top:6px"><span class="badge">saved · Want to go</span></div>`:''}
+    </div>`};
+  const teasers=live.length?`<div class="section-head"><h2>Something new for you</h2><button class="text-action" onclick="openDiscover(null,true)">The full map →</button></div>
+    <div class="hscroll">${live.slice(0,3).map(teaserCard).join('')}</div>
+    <div class="muted small serif" style="font-style:italic;margin:2px 2px 0">${cold?'Running on register defaults until the signal exists — name three cafés above and the reasons arrive.':'One list, one memory — a save from anywhere lands under Want to go; a skip quiets a place everywhere, then fades.'}</div>`
+    :`<div class="section-head"><h2>Something new for you</h2></div>
+    <div class="empty">Nothing to read yet — the register grows with every cup. ${readOnly()?'':'Bring your people from Find, or keep the first cup out yourself.'}</div>`;
+  const explore=`<h2>Explore</h2>
+  <button style="display:flex;justify-content:space-between;align-items:center;width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 13px;margin:2px 0 6px;font-family:var(--sans);font-size:15px;color:var(--ink-3);text-align:left;min-height:44px;background:transparent" onclick="openDiscover(null,true)">
+    <span><span style="color:var(--ink)">⌖</span>&nbsp; ${cityLens?esc(cityLens)+' — the neighborhood, read for you':'The register, read for you'}</span>
+    <span style="font-size:12px;color:var(--ink-2);text-decoration:underline;text-underline-offset:2px;flex:none">the map</span>
+  </button>
+  <div class="muted small">${REG.entries.length} place${REG.entries.length===1?'':'s'} on the register · ${live.length} read against your record</div>`;
+  const wa=getPref('wantAt',{})||{},wk=getPref('wantAsk',{})||{};
+  const agingN=wants.filter(w=>{const at=wa[normName(w)],ask=wk[normName(w)]||{n:0};
+    return at&&ask.n<2&&daysSince(ask.at||at)>=(ask.n===0?14:28)}).length;
+  const whisper=wants.length?`<button class="text-action" style="margin:8px 2px 0" onclick="go('${depth()>=4?'trace':'cafes'}')">Want to go holds ${wants.length}${agingN?` — ${agingN} aging, worth a look`:''} →</button>`:'';
+  const acts=D.cups.slice().sort(byNew).slice(0,5).map(c=>{
+    const when=new Date(c.createdAt).toLocaleDateString([],{month:'short',day:'numeric'});
+    const what=c.kind==='cafe'?`${c.shop||'a café'} — ${c.drink||'a cup'}`:`${bagName(bagById(c.bagId))} — at home`;
+    return`<div class="gtab"><span class="nm num" style="width:58px">${when}</span><span class="ds">${esc(what)}${c.hedonic!=null?`, ${c.hedonic}/9`:''}${c.again===true?', again':''}</span></div>`}).join('');
+  const activity=acts?`<details class="trace-more" style="margin-top:22px"><summary>Recent activity</summary>${acts}</details>`:'';
+  return hero+signalHTML+grad+resume+teasers+explore+whisper+activity+seal('Today','Pick it up where you left it — or find the next.');
+}
+/* --- the bookkeeping, on the Record: what waits, what stepped back, what leans --- */
+function recordKeepingHTML(){
+  const wants=(D.cafeWants||[]).slice();
+  const wa=getPref('wantAt',{})||{},wk=getPref('wantAsk',{})||{};
+  const rows=wants.map(n=>{const at=wa[normName(n)],ask=wk[normName(n)]||{n:0};
+    return{n,m:matchOf(n),e:regByName(n),at,ask,aging:!!at&&ask.n<2&&daysSince(ask.at||at)>=(ask.n===0?14:28)}})
+    .sort((a,b)=>b.m.score-a.m.score);
+  const wantsHTML=rows.length?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">Ordered by match, not the calendar — the age shows anyway.</div>
+    ${rows.map(w=>{const pal=palOf(w.e),vars=pal?cafeVars(pal):'';
+      return`<div class="card tap shopcard"${vars?` style="${vars}"`:''} onclick="openPlace(${jsq(w.n)})">
+        <div class="row"><span class="small"><strong>${esc(w.n)}</strong>${w.e&&(w.e.city||w.e.neighborhood)?`<span class="muted"> · ${esc([w.e.city,w.e.neighborhood].filter(Boolean).join(' · '))}</span>`:''}</span>${matchScoreHTML(w.m)}</div>
+        <div class="muted small">${w.at?`Saved ${agoWord(w.at)}`:'Saved — before the record kept dates'} · unvisited</div>
+        ${w.aging?`<div class="muted small serif" style="font-style:italic;margin-top:6px">${w.ask.n===0?`Saved ${agoWord(w.at)}, still unvisited — let it go?`:'Still waiting — the last ask. After this it stays quiet.'}</div>
+        <div style="display:flex;gap:16px;margin-top:7px;align-items:baseline">
+          <button class="text-action" onclick="event.stopPropagation();letGoWant(${jsq(w.n)})">Let it go</button>
+          <button class="text-action" onclick="event.stopPropagation();keepWaiting(${jsq(w.n)})">${w.ask.n===0?'It stays — one last ask in four weeks':'It stays — no more asks'}</button>
+        </div>`
+        :readOnly()?'':`<div style="display:flex;gap:16px;margin-top:7px;align-items:baseline">
+          <button class="text-action" onclick="event.stopPropagation();openPlace(${jsq(w.n)})">Why this →</button>
+          <button class="text-action" style="margin-left:auto" onclick="event.stopPropagation();letGoWant(${jsq(w.n)})">Let it go</button>
+        </div>`}
+      </div>`}).join('')}
+    <div class="muted small serif" style="font-style:italic;margin:0 2px 4px">Letting go is not a skip — no mark against the place; it simply stops waiting.</div>`
+    :`<div class="empty">Nothing waiting. A save — from the map, the list, a café's page — lands here.</div>`;
+  const S=getPref('placeSkips',{})||{};
+  const skipRows=Object.values(S).map(rec=>{const info=skipInfo(rec.name);if(!info)return null;
+    const dLeft=Math.max(1,Math.ceil(SKIP_DAYS-info.age));
+    return info.active
+      ?`<div class="gtab"><span class="nm num" style="width:58px">${dLeft}d left</span><span class="ds">${esc(rec.name)} — skipped ${agoWord(rec.at)}; fades in ${dLeft} day${dLeft===1?'':'s'}</span>${readOnly()?'':`<button class="text-action" style="flex:none" onclick="discUnskip(${jsq(rec.name)})">clear now</button>`}</div>`
+      :`<div class="gtab"><span class="nm num" style="width:58px">faded</span><span class="ds">${esc(rec.name)} — the skip faded; it is back in the results, read again</span></div>`;
+  }).filter(Boolean).join('');
+  const skips=`<div class="section-head"><h2>Standing skips</h2></div>
+    ${skipRows||`<div class="empty">No standing skips. A skip quiets a place for two weeks, waits here, and fades on its own.</div>`}
+    <div class="muted small serif" style="font-style:italic;margin:6px 2px 0">A skip steps a place back — never its kind. When you want fewer of a kind, say so at the moment you skip.</div>`;
+  const leansList=activeLeans();
+  const leanRows=leansList.map(l=>{const active=l.age<LEAN_DAYS,dLeft=Math.max(1,Math.ceil(LEAN_DAYS-l.age));
+    return active
+      ?`<div class="gtab"><span class="nm num" style="width:58px">${dLeft}d left</span><span class="ds">${esc(l.label)} places weigh less — from skipping ${esc(l.from)}; fades in ${dLeft} day${dLeft===1?'':'s'}</span>${readOnly()?'':`<button class="text-action" style="flex:none" onclick="clearLean(${jsq(l.tag)})">clear now</button>`}</div>`
+      :`<div class="gtab"><span class="nm num" style="width:58px">faded</span><span class="ds">${esc(l.label)} — the lean faded; full weight again</span></div>`}).join('');
+  const cap=leansList.filter(l=>l.age<LEAN_DAYS).length>=3?`<div class="muted small serif" style="font-style:italic;margin:4px 2px 0">Three leans of a kind is the cap — further skips deepen nothing.</div>`:'';
+  const leans=`<div class="section-head"><h2>Standing trait leans</h2></div>
+    ${leanRows||`<div class="empty">No standing leans. "Fewer like it" tips a kind down for two weeks — it fades on the same curve as a skip.</div>`}${cap}`;
+  return`<div class="section-head"><h2>Want to go</h2><span class="n-note num">${wants.length?'n='+wants.length:''}</span></div>`+wantsHTML+skips+leans;
+}
+const recordKeepingAny=()=>!!((D.cafeWants||[]).length||Object.keys(getPref('placeSkips',{})||{}).length||activeLeans().length);
 
 /* ============ quick start ============ */
 const firstRun=()=>!D.setups.length&&!D.bags.length&&!D.cups.length;
