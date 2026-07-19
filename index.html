@@ -322,9 +322,11 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .cafe-banner .txt{position:absolute;left:16px;right:16px;bottom:15px;color:#fff}
 .cafe-banner .txt h2{font-family:var(--serif);font-size:25px;font-weight:600;line-height:1.02;letter-spacing:-.02em;margin:0;color:#fff;text-transform:none;text-shadow:0 1px 14px rgba(0,0,0,.55)}
 .cafe-banner .txt .city{font-family:var(--sans);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-top:6px;opacity:.92;text-shadow:0 1px 10px rgba(0,0,0,.6)}
-/* the map — a decorative, non-geographic plot: real lat/lon scaled to fit the box,
-   never tiles or streets. A filled dot is a place you keep, a dashed one is not. */
-.cafe-map{position:relative;height:110px;background:var(--paper-2);border:1px solid var(--line);margin-bottom:8px}
+/* the map — real lat/lon scaled to fit the box; a filled dot is a place you
+   keep, a dashed one is not. The drawn plot is the floor: real streets (the
+   street map section) fade in behind the pins when tiles can be fetched, and
+   this plot simply stands when they can't. */
+.cafe-map{position:relative;height:110px;background:var(--paper-2);border:1px solid var(--line);margin-bottom:8px;overflow:hidden}
 .cafe-map .pin{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--ink);cursor:pointer;transform:translate(-50%,-50%)}
 .cafe-map .pin.unread{width:7px;height:7px;border:1px dashed var(--ink-3);background:none}
 .cafe-map .pin .lbl{position:absolute;left:100%;top:50%;transform:translate(6px,-50%);font-family:var(--sans);font-size:11px;color:var(--ink);font-weight:500;white-space:nowrap}
@@ -335,13 +337,27 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .cafe-map .pin.nn.sel{width:28px;height:28px;font-size:11px}
 .cafe-map .pin.nn.dashed{background:var(--paper);border:1px dashed var(--ink-3);color:var(--ink-3)}
 .cafe-map .pin.nn.saved{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--ink)}
-.cafe-map .pin.you{width:14px;height:14px;background:none;border:1.5px solid var(--ink);border-radius:50%}
-.cafe-map .pin.you::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:var(--ink);transform:translate(-50%,-50%)}
+.cafe-map .pin.you{width:14px;height:14px;background:var(--paper);border:1.5px solid var(--accent);border-radius:50%}
+.cafe-map .pin.you::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%)}
 .cafe-map .pin .lbl.top{left:50%;top:auto;bottom:100%;transform:translate(-50%,-6px);font-weight:600}
+/* the street layer — MapLibre over the plot; fades in only once tiles actually land */
+.cafe-map .smap-live{position:absolute;inset:0;opacity:0;transition:opacity .45s ease}
+.cafe-map .smap-live.in{opacity:1}
+.cafe-map .smap-live .maplibregl-map{width:100%;height:100%}
+.cafe-map .smap-live .lbl{text-shadow:0 0 2px var(--paper),0 1px 2px var(--paper),0 0 5px var(--paper)}
+.cafe-map .maplibregl-ctrl-attrib{font-family:var(--sans)!important;font-size:9px!important;letter-spacing:.02em;background:color-mix(in srgb,var(--paper-card) 82%,transparent)!important;color:var(--ink-3)!important;padding:1px 6px}
+.cafe-map .maplibregl-ctrl-attrib a{color:var(--ink-3)!important;text-decoration:none}
+.cafe-map .maplibregl-ctrl-attrib-button{display:none!important}
+.cafe-map .maplibregl-canvas{outline:none!important}
+.cafe-map .maplibregl-cooperative-gesture-screen{font-family:var(--sans)!important;font-size:13px}
+.cafe-map .pin.spot{width:13px;height:13px;background:var(--accent);box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent)}
+.cafe-map .smap-note{position:absolute;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;gap:9px;padding:8px 11px;background:color-mix(in srgb,var(--paper-card) 92%,transparent);border-top:1px solid var(--line);font-family:var(--sans);font-size:12px;color:var(--ink-2)}
+.cafe-map .smap-note .dot{flex:none;width:5px;height:5px;border-radius:50%;background:var(--ink-3)}
+.cafe-map .smap-note .text-action{margin-left:auto;flex:none}
 .hscroll{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 6px;margin:0 -2px;scrollbar-width:none}
 .hscroll::-webkit-scrollbar{display:none}
 .hscroll>*{flex:none;scroll-snap-align:start}
-@media (prefers-reduced-motion: reduce){.cafe-map .pin.nn{transition:none}}
+@media (prefers-reduced-motion: reduce){.cafe-map .pin.nn{transition:none}.cafe-map .smap-live{transition:none}}
 .continuation{border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:15px 0;margin:2px 0 16px}
 .continuation .score{font-family:var(--sans);font-size:46px;line-height:.9;color:var(--accent);font-weight:550;letter-spacing:-.05em}
 .continuation .score small{font-size:12px;letter-spacing:.04em;color:var(--ink-3);font-weight:400}
@@ -985,9 +1001,11 @@ function cafeBannerGrad(pal){
   const h=pal.h,s=Math.max(Math.min(pal.s,70),34);
   return{grad:`linear-gradient(135deg,hsl(${h},${s}%,16%) 0%,hsl(${h},${s}%,34%) 55%,hsl(${h},${s}%,50%) 100%)`,bar:pal.brand||`hsl(${h},${s}%,50%)`};
 }
-// The map — a decorative plot, never a tile. Real lat/lon, scaled to fill the box
+// The map — the drawn plot. Real lat/lon, scaled to fill the box
 // (equirectangular; fine at the scale of one city). A single point centers with
-// nothing to scale against, so it holds the middle alone.
+// nothing to scale against, so it holds the middle alone. This plot is the
+// floor every map surface stands on: the street map section lays real streets
+// behind it when tiles can be fetched, and offline the plot simply stands.
 function mapProject(points){
   const pts=points.filter(p=>p.lat!=null&&p.lon!=null);
   if(!pts.length)return[];
@@ -1007,7 +1025,13 @@ function mapProject(points){
 function mapHTML(points){
   const pts=mapProject(points);
   if(!pts.length)return'';
-  return `<div class="cafe-map">${pts.map(p=>`<div class="pin${p.read?'':' unread'}" style="left:${p.x}%;top:${p.y}%" onclick="openPlace(${jsq(p.name)})"><span class="lbl">${esc(p.name)}</span></div>`).join('')}</div>`;
+  const real=points.filter(p=>p.lat!=null&&p.lon!=null);
+  const id=smapReg(smapView({camKey:smapCamKey('find',real),marks:()=>real.map(p=>{
+    const el=smapPinEl(p.read?'':'unread',{label:p.name});
+    el.onclick=()=>openPlace(p.name);
+    return{lat:p.lat,lon:p.lon,el};
+  })},real));
+  return `<div class="cafe-map" id="${id}" data-smap="${id}">${pts.map(p=>`<div class="pin${p.read?'':' unread'}" style="left:${p.x}%;top:${p.y}%" onclick="openPlace(${jsq(p.name)})"><span class="lbl">${esc(p.name)}</span></div>`).join('')}</div>`;
 }
 // home vs café: same coffee (roaster / origin), two contexts. An honest little comparison, not a claim.
 function crossContext(key){
@@ -1019,11 +1043,166 @@ function crossContext(key){
   return {home:{n:home.length,avg:avgHedonic(home)},cafe:{n:cafe.length,avg:avgHedonic(cafe)}};
 }
 
+/* ============ street map ============ */
+// Real streets behind the drawn plot — an enhancement, never a dependency.
+// MapLibre GL (BSD-3) renders OpenFreeMap's vector tiles (OpenStreetMap data),
+// repainted layer by layer in CARTA's own tokens — the map is ours, not a
+// provider's chrome. Keyless, no account, nothing tracked. The library and its
+// stylesheet lazy-load only when a map surface is on screen and the network
+// answers; until tiles actually land the drawn plot stays, pins live the whole
+// time, and offline — or if the fetch fails — the plot simply stands. Streets
+// slot in quietly whenever they arrive.
+const ML_JS='https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js';
+const ML_CSS='https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css';
+const ML_TILES='https://tiles.openfreemap.org/planet';
+const ML_GLYPHS='https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf';
+let _mlP=null,_mlDown=false,_smaps={},_smapCfg={},_smapCam={},_smapN=0,_smapMT=null;
+function mlLoad(){
+  if(window.maplibregl)return Promise.resolve();
+  if(_mlP)return _mlP;
+  return _mlP=new Promise((res,rej)=>{
+    const css=document.createElement('link');css.rel='stylesheet';css.href=ML_CSS;document.head.appendChild(css);
+    const s=document.createElement('script');s.src=ML_JS;
+    const to=setTimeout(()=>{_mlP=null;rej(new Error('slow'))},8000);
+    s.onload=()=>{clearTimeout(to);res()};
+    s.onerror=()=>{clearTimeout(to);_mlP=null;rej(new Error('unreachable'))};
+    document.head.appendChild(s);
+  });
+}
+// The exact token hexes, by theme — a MapLibre style can't read CSS variables.
+function smapInk(){
+  return document.documentElement.getAttribute('data-theme')==='dusk'
+    ?{page:'#171310',sunk:'#2d241f',ink2:'#c8bcae',faint:'#5b574f',ember:'#e06b4f'}
+    :{page:'#f2eee6',sunk:'#e9e3d8',ink2:'#554a41',faint:'#b8b5b0',ember:'#a63f2b'};
+}
+// The CARTA basemap: every OSM layer bound to a token. Paper for land, sunk for
+// water and parks, faint side streets, arterials in operational ink, one dashed
+// ember line for admin boundaries, tracked small-caps place labels. Boundary
+// near-opaque and labels at secondary — the map study's audited contrast baseline.
+function smapStyle(){
+  const c=smapInk();
+  const road=cls=>['match',['get','class'],cls,true,false];
+  return{version:8,glyphs:ML_GLYPHS,
+    sources:{osm:{type:'vector',url:ML_TILES}},
+    layers:[
+      {id:'bg',type:'background',paint:{'background-color':c.page}},
+      {id:'park',type:'fill',source:'osm','source-layer':'park',paint:{'fill-color':c.sunk,'fill-opacity':.5}},
+      {id:'water',type:'fill',source:'osm','source-layer':'water',paint:{'fill-color':c.sunk}},
+      {id:'road-minor',type:'line',source:'osm','source-layer':'transportation',filter:road(['minor','service','residential','living_street','unclassified']),layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':c.faint,'line-width':['interpolate',['linear'],['zoom'],11,.25,13,.5,15,.95,17,1.9],'line-opacity':.9}},
+      {id:'road-major',type:'line',source:'osm','source-layer':'transportation',filter:road(['motorway','trunk','primary','secondary','tertiary']),layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':c.ink2,'line-width':['interpolate',['linear'],['zoom'],9,.4,12,.85,14,1.5,16,2.8,18,4.8]}},
+      {id:'boundary',type:'line',source:'osm','source-layer':'boundary',filter:['all',['>=',['to-number',['get','admin_level']],4],['<=',['to-number',['get','admin_level']],10],['!=',['get','maritime'],1]],paint:{'line-color':c.ember,'line-opacity':.9,'line-dasharray':[3,2.2],'line-width':['interpolate',['linear'],['zoom'],8,.6,12,1.1,15,1.9]}},
+      {id:'lbl-neigh',type:'symbol',source:'osm','source-layer':'place',filter:['match',['get','class'],['neighbourhood','suburb','quarter'],true,false],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-transform':'uppercase','text-letter-spacing':.14,'text-size':['interpolate',['linear'],['zoom'],11,9.5,14,12.5],'text-max-width':7,'text-padding':6},paint:{'text-color':c.ink2,'text-halo-color':c.page,'text-halo-width':1.6,'text-halo-blur':.4}},
+      {id:'lbl-city',type:'symbol',source:'osm','source-layer':'place',filter:['match',['get','class'],['city','town'],true,false],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-letter-spacing':.04,'text-size':['interpolate',['linear'],['zoom'],9,12,13,17],'text-max-width':8},paint:{'text-color':c.ink2,'text-halo-color':c.page,'text-halo-width':1.4}}
+    ]};
+}
+// A pin element for a live marker — the same .pin classes the drawn plot wears,
+// so both layers speak one language. Focusable when it acts: the canvas itself
+// is never a tab stop, the pins are.
+function smapPinEl(cls,o){
+  o=o||{};
+  const el=document.createElement('div');
+  el.className='pin'+(cls?' '+cls:'');
+  if(o.text!=null)el.appendChild(document.createTextNode(o.text));
+  if(o.label){const l=document.createElement('span');l.className='lbl'+(o.top?' top':'');l.textContent=o.label;el.appendChild(l)}
+  if(o.aria){el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label',o.aria);
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click()}})}
+  return el;
+}
+const smapCamKey=(k,pts)=>k+'|'+pts.map(p=>p.lat.toFixed(3)+','+p.lon.toFixed(3)).join(';');
+function smapView(cfg,pts){
+  if(pts.length===1){cfg.center=[pts[0].lon,pts[0].lat];cfg.zoom=13.2}
+  else{
+    const lats=pts.map(p=>p.lat),lons=pts.map(p=>p.lon);
+    cfg.bounds=[[Math.min(...lons),Math.min(...lats)],[Math.max(...lons),Math.max(...lats)]];
+  }
+  return cfg;
+}
+function smapReg(cfg){const id='smap'+(++_smapN);_smapCfg[id]=cfg;return id}
+// Mount whatever map surfaces the current paint carries. Debounced past the
+// keystroke, skipped while the matching interlude repaints in steps, and dead
+// containers give their WebGL contexts back first.
+function smapMount(){
+  clearTimeout(_smapMT);
+  _smapMT=setTimeout(()=>{
+    Object.keys(_smaps).forEach(k=>{const s=_smaps[k];if(!s.el.isConnected){try{s.map.remove()}catch(e){}delete _smaps[k]}});
+    if(typeof discMatch!=='undefined'&&discMatch)return;
+    document.querySelectorAll('[data-smap]').forEach(el=>{
+      const cfg=_smapCfg[el.dataset.smap];
+      if(cfg&&!el._smap)smapBoot(el,cfg);
+    });
+  },300);
+}
+function smapDestroy(){
+  Object.keys(_smaps).forEach(k=>{const s=_smaps[k];
+    try{_smapCam[s.camKey]={center:s.map.getCenter(),zoom:s.map.getZoom()}}catch(e){}
+    try{s.map.remove()}catch(e){}});
+  _smaps={};_smapCfg={};
+}
+function smapRestyle(){Object.keys(_smaps).forEach(k=>{try{_smaps[k].map.setStyle(smapStyle())}catch(e){}})}
+function smapBoot(el,cfg){
+  el._smap=true;
+  const id=el.dataset.smap;
+  if(!navigator.onLine||_mlDown){smapNote(el,cfg,true);return} // the plot stands; quiet about it
+  mlLoad().then(()=>{
+    if(!el.isConnected)return;
+    const live=document.createElement('div');live.className='smap-live';el.appendChild(live);
+    const camKey=cfg.camKey||id,cam=_smapCam[camKey];
+    const opts={container:live,style:smapStyle(),interactive:!!cfg.interactive,dragRotate:false,pitchWithRotate:false,
+      attributionControl:{compact:false,customAttribution:'© OpenMapTiles · © OpenStreetMap contributors'}};
+    if(cam){opts.center=cam.center;opts.zoom=cam.zoom}
+    else if(cfg.center){opts.center=cfg.center;opts.zoom=cfg.zoom}
+    else{opts.bounds=cfg.bounds;opts.fitBoundsOptions={padding:46,maxZoom:15}}
+    if(cfg.maxBounds)opts.maxBounds=cfg.maxBounds;
+    if(cfg.interactive)opts.cooperativeGestures=true;
+    let map;
+    try{map=new maplibregl.Map(opts)}catch(e){smapFail(el,cfg);return}
+    if(map.touchZoomRotate)map.touchZoomRotate.disableRotation();
+    const rec=_smaps[id]={map,el,cfg,camKey,pins:{}};
+    const to=setTimeout(()=>smapNote(el,cfg,true),3000); // ~2.5s and the plot takes over — it never left
+    map.on('load',()=>{
+      clearTimeout(to);_mlDown=false;smapNote(el,cfg,false);
+      try{map.getCanvas().setAttribute('tabindex','-1')}catch(e){}
+      el.querySelectorAll(':scope>.pin').forEach(p=>p.remove()); // the drawn pins hand over to live markers
+      (cfg.marks?cfg.marks():[]).forEach(mk=>{
+        new maplibregl.Marker({element:mk.el,anchor:'center'}).setLngLat([mk.lon,mk.lat]).addTo(map);
+        if(mk.id!=null)rec.pins[mk.id]=mk.el;
+      });
+      live.classList.add('in');
+    });
+    map.on('moveend',()=>{try{_smapCam[camKey]={center:map.getCenter(),zoom:map.getZoom()}}catch(e){}});
+  }).catch(()=>{if(el.isConnected)smapFail(el,cfg)});
+}
+function smapFail(el,cfg){_mlDown=true;smapNote(el,cfg,true)}
+// One quiet line on the tall map only — no red, no dialog: offline is a
+// considered mode, not an error. Retry re-attempts the tiles by hand.
+function smapNote(el,cfg,on){
+  if(!cfg.note)return;
+  let n=el.querySelector(':scope>.smap-note');
+  if(!on){if(n)n.remove();return}
+  if(n)return;
+  n=document.createElement('div');n.className='smap-note';
+  n.innerHTML=`<span class="dot"></span><span>Streets unavailable — showing saved positions.</span><button class="text-action" onclick="smapRetry(${jsq(el.dataset.smap)})">Retry</button>`;
+  el.appendChild(n);
+}
+function smapRetry(id){
+  const el=document.querySelector(`[data-smap="${CSS.escape(id)}"]`);if(!el)return;
+  _mlDown=false;el._smap=false;
+  const s=_smaps[id];if(s){try{s.map.remove()}catch(e){}delete _smaps[id]}
+  el.querySelectorAll(':scope>.smap-live,:scope>.smap-note').forEach(n=>n.remove());
+  smapMount();
+}
+
 /* ============ version tracker ============ */
-const APP_VERSION='4.8.0';
+const APP_VERSION='4.9.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.9.0',date:'Jul 19, 2026',title:'Streets under the pins',items:[
+    'The map surfaces — Find\'s results, the discover map, a café\'s page — now draw real streets behind the pins: OpenStreetMap, repainted in CARTA\'s own paper and ink. No key, no account, nothing tracked.',
+    'Offline nothing changes. The drawn plot stands, exact as ever, and streets slot in quietly only when the tiles can be fetched. The map is an enhancement, never a dependency.',
+    'A café\'s page gains a small locator — its pin wearing the café\'s own accent, the streets around it staying neutral.',
+    'The discover map pans now. Ranks are labels, not positions — #2 stays #2 wherever you wander — and the drawer follows the pin you tap.',
+  ]},
   {v:'4.8.0',date:'Jul 19, 2026',title:'Appearance, auto',items:[
     'A third choice under Preferences → Appearance: Auto. It hands the call to your device\'s own light/dark setting and follows it live — dusk falls in when the system does, no separate switch to remember.',
   ]},
@@ -1213,6 +1392,7 @@ function go(t){tab=t;placeView=null;discOn=false;discMatch=null;clearTimeout(_mt
 function render(){
   _affCache=null; // affinity is recomputed once per paint, from the current record
   _mCache=null;   // so is the matching — signal, circle, candidates
+  smapDestroy();  // live maps die with the DOM they sit in — give the contexts back first
   document.getElementById('who').textContent=
     readOnly()?`viewing ${viewingUser().name}`:(tab==='ledger'?'the rest of it':(USERS.users.length>1?viewingUser().name:'one cup · two contexts'));
   document.getElementById('tabs').innerHTML=tabsFor(depth()).map(t=>
@@ -1220,6 +1400,7 @@ function render(){
   const m=document.getElementById('main');
   m.innerHTML=(readOnly()?viewBanner():'')+(placeView?vPlace():discOn?vDiscover():({today:vToday,field:vField,cafes:vCafes,circle:vCircle,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
   m.scrollTop=0;window.scrollTo(0,0);
+  smapMount();
 }
 function viewBanner(){return `<div class="viewbar"><span>Viewing <strong>${esc(viewingUser().name)}</strong>'s ledger — read only${remoteStale?` · cached ${fmtAgo(remoteStale===true?null:remoteStale)}`:''}</span><button onclick="exitView()">Back to mine</button></div>`}
 
@@ -1433,6 +1614,7 @@ function applyTheme(){
   document.documentElement.setAttribute('data-theme',t);
   const mc=document.querySelector('meta[name=theme-color]');
   if(mc)mc.setAttribute('content',t==='dusk'?'#171310':'#f2eee6');
+  smapRestyle(); // live street maps repaint to the theme in place
 }
 duskMQ.addEventListener('change',()=>{if(getPref('theme','paper')==='auto')applyTheme()});
 function themeSet(t){setPref('theme',t);applyTheme();render()}
@@ -2137,6 +2319,21 @@ function shopCard(s){
 /* --- the place page: one page per café, reached from anywhere its name appears.
  * Your cups, the circle's cups, the Register entry — identity, provenance,
  * actions — merged onto one surface, wearing the café's own palette. --- */
+// The locator on a café's page. The base map stays neutral — land, water and
+// streets never move; the one warm mark takes the café's own hue, shifted per
+// theme so an arbitrary brand colour reads on either paper, and a near-neutral
+// palette floors back to the global ember rather than a muddy wash.
+function placeMapHTML(shop,p,pal){
+  const dusk=document.documentElement.getAttribute('data-theme')==='dusk';
+  const acc=(pal&&pal.h!=null&&pal.s>=12)?`hsl(${pal.h},${Math.min(pal.s,70)}%,${dusk?62:45}%)`:'';
+  const st=acc?`background:${acc};box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px ${acc}`:'';
+  const id=smapReg({camKey:'place|'+normName(shop),center:[p.lon,p.lat],zoom:14.4,marks:()=>{
+    const el=smapPinEl('spot',{label:shop});
+    if(st)el.style.cssText=st;
+    return[{lat:p.lat,lon:p.lon,el}];
+  }});
+  return `<div class="cafe-map" id="${id}" data-smap="${id}"><div class="pin spot" style="left:42%;top:44%;${st}"><span class="lbl">${esc(shop)}</span></div></div>`;
+}
 function vPlace(){
   const shop=placeView;
   const e=regByName(shop);
@@ -2203,6 +2400,7 @@ function vPlace(){
   return `<div class="cafe-theme"${vars?` style="${vars}"`:''}>
   <button class="text-action" style="margin:2px 0 6px" onclick="closePlace()">← Back</button>
   ${head}
+  ${p&&p.lat!=null?placeMapHTML(shop,p,pal):''}
   ${skState}
   ${kvs.length?`<div class="card">${kvs.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>`:''}
   ${!mine.length?`<div class="empty">${d>=2?'You haven’t been yet. The first cup you keep here starts the page.':'You haven’t been yet. Read what’s below, order what they ordered.'}</div>`:''}
@@ -3173,7 +3371,7 @@ function circleSearch(q){
 function circleSearchInput(){
   const inp=document.getElementById('circleSearch');if(!inp)return;
   circleQuery=inp.value;
-  const box=document.getElementById('circleResults');if(box)box.innerHTML=circleResultsHTML(circleQuery);
+  const box=document.getElementById('circleResults');if(box){box.innerHTML=circleResultsHTML(circleQuery);smapMount()}
 }
 // The map for a set of search results — real pins, scaled to fit; filled for a
 // place you keep, dashed for one you don't. Names only; the row carries the rest.
@@ -3652,13 +3850,17 @@ function discScrollTo(i,instant){
 function discPick(i){
   discSel=i;const r=discCands()[i];
   if(r)saveSess({sel:r.shop});
-  render();discScrollTo(i);
+  const dr=document.getElementById('discdrawer');
+  if(dr&&discMapSync()){ // streets live: move only the pins and the drawer — the map itself holds
+    dr.innerHTML=discCands().map((x,j)=>`<div style="width:300px">${discCardInner(x,j)}</div>`).join('');
+    discScrollTo(i);
+  }else{render();discScrollTo(i)}
 }
 function onDrawerScroll(el){
   const i=Math.round(el.scrollLeft/310),cands=discCands();
   if(i!==discSel&&i>=0&&i<cands.length){
     discSel=i;
-    const m=document.getElementById('discmap');if(m)m.innerHTML=discPinsHTML(cands); // pins only — a full paint would fight the scroll
+    if(!discMapSync()){const m=document.getElementById('discmap');if(m)m.innerHTML=discPinsHTML(cands)} // pins only — a full paint would fight the scroll
     clearTimeout(_sp);_sp=setTimeout(()=>{const r=discCands()[discSel];if(r)saveSess({sel:r.shop})},400);
   }
 }
@@ -3679,6 +3881,38 @@ function discPinsHTML(cands){
     const selP=p.i===discSel,sk=p.r.skip&&p.r.skip.active;
     return`<div class="pin nn${selP?' sel':''}${sk||cold?' dashed':''}${isWant(p.r.shop)?' saved':''}" style="left:${p.x}%;top:${p.y}%" onclick="discPick(${p.i})">${cold?'·':sk?'':p.i+1}${selP?`<span class="lbl top">${esc(p.r.shop)}</span>`:''}</div>`;
   }).join('');
+}
+// The live markers behind the discover map — same signals as the drawn pins:
+// number for rank, dashed for cold or skipped, the ring for where you stand.
+const discPinCls=(r,i,cold)=>'nn'+(i===discSel?' sel':'')+((r.skip&&r.skip.active)||cold?' dashed':'')+(isWant(r.shop)?' saved':'');
+function discMarks(){
+  const cands=discCands(),cold=coldNow(),out=[];
+  if(nearOn&&myGeo)out.push({lat:myGeo.lat,lon:myGeo.lon,el:smapPinEl('you',{label:'you',aria:'Where you stand'})});
+  cands.forEach((r,i)=>{
+    if(!(r.e&&r.e.lat!=null))return;
+    const sk=r.skip&&r.skip.active;
+    const el=smapPinEl(discPinCls(r,i,cold),{text:cold?'·':sk?'':String(i+1),aria:`${r.shop}${cold?'':`, ranked ${i+1}`}${isWant(r.shop)?', saved':''}`});
+    if(i===discSel){const l=document.createElement('span');l.className='lbl top';l.textContent=r.shop;el.appendChild(l)}
+    el.onclick=e=>{e.stopPropagation();discPick(i)};
+    out.push({lat:r.e.lat,lon:r.e.lon,el,id:i});
+  });
+  return out;
+}
+// Selection, without a repaint: restyle the markers in place and ease the map
+// to the chosen pin. False when the streets aren't live — callers fall back.
+function discMapSync(){
+  const s=_smaps.discmap;if(!s)return false;
+  const cands=discCands(),cold=coldNow();
+  Object.keys(s.pins).forEach(k=>{
+    const i=+k,el=s.pins[k],r=cands[i];if(!r)return;
+    el.className='pin '+discPinCls(r,i,cold);
+    let l=el.querySelector('.lbl');
+    if(i===discSel&&!l){l=document.createElement('span');l.className='lbl top';l.textContent=r.shop;el.appendChild(l)}
+    if(i!==discSel&&l)l.remove();
+  });
+  const r=cands[discSel];
+  if(r&&r.e&&r.e.lat!=null)try{s.map.easeTo({center:[r.e.lon,r.e.lat],duration:reducedMotion()?0:520})}catch(e){}
+  return true;
 }
 const matchScoreHTML=m=>coldNow()?`<span class="badge dashed" style="flex:none">unread</span>`
   :lowConf()?`<span class="badge ghost" style="flex:none">${m.band}</span>`
@@ -3756,10 +3990,20 @@ function vDiscover(){
     <div class="muted small" style="margin-top:4px">Matching needs three cafés you already love. Name them once on Today and every pin here carries its reasons.</div>
     <button class="text-action" style="margin-top:7px" onclick="closeDiscover()">Name three on Today →</button>
   </div>`:'';
+  // streets behind the reading: register the live layer for this paint. Free-pan
+  // inside a fenced extent — a fling never drifts past the record's own edges.
+  const dpts=cands.filter(r=>r.e&&r.e.lat!=null).map(r=>({lat:r.e.lat,lon:r.e.lon}));
+  if(nearOn&&myGeo)dpts.push({lat:myGeo.lat,lon:myGeo.lon});
+  if(dpts.length&&s.view==='map'){
+    const lats=dpts.map(p=>p.lat),lons=dpts.map(p=>p.lon);
+    _smapCfg.discmap=smapView({interactive:true,note:true,camKey:smapCamKey('disc',dpts),
+      maxBounds:[[Math.min(...lons)-.25,Math.min(...lats)-.25],[Math.max(...lons)+.25,Math.max(...lats)+.25]],
+      marks:discMarks},dpts);
+  }
   const body=!cands.length
     ?`<div class="empty">No places to read${cityLens?` in ${esc(cityLens)}`:''} yet. The register grows with every cup — yours and your circle's.</div>`
     :s.view==='map'
-      ?`<div class="cafe-map tall" id="discmap" style="margin-bottom:10px">${discPinsHTML(cands)}</div>
+      ?`<div class="cafe-map tall" id="discmap"${dpts.length?' data-smap="discmap"':''} style="margin-bottom:10px">${discPinsHTML(cands)}</div>
       ${sparseNote}${coldNote}
       <div class="hscroll" id="discdrawer" onscroll="onDrawerScroll(this)">${cands.map((r,i)=>`<div style="width:300px">${discCardInner(r,i)}</div>`).join('')}</div>`
       :`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">The map as a list — same reading, same order, nothing hidden.</div>
@@ -4144,7 +4388,7 @@ if(needsWelcome()){
 // Sync: on boot, when the network returns, and when the app comes back to the
 // foreground (iOS PWAs get no background time — this is the sync heartbeat).
 if(SYNC)setTimeout(()=>syncNow(false),400);
-window.addEventListener('online',()=>syncNow(false));
+window.addEventListener('online',()=>{syncNow(false);_mlDown=false;smapMount()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyTheme();syncNow(false)}});
 </script>
 </body>
