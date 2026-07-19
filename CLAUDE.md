@@ -136,9 +136,23 @@ server/
   `crossContext`. A café's own page opens on a banner (`cafeBannerGrad`) — a
   gradient drawn from its derived hue, or a neutral roast tone unread — never
   the app's ember, which stays reserved for the current action and the score.
-  Find's search plots pinned results on a decorative map (`mapProject`/
-  `mapHTML`): real lat/lon scaled to fit the box, filled dot for a place you
-  keep, dashed for one you don't — no tile, no street, no library.
+  Find's search plots pinned results on a map (`mapProject`/`mapHTML`): real
+  lat/lon scaled to fit the box, filled dot for a place you keep, dashed for
+  one you don't. The drawn plot is the floor; the **street map** section lays
+  real streets behind it when tiles can be fetched (see below).
+- **street map** — the live layer behind every map surface. MapLibre GL +
+  OpenFreeMap vector tiles (OpenStreetMap data), lazy-loaded from CDN only when
+  a `[data-smap]` surface is on screen and the network answers; the style
+  (`smapStyle`) repaints every OSM layer in CARTA's theme tokens (`smapInk`),
+  both paper and dusk. The drawn plot renders first and stands alone offline —
+  streets fade in (`.smap-live.in`) only once tiles land; a quiet note with
+  Retry appears on the tall discover map when they can't (`smapNote`). Surfaces
+  register configs via `smapReg`/`_smapCfg`; `render()` destroys live maps
+  (`smapDestroy`) before repainting and re-mounts after (`smapMount`); cameras
+  persist across repaints (`_smapCam`). Pins are HTML markers wearing the same
+  `.pin` classes as the drawn plot. The café-page locator (`placeMapHTML`)
+  tints only its pin to the café's hue (near-neutral floors to the ember);
+  the basemap never moves.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
 - **export / import** — JSON export (stamped with the user's name); import as a
@@ -302,18 +316,20 @@ is the one exception browsers allow, so local dev needs no TLS.
 - **Match the existing terse code style.** The frontend deliberately favors
   compact, single-line helpers and inline handlers. The server is idiomatic,
   commented Node with clear section banners.
-- **Keep the app dependency-free and single-file.** Same for the server
-  (zero deps). This is a core design property, not an accident. The app makes only
-  two network calls, both *optional* progressive enhancements that degrade offline:
-  the café address lookup (OpenStreetMap Nominatim → manual text) and the brand
-  read (`readBrand`: Microlink → the site's palette, name and description), shared
-  by cafés, bags and café cups — each reads its brand from a website the same way.
-  Each is keyless and bundles nothing, and must stay that way (no map tiles, no
-  embedded library, no design-system SDK); the brand read keeps only the derived
-  palette and the words, never a hotlinked image or a captured photo. Find's
-  "map" (`mapHTML`) is drawn, not fetched — dots plotted from stored lat/lon on
-  a plain surface, no tile provider or map library involved; it doesn't
-  compromise this rule and shouldn't grow into one.
+- **Keep the app bundle-free and single-file.** Same for the server
+  (zero deps). This is a core design property, not an accident. The app ships
+  nothing but itself; its network reads are *optional* progressive enhancements
+  that degrade offline: the café address lookup (OpenStreetMap Nominatim →
+  manual text), the brand read (`readBrand`: Microlink → the site's palette,
+  name and description), and the street map (MapLibre GL + OpenFreeMap vector
+  tiles, lazy-loaded at runtime → the drawn plot). Each is keyless, accountless
+  and bundles nothing into the file, and must stay that way (no design-system
+  SDK, no tracking, no API keys); the brand read keeps only the derived palette
+  and the words, never a hotlinked image or a captured photo. The street map is
+  an enhancement, never a dependency: the drawn plot (`mapHTML`) always renders
+  first from stored lat/lon, stands alone offline, and every map surface must
+  keep working — pins, taps, ranking — with zero tiles. Never let a surface
+  *require* the street layer.
 - **Match the brand voice.** `VOICE.md` is the standard for every user-facing
   string — sentence case, terse, honest, no emoji, the record-keeper persona.
   Screen new copy against its gate before shipping.

@@ -92,8 +92,11 @@ the next thing worth reading:
 - **Something new for you.** Three teasers, matched against your record, each
   carrying its reasons. "The full map" opens the whole reading.
 - **The map, read for you.** Every place on the register you haven't kept,
-  ranked by match — pins on a drawn map (real coordinates, never a tile), a card
-  per pin, or the same reading as a list. Reached from Today or Find.
+  ranked by match — pins on the map, a card per pin, or the same reading as a
+  list. Reached from Today or Find. Online, real streets draw themselves behind
+  the pins — OpenStreetMap, repainted in CARTA's own paper and ink, keyless and
+  untracked — and the map pans freely; offline the same pins stand on the drawn
+  plot, exact as ever.
 
 **The matching** reads three things, and says so: the *traits* of the places you
 keep (their tags and reach facts, weighed heavier where you scored well); the
@@ -126,6 +129,7 @@ The **Café** tab is a passport of every shop you log — your average, visit co
 - **A banner drawn from that same colour.** The café's own page opens on a gradient built from its hue — a neutral roast tone while the café is still unbranded. Just the name, on its own colour; nothing fetched, nothing photographed.
 - **One read fills the rest.** The same website read pulls more than colour — the site's own description becomes the café's line, the name it states is surfaced, and the map lookup opens on its address — so you retype nothing the site already knows. It fills only what's still blank, and offline you fill it in by hand.
 - **Pin it on the map.** Look up a café's address online and open it in Maps from its page. Typing the address by hand always works; the lookup is a convenience, not a requirement, and the app stays fully offline without it.
+- **A locator on the page.** A pinned café's page carries a small street map of where it stands. Only the pin wears the café's colour — the streets around it stay neutral, and a café with no colour worth borrowing keeps the ember. Offline the pin holds the frame alone.
 - **The neighborhood, named.** The map lookup names a neighborhood along with the pin — filled in automatically when it knows one, blanks only, typed always wins. It rides next to the city everywhere a café is shown.
 - **Tag a place your own way.** A short list of tags — however you'd describe it to a friend — rides on the café's page and joins the pooled search in Find, so "patio" or "quiet" turns up every place you've marked that way.
 - **The beans, read from the roaster.** Give a café cup the roaster's website and CARTA reads its brand the same way a café or a bag does — the roaster it states and a line fill what's blank, and the cup carries the colours it read. Less to type at the counter.
@@ -202,8 +206,10 @@ you → whose taste matches yours → worth the walk → save it → go.*
   roaster, an origin, a descriptor, a tag or a note and matching **places**,
   **beans** and **cups** surface at once. Pinned results also plot on a small
   map alongside the list — a filled dot for a place you keep, a dashed one for
-  a place you haven't yet. It's drawn from the record's own coordinates, not
-  fetched — no tiles, no street names, nothing loaded from a map provider.
+  a place you haven't yet. Online, the plot gains real streets behind the dots
+  (OpenStreetMap, restyled to CARTA — no key, no tracking); offline it stays
+  the drawn plot from the record's own coordinates, and nothing is missed but
+  the street names.
 - **Near you** — say where you are (optional; asked only when you tap it, and
   kept on the device — never stored or synced) and the pinned cafés your people
   kept sort by distance, closest first, each showing how far.
@@ -319,9 +325,12 @@ If you clear browser data or Safari storage fills up, your ledger is gone — th
 
 ## Technical
 
-- No external dependencies
+- No build step, no bundled dependencies — one self-contained file
 - Runs entirely in the browser
 - Uses localStorage for persistence
+- Street maps are an optional, keyless enhancement (MapLibre GL +
+  OpenFreeMap / OpenStreetMap, loaded only when online); the app is complete
+  without them
 - 100% open source
 
 ---
