@@ -96,7 +96,23 @@ server/
   shown to returning users on a version bump. **Bump `APP_VERSION` and prepend a
   `CHANGELOG` entry when you ship a user-visible change.**
 - **router** — `TABS`, current `tab`, `go()`, `render()`. Each tab has a
-  `vXxx()` view function returning an HTML string.
+  `vXxx()` view function returning an HTML string. `discOn` overlays the
+  discover surface (`vDiscover`) the way `placeView` overlays a café's page.
+- **today + the matching** — the Today tab (`vToday`, the first tab and the
+  landing surface) and the matching engine behind it. `matchOf(shop)` scores an
+  unkept place per spec v1 (trait 60 · proximity 20 · circle 20) and always
+  returns its `signals` — a score is never shown without reasons. The signal
+  (`signalTraits`) is argued by kept places' tags/reach facts plus the three
+  cafés a new keeper names (`prefs.signal`, the cold-start on Today);
+  `discCands()` ranks candidates; `vDiscover` is the map/list surface (ranked
+  pins over `mapProject`, card drawer, tune, a once-per-visit matching
+  interlude honoring reduced motion). Until three café cups are kept the read
+  speaks in bands (`lowConf`), not numbers. Saves stamp `prefs.wantAt` and age
+  into a gentle ask on the Record (`recordKeepingHTML`); skips
+  (`prefs.placeSkips`) step a place back 14 days and fade by 21; "fewer like
+  it" leans (`prefs.traitLeans`) tip a kind down on the same curve, capped in
+  effect at three. A week-old map session (`prefs.findSess`) steps back from a
+  resume card to a plain suggestion.
 - **views** — `vField` (log/home), `vBags`, `vSetups`, `vTrace`, `vCafes`,
   `vLedger`, plus detail sheets.
 - **sheet plumbing** — bottom-sheet modal (`openSheet`/`closeSheet`) with
@@ -176,7 +192,10 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 - **cafeFavs** — favorited café shop names.
 - **deleted** — tombstones so removed records stay removed across a sync merge.
 - **prefs** — per-user preferences (`tempUnit`, `hideTimer`, …) via
-  `getPref`/`setPref`.
+  `getPref`/`setPref`. The matching's bookkeeping lives here too: `signal`
+  (the three named cafés), `wantAt`/`wantAsk` (save dates and aging asks),
+  `placeSkips`, `traitLeans`, `findSess` (the map session), `gradSeen`. Sync
+  merges prefs shallowly, local key wins — never wipe them in a merge.
 
 Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
 `{version, rev, dirty, entries, deleted}` where each entry is a canonical café
@@ -206,6 +225,12 @@ all users on the device and synced as one group-writable document.
   supersede strike a line with a date, never delete it — and `unread` is a
   state, never a default to ○ Counter. Depth is a filter in Find, never a sort
   key. Badges stay monochrome: never the ember, never a fill.
+- **A match score never travels without its reasons.** Anywhere a score or
+  band shows, "Why this" (the `signals` from `matchOf`) must be reachable.
+  Location is consent-gated and ephemeral (`myGeo`, in memory only — never
+  stored, never synced); proximity contributes 0 until the keeper taps "Near
+  you". A skip fades on its own and is never a veto; nothing the matching
+  writes is hidden from the Record.
 
 ## The sync server (`server/`)
 

@@ -80,6 +80,43 @@ again.
 
 CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, and one ember-red signal for the current action and the cup’s score. Two themes — **Paper** and **Dusk** — switch under **More → Preferences**, remembered per user. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
 
+## Today, and the matching
+
+**Today** is the first tab — the day's surface. It holds the thread you left and
+the next thing worth reading:
+
+- **Pick up where you left off.** Leave the map mid-read and Today offers the
+  same map, the same card, for a week. Left longer, the session lets go and the
+  place steps back to a plain suggestion — the reading keeps, the ceremony
+  doesn't.
+- **Something new for you.** Three teasers, matched against your record, each
+  carrying its reasons. "The full map" opens the whole reading.
+- **The map, read for you.** Every place on the register you haven't kept,
+  ranked by match — pins on a drawn map (real coordinates, never a tile), a card
+  per pin, or the same reading as a list. Reached from Today or Find.
+
+**The matching** reads three things, and says so: the *traits* of the places you
+keep (their tags and reach facts, weighed heavier where you scored well); the
+*distance*, only once you tap "Near you" — your location is held in memory,
+never stored; and the *circle's cups* there, weighted toward the people whose
+taste sits closest to yours. Every score opens into its signals on the café's
+page — "Why this" — and no score is ever shown without them.
+
+- **The early read.** Until you've kept three café cups the matching speaks in
+  bands — *worth a look · promising · a strong read* — not numbers. New to the
+  record entirely? Today asks for **three cafés you already love**; their traits
+  become your signal, and a place the register doesn't know yet enters on its
+  name alone. At your third kept cup, the numbers arrive.
+- **Save** waits under **Want to go** — one list, a save from anywhere lands
+  there. The Record orders it by match and, when a save sits unvisited a couple
+  of weeks, asks once whether to let it go. Letting go is not a skip — no mark
+  against the place.
+- **Skip** steps a place back for two weeks, then fades on its own — never a
+  veto. At the moment you skip, one question: the place, or its kind? "Fewer
+  like it" tips the place's kind (its first tag) down on the same fading curve.
+  Every standing skip and lean is visible on the Record, each with a "clear
+  now".
+
 ## Café cups
 
 The **Café** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, the order-again verdict, traceability — waits behind one line, to add now or later.
