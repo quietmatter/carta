@@ -3,6 +3,11 @@
 *A draft restructuring. The cup-centric north star (`NORTH_STAR.md`) is the record
 of where CARTA started. This is the record of where it turns.*
 
+*Second draft — revised against an industry-consensus QA of its structural
+assumptions (`MODEL_QA.md`): the lot re-drawn as a commercial offering that splits
+and merges, the origin actors pulled apart, quality split from traceability, and
+caliber re-based on the SCA's current standard.*
+
 ## The turn
 
 CARTA began as a personal coffee memory: **one cup, two contexts, your taste the
@@ -16,14 +21,24 @@ CARTA is now **an encyclopedia of specialty coffee, drawn as a map, keyed on the
 lot.** You keep a record the way you always did; the record feeds a shared,
 traceable atlas that everyone reading it makes clearer.
 
-## The atom: the lot
+## The centre: the lot
 
-A **green coffee lot** is the smallest distinct, unrepeatable unit in coffee.
-One producer, one harvest, one varietal, one process, one parcel offered to the
-trade. Next season it is a different lot. The farm beside it is a different lot. It
-is the thing that is *actually* singular — and the thing no product has ever made
-the centre. A blend is not a lot but a *cluster* of them, named by a roaster; it
-sits beside the single origins in the atlas (see *Blends*, below).
+A **green coffee lot** is the unit coffee is actually traded and known by — one
+harvest, one parcel of a place, offered to the trade under one identity. Next
+season it is a different lot; the farm beside it is a different lot. No product has
+ever made it the centre, and it is where *"the same green, many roasters"* becomes
+sayable. That is the claim the atlas rests on, and the industry check confirmed it
+holds.
+
+What the trade taught us to stop pretending: a lot is **not a tidy atom.** It is a
+*commercial offering, and it splits and merges.* One washing station's lot may
+gather cherry from hundreds of smallholders; one delivery is graded into several
+export lots; an importer re-cuts small lots into a community lot. Its variety can be
+a whole set (*mixed heirloom* is the honest default in Ethiopia, not a defect); its
+process can run in stages. So the lot stays the hero — but modelled as a node with
+**lineage, many possible producers, and an identity that can be split or merged**,
+never as one indivisible thing. A blend is not a lot but a *cluster* of them, named
+by a roaster; it sits beside the single origins in the atlas (see *Blends*, below).
 
 Everything else is a branch off the lot, or a leaf on a branch. A roaster is not
 the atom; a roaster is *what happened to a lot*. A café is not the atom; a café
@@ -83,12 +98,22 @@ every bag and cup — which is exactly why "the same green, many roasters" is
 currently impossible to express. The restructure makes each of these a canonical,
 shared, provenance-carrying entity, and lets records *reference* them:
 
-- **Producer** — farm · washing station · cooperative · grower. Region, altitude.
-- **Lot** *(the atom)* — references a Producer. Varietal(s), process, harvest year,
-  lot identifier, the green's provenance (auction, direct trade, importer), and a
-  recorded **traceability resolution** — how specifically it is pinned (see *Lot
-  identity*, below). A stable opaque id; identity adjudicated, never keyed on the
-  text.
+- **Producer** — the grower: farm, estate, or smallholder. Region, altitude,
+  country. *Grows cherry.*
+- **Processor** — the washing station, wet mill, or dry mill where cherry is
+  processed and first aggregated. **Not the same as the producer** — one processor
+  gathers cherry from many growers, which is why a single lot can carry hundreds of
+  them.
+- **Aggregator** — cooperative, union, or exporter: the org that pools and moves the
+  green. (Producer · Processor · Aggregator are the three origin actors the trade
+  keeps distinct; the old single "Producer" quietly conflated them.)
+- **Lot** *(the hero)* — references a Processor and **one or more Producers**, with a
+  `scope` (single-farm · multi-farm · washing-station · community · cooperative ·
+  region). Variety *as a set* (incl. *mixed heirloom* / *unknown*); process *in
+  stages* (fermentation → drying → finishing); harvest as crop · year · hemisphere.
+  Carries a **sourcing channel** and, separately, an **intermediary** (see *Lot
+  identity*); a recorded **traceability resolution**; split/merge **lineage**; and a
+  stable opaque id — identity adjudicated, never keyed on the text.
 - **Blend** — a roaster's named composite. References a **Roaster** and two or more
   Lots — a blend is a recipe *authored* at the roaster, so it belongs to one: two
   roasters combining the same lots make two blends, not one. Sits *beside* single-
@@ -96,8 +121,12 @@ shared, provenance-carrying entity, and lets records *reference* them:
   below). This asymmetry is deliberate — a single origin points at a shared atom, but
   a blend is authored, so it is owned.
 - **Roaster** — references nothing; is referenced by roasts and blends.
-- **Roast** — references a Lot *or* a Blend, and a Roaster. Level, roast date,
-  offering name, the roaster's own notes. The node that makes branch 2 possible.
+- **Roast** — references a Roaster and either a **Blend** or **one or more Lots** at
+  a stated origin granularity (a "single origin" is often a co-op or regional lot,
+  not one farm). Roast level as a **free descriptor** the roaster used — never a
+  normalised scale, because one roaster's *medium* is another's *dark* — plus roast
+  date, offering name, and the roaster's own notes (a *reading*, not fact). The node
+  that makes branch 2 possible.
 - **Venue** — the café or bar. *This already exists* — it is the Register, the
   proof that CARTA can hold a canonical shared entity. Where a roast is poured or
   sold.
@@ -123,7 +152,7 @@ identity, provenance, sparse merge (a sighting fills blanks, never erases), and
 sync as a group document. The restructure extends that one proven pattern upstream
 from the café to the producer, the lot, the roaster, the roast.
 
-## Lot identity — how the atom stays singular
+## Lot identity — how the lot stays singular
 
 The whole atlas rests on one thing: two people entering the same green coffee
 must land on the *same* lot node, and two genuinely different lots must never
@@ -145,12 +174,17 @@ So identity is not a field. It is adjudicated, confidence-graded, and correctabl
   2024 — the same lot?"* Confirm binds the roast to the existing node; reject
   forks a new one. The machine proposes; the keeper decides. It fits the
   moderation model already chosen.
-- **Traceability resolution is recorded, not required.** Every lot states how far
-  it is pinned — *specific lot · producer + process · region + season · country
-  only*. An under-specified roast (*"Ethiopia Guji, natural"* with no producer)
-  binds at the **coarsest node it can actually prove** and is **promotable** later,
-  when someone supplies the missing facts, without losing its history. A vague
-  claim never masquerades as a precise one — the honesty principle, upstream.
+- **Traceability resolution is recorded, not required.** Resolution is one *spatial*
+  ladder — *country → region → washing-station → farm → lot → micro/nano* — and
+  nothing else rides on it: process, variety and harvest are their own fields, not
+  rungs. An under-specified roast (*"Ethiopia Guji, natural"* with no farm) binds at
+  the **coarsest node it can actually prove.** What improves later is the **record**,
+  not the coffee: when someone supplies the missing facts the entry is enriched,
+  timestamped and signed — the coffee was always that traceable; we simply know more
+  now. And **traceability** (how finely origin is *known*) stays distinct from
+  **transparency** (whether price and relationship are *disclosed*) — the trade
+  treats them as two things, so we do too. A vague claim never masquerades as a
+  precise one.
 - **Merge and split are first-class.** You *will* learn later that two lots were
   one, or one was two. Both operations re-point every downstream roast and
   preserve every contributor's provenance — the sparse-merge instinct the Register
@@ -169,12 +203,13 @@ other.
 
 Both are true at once by separating two layers:
 
-- **The green layer** keys on single-origin lots. They are the atoms; the "same
-  green, many roasters" view is a property of one lot.
-- **The offering layer** is what you browse — a roaster's product, which is either
-  a single-origin roast (one lot) or a **Blend**: a named cluster of two or more
-  lots, with ratios *when disclosed*, unknown when not. At this layer single
-  origins and blends sit adjacent, exactly as they should.
+- **The green layer** keys on single-origin lots — the "same green, many roasters"
+  view is a property of one lot.
+- **The offering layer** is what you browse — a roaster's product, which is either a
+  single-origin roast (one lot, or the several lots of one co-op or region) or a
+  **Blend**: a named cluster of two or more lots, with ratios *when disclosed*,
+  unknown when not. At this layer single origins and blends sit adjacent, exactly as
+  they should.
 
 - **A blend belongs to its roaster and references its component lots.** Identity is
   roaster + name + composition, so two roasters combining the same lots make two
@@ -183,11 +218,12 @@ Both are true at once by separating two layers:
   whom. Components disclosed only in prose (*"washed Latin American coffees"*) bind
   at coarse-resolution lot nodes or none — the blend stays browsable, just less
   traceable.
-- **Composition is dated.** A house blend's recipe moves season to season; a blend
-  carries dated compositions the way a producer carries per-harvest lots. Same
-  name, honest about change.
+- **Composition is dated, and rotation is first-class.** A house blend's recipe
+  moves season to season; a blend carries dated compositions the way a producer
+  carries per-harvest lots, and a *seasonal / rotating* blend is a normal kind, not
+  an anomaly. Same name, honest about change.
 - **Blends reference lots, not other blends.** A blend of blends flattens to its
-  component lots. No recursive composites — the atom stays the atom.
+  component lots. No recursive composites — the lot stays the lot.
 
 ## The standing — tiering, compiled from facts
 
@@ -208,17 +244,24 @@ never picked, and always showing its evidence.**
 Standing stands on three measurable axes, each a fact with provenance, each able to
 read *unread* when the evidence isn't there yet:
 
-- **Caliber** — the SCA cupping score (80–100) or a competition result, *with its
-  source and cupper*. The industry's own instrument, and the SCA gate already puts
-  every coffee here on this scale — but a score is admissible only if it can name
-  where it came from (the ladder, below). Sourced, or it reads *unread*.
+- **Caliber** — a cup score, carried as a **record, never a bare number:**
+  `{ score · protocol · cupper · event · date }`. The protocol matters now, because
+  the SCA **retired the 2004 cupping form in November 2024** for the Coffee Value
+  Assessment, whose scores spread wider and do not convert 1:1 — an untagged "90"
+  silently mixes two scales. The new form sets *no* official specialty cutoff (80 is
+  a carried-over convention, and contested), so 80 shows as a labelled convention,
+  not a law. Admissible only if it can name its source (the ladder, below); sourced,
+  or it reads *unread*. **Price is not caliber** — a record auction price is a rarity
+  signal, and it never raises this axis.
 - **Rarity** — how scarce the green is: lot size in kg/bags when disclosed, auction
-  vs. commodity provenance, an inherently scarce varietal (gesha, sudan rume, pink
+  vs. commodity provenance, **auction clearing price** (a demand signal, kept here
+  and never in caliber), an inherently scarce varietal (gesha, sudan rume, pink
   bourbon), and **how narrowly it is carried** — a signal the atlas *measures
   itself*, since it knows how few roasters bought it and how few bars pour it.
-- **Traceability** — the lot's recorded resolution (farm-lot → country-only). How
-  legible the coffee's whole road is. The reach's original axis, now honest because
-  it is a fact about disclosure, not a judgment of quality.
+- **Traceability** — the lot's recorded resolution on the spatial ladder (country →
+  farm-lot → micro). How legible the coffee's road is — a fact about disclosure, not
+  quality, and **independent of caliber**: a superb coffee can be thinly traced, a
+  fully-traced one merely good. The two never infer each other.
 
 ### Caliber admits a score only if it names its source
 
@@ -226,26 +269,34 @@ Caliber is where authenticity is won or lost, because the number a roaster print
 on a bag is a marketing instrument, not a cupping. So caliber admits scores by a
 **source ladder**, and only the grounded tiers set the standing:
 
-1. **Competition result** *(strongest)* — Cup of Excellence, Best of Panama, a
-   national CoE, a juried auction. Independently judged, published, dated,
-   verifiable against a public record. Carried as its placing/score + event + year.
-2. **Attributable protocol score** — an SCA-protocol cupping from a named
-   Q-grader or lab, or an importer offer-sheet score where the cupper is named.
-   The authentic instrument, with someone's name behind it.
-3. **Credentialed keeper cupping** — a CARTA contributor who is a Q-grader cups to
-   protocol and signs it. Community-grade, but real. A non-credentialed keeper's
-   estimate is welcome as a *reading* on the overlay — it never sets caliber.
+1a. **Independently-juried competition** *(strongest)* — Cup of Excellence, a
+   national CoE, Best of Panama: blind, dual-jury, published, dated, verifiable
+   against a public record that persists. Carried as placing/score + event + year +
+   protocol.
+1b. **Producer- or estate-run auction** — Gesha Village, Pride of Gesha and the
+   like. Real and published, but scored by the estate or an invited panel, not an
+   independent jury — above a seller's own number only for being on the record.
+2. **Attributable protocol score** — an SCA-protocol cupping from a named Q-grader
+   or lab (stronger), or an importer offer-sheet score where the cupper is named
+   (weaker, and often scored at the coffee's peak, never re-scored as it fades).
+   Above rung 3 for *calibration and cross-checking*, not for being more disinterested.
+3. **Credentialed keeper cupping** — a CARTA contributor with a recognised
+   calibration (evolved-Q, legacy Q, SCA Sensory Skills, or competition-jury service)
+   cups to protocol and signs it; a panel of signed cuppings weighs more than one. A
+   non-credentialed estimate is welcome as a *reading* on the overlay — it never sets
+   caliber.
 4. **Roaster / retail claim** *(inadmissible)* — a number with no attributable
-   cupper. **This never sets standing and never prints as the score.** It may be
-   recorded as a claim, shown as *"roaster-stated 92 — unverified,"* and nothing
-   more. This is the poison line.
+   cupper. **This never sets standing and never prints as the score.** Recorded only
+   as a claim, shown as *"roaster-stated 92 — unverified."* This is the poison line.
+
+Barista competitions (World Barista Championship, Brewers Cup) score the
+*competitor*, not the coffee — they are **firewalled out** of caliber entirely, and
+may only ever appear as usage provenance (*"this lot was poured at WBC"*).
 
 Caliber reads **unread** until an admissible source exists — never a number pulled
-from a bag. The gate itself shares this ladder: a coffee with no admissible score
-is admitted *provisionally* on curator judgment, its caliber unread, its specialty
-standing asserted by no one until a source arrives. Every caliber badge names its
-tier on one tap — *"90.1 · COE Ethiopia 2024, #7"* or *"89.5 · Q-graded, [lab],
-2024"* — so the reader always knows not just the score but how far to trust it.
+from a bag. Every caliber badge names its tier and protocol on one tap —
+*"90.1 · CoE Ethiopia 2024 · #7"* or *"89.5 · Q (CVA), [lab], 2025"* — so the reader
+always knows the score, the standard behind it, and how far to trust it.
 
 The tier is the **compiled reading across the three**, and — like every reach badge
 before it — it **explains itself**: one tap opens the score and who cupped it, the
@@ -262,17 +313,21 @@ Others may log their home brews, and the value is a shared floor of starting
 points: *given this roast and this exact grinder and brewer, here is where people
 began.* It is never for commercial use, and it never pretends.
 
-**Grind does not normalise across grinders — so it never will here.** A starting
-point aggregates only across *exact equipment matches*: same grinder model, same
-brewer. Two people on the same Comandante and the same V60 can share a number; a
-number carried between two different grinders is a rumour, and CARTA will not
-print it. The corpus keys on canonical **Gear** — the grinder model — while each
-keeper's **Setup** carries the scale that makes their own dial move; the number
-that transfers is the one two owners of the same grinder actually share. Ratio,
-temperature, time, and method are comparable and shown as such; grind is shown only
-within its exact match. Once a roast has enough exact-match
-brews on it, the algorithm — and later an LLM over the corpus — can offer a first
-dial-in without ever having lied about what transfers.
+**Grind does not normalise across grinders — so it never will here.** A number
+carried between two different grinders is a rumour; the corpus keys on canonical
+**Gear** (the grinder model) so it never prints one. But the trade's own technicians
+taught us the harder truth: even *one model* is only a whisper — burr alignment,
+per-unit zero-point, drivetrain variants and burr seasoning all move the number. So
+same-model grind is shown as a **distribution with a "calibrate to your own zero"
+note**, never one authoritative figure, while each keeper's **Setup** still carries
+the scale that makes their own dial move. What *does* transfer is shown with
+confidence — ratio, temperature, time, agitation, water, method — and pools not just
+on the exact brewer but up a **method cluster** (immersion · conical · flat-bottom ·
+hybrid · pressure), where those variables legitimately carry. **Espresso is its own
+corpus** — grind there depends on machine, basket and dose, so it is never folded in
+with filter. Once a roast has enough exact-match brews, the algorithm — and later an
+LLM over the corpus — can offer a first dial-in without ever having lied about what
+transfers.
 
 ## Contribution and curation
 
@@ -289,13 +344,19 @@ The catalog is **moderated**, and at the start the moderator is you.
   second contributor ever exists, and it is the same pipeline that later helps a
   traveller find a cup in a city they have never walked.
 
-## The gate: SCA specialty, only
+## The gate: specialty *and* traceable — two bars, not one
 
-CARTA holds **Specialty-Coffee-Association-grade coffee only** — traceable, named
-lots. This is not a limit that costs something; it is the decision that makes a
-traceable atlas *possible*. A universe bounded to coffee that can actually be
-traced is small enough for one keeper to seed and moderate, and clean enough for
-discovery to mean something. The scarcity is the luxury.
+CARTA curates coffee that is both **specialty-grade** and **traceable** — but these
+are **two independent facts, and the model never infers one from the other.** The
+SCA's own 2021 definition splits them for a reason: quality is an intrinsic cup
+property, traceability an extrinsic one about disclosure, and they diverge all the
+time — an 84-point coffee can be thinly traced, a meticulously-traced lot can score
+below the line. So each coffee carries a **quality** signal and a **traceability**
+signal *separately*; the catalog can be filtered on either, and neither is ever read
+off the other. Bounding the atlas to coffee that clears both bars is not a limit that
+costs something — it is what keeps the universe small enough for one keeper to seed
+and moderate, and clean enough for discovery to mean something. The scarcity is the
+luxury.
 
 ## What this keeps, and what it demotes
 
@@ -332,10 +393,11 @@ discovery to mean something. The scarcity is the luxury.
 
 ## Sequence
 
-1. **Normalise the spine.** Turn producer · lot · blend · roaster · roast · gear into
-   canonical entities; split a cup into a Reading over a Preparation (Brew or Pour);
-   make bags and cups reference them; migrate existing flat origin text by
-   de-duplicating it into nodes. Unlocks the "same green, many roasters" page.
+1. **Normalise the spine.** Turn producer · processor · aggregator · lot · blend ·
+   roaster · roast · gear into canonical entities; split a cup into a Reading over a
+   Preparation (Brew or Pour); make bags and cups reference them; migrate existing
+   flat origin text by de-duplicating it into nodes. Unlocks the "same green, many
+   roasters" page.
 2. **Lot identity.** The fingerprint match, propose-and-confirm entry, traceability
    resolution, and merge/split — the guardrails that keep the atom singular before
    the catalog grows.
@@ -343,8 +405,9 @@ discovery to mean something. The scarcity is the luxury.
    research, with moderation and identity-adjudication built in.
 4. **The two surfaces.** The lot-keyed map and the encyclopedic pages over the
    normalised spine.
-5. **The standing.** Tiering compiled from sourced caliber · rarity · traceability,
-   each self-explaining, each able to read *unread*.
+5. **The standing.** Tiering compiled from sourced caliber · rarity · traceability —
+   caliber carried with its protocol and source, quality and traceability kept
+   independent, each self-explaining, each able to read *unread*.
 6. **The brew corpus.** Exact-match dial-in starting points on each roast.
 7. **Discovery, over saturated data.** The algorithm and the LLM, once the overlay
    is dense enough to inform them.
