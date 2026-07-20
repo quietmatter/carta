@@ -36,8 +36,10 @@ A lot's page answers three questions, and nothing else has to be on it.
 
 1. **Where can I find it.** Which roasters bought this lot and offer it; which
    cafés pour it; how it reaches a cup — direct from the roaster, at the
-   roaster's own bar, at a multi-roaster café. The *availability* branch. This is
-   discovery.
+   roaster's own bar, at a multi-roaster café. Each pour is a first-class
+   availability record — a roast seen at a venue, dated and signed — so the branch
+   holds even for a roast nobody has yet logged a cup of. The *availability* branch.
+   This is discovery.
 
 2. **How is it roasted.** The same green, in more than one hand. Each roaster's
    profile on this lot — level, roast date, the notes they market it by, the
@@ -87,20 +89,34 @@ shared, provenance-carrying entity, and lets records *reference* them:
   recorded **traceability resolution** — how specifically it is pinned (see *Lot
   identity*, below). A stable opaque id; identity adjudicated, never keyed on the
   text.
-- **Blend** — a composite offering that references two or more Lots, defined at the
-  roaster, not at origin. Sits *beside* single-origin lots in the atlas; only as
-  traceable as its vaguest component (see *Blends*, below).
-- **Roaster** — references nothing; is referenced by roasts.
+- **Blend** — a roaster's named composite. References a **Roaster** and two or more
+  Lots — a blend is a recipe *authored* at the roaster, so it belongs to one: two
+  roasters combining the same lots make two blends, not one. Sits *beside* single-
+  origin lots in the atlas; only as traceable as its vaguest component (see *Blends*,
+  below). This asymmetry is deliberate — a single origin points at a shared atom, but
+  a blend is authored, so it is owned.
+- **Roaster** — references nothing; is referenced by roasts and blends.
 - **Roast** — references a Lot *or* a Blend, and a Roaster. Level, roast date,
   offering name, the roaster's own notes. The node that makes branch 2 possible.
 - **Venue** — the café or bar. *This already exists* — it is the Register, the
   proof that CARTA can hold a canonical shared entity. Where a roast is poured or
   sold.
-- **Equipment** — grinder and brewer, by exact model. The key the brew corpus
-  aggregates on.
-- **Brew** — references a Roast, a purchase channel, and Equipment. The recipe.
-- **Reading (Cup)** — the overlay. Hedonic, descriptors, palette. Hangs off a Brew
-  (home) or a Roast-at-a-Venue (café).
+- **Gear** *(canonical)* — the exact grinder model and brewer model, as shared
+  catalog entities. The key the brew corpus aggregates on. Distinct from a keeper's
+  **Setup** — the per-user instance that references a canonical grinder + brewer and
+  carries *their* grind scale (`grindMin`/`grindMax`/`grindStep`), kept exactly as
+  today. Gear is what transfers; the Setup is how one keeper's dial moves.
+- **Preparation** — the parent of every Reading, in one of two forms, so a reading
+  always rolls up the same shape:
+  - **Brew** *(home)* — your preparation. References a Roast, a Setup (its canonical
+    Gear), and a purchase channel. The recipe. Enters the corpus only on an exact
+    Gear match.
+  - **Pour** *(café)* — the venue's preparation. References a Roast and a Venue. The
+    **availability edge** of branch 1, dated and provenance-carried like a Register
+    sighting; the recipe is unknown and never invented.
+- **Reading (Cup)** — the overlay. Hedonic, descriptors, palette. Hangs off a
+  **Preparation** — a Brew at home, a Pour at a café — so it always rolls up the same
+  road, honestly sparse where the café's recipe isn't known.
 
 The machinery for all of this is written. The Register already does canonical
 identity, provenance, sparse merge (a sighting fills blanks, never erases), and
@@ -160,11 +176,13 @@ Both are true at once by separating two layers:
   lots, with ratios *when disclosed*, unknown when not. At this layer single
   origins and blends sit adjacent, exactly as they should.
 
-- **A blend references its component lots**, so every component drills back into
-  the spine, and each single-origin lot's page carries the reverse edge — *also
-  appears in these blends*. Components disclosed only in prose (*"washed Latin
-  American coffees"*) bind at coarse-resolution lot nodes or none — the blend stays
-  browsable, just less traceable.
+- **A blend belongs to its roaster and references its component lots.** Identity is
+  roaster + name + composition, so two roasters combining the same lots make two
+  blends, not one. Every component drills back into the spine, and each single-origin
+  lot's page carries the reverse edge — *also appears in these blends*, named by
+  whom. Components disclosed only in prose (*"washed Latin American coffees"*) bind
+  at coarse-resolution lot nodes or none — the blend stays browsable, just less
+  traceable.
 - **Composition is dated.** A house blend's recipe moves season to season; a blend
   carries dated compositions the way a producer carries per-harvest lots. Same
   name, honest about change.
@@ -248,8 +266,11 @@ began.* It is never for commercial use, and it never pretends.
 point aggregates only across *exact equipment matches*: same grinder model, same
 brewer. Two people on the same Comandante and the same V60 can share a number; a
 number carried between two different grinders is a rumour, and CARTA will not
-print it. Ratio, temperature, time, and method are comparable and shown as such;
-grind is shown only within its exact match. Once a roast has enough exact-match
+print it. The corpus keys on canonical **Gear** — the grinder model — while each
+keeper's **Setup** carries the scale that makes their own dial move; the number
+that transfers is the one two owners of the same grinder actually share. Ratio,
+temperature, time, and method are comparable and shown as such; grind is shown only
+within its exact match. Once a roast has enough exact-match
 brews on it, the algorithm — and later an LLM over the corpus — can offer a first
 dial-in without ever having lied about what transfers.
 
@@ -282,7 +303,9 @@ discovery to mean something. The scarcity is the luxury.
 
 - The Register machinery — canonical entities, provenance, sparse merge, sync.
 - The brew form and the per-Setup grind scale — dialing-in is now a first pillar,
-  and "a grind is only comparable within one Setup" becomes the corpus's honesty.
+  and "a grind is only comparable within one Setup" becomes the corpus's honesty. A
+  Setup now names a canonical grinder + brewer (Gear), so the corpus can find its
+  exact matches.
 - The reading — hedonic 1–9, descriptors, the derived palette.
 - Offline-first, single-file, self-hosted sync. Quiet by construction.
 
@@ -309,10 +332,10 @@ discovery to mean something. The scarcity is the luxury.
 
 ## Sequence
 
-1. **Normalise the spine.** Turn producer · lot · blend · roaster · roast into
-   canonical entities; make bags and cups reference them; migrate existing flat
-   origin text by de-duplicating it into nodes. Unlocks the "same green, many
-   roasters" page.
+1. **Normalise the spine.** Turn producer · lot · blend · roaster · roast · gear into
+   canonical entities; split a cup into a Reading over a Preparation (Brew or Pour);
+   make bags and cups reference them; migrate existing flat origin text by
+   de-duplicating it into nodes. Unlocks the "same green, many roasters" page.
 2. **Lot identity.** The fingerprint match, propose-and-confirm entry, traceability
    resolution, and merge/split — the guardrails that keep the atom singular before
    the catalog grows.
