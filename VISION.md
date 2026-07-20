@@ -190,10 +190,10 @@ never picked, and always showing its evidence.**
 Standing stands on three measurable axes, each a fact with provenance, each able to
 read *unread* when the evidence isn't there yet:
 
-- **Caliber** — the SCA cupping score (80–100) or a competition result (Cup of
-  Excellence, Best of Panama, a national placing), *with its source and cupper*.
-  This is the industry's own instrument, and the SCA gate already means every
-  coffee here is on this scale. Sourced, or it doesn't count.
+- **Caliber** — the SCA cupping score (80–100) or a competition result, *with its
+  source and cupper*. The industry's own instrument, and the SCA gate already puts
+  every coffee here on this scale — but a score is admissible only if it can name
+  where it came from (the ladder, below). Sourced, or it reads *unread*.
 - **Rarity** — how scarce the green is: lot size in kg/bags when disclosed, auction
   vs. commodity provenance, an inherently scarce varietal (gesha, sudan rume, pink
   bourbon), and **how narrowly it is carried** — a signal the atlas *measures
@@ -201,6 +201,33 @@ read *unread* when the evidence isn't there yet:
 - **Traceability** — the lot's recorded resolution (farm-lot → country-only). How
   legible the coffee's whole road is. The reach's original axis, now honest because
   it is a fact about disclosure, not a judgment of quality.
+
+### Caliber admits a score only if it names its source
+
+Caliber is where authenticity is won or lost, because the number a roaster prints
+on a bag is a marketing instrument, not a cupping. So caliber admits scores by a
+**source ladder**, and only the grounded tiers set the standing:
+
+1. **Competition result** *(strongest)* — Cup of Excellence, Best of Panama, a
+   national CoE, a juried auction. Independently judged, published, dated,
+   verifiable against a public record. Carried as its placing/score + event + year.
+2. **Attributable protocol score** — an SCA-protocol cupping from a named
+   Q-grader or lab, or an importer offer-sheet score where the cupper is named.
+   The authentic instrument, with someone's name behind it.
+3. **Credentialed keeper cupping** — a CARTA contributor who is a Q-grader cups to
+   protocol and signs it. Community-grade, but real. A non-credentialed keeper's
+   estimate is welcome as a *reading* on the overlay — it never sets caliber.
+4. **Roaster / retail claim** *(inadmissible)* — a number with no attributable
+   cupper. **This never sets standing and never prints as the score.** It may be
+   recorded as a claim, shown as *"roaster-stated 92 — unverified,"* and nothing
+   more. This is the poison line.
+
+Caliber reads **unread** until an admissible source exists — never a number pulled
+from a bag. The gate itself shares this ladder: a coffee with no admissible score
+is admitted *provisionally* on curator judgment, its caliber unread, its specialty
+standing asserted by no one until a source arrives. Every caliber badge names its
+tier on one tap — *"90.1 · COE Ethiopia 2024, #7"* or *"89.5 · Q-graded, [lab],
+2024"* — so the reader always knows not just the score but how far to trust it.
 
 The tier is the **compiled reading across the three**, and — like every reach badge
 before it — it **explains itself**: one tap opens the score and who cupped it, the
