@@ -640,6 +640,93 @@ function regSeed(){
   sights.sort((a,b)=>a.at.localeCompare(b.at)).forEach(s=>regUpsert(s.name,s.fields,s.who,{at:s.at||null}));
 }
 
+/* ============ the catalog ============ */
+/* The spine, upstream of the café. The Register keeps ONE shared document — the
+ * Venue (a café). The catalog keeps the rest of the road as the SAME shape: a
+ * set of Register-enveloped documents, one per entity kind, each
+ * {version,rev,dirty,entries,deleted}. loadDoc/saveDoc/catUpsert/compile are
+ * loadReg/saveReg/regUpsert/reachCompile, generalised — no new sync machinery,
+ * the pattern is already proven in the café (see SCHEMA.md). Device-local until a
+ * catalog-aware server exists: an old server 404s the endpoint and this stays
+ * local, exactly as the Register degrades. Nothing renders it yet — this is the
+ * substrate the restructure is built on; step 1, normalise the spine. */
+const CAT_KINDS=['producers','processors','aggregators','lots','blends','roasters','roasts','gear'];
+const catKey=kind=>'carta.catalog.'+kind+'.v1';
+const catSingular={producers:'producer',processors:'processor',aggregators:'aggregator',lots:'lot',blends:'blend',roasters:'roaster',roasts:'roast',gear:'gear'};
+const CAT={};
+function loadDoc(kind){
+  try{const r=localStorage.getItem(catKey(kind));const g=r?JSON.parse(r):null;
+    if(g&&Array.isArray(g.entries))return{version:1,rev:g.rev||0,dirty:!!g.dirty,entries:g.entries,deleted:g.deleted||[]};
+  }catch(e){}
+  return{version:1,rev:0,dirty:false,entries:[],deleted:[]};
+}
+function saveDoc(kind){try{localStorage.setItem(catKey(kind),JSON.stringify(CAT[kind]))}catch(e){}}
+CAT_KINDS.forEach(k=>{CAT[k]=loadDoc(k)});
+// Find-or-create by a caller-supplied collapse key. The key is NOT identity — it
+// is how THIS caller chose to dedup (the seed's timid fingerprint below; a lot's
+// real identity is the resolver, a later pass). Sparse by default, the café's law
+// one kind up: a write fills blanks, never erases; {full:true} overwrites; {at}
+// backdates provenance so the earliest record to name a node holds it.
+const catByKey=(kind,key)=>CAT[kind].entries.find(e=>e._key===String(key))||null;
+function catUpsert(kind,key,fields,who,opts){
+  key=String(key||'').trim(); if(!key||!CAT[kind])return null;
+  opts=opts||{};
+  const now=new Date().toISOString(),at=opts.at||now;
+  let e=catByKey(kind,key),changed=false;
+  if(!e){e={id:uid(),kind:catSingular[kind],_key:key,createdAt:at,firstBy:who||'',firstAt:at,sightings:[],status:'proposed'};CAT[kind].entries.push(e);changed=true}
+  else if(at<(e.firstAt||e.createdAt||'')){e.firstAt=at;if(who)e.firstBy=who;changed=true}
+  Object.keys(fields||{}).forEach(k=>{const v=fields[k];
+    if(opts.full ? ((regSubstance(v)||regSubstance(e[k]))&&e[k]!==v) : (regSubstance(v)&&!regSubstance(e[k]))){e[k]=v==null?null:v;changed=true}});
+  if(changed){e.updatedAt=now;if(who)e.by=who;CAT[kind].dirty=true;saveDoc(kind)}
+  return e;
+}
+// Compile an entry's visible fields from its standing sightings — reachCompile,
+// generalised from bag/seen to arbitrary fields. Newest standing line per field
+// carries; a struck line keeps its ink; silence is not denial. The mechanism that
+// lets a value be a READING over attestations — correctable by a later line, never
+// a cell someone overwrote. No sighting is written yet in this slice; the fold is
+// here for the resolver and ingestion passes to write into.
+function compile(e,asOf){
+  const st=((e&&e.sightings)||[]).filter(s=>asOf?(s.at<=asOf&&(!s.withdrawnAt||s.withdrawnAt>asOf)&&(!s.supersededAt||s.supersededAt>asOf)):sightStanding(s)).sort(bySight);
+  const carry={};
+  st.forEach(s=>{Object.keys(s.fields||{}).forEach(k=>{if(regSubstance(s.fields[k]))carry[k]=s})});
+  const fields={};Object.keys(carry).forEach(k=>{fields[k]=carry[k].fields[k]});
+  return {fields,carry,standing:st};
+}
+// Seed the catalog from every readable ledger — the move regSeed makes for cafés,
+// widened to the spine. Each bag becomes a roaster + a lot (a timid fingerprint) +
+// a roast; each café cup contributes its roaster and, when structured, its lot.
+// Timid on purpose: a lot collapses only when two-plus origin tokens match —
+// thinner origins fork rather than risk unioning two different greens (over-merge
+// is the worse failure; the atlas starts granular and is merged UP by curation,
+// never auto-merged down). Chronological, so the earliest record holds provenance;
+// idempotent, blanks-only, exactly as regSeed.
+const catNorm=s=>normName(s||'');
+const lotKeyOf=(o,fallbackId)=>{
+  const parts=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].map(catNorm);
+  return parts.filter(Boolean).length>=2 ? 'fp:'+parts.join('|') : 'lot:'+fallbackId;   // too thin to trust → fork
+};
+function catSeed(){
+  const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
+  remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
+  const jobs=[];
+  srcs.forEach(s=>{const d=s.led;if(!d)return;
+    (d.bags||[]).forEach(b=>{if(b)jobs.push({at:b.createdAt||'',who:s.who,type:'bag',r:b})});
+    (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&(regSubstance(c.roaster)||[c.originCountry,c.originRegion,c.producer,c.variety,c.process,c.lot].some(regSubstance)))jobs.push({at:c.createdAt||'',who:s.who,type:'cup',r:c})});
+  });
+  jobs.sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(j=>{
+    const r=j.r,o={at:j.at||null},who=j.who;
+    let roaster=null,lot=null;
+    if(regSubstance(r.roaster))roaster=catUpsert('roasters',catNorm(r.roaster),{name:r.roaster,site:r.site,palette:r.palette},who,o);
+    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance))
+      lot=catUpsert('lots',lotKeyOf(r,r.id),{country:r.originCountry,region:r.originRegion,producer:r.producer,variety:r.variety,process:r.process,lotName:r.lot},who,o);
+    if(j.type==='bag'){
+      const rk=[roaster?roaster.id:'',lot?lot.id:'',catNorm(r.name),r.roastDate||''].join('|');
+      catUpsert('roasts',rk,{roasterRef:roaster?roaster.id:null,lotRef:lot?lot.id:null,offeringName:r.name,level:ROAST_LEVELS[r.roastLevel]||'',roastDate:r.roastDate,site:r.site,palette:r.palette},who,o);
+    }
+  });
+}
+
 /* ============ the reach ============ */
 /* A classification of depth, not worth — four marks for how much of a coffee's
  * road reads from the customer's side of the counter. A Register fact, like the
@@ -4372,6 +4459,7 @@ function finishWelcome(d,t,msg){
 /* ============ boot ============ */
 applyTheme();
 regSeed(); // the Register meets every ledger already on this device
+catSeed(); // and the catalog spine is normalised from the same ledgers (device-local, unrendered — step 1)
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
 // The deepest open room is where the day starts — Home, else Café, else Find.
