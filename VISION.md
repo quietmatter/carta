@@ -8,6 +8,11 @@ assumptions (`MODEL_QA.md`): the lot re-drawn as a commercial offering that spli
 and merges, the origin actors pulled apart, quality split from traceability, and
 caliber re-based on the SCA's current standard.*
 
+*Third pass — the lot-identity question, the hardest joint in the design, spiked
+against the trade across five sourcing channels (`LOT_IDENTITY.md`): identity is a
+compiled resolution, not a key, and the finest provable unit is often the processor
+and the season, not the green lot.*
+
 ## The turn
 
 CARTA began as a personal coffee memory: **one cup, two contexts, your taste the
@@ -37,7 +42,9 @@ export lots; an importer re-cuts small lots into a community lot. Its variety ca
 a whole set (*mixed heirloom* is the honest default in Ethiopia, not a defect); its
 process can run in stages. So the lot stays the hero — but modelled as a node with
 **lineage, many possible producers, and an identity that can be split or merged**,
-never as one indivisible thing. A blend is not a lot but a *cluster* of them, named
+never as one indivisible thing — and an identity that, for much of coffee, resolves
+only as far as the *processor and the season*, the finest unit the trade can
+actually prove (see *Lot identity*). A blend is not a lot but a *cluster* of them, named
 by a roaster; it sits beside the single origins in the atlas (see *Blends*, below).
 
 Everything else is a branch off the lot, or a leaf on a branch. A roaster is not
@@ -112,8 +119,10 @@ shared, provenance-carrying entity, and lets records *reference* them:
   region). Variety *as a set* (incl. *mixed heirloom* / *unknown*); process *in
   stages* (fermentation → drying → finishing); harvest as crop · year · hemisphere.
   Carries a **sourcing channel** and, separately, an **intermediary** (see *Lot
-  identity*); a recorded **traceability resolution**; split/merge **lineage**; and a
-  stable opaque id — identity adjudicated, never keyed on the text.
+  identity*); a recorded **traceability resolution** with its **grain** (green-lot ·
+  station-season · region-grade); an optional **namespaced hard-id set** (a Kenyan
+  outturn, an auction lot, an ICO mark — when one exists, zero-or-many); split/merge
+  **lineage**; and a stable opaque id — identity *compiled*, never keyed on the text.
 - **Blend** — a roaster's named composite. References a **Roaster** and two or more
   Lots — a blend is a recipe *authored* at the roaster, so it belongs to one: two
   roasters combining the same lots make two blends, not one. Sits *beside* single-
@@ -156,39 +165,63 @@ from the café to the producer, the lot, the roaster, the roast.
 
 The whole atlas rests on one thing: two people entering the same green coffee
 must land on the *same* lot node, and two genuinely different lots must never
-collapse into one. This is the hardest problem in the product, and it cannot be
-solved by a key, because **traceability degrades downstream.** A producer knows
-the exact parcel; an importer mostly does; a roaster prints what it chooses; a
-café bag may say only *Ethiopia*. You cannot demand a global lot number at the
-point where most records are entered, because the record rarely carries one.
+collapse into one. This is the hardest joint in the design, so before committing to
+it we spiked it against the trade across five sourcing channels (`LOT_IDENTITY.md`).
+The finding: it is tractable — but **identity cannot be a key**, because
+traceability degrades downstream and the deterministic identifier reaches the
+person under ~10% of the time. A producer knows the exact parcel; an importer mostly
+does; a roaster prints what it chooses; a café bag may say only *Ethiopia*. So
+identity is **compiled and confidence-graded** — the same posture the standing and
+the reach already take — proposed by the machine, confirmed by the keeper, and
+always correctable. It is a **ladder**, walked strongest rung first:
 
-So identity is not a field. It is adjudicated, confidence-graded, and correctable:
-
-- **A stable id, a fingerprint for matching.** Each lot carries an opaque id
-  assigned once (as Register entries already do). Matching is done on a
-  *fingerprint* of its traceable facts — producer · country/region · harvest ·
-  varietal · process · lot designation · auction reference. No single field is
-  identity; the cluster is. Correcting a typo never changes what a lot *is*.
-- **Propose, then confirm.** On entry, CARTA finds candidate lots by fingerprint
-  overlap and asks the curator plainly — *"this looks like Nine's Gedeb, natural,
-  2024 — the same lot?"* Confirm binds the roast to the existing node; reject
-  forks a new one. The machine proposes; the keeper decides. It fits the
-  moderation model already chosen.
-- **Traceability resolution is recorded, not required.** Resolution is one *spatial*
-  ladder — *country → region → washing-station → farm → lot → micro/nano* — and
-  nothing else rides on it: process, variety and harvest are their own fields, not
-  rungs. An under-specified roast (*"Ethiopia Guji, natural"* with no farm) binds at
-  the **coarsest node it can actually prove.** What improves later is the **record**,
-  not the coffee: when someone supplies the missing facts the entry is enriched,
-  timestamped and signed — the coffee was always that traceable; we simply know more
-  now. And **traceability** (how finely origin is *known*) stays distinct from
-  **transparency** (whether price and relationship are *disclosed*) — the trade
-  treats them as two things, so we do too. A vague claim never masquerades as a
-  precise one.
-- **Merge and split are first-class.** You *will* learn later that two lots were
-  one, or one was two. Both operations re-point every downstream roast and
-  preserve every contributor's provenance — the sparse-merge instinct the Register
-  already has, extended with re-parenting. Nothing is lost in a correction.
+- **A shared hard id, when one exists** *(the clean ~10%)*. A few channels mint an
+  identifier stable and public enough to match on outright: a **Kenyan outturn**
+  (sewn into the bag, keyed *with its grade*, since one outturn splits into
+  AA/AB/PB), a **competition-auction lot** (Cup of Excellence, Best of Panama, Gesha
+  Village — public, dated, and shared intact when a buying consortium splits one lot
+  across roasters), a **branded-estate lot** (Ninety Plus, Esmeralda), or a disclosed
+  **ICO mark**. These carry as a *namespaced set* — `{scheme, value}`, zero-or-many
+  per lot — and a match on any shared token binds deterministically. The look-alikes
+  are firewalled out: an importer's warehouse SKU, an auction catalogue's per-sale
+  line number, and a grade token (G1, AA) name the shipment, the seat, or a quality
+  class — never the coffee.
+- **A fingerprint, for the fuzzy majority** *(the default ~50–60%)*. Most records
+  carry no shared token, so matching is a *cluster* of traceable facts —
+  producer/station · country/region · harvest · varietal *(a set, admitting
+  unknown)* · process *(staged, admitting unspecified)* · intermediary. No single
+  field is identity; the cluster is. CARTA finds candidates by fingerprint overlap
+  and asks plainly — *"this looks like Nine's Gedeb, natural, 2024 — the same lot?"*
+  Confirm binds the roast to the existing node; reject forks a new one. The machine
+  proposes; the keeper decides — **propose-and-confirm is the default road, not an
+  edge case.** A normalisation layer folds transliteration variants (*Yirgacheffe /
+  Yirgachefe / Yergacheffe*) and reconciles the naming tier (farm vs producer vs
+  station vs region) before it proposes, or the fuzzy tier degrades to noise.
+- **A resolution grain, recorded as a first-class fact.** Identity does not always
+  reach the green lot: for roughly a third of real coffee the finest *provable* unit
+  is the **processor in a given harvest** — a washing station blends thousands of
+  smallholders into indistinguishable day-lots, and the ECX floor bottoms out at
+  region-and-grade. So each lot records the grain its identity was actually
+  established at — *green-lot · station-season · region-grade* — and **a
+  station-season node is a legitimate, terminal record, often the very node a keeper
+  browses**, never a half-filled lot or a blank coerced into false precision.
+  Resolution is one *spatial* ladder — *country → region → washing-station → farm →
+  lot → micro/nano*; process, variety and harvest are their own fields, not rungs.
+  What improves later is the **record**, not the coffee: supply the missing facts and
+  the entry is enriched, timestamped and signed. And **traceability** (how finely
+  origin is *known*) stays distinct from **transparency** (whether price and
+  relationship are *disclosed*).
+- **Merge, split, and the guards.** You *will* learn later that two lots were one, or
+  one was two — and a Kenyan outturn is genuinely *one cherry graded into sibling
+  export lots* under a shared processing batch. Merge and split are first-class: both
+  re-point every downstream roast and preserve every contributor's provenance — the
+  sparse-merge instinct the Register already has, extended with re-parenting. And the
+  merge is guarded in both directions the trade taught us it fails: never
+  *same-string ⇒ same lot* (rebranded split lots, rotating house names), never
+  *different-string ⇒ different lot* (transliteration, a lot resold under two
+  importers' names). *Unknown* and *unspecified* never **block** a match — they only
+  fail to confirm one. Nothing is lost in a correction, because every binding is an
+  append-only sighting a later line can supersede.
 
 Resolution feeds tiering (below): how legibly a coffee traces is one of the honest,
 measurable axes a lot stands on.
@@ -398,9 +431,11 @@ luxury.
    Preparation (Brew or Pour); make bags and cups reference them; migrate existing
    flat origin text by de-duplicating it into nodes. Unlocks the "same green, many
    roasters" page.
-2. **Lot identity.** The fingerprint match, propose-and-confirm entry, traceability
-   resolution, and merge/split — the guardrails that keep the atom singular before
-   the catalog grows.
+2. **Lot identity** *(spiked, tractable — `LOT_IDENTITY.md`)*. The identity ladder —
+   a shared hard id where one exists, a fingerprint everywhere else, a recorded
+   resolution grain, and first-class merge/split with both-direction guards.
+   Propose-and-confirm is the default entry path, and a station-season a legitimate
+   terminal node — the guardrails that keep the atom singular before the catalog grows.
 3. **Curator ingestion, LLM-assisted.** Fill the atlas from existing off-app
    research, with moderation and identity-adjudication built in.
 4. **The two surfaces.** The lot-keyed map and the encyclopedic pages over the
