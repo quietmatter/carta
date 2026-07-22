@@ -908,6 +908,46 @@ function catStampRoast(rec){
   if(n&&regSubstance(lv)&&n.level!==lv){n.level=lv;n.updatedAt=new Date().toISOString();n.by=activeName();CAT.roasts.dirty=true;saveDoc('roasts')} // level is mutable and unkeyed → write it through so a re-grade survives the flat field's retirement
   setRef(rec,'roastRef',n);
 }
+/* ---- Gear — the canonical grinder/brewer model, the key the brew corpus will one day
+ * aggregate on. Seeded from every Setup's free-text grinder/brewer; maker/model can't be
+ * split from free text, so `model` carries the whole string and `maker`/`methodClass` read
+ * unread (a later pass classifies them). A Setup keeps its own grind scale — grind is only
+ * comparable within one Setup, invariant — and merely gains grinderRef/brewerRef, the edges
+ * to the shared model. Keyed by kind+name so a grinder and a brewer sharing a string never
+ * collapse. The Setup is how one keeper's dial moves; Gear is what transfers. ---- */
+function catStampGear(s){
+  if(!s)return;
+  const g=regSubstance(s.grinder)?catUpsert('gear','grinder:'+catNorm(s.grinder),{kind:'grinder',model:s.grinder},activeName(),{at:s.createdAt||null}):null;
+  const b=regSubstance(s.brewer)?catUpsert('gear','brewer:'+catNorm(s.brewer),{kind:'brewer',model:s.brewer},activeName(),{at:s.createdAt||null}):null;
+  setRef(s,'grinderRef',g);setRef(s,'brewerRef',b);
+}
+// Boot sweep: seed Gear from every readable ledger's Setups, chronologically so the earliest
+// naming holds provenance — the regSeed/catSeed move, one collection over.
+function catSeedGear(){
+  const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
+  remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
+  const jobs=[];
+  srcs.forEach(s=>{(s.led&&s.led.setups||[]).forEach(st=>{if(st)jobs.push({at:st.createdAt||'',who:s.who,s:st})})});
+  jobs.sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(j=>{const s=j.s,o={at:j.at||null},who=j.who;
+    if(regSubstance(s.grinder))catUpsert('gear','grinder:'+catNorm(s.grinder),{kind:'grinder',model:s.grinder},who,o);
+    if(regSubstance(s.brewer))catUpsert('gear','brewer:'+catNorm(s.brewer),{kind:'brewer',model:s.brewer},who,o);
+  });
+}
+// Re-point Setups onto Gear — the catRepoint move for the tools. Flat grinder/brewer text stays
+// authoritative (re-derives at boot); a blank falls back to the standing ref. Local users only,
+// additive and reversible, never bumps updatedAt (a local derivation, not a keeper's edit).
+function gearRepoint(){
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    (d.setups||[]).forEach(s=>{if(!s)return;
+      const g=regSubstance(s.grinder)?catByKey('gear','grinder:'+catNorm(s.grinder)):catNode('gear',s.grinderRef);
+      const b=regSubstance(s.brewer)?catByKey('gear','brewer:'+catNorm(s.brewer)):catNode('gear',s.brewerRef);
+      if([setRef(s,'grinderRef',g),setRef(s,'brewerRef',b)].some(Boolean))changed=true;
+    });
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
+  });
+  D=load();
+}
 
 /* ============ the reach ============ */
 /* A classification of depth, not worth — four marks for how much of a coffee's
@@ -2438,7 +2478,9 @@ function saveSetup(id){
     papers:val('s_papers'),water:val('s_water'),notes:val('s_notes'),
     grindMin:numv('s_grindMin'),grindMax:numv('s_grindMax'),grindStep:numv('s_grindStep')};
   if(!rec.name){toast('Name the Setup');return}
-  if(id){Object.assign(setupById(id),rec,{updatedAt:new Date().toISOString()})}else{D.setups.push({id:uid(),createdAt:new Date().toISOString(),...rec})}
+  let s;
+  if(id){s=setupById(id);Object.assign(s,rec,{updatedAt:new Date().toISOString()})}else{s={id:uid(),createdAt:new Date().toISOString(),...rec};D.setups.push(s)}
+  catStampGear(s); // author its grinder/brewer Gear nodes and stamp the refs at save time, not next boot
   save();closeSheet();render();toast('Setup saved');
 }
 
@@ -2527,7 +2569,7 @@ function saveBrew(editId){
     const g=val('n_grinder'),br=val('n_brewer');
     if(!g&&!br){toast('Name your grinder or brewer — once is enough');return}
     const s={id:uid(),createdAt:new Date().toISOString(),name:[g,br].filter(Boolean).join(' · '),grinder:g,brewer:br};
-    D.setups.push(s);setupId=s.id;
+    D.setups.push(s);setupId=s.id;catStampGear(s); // the first brew names the tools → author their Gear nodes now
   }
   if(!setupId){toast('Refused: a brew requires a Setup');return}
   const fields={bagId:val('b_bag'),setupId,
@@ -3350,7 +3392,7 @@ function importAsUser(){
   catch(e){toast('Storage full — could not import');return}
   USERS.users.push(nu);saveUsers();
   pendingImport=null;closeSheet();
-  regSeed();catSeed();catRepoint(); // an imported record may name cafés/greens the device hasn't met
+  regSeed();catSeed();catSeedGear();catRepoint();gearRepoint(); // an imported record may name cafés/greens/tools the device hasn't met
   viewLedger(nu.id);
 }
 function importReplace(){
@@ -3359,7 +3401,7 @@ function importReplace(){
   const me=userById(USERS.activeId).name;
   if(!confirm(`Replace ${me}'s current ledger with the import?\n\nThis cannot be undone.`))return;
   const cat=pendingImport.catalog;delete pendingImport.catalog; // fold the copy's spine before it becomes the ledger, so retired fields read through
-  D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catRepoint();closeSheet();render();toast('Ledger imported');
+  D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();closeSheet();render();toast('Ledger imported');
 }
 // Fold an imported catalog into the device's spine, then heal the imported ledger's refs.
 // A copy carries the whole atlas (exportJSON); bringing it in unions it into the local spine
@@ -3631,8 +3673,10 @@ async function syncNow(manual){
     await syncRegister();                              // the café Register, same heartbeat
     regSeed();                                         // pulled ledgers may have named new cafés
     catSeed();                                         // and new spine nodes — producers, lots, roasters
+    catSeedGear();                                      // and new Gear — grinder/brewer models
     await syncCatalog();                               // the spine of the atlas, same heartbeat
     catRepoint();                                      // re-point local ledgers onto the merged ids
+    gearRepoint();                                      // and Setups onto their Gear
     if(tab==='cafes'&&!document.getElementById('sheet').classList.contains('open'))render();
     try{
       const dir=await api('/api/users');
@@ -4936,7 +4980,9 @@ function finishWelcome(d,t,msg){
 applyTheme();
 regSeed(); // the Register meets every ledger already on this device
 catSeed(); // and the catalog spine is normalised from the same ledgers (device-local, unrendered — step 1)
+catSeedGear(); // Gear too — grinder/brewer models swept from every Setup
 catRepoint(); // then the ledger leans on it: each bag/cup carries the id of its node (additive, reversible — step 2)
+gearRepoint(); // and each Setup carries grinderRef/brewerRef
 catRetire(); // then the flat roaster + structured origin (and a bag's roast level + date) retire under those refs — the node is the only copy now (step 3)
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
