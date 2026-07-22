@@ -765,6 +765,39 @@ function catRepoint(){
   });
   D=load(); // refresh the viewing ledger so in-memory D carries the fresh refs
 }
+// Migration step 3 — the retirement. catRepoint stamped every bag and café cup with
+// the id of its catalog node; catRetire now strikes the flat roaster + structured origin
+// those nodes carry, so the lot node becomes the record's sole copy — the atlas, not the
+// text, is where the green lives. Gated on a LIVE node (never null a field the catalog
+// can't surface): a lot node is a faithful copy of the record's own fields, keyed by the
+// full six-field fingerprint, so co-keyed records logged the same positions and lotRead/
+// circleLot re-surface exactly what was struck, re-spelled to the atlas canonical. The
+// free-text `origin` line has no node and is never touched; a bag's name/roast/date keep
+// their flat fields too (only roaster + the six structured origin fields retire here).
+// Like catRepoint this is a device-local normalisation — deterministic, idempotent,
+// re-derived each boot — so it never bumps updatedAt or marks the ledger dirty:
+// mergeColl's local-wins-on-tie shields a retired record from an equal-timestamp flat
+// remote, and a genuine remote edit (newer) legitimately re-fills the words. It rides
+// the next real edit's push like the refs do; a stale device reading the server's flat
+// copy still reads correctly, and an up-to-date device re-retires it at its own boot.
+// Local users only; a read-only remote ledger is never mutated. This is the irreversible
+// step: once the text is struck, the node is the only copy — clearing the ref reverts
+// nothing (unlike catRepoint). It runs only after catSeed + catRepoint have stood a node
+// under every ref.
+function catRetire(){
+  const strike=r=>{if(!r)return false;let hit=false;
+    if(r.roasterRef&&catNode('roasters',r.roasterRef)&&regSubstance(r.roaster)){r.roaster='';hit=true} // roaster node stands → the text retires
+    if(r.lotRef&&catNode('lots',r.lotRef))['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>{if(regSubstance(r[k])){r[k]='';hit=true}}); // lot node stands → the six structured origin fields retire; free-text `origin` has none and stays
+    return hit;
+  };
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    (d.bags||[]).forEach(b=>{if(strike(b))changed=true});
+    (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&strike(c))changed=true}); // café cups only — a home cup's beans live on its bag
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){} // write back only a ledger that actually changed — a re-run is a clean no-op
+  });
+  D=load(); // refresh the viewing ledger so in-memory D carries the retired records
+}
 // The write-path half of the repoint: author a record's roaster node the moment the
 // record is saved, not only at the next boot sweep. Same upsert catSeed makes, keyed
 // identically, so it stays idempotent with the boot pass (blanks-only, earliest
@@ -4763,6 +4796,7 @@ applyTheme();
 regSeed(); // the Register meets every ledger already on this device
 catSeed(); // and the catalog spine is normalised from the same ledgers (device-local, unrendered — step 1)
 catRepoint(); // then the ledger leans on it: each bag/cup carries the id of its node (additive, reversible — step 2)
+catRetire(); // then the flat roaster + structured origin retire under those refs — the node is the only copy now (step 3)
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
 // The deepest open room is where the day starts — Home, else Café, else Find.
