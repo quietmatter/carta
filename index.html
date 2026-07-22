@@ -1309,10 +1309,14 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.10.0';
+const APP_VERSION='4.11.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.11.0',date:'Jul 22, 2026',title:'More from this roaster',items:[
+    'A bag or a café cup now also shows more from the same roaster elsewhere in your journal — a bag you brewed at home and a cup you had out under one roaster, tied even when the name was written a little differently each time.',
+    'It sits under the same-lot line and never repeats a record already shown there; like that line, it reads from what you\'ve logged and appears only when there\'s truly something to connect.',
+  ]},
   {v:'4.10.0',date:'Jul 22, 2026',title:'The same lot, wherever it landed',items:[
     'A bag or a café cup now shows the same green lot elsewhere in your journal — the coffee you brewed at home and the one you had out can be a single lot, a tie the origin words alone could state but never connect. Tap it to cross to the other record.',
     'It reads from what you already logged and appears only when a lot truly recurs; nothing new to fill in, nothing shown when there\'s no match yet.',
@@ -1554,17 +1558,35 @@ function cupRow(c,showKind){
 // words can state but never connect. Still grounded in those words (the label is
 // built from them; a record with no lotRef simply shows nothing here), so reading
 // through the ref earns only what the atlas alone can say and stays reversible.
-function lotKin(rec){
-  const ref=rec&&rec.lotRef; if(!ref)return [];
-  const out=[];
-  (D.bags||[]).forEach(b=>{if(b&&b.id!==rec.id&&b.lotRef===ref)out.push({t:'bag',id:b.id,label:bagName(b)})});
-  (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&c.id!==rec.id&&c.lotRef===ref)out.push({t:'cup',id:c.id,label:[c.shop,c.drink].filter(Boolean).join(' · ')||'a café cup'})});
+// Records that resolved to the same node as `rec` on ref `k`, bag and café cup
+// alike. Grounded in flat text throughout — the labels are the flat names, no
+// ref no kin — so this only ever reads what a resolved id can say that loose
+// words can't: the CONNECTION between two records the spine collapsed to one.
+function refKin(rec,k,skip){
+  const ref=rec&&rec[k]; if(!ref)return [];
+  const seen=new Set(skip||[]),out=[];
+  (D.bags||[]).forEach(b=>{if(b&&b.id!==rec.id&&b[k]===ref&&!seen.has(b.id))out.push({t:'bag',id:b.id,label:bagName(b)})});
+  (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&c.id!==rec.id&&c[k]===ref&&!seen.has(c.id))out.push({t:'cup',id:c.id,label:[c.shop,c.drink].filter(Boolean).join(' · ')||'a café cup'})});
   return out;
 }
-function sameLotHTML(rec){
-  const kin=lotKin(rec); if(!kin.length)return '';
+const lotKin=rec=>refKin(rec,'lotRef');
+// The second surface to lean on a ref. Lot first — the deepest tie the atlas
+// draws (one green, two records the origin words could never link). Roaster
+// second, and only for records the lot line didn't already claim: the roaster
+// node collapses spelling variants a keeper couldn't reliably match by eye, and
+// ties a bag brewed home to a cup had out under one roaster. Both stay a reading
+// OVER what's logged — absent with no ref, no match — so it's reversible still.
+function kinLine(label,kin){
   const links=kin.map(k=>`<a class="link" onclick="${k.t==='bag'?'openBagDetail':'openCupDetail'}(${jsq(k.id)})">${esc(k.label)}</a>`).join(', ');
-  return `<div class="muted small" style="margin:-4px 0 12px">Same lot, elsewhere in your journal: ${links}.</div>`;
+  return `<div class="muted small" style="margin:-4px 0 12px">${label} ${links}.</div>`;
+}
+function kinHTML(rec){
+  const lot=lotKin(rec);
+  const roaster=refKin(rec,'roasterRef',lot.map(k=>k.id));
+  let out='';
+  if(lot.length)out+=kinLine('Same lot, elsewhere in your journal:',lot);
+  if(roaster.length)out+=kinLine(`More from ${rec.roaster?esc(rec.roaster):'this roaster'}, elsewhere:`,roaster);
+  return out;
 }
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
@@ -1594,7 +1616,7 @@ function openCupDetail(id){
     ${brew?`<div class="kv"><span class="k">Brew</span><span class="v num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span></div>`:''}
     ${setup?`<div class="kv"><span class="k">Setup</span><span class="v">${esc(setup.name)}</span></div>`:''}
   </div>
-  ${sameLotHTML(c)}
+  ${kinHTML(c)}
   ${x&&x.home.n?`<div class="cafeback">You have had beans like these at home — <strong>${x.home.avg}</strong> across ${x.home.n} home cup${x.home.n>1?'s':''} vs <strong>${x.cafe.avg}</strong> out. How the preference travels.</div>`:''}
   ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
@@ -2095,7 +2117,7 @@ function openBagDetail(id){
     <div class="kv"><span class="k">Bought at</span><span class="v">${esc(b.boughtAt)||'—'}</span></div>
     <div class="kv"><span class="k">Brews</span><span class="v num">${brews.length}</span></div>
   </div>
-  ${sameLotHTML(b)}
+  ${kinHTML(b)}
   ${b.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${esc(b.notes)}</div>`:''}
   ${readOnly()?`<button class="btn btn-quiet" onclick="closeSheet()">Close</button>`:`<button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
   <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`}`);
