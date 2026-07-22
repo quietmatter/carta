@@ -1310,10 +1310,14 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.12.0';
+const APP_VERSION='4.13.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.13.0',date:'Jul 22, 2026',title:'Your journal, by lot',items:[
+    'Your record now also folds by lot: when the same green shows up in more than one record — a bag you brewed and a cup you had out that trace back to one lot — it gathers into a single row, tied where the loose origin words alone could never connect them. Tap a lot to see every record on it.',
+    'Only lots that appear in two or more records show — a green logged once just echoes its own record, so it stays out of the way. Like the rest, it reads from what you\'ve already written and adds nothing to fill in.',
+  ]},
   {v:'4.12.0',date:'Jul 22, 2026',title:'Your journal, by roaster',items:[
     'Your record now folds by roaster: one row per roaster behind your bags and café cups, with variants of a name gathered together and a bag at home counted beside a cup you had out. Tap a roaster to see every record under it.',
     'It reads from what you\'ve already logged — no roaster, no row — and appears only once there\'s more than one record to gather, so it stays a reading over your journal, never another thing to fill in.',
@@ -1594,28 +1598,42 @@ function kinHTML(rec){
   return out;
 }
 // The read-through, aggregated — the same refs the detail sheets lean on, now folded
-// over the WHOLE journal. Every bag and café cup gathers under the roaster node it
-// resolved to, so spelling variants a keeper couldn't reliably eyeball-match collapse
-// into one row and a bag brewed home sits beside a cup had out under one roaster. A
-// reading over the refs, not a store: no roasterRef, no row (grounded in what's
-// logged, absent when nothing resolved), so like the detail lines it stays reversible.
-function roasterIndex(){
+// over the WHOLE journal on one ref. Every bag and café cup gathers under the node it
+// resolved to, so variants the flat words couldn't reliably tie collapse into one row
+// and a bag brewed home sits beside a cup had out. A reading over the refs, not a
+// store: no ref, no row (grounded in what's logged, absent when nothing resolved), so
+// like the detail lines it stays reversible. `key` is the ref field on the records;
+// `name` labels a resolved node id for the surface. Roaster folds on one token, so
+// every roaster shows; a lot forks unless two-plus origin tokens agree, so its rows
+// are the rarer, deeper ties — the same green in more than one record.
+function refIndex(key,name){
   const g=new Map();
-  const add=(ref,rec,t)=>{if(!ref)return;let e=g.get(ref);if(!e){const n=catNode('roasters',ref);e={ref,name:(n&&n.name)||'a roaster',bags:0,cups:0,recs:[]};g.set(ref,e)}e[t==='bag'?'bags':'cups']++;e.recs.push({t,id:rec.id})};
-  (D.bags||[]).forEach(b=>{if(b)add(b.roasterRef,b,'bag')});
-  (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe')add(c.roasterRef,c,'cup')});
+  const add=(ref,rec,t)=>{if(!ref)return;let e=g.get(ref);if(!e){e={ref,name:name(ref),bags:0,cups:0,recs:[]};g.set(ref,e)}e[t==='bag'?'bags':'cups']++;e.recs.push({t,id:rec.id})};
+  (D.bags||[]).forEach(b=>{if(b)add(b[key],b,'bag')});
+  (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe')add(c[key],c,'cup')});
   return [...g.values()].sort((a,b)=>(b.bags+b.cups)-(a.bags+a.cups)||a.name.localeCompare(b.name));
 }
-const roasterTally=r=>[r.bags&&`${r.bags} ${r.bags===1?'bag':'bags'}`,r.cups&&`${r.cups} ${r.cups===1?'cup out':'cups out'}`].filter(Boolean).join(' · ');
+const roasterName=ref=>{const n=catNode('roasters',ref);return (n&&n.name)||'a roaster'};
+// A lot has no single name — build one from the origin words it collapsed: who (the
+// producer, or the lot name), where (region, country), and the variety, terse.
+const lotLabel=n=>{if(!n)return 'a lot';const place=[n.region,n.country].filter(Boolean).join(', ');const parts=[n.producer||n.lotName,place,n.variety].filter(Boolean);return parts.length?parts.join(' · '):'a lot'};
+const roasterIndex=()=>refIndex('roasterRef',roasterName);
+const lotIndex=()=>refIndex('lotRef',ref=>lotLabel(catNode('lots',ref)));
+const kinTally=r=>[r.bags&&`${r.bags} ${r.bags===1?'bag':'bags'}`,r.cups&&`${r.cups} ${r.cups===1?'cup out':'cups out'}`].filter(Boolean).join(' · ');
+const kinRow=m=>{const rec=m.t==='bag'?bagById(m.id):cupById(m.id);if(!rec)return'';
+  const label=m.t==='bag'?bagName(rec):([rec.shop,rec.drink].filter(Boolean).join(' · ')||'a café cup');
+  return `<button class="wc-item" onclick="${m.t==='bag'?'openBagDetail':'openCupDetail'}(${jsq(m.id)})"><span class="tx"><span class="tt">${esc(label)}</span><span class="dd">${m.t==='bag'?'on your shelf':'a cup out'}</span></span><span class="go">→</span></button>`};
 function openRoasterKin(ref){
   const r=roasterIndex().find(x=>x.ref===ref); if(!r)return;
-  const row=m=>{const rec=m.t==='bag'?bagById(m.id):cupById(m.id);if(!rec)return'';
-    const label=m.t==='bag'?bagName(rec):([rec.shop,rec.drink].filter(Boolean).join(' · ')||'a café cup');
-    return `<button class="wc-item" onclick="${m.t==='bag'?'openBagDetail':'openCupDetail'}(${jsq(m.id)})">
-      <span class="tx"><span class="tt">${esc(label)}</span><span class="dd">${m.t==='bag'?'on your shelf':'a cup out'}</span></span><span class="go">→</span></button>`};
   openSheet(`<h3 style="margin:0 0 4px">${esc(r.name)}</h3>
-    <div class="muted small" style="margin:0 0 10px">${roasterTally(r)}, folded from what you've logged.</div>
-    ${r.recs.map(row).join('')}`);
+    <div class="muted small" style="margin:0 0 10px">${kinTally(r)}, folded from what you've logged.</div>
+    ${r.recs.map(kinRow).join('')}`);
+}
+function openLotKin(ref){
+  const r=lotIndex().find(x=>x.ref===ref); if(!r)return;
+  openSheet(`<h3 style="margin:0 0 4px">${esc(r.name)}</h3>
+    <div class="muted small" style="margin:0 0 10px">one green · ${kinTally(r)}, wherever it landed in your journal.</div>
+    ${r.recs.map(kinRow).join('')}`);
 }
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
@@ -1745,7 +1763,14 @@ function vMore(){
   const roasterHTML=rIdx.length&&rTot>=2?`<h2>By roaster</h2>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Your journal folded onto the roasters behind it — variants of a name gathered, a bag at home beside a cup out.</div>
   ${rIdx.map(r=>`<button class="wc-item" onclick="openRoasterKin(${jsq(r.ref)})">
-    <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${roasterTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
+    <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
+  // Only lots that gather two-plus records — the atlas tying a bag and a cup out to one
+  // green where the origin words alone couldn't. A singleton lot just echoes its record.
+  const lIdx=lotIndex().filter(r=>r.bags+r.cups>=2);
+  const lotHTML=lIdx.length?`<h2>By lot</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">The same green in more than one record — a bag you brewed and a cup you had out that are one lot, tied where the origin words couldn't reach.</div>
+  ${lIdx.map(r=>`<button class="wc-item" onclick="openLotKin(${jsq(r.ref)})">
+    <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
   return `
   <h2>${readOnly()?esc(viewingUser().name)+"'s record":'Your record'}</h2>
   <div class="card">${counts.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>
@@ -1757,6 +1782,7 @@ function vMore(){
     <button class="text-action" onclick="go('setups')">The tools — your Setups</button>
   </div>`:''}
   ${roasterHTML}
+  ${lotHTML}
   ${readOnly()?'':`
   <h2>How deep you go</h2>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">CARTA opens a room at a time. Step in whenever you're ready — nothing is ever taken away.</div>
