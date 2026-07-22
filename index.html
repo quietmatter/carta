@@ -738,8 +738,19 @@ function lotIdentity(o){
 // The whole field object a lot upsert carries — the flat origin (the read surface) plus the
 // identity columns above — so catSeed, catStampLot and any later writer stamp one shape. A loose
 // free-text origin (no structured fields) keeps only `origin`; structured records keep the six.
-const lotFields=o=>{const struct=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].some(regSubstance);
-  return Object.assign({country:o.originCountry,region:o.originRegion,producer:o.producer,variety:o.variety,process:o.process,lotName:o.lot,origin:struct?undefined:o.origin},lotIdentity(o))};
+const lotFields=(o,pRef)=>{const struct=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].some(regSubstance);
+  const f=Object.assign({country:o.originCountry,region:o.originRegion,producer:o.producer,variety:o.variety,process:o.process,lotName:o.lot,origin:struct?undefined:o.origin},lotIdentity(o));
+  if(pRef)f.producerRefs=[pRef];   // the spine edge lot → producer, set once (blanks-only)
+  return f};
+// The producer node — the grower behind a lot's producer field, keyed by name+country so two
+// growers sharing a name in different origins never collapse (the lot's timidity, one hand up).
+// The ONLY origin actor flat data can seed: the old records carry no processor (washing-station)
+// or aggregator (importer/exporter) field, so those catalogs stay honestly empty until a curator
+// or the resolver (a later pass) names one — never a blank coerced into a fake node.
+function catStampProducer(o,who,at){
+  if(!regSubstance(o.producer))return null;
+  return catUpsert('producers',catNorm(o.producer)+'|'+catNorm(o.originCountry),{name:o.producer,country:o.originCountry,region:o.originRegion},who,{at:at||null});
+}
 function catSeed(){
   const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
   remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
@@ -753,8 +764,10 @@ function catSeed(){
     let roaster=null,lot=null;
     if(regSubstance(r.roaster))roaster=catUpsert('roasters',catNorm(r.roaster),{name:r.roaster,site:r.site,palette:r.palette},who,o);
     else if(r.roasterRef)roaster=catNode('roasters',r.roasterRef); // flat gone legacy → resolve via the standing ref, so the roasts key below stays identical to catRepoint's
-    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin)) // structured tokens OR a loose free-text origin (its own singleton lot — lotKeyOf forks to lot:<id>, never keyed, so it can't union two greens)
-      lot=catUpsert('lots',lotKeyOf(r,r.id),lotFields(r),who,o);
+    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin)){ // structured tokens OR a loose free-text origin (its own singleton lot — lotKeyOf forks to lot:<id>, never keyed, so it can't union two greens)
+      const p=catStampProducer(r,who,j.at);
+      lot=catUpsert('lots',lotKeyOf(r,r.id),lotFields(r,p&&p.id),who,o);
+    }
     else if(r.lotRef)lot=catNode('lots',r.lotRef); // flat origin gone legacy → resolve the lot via its standing ref, so the roasts key below stays identical to catRepoint's (mirror of the roaster fallback above)
     if(j.type==='bag'){
       const rk=[roaster?roaster.id:'',lot?lot.id:'',catNorm(r.name),r.roastDate||''].join('|');
@@ -873,8 +886,9 @@ function catStampLot(rec){
   // A café cup's loose free-text origin, with no structured fields, is homed on the cup's own
   // singleton lot (lotKeyOf forks to lot:<id>) — never on a shared fp-keyed lot, so node-first
   // reads and the retirement strike can never surface one cup's origin onto a co-keyed sibling.
+  const p=(struct||regSubstance(rec.origin))?catStampProducer(rec,activeName(),rec.createdAt):null;
   const n=(struct||regSubstance(rec.origin))
-    ?catUpsert('lots',lotKeyOf(rec,rec.id),lotFields(rec),activeName(),{at:rec.createdAt||null}):null;
+    ?catUpsert('lots',lotKeyOf(rec,rec.id),lotFields(rec,p&&p.id),activeName(),{at:rec.createdAt||null}):null;
   setRef(rec,'lotRef',n);
 }
 // The roast's write-path half — the bag's third stamp, run beside catStampRoaster and
