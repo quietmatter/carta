@@ -1329,10 +1329,13 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.16.0';
+const APP_VERSION='4.17.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.17.0',date:'Jul 22, 2026',title:'A café cup, keyed on the green',items:[
+    'A café cup now reads its traceability — country, region, variety, producer, process, lot — through the green behind it too, so a cup and a bag of the same lot read as that one lot on the cup\'s page, however loosely either was typed. As on your shelf, it only re-spells an origin you already wrote and never adds a field the cup didn\'t log; a cup shared into your circle still shows exactly what its keeper wrote.',
+  ]},
   {v:'4.16.0',date:'Jul 22, 2026',title:'One green, spelled once',items:[
     'A bag now reads its origin — country, region, producer, variety, process — through the green behind it, so bags of the one lot spelled a little differently read as that one lot across your shelf, its page, and the brew screen. It only ever re-spells an origin you already wrote; the atlas never adds a field the bag didn\'t log, and everything falls back to exactly what you typed.',
   ]},
@@ -1670,7 +1673,8 @@ function openCupDetail(id){
   const what=cafe?`${esc(c.shop||'café')}${c.drink?` · ${esc(c.drink)}`:''}`:esc(bagName(b));
   const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
   const setup=brew?setupById(brew.setupId):null;
-  const trace=cafe?[c.originCountry,c.originRegion,c.variety,c.producer,c.process,c.lot&&('lot '+c.lot)].filter(Boolean).map(esc).join(' · '):'';
+  const o=lotRead(c);
+  const trace=cafe?[o.country,o.region,o.variety,o.producer,o.process,o.lot&&('lot '+o.lot)].filter(Boolean).map(esc).join(' · '):'';
   const x=cafe&&(c.roaster||c.origin||c.originCountry||c.variety)?crossContext({roaster:c.roaster,origin:c.origin||c.originCountry,variety:c.variety}):null;
   openSheet(`
   <h3>${what}</h3>
