@@ -2440,7 +2440,7 @@ function saveCup(kind,brewId,bagId,skip,editId){
   let cup;
   if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});cup=ex}
   else{cup={id:uid(),createdAt:new Date().toISOString(),...fields};D.cups.push(cup)}
-  if(kind==='cafe')catStampRoaster(cup); // author its roaster node at save time, not next boot
+  if(kind==='cafe'){catStampRoaster(cup);catStampLot(cup);} // author its roaster + lot nodes at save time, not next boot
   editingCupId=null;
   save();closeSheet();
   if(kind==='cafe'){go('cafes');toast(ex?'Cup updated':(firstOut?'Kept — your first cup out.':'Kept.'));}
