@@ -726,6 +726,35 @@ function catSeed(){
     }
   });
 }
+// Re-point the ledger onto the spine — migration step 2. Every bag and café cup
+// gains the id of the catalog node it seeded (roasterRef/lotRef, +roastRef for a
+// bag), stamped BESIDE the flat origin text, never over it: the words stay
+// authoritative and every render/edit path still reads them. Purely additive, so
+// it is reversible (drop the refs and nothing is lost) and idempotent (re-derived
+// each boot from the SAME collapse keys catSeed used). A ref is a local derivation,
+// not a keeper's edit — it never touches updatedAt, so sync sees no spurious push
+// and a merge that drops one simply re-stamps next boot. Local users only; a
+// read-only remote ledger is never mutated. Flat fields go inert (legacy) only in a
+// later version, once the catalog is trusted and the UI reads through the refs.
+const catRefsFor=r=>({
+  roaster:regSubstance(r.roaster)?catByKey('roasters',catNorm(r.roaster)):null,
+  lot:[r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)?catByKey('lots',lotKeyOf(r,r.id)):null
+});
+const setRef=(rec,k,node)=>{const id=node?node.id:null;if((rec[k]||null)===id)return false;if(id)rec[k]=id;else delete rec[k];return true};
+function catRepoint(){
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    (d.bags||[]).forEach(b=>{if(!b)return;const{roaster,lot}=catRefsFor(b);
+      const roast=catByKey('roasts',[roaster?roaster.id:'',lot?lot.id:'',catNorm(b.name),b.roastDate||''].join('|'));
+      if([setRef(b,'roasterRef',roaster),setRef(b,'lotRef',lot),setRef(b,'roastRef',roast)].some(Boolean))changed=true;
+    });
+    (d.cups||[]).forEach(c=>{if(!c||c.kind!=='cafe')return;const{roaster,lot}=catRefsFor(c);
+      if([setRef(c,'roasterRef',roaster),setRef(c,'lotRef',lot)].some(Boolean))changed=true;
+    });
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
+  });
+  D=load(); // refresh the viewing ledger so in-memory D carries the fresh refs
+}
 
 /* ============ the reach ============ */
 /* A classification of depth, not worth — four marks for how much of a coffee's
@@ -4460,6 +4489,7 @@ function finishWelcome(d,t,msg){
 applyTheme();
 regSeed(); // the Register meets every ledger already on this device
 catSeed(); // and the catalog spine is normalised from the same ledgers (device-local, unrendered — step 1)
+catRepoint(); // then the ledger leans on it: each bag/cup carries the id of its node (additive, reversible — step 2)
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
 // The deepest open room is where the day starts — Home, else Café, else Find.
