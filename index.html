@@ -1046,6 +1046,15 @@ const bagName=b=>{if(!b)return '—';const r=bagRoaster(b);return `${r?r+' — '
 // node when one stands, the flat `roaster` as the floor. Scoped to your own cups —
 // a circle cup keeps exactly the text its keeper wrote (their ref is theirs, not ours).
 const cupRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.roasterRef);return (n&&n.name)||c.roaster||''};
+// A record's green, read through its lot node when one stands — each origin field
+// re-spelled to the atlas's canonical (variants that collapsed to one green read as
+// that green wherever they landed), the flat field both the floor and the gate: the
+// node never surfaces a field the record itself didn't log, so a bag shows exactly
+// its own origins, only spelled as the lot they are. Drop the resolver and every
+// field reverts, byte for byte, to what was typed.
+const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
+  const f=(flat,nk)=>{const v=(rec&&rec[flat])||'';return (v&&n&&n[nk])||v};
+  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName')}};
 const setupById=id=>D.setups.find(s=>s.id===id);
 const bagById=id=>D.bags.find(b=>b.id===id);
 const cupById=id=>D.cups.find(c=>c.id===id);
@@ -1320,10 +1329,13 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.15.0';
+const APP_VERSION='4.16.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.16.0',date:'Jul 22, 2026',title:'One green, spelled once',items:[
+    'A bag now reads its origin — country, region, producer, variety, process — through the green behind it, so bags of the one lot spelled a little differently read as that one lot across your shelf, its page, and the brew screen. It only ever re-spells an origin you already wrote; the atlas never adds a field the bag didn\'t log, and everything falls back to exactly what you typed.',
+  ]},
   {v:'4.15.0',date:'Jul 22, 2026',title:'Café beans, one name too',items:[
     'A café cup now reads its beans-roaster the same way your shelf does — variants of a roaster you\'ve typed differently across cups read as the one roaster they are, on the cup\'s row and its page. As on the shelf, nothing you wrote is changed and it falls back to exactly what you typed. A cup shared into your circle still shows precisely what its keeper wrote.',
   ]},
@@ -1707,10 +1719,10 @@ function vBags(){
   return `<button class="text-action" style="margin:2px 0 10px" onclick="go('field')">← Back</button>
   ${readOnly()?'':`<button class="btn btn-primary" onclick="openBagForm()">Put a coffee on the shelf</button>`}
   <h2>The shelf <span class="n-note">n=${bags.length}</span></h2>
-  ${bags.length? bags.map(b=>{const pal=palOf(b),vars=pal?cafeVars(pal):'';return `
+  ${bags.length? bags.map(b=>{const pal=palOf(b),vars=pal?cafeVars(pal):'',o=lotRead(b);return `
     <div class="card tap"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openBagDetail('${b.id}')">
       <div class="row"><strong>${esc(bagName(b))}</strong>${restChip(b)}</div>
-      <div class="muted small">${esc([b.originCountry,b.producer,b.process].filter(Boolean).join(' · '))||'&nbsp;'}</div>
+      <div class="muted small">${esc([o.country,o.producer,o.process].filter(Boolean).join(' · '))||'&nbsp;'}</div>
     </div>`}).join('') : `<div class="empty">Name the bag in your hand — every brew after remembers it.</div>`}`;
 }
 
@@ -2163,13 +2175,13 @@ function archiveBag(id){if(guard())return;const b=bagById(id);b.archived=!b.arch
 function openArchiveSheet(id){
   if(guard())return;
   const b=bagById(id);if(!b)return;
-  const a=archivedBagLine(b);
+  const a=archivedBagLine(b),o=lotRead(b);
   openSheet(`
   <h3>Put the bag away</h3>
   <div class="sub">The bag goes. The record stays.</div>
   <div class="card">
     <div class="row"><strong class="small">${esc(bagName(b))}</strong><span class="num muted small">${a.stat}</span></div>
-    <div class="muted small">${esc([b.originCountry,b.originRegion,b.process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
+    <div class="muted small">${esc([o.country,o.region,o.process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
     <div class="muted small" style="margin-top:4px">${a.line}</div>
   </div>
   <div class="muted small serif" style="font-style:italic;margin:10px 2px">It waits under <strong>Put away</strong>. Buy the same bag again and the first brew starts where you left off — nothing to re-learn.</div>
@@ -2177,18 +2189,18 @@ function openArchiveSheet(id){
   <button class="btn btn-quiet" onclick="closeSheet()">Not yet — there's a cup left in it</button>`);
 }
 function openBagDetail(id){
-  const b=bagById(id),r=restState(b),brews=brewsOf(id);
+  const b=bagById(id),r=restState(b),brews=brewsOf(id),o=lotRead(b);
   const pal=palOf(b),vars=pal?cafeVars(pal):''; // the bag wears the palette read from its website
   openSheet(`
   <h3>${esc(bagName(b))}</h3>
-  <div class="sub">${esc([b.originCountry,b.originRegion,b.producer].filter(Boolean).join(' · '))||'origin unrecorded'}</div>
+  <div class="sub">${esc([o.country,o.region,o.producer].filter(Boolean).join(' · '))||'origin unrecorded'}</div>
   ${pal?`<div class="cafe-theme" style="${vars};margin:2px 0 12px;padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius)">
     <div class="palette">${paletteSwatches(pal)}</div>
     <div class="muted small" style="margin-top:8px">${b.site?`Its colours, read from <strong>${esc(b.site.replace(/^https?:\/\/(www\.)?/,''))}</strong>.`:'Its own colours, on the record.'}</div>
   </div>`:''}
   <div class="card">
-    <div class="kv"><span class="k">Process</span><span class="v">${esc(b.process)||'—'}</span></div>
-    <div class="kv"><span class="k">Variety</span><span class="v">${esc(b.variety)||'—'}</span></div>
+    <div class="kv"><span class="k">Process</span><span class="v">${esc(o.process)||'—'}</span></div>
+    <div class="kv"><span class="k">Variety</span><span class="v">${esc(o.variety)||'—'}</span></div>
     <div class="kv"><span class="k">Roast</span><span class="v">${ROAST_LEVELS[b.roastLevel]||'—'} · ${esc(b.roastDate)||'no date'}</span></div>
     ${r?`<div class="kv"><span class="k">Rest</span><span class="v num">day ${r.d} · window ${r.a}–${r.b}d</span></div>`:''}
     <div class="kv"><span class="k">Bought at</span><span class="v">${esc(b.boughtAt)||'—'}</span></div>
@@ -2881,12 +2893,12 @@ function vField(){
   const scored=brewsOf(bag.id).map(b=>({brew:b,cup:D.cups.find(c=>c.brewId===b.id)}))
     .filter(x=>x.cup&&x.cup.hedonic!=null).sort((a,b)=>b.cup.hedonic-a.cup.hedonic);
   const best=scored[0]||null;
-  const notes=lastCup&&(lastCup.notes||((lastCup.descriptors||[]).join(' · ')));
+  const notes=lastCup&&(lastCup.notes||((lastCup.descriptors||[]).join(' · '))),o=lotRead(bag);
   return `
     <div class="hero">
       <div class="eyebrow">The cup at home</div>
       <h2 style="max-width:13ch">${esc(bagName(bag))}</h2>
-      <div class="origin">${esc([bag.originCountry,bag.originRegion,bag.process].filter(Boolean).join(' · '))||'origin unwritten'} ${restChip(bag)}</div>
+      <div class="origin">${esc([o.country,o.region,o.process].filter(Boolean).join(' · '))||'origin unwritten'} ${restChip(bag)}</div>
     </div>
     ${last?`<div class="continuation">
       <div class="row">
@@ -2907,7 +2919,7 @@ function vField(){
     ${bags.filter(b=>b.id!==bag.id).map(b=>`
       <div class="card tap coffee-card" onclick="pickCoffee('${b.id}')">
         <strong>${esc(bagName(b))}</strong>
-        <div class="muted small">${esc([b.originCountry,b.process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
+        <div class="muted small">${esc([lotRead(b).country,lotRead(b).process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
         <span class="count num">${brewsOf(b.id).length?brewsOf(b.id).length+(brewsOf(b.id).length>1?' brews':' brew'):'no brews yet'}</span>
       </div>`).join('')}
     ${readOnly()?'':`<div style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:2px 0 4px">
