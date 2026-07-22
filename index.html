@@ -1068,14 +1068,17 @@ const bagName=b=>{if(!b)return '—';const r=bagRoaster(b);return `${r?r+' — '
 // node when one stands, the flat `roaster` as the floor. Scoped to your own cups —
 // a circle cup keeps exactly the text its keeper wrote (their ref is theirs, not ours).
 const cupRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.roasterRef);return (n&&n.name)||c.roaster||''};
-// A record's green, read through its lot node when one stands — each origin field
-// re-spelled to the atlas's canonical (variants that collapsed to one green read as
-// that green wherever they landed), the flat field both the floor and the gate: the
-// node never surfaces a field the record itself didn't log, so a bag shows exactly
-// its own origins, only spelled as the lot they are. Drop the resolver and every
-// field reverts, byte for byte, to what was typed.
+// A record's green, read through its lot node when one stands — the node the floor,
+// the flat field the fallback (node-first, as the roaster read above), so once flat
+// origin is retired the node still carries the display. Each field is re-spelled to
+// the atlas's canonical (variants that collapsed to one green read as that green
+// wherever they landed). Today the two agree: a lot key is the full six-field
+// fingerprint, so co-keyed records logged the same positions — the node surfaces only
+// fields the record itself logged, never a sibling's. (A curation merge across
+// differently-logged lots is the one case that would over-surface; revisit then.)
+// Clear the ref and every field reverts, byte for byte, to what was typed.
 const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
-  const f=(flat,nk)=>{const v=(rec&&rec[flat])||'';return (v&&n&&n[nk])||v};
+  const f=(flat,nk)=>{const v=(rec&&rec[flat])||'';return (n&&n[nk])||v};
   return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName')}};
 const setupById=id=>D.setups.find(s=>s.id===id);
 const bagById=id=>D.bags.find(b=>b.id===id);
