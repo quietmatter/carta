@@ -722,6 +722,7 @@ function catSeed(){
     else if(r.roasterRef)roaster=catNode('roasters',r.roasterRef); // flat gone legacy → resolve via the standing ref, so the roasts key below stays identical to catRepoint's
     if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance))
       lot=catUpsert('lots',lotKeyOf(r,r.id),{country:r.originCountry,region:r.originRegion,producer:r.producer,variety:r.variety,process:r.process,lotName:r.lot},who,o);
+    else if(r.lotRef)lot=catNode('lots',r.lotRef); // flat origin gone legacy → resolve the lot via its standing ref, so the roasts key below stays identical to catRepoint's (mirror of the roaster fallback above)
     if(j.type==='bag'){
       const rk=[roaster?roaster.id:'',lot?lot.id:'',catNorm(r.name),r.roastDate||''].join('|');
       catUpsert('roasts',rk,{roasterRef:roaster?roaster.id:null,lotRef:lot?lot.id:null,offeringName:r.name,level:ROAST_LEVELS[r.roastLevel]||'',roastDate:r.roastDate,site:r.site,palette:r.palette},who,o);
@@ -747,7 +748,7 @@ const catRefsFor=r=>({
   // falls to null. A pure no-op on today's data — every ref-bearing record still has flat
   // text — this only takes effect once the flat field is nulled: the precondition for it.
   roaster:regSubstance(r.roaster)?catByKey('roasters',catNorm(r.roaster)):catNode('roasters',r.roasterRef),
-  lot:[r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)?catByKey('lots',lotKeyOf(r,r.id)):null
+  lot:[r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)?catByKey('lots',lotKeyOf(r,r.id)):catNode('lots',r.lotRef) // flat origin blank → keep the standing lotRef, exactly as the roaster line above (a no-op until a lot null-out)
 });
 const setRef=(rec,k,node)=>{const id=node?node.id:null;if((rec[k]||null)===id)return false;if(id)rec[k]=id;else delete rec[k];return true};
 function catRepoint(){
