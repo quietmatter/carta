@@ -130,7 +130,7 @@ Everything is plain JSON. **Back up the data directory** — copying it while th
 - Register with a **name + passcode** (passcodes are scrypt-hashed with per-user salts; login is timing-safe and rate-limited).
 - Every authenticated user can **read** every ledger — seeing each other's records is the point.
 - Only the owner can **write** their own ledger.
-- The **café Register** (`/api/cafes`) is the one shared document: every authenticated user can read *and* write it, so the group keeps a single record of each café. At this early stage all contributors are trusted to amend it.
+- The **café Register** (`/api/cafes`) and the **catalog** (`/api/catalog/:kind` — the spine of producers, lots, roasters, roasts and the rest, upstream of the café) are the shared documents: every authenticated user can read *and* write them, so the group keeps a single record of each café and each node of the road. At this early stage all contributors are trusted to amend them.
 - Tokens don't expire. To revoke a device, delete its token from `users.json` (server restart not required for ledgers, but token changes are read from memory — restart after editing the file).
 
 This is deliberately simple, built for a household or a group of friends — not a hardened public service. Don't run it on the open internet for strangers.
@@ -161,12 +161,19 @@ All bodies are JSON. Errors are `{error: "<code>", message}`. Authenticated endp
 | GET | `/api/cafes` | ✓ | — | 200 `{rev, updatedAt, register}` — the shared café Register (rev 0, register null if never pushed) | 401 |
 | GET | `/api/cafes?meta=1` | ✓ | — | 200 `{rev, updatedAt}` — cheap change poll | 401 |
 | PUT | `/api/cafes` | ✓ any user | `{baseRev, register}` (`register.entries` array required) | 200 `{rev, updatedAt}` | 401, 400, 409 conflict (carries current `{rev, updatedAt, register}`), 413 |
+| GET | `/api/catalog/:kind` | ✓ | — | 200 `{rev, updatedAt, catalog}` — a shared spine document (rev 0, catalog null if never pushed) | 401, 404 unknown kind |
+| GET | `/api/catalog/:kind?meta=1` | ✓ | — | 200 `{rev, updatedAt}` — cheap change poll | 401, 404 |
+| PUT | `/api/catalog/:kind` | ✓ any user | `{baseRev, catalog}` (`catalog.entries` array required) | 200 `{rev, updatedAt}` | 401, 400, 409 conflict (carries current `{rev, updatedAt, catalog}`), 413 |
+
+`:kind` is one of `producers`, `processors`, `aggregators`, `lots`, `blends`, `roasters`, `roasts`, `gear` — the entity spine upstream of the café. Each kind is an independent document with its own revision; any other kind is **404**.
 
 ### Sync protocol
 
 The client keeps the last server revision it saw. To sync it polls `?meta=1`; if the server rev is newer it pulls and merges (union by record id). To push it sends `PUT {baseRev, ledger}` — if `baseRev` doesn't match the server's current rev the push is rejected with **409** carrying the server's copy, the client merges and retries. Revisions only ever increment.
 
 The café Register (`/api/cafes`) follows the same protocol with one difference: it's a single shared document rather than per-user, and **any** authenticated user may PUT it. The client merges by entry id, collapses entries that name the same café from different devices, and keeps the earliest provenance (`firstBy`/`firstAt`). Servers older than this endpoint simply 404 it; clients skip it and keep the Register device-local.
+
+The catalog (`/api/catalog/:kind`) is the same shared, group-writable protocol widened to the spine — one document per entity kind, each synced independently. The client merges by entry id and then collapses entries that share a `_key` (the deterministic dedup the client seeds with) but were born on different devices, keeping the earliest provenance. A ledger reference left dangling by a collapse re-points on the next boot through that same `_key`. Older servers 404 the route and every kind stays device-local, exactly as the Register degrades.
 
 ## Tests
 

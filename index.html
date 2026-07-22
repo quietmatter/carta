@@ -3135,6 +3135,40 @@ function mergeRegister(loc,rem){
   });
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
 }
+/* Catalog merge: the Register's law, keyed on _key instead of name. Union by id
+ * (newer updatedAt wins; a tie breaks to substance, then bytes, so both sides
+ * converge), sightings union and never race, then collapse entries that share a
+ * _key but were born on different devices — the same node seeded twice — keeping
+ * the earliest provenance. _key is the deterministic dedup the seed already used,
+ * so the two copies of one node always land together; a ledger ref left dangling
+ * by the collapse re-points next boot through the same _key. */
+function mergeCatalog(loc,rem){
+  const fuller=e=>Object.keys(e).filter(k=>regSubstance(e[k])).length;
+  const beats=(l,r)=>{const lu=l.updatedAt||'',ru=r.updatedAt||'';if(lu!==ru)return lu>ru;
+    const lf=fuller(l),rf=fuller(r);if(lf!==rf)return lf>rf;
+    return JSON.stringify(l)>=JSON.stringify(r)};
+  const dead=new Map();[...((rem&&rem.deleted)||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
+  const m=new Map();((rem&&rem.entries)||[]).forEach(r=>m.set(r.id,r));
+  (loc.entries||[]).forEach(l=>{const r=m.get(l.id);
+    if(!r){m.set(l.id,l);return}
+    const w={...(beats(l,r)?l:r)};
+    if(l.sightings||r.sightings)w.sightings=mergeSightings(l.sightings||[],r.sightings||[]);
+    m.set(l.id,w)});
+  const groups={};
+  [...m.values()].filter(e=>e&&e._key&&!dead.has(e.id)).forEach(e=>{(groups[e._key]=groups[e._key]||[]).push(e)});
+  const entries=Object.keys(groups).sort().map(k=>{
+    const g=groups[k].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')||String(a.id).localeCompare(String(b.id)));
+    const w={...g[0]};
+    g.slice(1).forEach(e=>{
+      Object.keys(e).forEach(f=>{if(!regSubstance(w[f])&&regSubstance(e[f]))w[f]=e[f]});
+      if(e.firstAt&&(!w.firstAt||e.firstAt<w.firstAt)){w.firstAt=e.firstAt;w.firstBy=e.firstBy||w.firstBy}
+    });
+    const sg=mergeSightings(...g.map(e=>e.sightings||[]));
+    if(sg.length)w.sightings=sg;
+    return w;
+  });
+  return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
+}
 // The Register rides the same heartbeat as the ledger: poll meta, pull + merge
 // when the server moved, push while dirty (409 → merge, retry). Any keeper may
 // push — the document is the group's. Older servers without /api/cafes answer
@@ -3161,6 +3195,38 @@ async function syncRegister(){
       REG.rev=r.body.rev;REG.entries=merged.entries;REG.deleted=merged.deleted;saveReg();
     }
     else break;
+  }
+}
+// The catalog rides the same heartbeat as the Register, one document per kind:
+// poll each kind's meta, pull + merge when the server moved, push while dirty
+// (409 → merge, retry). Group-writable like the café Register. An older server
+// 404s /api/catalog and the whole spine stays device-local, exactly as the
+// Register degrades — the atlas is still useful offline.
+async function syncCatalog(){
+  for(const kind of CAT_KINDS){
+    const doc=CAT[kind];
+    const meta=await api('/api/catalog/'+kind+'?meta=1');
+    if(meta.status!==200)return;   // old server (404) — the endpoint is absent, skip the spine
+    if(meta.body.rev>doc.rev){
+      const full=await api('/api/catalog/'+kind);
+      if(full.status===200&&full.body.catalog){
+        const merged=mergeCatalog({entries:doc.entries,deleted:doc.deleted},full.body.catalog);
+        doc.rev=full.body.rev;doc.entries=merged.entries;doc.deleted=merged.deleted;
+        doc.dirty=JSON.stringify(merged)!==JSON.stringify({entries:full.body.catalog.entries||[],deleted:full.body.catalog.deleted||[]});
+        saveDoc(kind);
+      }
+    }
+    let tries=0;
+    while(doc.dirty&&tries<3){
+      tries++;
+      const r=await api('/api/catalog/'+kind,'PUT',{baseRev:doc.rev,catalog:{version:1,entries:doc.entries,deleted:doc.deleted}});
+      if(r.status===200){doc.rev=r.body.rev;doc.dirty=false;saveDoc(kind)}
+      else if(r.status===409){
+        const merged=mergeCatalog({entries:doc.entries,deleted:doc.deleted},r.body.catalog||{});
+        doc.rev=r.body.rev;doc.entries=merged.entries;doc.deleted=merged.deleted;saveDoc(kind);
+      }
+      else break;
+    }
   }
 }
 
@@ -3213,6 +3279,9 @@ async function syncNow(manual){
     if(SYNC.dirty&&manual)toast('Sync conflict — will retry');
     await syncRegister();                              // the café Register, same heartbeat
     regSeed();                                         // pulled ledgers may have named new cafés
+    catSeed();                                         // and new spine nodes — producers, lots, roasters
+    await syncCatalog();                               // the spine of the atlas, same heartbeat
+    catRepoint();                                      // re-point local ledgers onto the merged ids
     if(tab==='cafes'&&!document.getElementById('sheet').classList.contains('open'))render();
     try{
       const dir=await api('/api/users');

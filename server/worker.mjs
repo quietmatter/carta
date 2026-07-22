@@ -15,6 +15,7 @@
  *   L:<id>:meta      {rev, updatedAt, chunks, counts} per ledger
  *   L:<id>:<n>       ledger JSON, sliced into chunks (see CHUNK below)
  *   R:meta / R:<n>   the shared café Register, same layout
+ *   C:<kind>:meta / C:<kind>:<n>   the catalog (the spine), one doc per kind
  *
  * Ledgers embed photos as base64 and run to many MB; the storage API caps
  * key+value at 2 MB, so document JSON is stored as string chunks and joined
@@ -26,7 +27,8 @@
  *
  * Auth model is unchanged from server.js: trust-your-friends, scrypt-hashed
  * passcodes, every keeper reads every ledger, only the owner writes theirs,
- * the café Register is group-writable. Not a hardened public service.
+ * the café Register and the catalog (the spine) are group-writable. Not a
+ * hardened public service.
  * ============================================================ */
 
 import { scrypt, randomBytes, timingSafeEqual, createHash } from 'node:crypto';
@@ -37,6 +39,9 @@ import { Buffer } from 'node:buffer';
 const CHUNK = 1_000_000;
 // The storage API takes at most 128 keys per get()/put() — batch above that.
 const BATCH = 128;
+// The spine kinds, whitelisted so a stray path can't mint an arbitrary document.
+// An unknown kind 404s and the client keeps it device-local, as with an old server.
+const CATALOG_KINDS = ['producers', 'processors', 'aggregators', 'lots', 'blends', 'roasters', 'roasts', 'gear'];
 
 const HEADERS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: HEADERS });
@@ -230,6 +235,31 @@ export class CartaStore {
     return json(200, { rev: next.rev, updatedAt: next.updatedAt });
   }
 
+  async handleGetCatalog(kind, metaOnly) {
+    const meta = await this.getMeta('C:' + kind);
+    if (metaOnly) return json(200, { rev: meta.rev, updatedAt: meta.updatedAt });
+    const m = { rev: meta.rev, updatedAt: meta.updatedAt };
+    if (meta.updatedBy) m.updatedBy = meta.updatedBy;
+    return jsonWith(200, m, 'catalog', await this.readRaw('C:' + kind, meta));
+  }
+
+  // A catalog kind, like the café Register, is group-writable — the whole party
+  // keeps the shared spine together. Same optimistic concurrency: a stale baseRev
+  // gets a 409 carrying the server copy to merge against.
+  async handlePutCatalog(request, auth, kind) {
+    const body = await this.body(request);
+    if (body instanceof Response) return body;
+    if (typeof body.baseRev !== 'number' || !body.catalog || typeof body.catalog !== 'object' ||
+        !Array.isArray(body.catalog.entries))
+      return err(400, 'bad-input', 'Expected {baseRev, catalog} with an entries array');
+    const meta = await this.getMeta('C:' + kind);
+    if (body.baseRev !== meta.rev)
+      return jsonWith(409, { error: 'conflict', message: 'Catalog changed since your base revision', rev: meta.rev, updatedAt: meta.updatedAt }, 'catalog', await this.readRaw('C:' + kind, meta));
+    const next = { rev: meta.rev + 1, updatedAt: iso(), updatedBy: auth.name };
+    await this.writeDoc('C:' + kind, next, JSON.stringify(body.catalog), meta.chunks || 0);
+    return json(200, { rev: next.rev, updatedAt: next.updatedAt });
+  }
+
   /* ---------- router ---------- */
   async fetch(request) {
     const url = new URL(request.url);
@@ -266,6 +296,13 @@ export class CartaStore {
     if (p === '/api/cafes') {
       if (request.method === 'GET') return this.handleGetRegister(url.searchParams.get('meta') === '1');
       if (request.method === 'PUT') return this.handlePutRegister(request, auth);
+    }
+
+    // /api/catalog/<kind> — the spine, one shared document per whitelisted kind.
+    const cm = /^\/api\/catalog\/([a-z]+)$/.exec(p);
+    if (cm && CATALOG_KINDS.includes(cm[1])) {
+      if (request.method === 'GET') return this.handleGetCatalog(cm[1], url.searchParams.get('meta') === '1');
+      if (request.method === 'PUT') return this.handlePutCatalog(request, auth, cm[1]);
     }
 
     const m = /^\/api\/ledgers\/([a-f0-9]{16})$/.exec(p);
