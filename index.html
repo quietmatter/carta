@@ -719,6 +719,7 @@ function catSeed(){
     const r=j.r,o={at:j.at||null},who=j.who;
     let roaster=null,lot=null;
     if(regSubstance(r.roaster))roaster=catUpsert('roasters',catNorm(r.roaster),{name:r.roaster,site:r.site,palette:r.palette},who,o);
+    else if(r.roasterRef)roaster=catNode('roasters',r.roasterRef); // flat gone legacy → resolve via the standing ref, so the roasts key below stays identical to catRepoint's
     if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance))
       lot=catUpsert('lots',lotKeyOf(r,r.id),{country:r.originCountry,region:r.originRegion,producer:r.producer,variety:r.variety,process:r.process,lotName:r.lot},who,o);
     if(j.type==='bag'){
@@ -2172,6 +2173,7 @@ function saveBag(id){
   if(id){const b=bagById(id);Object.assign(b,rec,{updatedAt:new Date().toISOString()});catStampRoaster(b);save();setAccent(roastLevel);closeSheet();render();toast('The record, revised');return}
   const nb={id:uid(),createdAt:new Date().toISOString(),archived:false,...rec};
   D.bags.push(nb);curBagId=nb.id;catStampRoaster(nb);
+  if(nb.roasterRef)nb.roaster=''; // flat roaster retired on new bags — the node authored above carries it (bagRoaster reads through), and a bag never surfaces to another keeper's circle
   save();setAccent(roastLevel);closeSheet();
   go(depth()>=3?'field':'bags');toast('On the shelf. The first brew starts whenever you do.');
 }
