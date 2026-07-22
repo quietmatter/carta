@@ -1100,7 +1100,7 @@ const cafeCups=()=>D.cups.filter(c=>c.kind==='cafe');
 const modeOf=arr=>{if(!arr.length)return null;const m={};let best=null,bn=0;arr.forEach(v=>{m[v]=(m[v]||0)+1;if(m[v]>bn){bn=m[v];best=v}});return best};
 const avgHedonic=cups=>{const h=cups.map(c=>c.hedonic).filter(v=>v!=null);return h.length?(h.reduce((a,b)=>a+b,0)/h.length).toFixed(1):null};
 const money=n=>n==null?null:'$'+(n%1===0?String(n):n.toFixed(2));
-const roasterList=()=>[...new Set([...D.bags.map(b=>b.roaster),...cafeCups().map(c=>c.roaster)].filter(Boolean))];
+const roasterList=()=>[...new Set([...D.bags.map(bagRoaster),...cafeCups().map(cupRoaster)].filter(Boolean))];
 // escape a string for use inside a single-quoted JS call within a double-quoted HTML attribute
 const jsq=s=>`'${String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;')}'`;
 // café profiles — branding/location that belongs to the café, not one cup. Keyed by name.
@@ -1194,8 +1194,8 @@ function crossContext(key){
   const k={roaster:normName(key.roaster),origin:normName(key.origin||key.originCountry),variety:normName(key.variety)};
   const hit=(r,o,v)=>{const R=normName(r),O=normName(o),V=normName(v);
     return (k.roaster&&R===k.roaster)||(k.variety&&V===k.variety)||(k.origin&&O&&O===k.origin)};
-  const cafe=cafeCups().filter(c=>hit(c.roaster,c.origin||c.originCountry,c.variety));
-  const home=D.cups.filter(c=>c.kind==='home').filter(c=>{const b=bagById(c.bagId);return b&&hit(b.roaster,b.originCountry,b.variety)});
+  const cafe=cafeCups().filter(c=>hit(cupRoaster(c),c.origin||c.originCountry,c.variety));
+  const home=D.cups.filter(c=>c.kind==='home').filter(c=>{const b=bagById(c.bagId);return b&&hit(bagRoaster(b),b.originCountry,b.variety)});
   return {home:{n:home.length,avg:avgHedonic(home)},cafe:{n:cafe.length,avg:avgHedonic(cafe)}};
 }
 
@@ -1645,7 +1645,7 @@ function kinHTML(rec){
   const roaster=refKin(rec,'roasterRef',lot.map(k=>k.id));
   let out='';
   if(lot.length)out+=kinLine('Same lot, elsewhere in your journal:',lot);
-  if(roaster.length)out+=kinLine(`More from ${rec.roaster?esc(rec.roaster):'this roaster'}, elsewhere:`,roaster);
+  if(roaster.length){const n=rec.roasterRef&&catNode('roasters',rec.roasterRef),rn=(n&&n.name)||rec.roaster;out+=kinLine(`More from ${rn?esc(rn):'this roaster'}, elsewhere:`,roaster);}
   return out;
 }
 // The read-through, aggregated — the same refs the detail sheets lean on, now folded
@@ -1695,7 +1695,7 @@ function openCupDetail(id){
   const setup=brew?setupById(brew.setupId):null;
   const o=lotRead(c);
   const trace=cafe?[o.country,o.region,o.variety,o.producer,o.process,o.lot&&('lot '+o.lot)].filter(Boolean).map(esc).join(' · '):'';
-  const x=cafe&&(c.roaster||c.origin||c.originCountry||c.variety)?crossContext({roaster:c.roaster,origin:c.origin||c.originCountry,variety:c.variety}):null;
+  const x=cafe&&(cupRoaster(c)||c.origin||c.originCountry||c.variety)?crossContext({roaster:cupRoaster(c),origin:c.origin||c.originCountry,variety:c.variety}):null;
   openSheet(`
   <h3>${what}</h3>
   <div class="sub">${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${cafe&&c.city?` · ${esc(c.city)}`:''}</div>
@@ -2133,7 +2133,7 @@ function openBagForm(id){
   <h3>${id?'Edit the coffee':'Put a coffee on the shelf'}</h3>
   <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'The bag in your hand — two lines is plenty. Or give its website and CARTA reads the rest.'}</div>
   <div class="grid2">
-    <label class="f"><span class="l">Roaster</span><input type="text" id="f_roaster" value="${esc(b.roaster)}" placeholder="Sey"></label>
+    <label class="f"><span class="l">Roaster</span><input type="text" id="f_roaster" value="${esc(b.roaster||bagRoaster(b))}" placeholder="Sey"></label>
     <label class="f"><span class="l">Coffee</span><input type="text" id="f_name" value="${esc(b.name)}" placeholder="Gesha Village"></label>
   </div>
   <label class="f"><span class="l">Website <span class="opt">optional</span></span>
@@ -2454,7 +2454,7 @@ function openCafe(pre,editId){
     <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="c_city" list="citylist" value="${esc(pre.city||'')}" placeholder="Los Angeles">
       <datalist id="citylist">${cities.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
     <div class="grid2">
-      <label class="f"><span class="l">Beans <span class="opt">optional</span></span><input type="text" id="c_roaster" list="roasterlist" value="${esc(pre.roaster||'')}" placeholder="roaster">
+      <label class="f"><span class="l">Beans <span class="opt">optional</span></span><input type="text" id="c_roaster" list="roasterlist" value="${esc(pre.roaster||cupRoaster(pre))}" placeholder="roaster">
         <datalist id="roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
       <label class="f"><span class="l">Origin <span class="opt">optional</span></span><input type="text" id="c_origin" value="${esc(pre.origin||'')}" placeholder="Ethiopia / blend"></label>
     </div>
@@ -2628,7 +2628,7 @@ function vPlace(){
   const theirAvg=avgHedonic(others);
   const people=[...new Set(others.map(c=>c._who))];
   const fav=isCafeFav(shop);
-  const roaster=modeOf(mine.map(c=>c.roaster).filter(Boolean));
+  const roaster=modeOf(mine.map(cupRoaster).filter(Boolean));
   const origin=modeOf(mine.map(c=>c.origin||c.originCountry).filter(Boolean));
   const x=roaster||origin?crossContext({roaster,origin}):null;
   const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
