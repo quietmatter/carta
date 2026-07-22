@@ -1042,6 +1042,10 @@ function restChip(bag){
 // and still authoritative. First surface to source a field from the spine, not the text.
 const bagRoaster=b=>{if(!b)return '';const n=b.roasterRef&&catNode('roasters',b.roasterRef);return (n&&n.name)||b.roaster||''};
 const bagName=b=>{if(!b)return '—';const r=bagRoaster(b);return `${r?r+' — ':''}${b.name||'(unnamed)'}`};
+// A café cup's beans-roaster, read the same way as a bag's: through the resolved
+// node when one stands, the flat `roaster` as the floor. Scoped to your own cups —
+// a circle cup keeps exactly the text its keeper wrote (their ref is theirs, not ours).
+const cupRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.roasterRef);return (n&&n.name)||c.roaster||''};
 const setupById=id=>D.setups.find(s=>s.id===id);
 const bagById=id=>D.bags.find(b=>b.id===id);
 const cupById=id=>D.cups.find(c=>c.id===id);
@@ -1316,10 +1320,13 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.14.0';
+const APP_VERSION='4.15.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.15.0',date:'Jul 22, 2026',title:'Café beans, one name too',items:[
+    'A café cup now reads its beans-roaster the same way your shelf does — variants of a roaster you\'ve typed differently across cups read as the one roaster they are, on the cup\'s row and its page. As on the shelf, nothing you wrote is changed and it falls back to exactly what you typed. A cup shared into your circle still shows precisely what its keeper wrote.',
+  ]},
   {v:'4.14.0',date:'Jul 22, 2026',title:'One roaster, one name',items:[
     'A bag now shows its roaster under one canonical name across your shelf — when you\'ve written a roaster a little differently on different bags, they read as the one roaster they are. Nothing you typed is changed; the bag just reads through to the roaster behind it, and falls back to exactly what you wrote wherever there\'s nothing to read through.',
   ]},
@@ -1552,7 +1559,7 @@ function cupRow(c,showKind){
   const cafe=c.kind==='cafe';
   const what=cafe?`${esc(c.shop||'café')}${c.drink?` · ${esc(c.drink)}`:''}`:esc(bagName(b));
   const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
-  const beans=[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ');
+  const beans=[cupRoaster(c),c.origin].filter(Boolean).map(esc).join(' · ');
   const meta=brew
     ?`<span class="num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span>`
     :cafe
@@ -1664,7 +1671,7 @@ function openCupDetail(id){
     <div class="kv"><span class="k">Hedonic</span><span class="v num">${c.hedonic??'—'}</span></div>
     <div class="kv"><span class="k">Kind</span><span class="v">${cafe?'café cup':'brew'}</span></div>
     ${cafe&&c.style?`<div class="kv"><span class="k">Style</span><span class="v">${esc(c.style)}</span></div>`:''}
-    ${cafe&&(c.roaster||c.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${cafe&&(c.roaster||c.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[cupRoaster(c),c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
     ${trace?`<div class="kv"><span class="k">Traceability</span><span class="v">${trace}</span></div>`:''}
     ${cafe&&c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
     ${cafe&&c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'order again':'pass'}</span></div>`:''}
