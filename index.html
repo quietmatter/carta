@@ -1094,6 +1094,19 @@ const cupRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.
 const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
   const f=(flat,nk)=>{const v=(rec&&rec[flat])||'';return (n&&n[nk])||v};
   return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName')}};
+// The circle reads a cup that belongs to ANOTHER keeper. It honours their exact words
+// FIRST — the circle's standing invariant, "what the keeper wrote" — and consults the
+// group-shared catalog node only as the floor beneath a field they've since retired.
+// (These are the inverse of the own-cup reads above, which re-spell to the atlas.) The
+// catalog is one group document, so their ref resolves against our merged copy by the
+// same global id; the comment on cupRoaster — "their ref is theirs, not ours" — predates
+// that sync and no longer holds. Purely additive: today every circle cup still carries
+// flat text, so the node is never reached; it earns its keep only once a keeper's flat
+// field goes legacy, keeping their cup readable across the circle instead of blank.
+const circleRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.roasterRef);return c.roaster||(n&&n.name)||''};
+const circleLot=c=>{const n=c&&c.lotRef&&catNode('lots',c.lotRef);
+  const f=(flat,nk)=>{const v=(c&&c[flat])||'';return v||(n&&n[nk])||''};
+  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName')}};
 const setupById=id=>D.setups.find(s=>s.id===id);
 const bagById=id=>D.bags.find(b=>b.id===id);
 const cupById=id=>D.cups.find(c=>c.id===id);
@@ -1213,8 +1226,8 @@ function crossContext(key){
   const k={roaster:normName(key.roaster),origin:normName(key.origin||key.originCountry),variety:normName(key.variety)};
   const hit=(r,o,v)=>{const R=normName(r),O=normName(o),V=normName(v);
     return (k.roaster&&R===k.roaster)||(k.variety&&V===k.variety)||(k.origin&&O&&O===k.origin)};
-  const cafe=cafeCups().filter(c=>hit(cupRoaster(c),c.origin||c.originCountry,c.variety));
-  const home=D.cups.filter(c=>c.kind==='home').filter(c=>{const b=bagById(c.bagId);return b&&hit(bagRoaster(b),b.originCountry,b.variety)});
+  const cafe=cafeCups().filter(c=>{const o=lotRead(c);return hit(cupRoaster(c),c.origin||o.country,o.variety)});
+  const home=D.cups.filter(c=>c.kind==='home').filter(c=>{const b=bagById(c.bagId);if(!b)return false;const o=lotRead(b);return hit(bagRoaster(b),o.country,o.variety)});
   return {home:{n:home.length,avg:avgHedonic(home)},cafe:{n:cafe.length,avg:avgHedonic(cafe)}};
 }
 
@@ -1714,7 +1727,7 @@ function openCupDetail(id){
   const setup=brew?setupById(brew.setupId):null;
   const o=lotRead(c);
   const trace=cafe?[o.country,o.region,o.variety,o.producer,o.process,o.lot&&('lot '+o.lot)].filter(Boolean).map(esc).join(' · '):'';
-  const x=cafe&&(cupRoaster(c)||c.origin||c.originCountry||c.variety)?crossContext({roaster:cupRoaster(c),origin:c.origin||c.originCountry,variety:c.variety}):null;
+  const x=cafe&&(cupRoaster(c)||c.origin||o.country||o.variety)?crossContext({roaster:cupRoaster(c),origin:c.origin||o.country,variety:o.variety}):null;
   openSheet(`
   <h3>${what}</h3>
   <div class="sub">${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${cafe&&c.city?` · ${esc(c.city)}`:''}</div>
@@ -1726,7 +1739,7 @@ function openCupDetail(id){
     <div class="kv"><span class="k">Hedonic</span><span class="v num">${c.hedonic??'—'}</span></div>
     <div class="kv"><span class="k">Kind</span><span class="v">${cafe?'café cup':'brew'}</span></div>
     ${cafe&&c.style?`<div class="kv"><span class="k">Style</span><span class="v">${esc(c.style)}</span></div>`:''}
-    ${cafe&&(c.roaster||c.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[cupRoaster(c),c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${cafe&&(cupRoaster(c)||c.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[cupRoaster(c),c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
     ${trace?`<div class="kv"><span class="k">Traceability</span><span class="v">${trace}</span></div>`:''}
     ${cafe&&c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
     ${cafe&&c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'order again':'pass'}</span></div>`:''}
@@ -2147,7 +2160,8 @@ function openBagForm(id){
   const b=id?bagById(id):{};
   brandPalette=palOf(b);brandAccent=(brandPalette&&brandPalette.brand)||null;
   brandCtx={kicker:'On the shelf',title:'The bag, in its own colours',cta:'Brew this'};
-  const more=!!(b.originCountry||b.originRegion||b.producer||b.variety||b.process||b.lot||b.roastDate||b.boughtAt||b.price!=null||b.notes);
+  const o=lotRead(b); // node-first, so a bag whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
+  const more=!!(o.country||o.region||o.producer||o.variety||o.process||o.lot||b.roastDate||b.boughtAt||b.price!=null||b.notes);
   openSheet(`
   <h3>${id?'Edit the coffee':'Put a coffee on the shelf'}</h3>
   <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'The bag in your hand — two lines is plenty. Or give its website and CARTA reads the rest.'}</div>
@@ -2165,12 +2179,12 @@ function openBagForm(id){
     ${seg('roast',ROAST_LEVELS.slice(1),ROAST_LEVELS[b.roastLevel]||'Medium')}</label>
   <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">origin, roast date, price — now or later</span></summary>
     <div class="grid2">
-      <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry)}" placeholder="Ethiopia"></label>
-      <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion)}" placeholder="Bench Maji"></label>
-      <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer)}" placeholder="free text"></label>
-      <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety)}" placeholder="Gesha 1931"></label>
-      <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process)}" placeholder="washed"></label>
-      <label class="f"><span class="l">Lot no.</span><input type="text" id="f_lot" value="${esc(b.lot)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry||o.country)}" placeholder="Ethiopia"></label>
+      <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion||o.region)}" placeholder="Bench Maji"></label>
+      <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer||o.producer)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety||o.variety)}" placeholder="Gesha 1931"></label>
+      <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process||o.process)}" placeholder="washed"></label>
+      <label class="f"><span class="l">Lot no.</span><input type="text" id="f_lot" value="${esc(b.lot||o.lot)}" placeholder="free text"></label>
       <label class="f"><span class="l">Roast date</span><input type="date" id="f_roastDate" value="${esc(b.roastDate)}"></label>
       <label class="f"><span class="l">Bought at</span><input type="text" id="f_boughtAt" value="${esc(b.boughtAt)}" placeholder="Kumquat, LA"></label>
       <label class="f"><span class="l">Price</span><input type="number" id="f_price" value="${b.price??''}" placeholder="$" inputmode="decimal"></label>
@@ -2446,8 +2460,9 @@ function openCafe(pre,editId){
   brandCtx={kicker:'This cup',title:'The beans, in their colours',cta:'Keep this cup'};
   sightBag=null;sightSeen=[];sightShop=null;sightHeld=false;amendFrom=null; // the sighting rides the cup, fresh each time
   const sc=sightChipsHTML();
+  const o=lotRead(pre); // node-first, so editing a cup whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
   // The fold opens on edit only if the cup already carries something under it.
-  const more=!!(pre.city||pre.roaster||pre.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||pre.originCountry||pre.originRegion||pre.producer||pre.variety||pre.lot||pre.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
+  const more=!!(pre.city||pre.roaster||cupRoaster(pre)||pre.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.producer||o.variety||o.lot||o.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
   openSheet(`
   <h3>${editId?'Edit the cup':'Remember a cup'}</h3>
   <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and one tap is plenty. The rest can wait.'}</div>
@@ -2486,12 +2501,12 @@ function openCafe(pre,editId){
     <div id="beansiteresults"></div>
     <div id="brandpreview" style="margin-top:12px">${brandPalette?brandPreviewHTML(brandPalette):''}</div>
     <div class="grid2">
-      <label class="f"><span class="l">Country</span><input type="text" id="c_country" value="${esc(pre.originCountry||'')}" placeholder="Ethiopia"></label>
-      <label class="f"><span class="l">Region</span><input type="text" id="c_region" value="${esc(pre.originRegion||'')}" placeholder="Bench Maji"></label>
-      <label class="f"><span class="l">Producer / station</span><input type="text" id="c_producer" value="${esc(pre.producer||'')}" placeholder="free text"></label>
-      <label class="f"><span class="l">Variety</span><input type="text" id="c_variety" value="${esc(pre.variety||'')}" placeholder="Gesha 1931"></label>
-      <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" value="${esc(pre.lot||'')}" placeholder="free text"></label>
-      <label class="f"><span class="l">Process</span><input type="text" id="c_process" value="${esc(pre.process||'')}" placeholder="washed"></label>
+      <label class="f"><span class="l">Country</span><input type="text" id="c_country" value="${esc(pre.originCountry||o.country)}" placeholder="Ethiopia"></label>
+      <label class="f"><span class="l">Region</span><input type="text" id="c_region" value="${esc(pre.originRegion||o.region)}" placeholder="Bench Maji"></label>
+      <label class="f"><span class="l">Producer / station</span><input type="text" id="c_producer" value="${esc(pre.producer||o.producer)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Variety</span><input type="text" id="c_variety" value="${esc(pre.variety||o.variety)}" placeholder="Gesha 1931"></label>
+      <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" value="${esc(pre.lot||o.lot)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Process</span><input type="text" id="c_process" value="${esc(pre.process||o.process)}" placeholder="washed"></label>
     </div>
     <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" value="${pre.price??''}" placeholder="$"></label>
     <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow(pre.descriptors)}</label>
@@ -2650,7 +2665,7 @@ function vPlace(){
   const people=[...new Set(others.map(c=>c._who))];
   const fav=isCafeFav(shop);
   const roaster=modeOf(mine.map(cupRoaster).filter(Boolean));
-  const origin=modeOf(mine.map(c=>c.origin||c.originCountry).filter(Boolean));
+  const origin=modeOf(mine.map(c=>c.origin||lotRead(c).country).filter(Boolean));
   const x=roaster||origin?crossContext({roaster,origin}):null;
   const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
   const place=[city,nbhood].filter(Boolean).join(' · ');
@@ -3688,7 +3703,7 @@ function affinityOf(srcId){
 // beans worth chasing — roasters and origins the circle scored, best average first.
 function circleBeans(){
   const m={};
-  circleCups().forEach(c=>{const label=(c.roaster||c.origin||c.originCountry||'').trim();
+  circleCups().forEach(c=>{const label=(circleRoaster(c)||c.origin||circleLot(c).country||'').trim();
     if(!label||c.hedonic==null)return;const k=normName(label);
     (m[k]=m[k]||{label,cups:[],who:new Set()});m[k].cups.push(c);m[k].who.add(c._who)});
   return Object.values(m).map(b=>({label:b.label,n:b.cups.length,avg:avgHedonic(b.cups),people:[...b.who]}))
@@ -3728,7 +3743,7 @@ function circleSearch(q){
   const toks=normName(q).split(/\s+/).filter(Boolean);
   if(!toks.length)return null;
   const match=s=>toks.every(t=>s.includes(t));
-  const hay=c=>normName([c.shop,c.city,c.drink,c.style,c.roaster,c.origin,c.originCountry,c.originRegion,c.variety,c.producer,c.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '));
+  const hay=c=>{const o=circleLot(c);return normName([c.shop,c.city,c.drink,c.style,circleRoaster(c),c.origin,o.country,o.region,o.variety,o.producer,o.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '))};
   const cups=circleCups().filter(c=>match(hay(c)));
   const places=circlePlaces(cups);
   const regHits=REG.entries.filter(e=>match(normName([e.name,e.city,e.neighborhood,e.notes,...(e.tags||[])].filter(Boolean).join(' '))))
@@ -3827,7 +3842,7 @@ async function circleRefresh(){
   if(changed&&tab==='circle'&&!document.getElementById('sheet').classList.contains('open')&&document.activeElement!==document.getElementById('circleSearch'))render();
 }
 function feedRow(c){
-  const beans=[c.roaster,c.origin||c.originCountry].filter(Boolean).map(esc).join(' · ');
+  const beans=[circleRoaster(c),c.origin||circleLot(c).country].filter(Boolean).map(esc).join(' · ');
   const verdict=c.again===true?' <span class="badge">again</span>':c.again===false?' <span class="badge ghost">pass</span>':'';
   const pal=palOf(c),vars=pal?cafeVars(pal):''; // their cup's beans-brand, if they read one
   return `<div class="card tap"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openCircleCup(${jsq(c._src)},${jsq(c.id)})">
@@ -3843,7 +3858,8 @@ function openCircleCup(src,id){
   const s=circleSources().find(x=>x.id===src);if(!s)return;
   const d=circleLedger(s);const c=d&&(d.cups||[]).find(x=>x.id===id);if(!c)return;
   const p=c.shop?circleProfile(c.shop):null;
-  const trace=[c.originCountry,c.originRegion,c.variety,c.producer,c.process,c.lot&&('lot '+c.lot)].filter(Boolean).map(esc).join(' · ');
+  const o=circleLot(c);
+  const trace=[o.country,o.region,o.variety,o.producer,o.process,o.lot&&('lot '+o.lot)].filter(Boolean).map(esc).join(' · ');
   openSheet(`
   <h3>${esc(c.shop||'A café cup')}${c.drink?` · ${esc(c.drink)}`:''}</h3>
   <div class="sub">${esc(s.name)}'s cup · ${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${c.city?` · ${esc(c.city)}`:''}</div>
@@ -3851,7 +3867,7 @@ function openCircleCup(src,id){
   <div class="card">
     <div class="kv"><span class="k">Their score</span><span class="v num">${c.hedonic!=null?c.hedonic+' / 9':'—'}</span></div>
     ${c.drink||c.style?`<div class="kv"><span class="k">The order</span><span class="v">${esc([c.style,c.drink].filter(Boolean).join(' · '))}</span></div>`:''}
-    ${c.roaster||c.origin?`<div class="kv"><span class="k">Beans</span><span class="v">${[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${circleRoaster(c)||c.origin?`<div class="kv"><span class="k">Beans</span><span class="v">${[circleRoaster(c),c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
     ${trace?`<div class="kv"><span class="k">Traceability</span><span class="v">${trace}</span></div>`:''}
     ${c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
     ${c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'would order again':'would pass'}</span></div>`:''}
