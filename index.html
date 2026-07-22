@@ -2440,7 +2440,12 @@ function saveCup(kind,brewId,bagId,skip,editId){
   let cup;
   if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});cup=ex}
   else{cup={id:uid(),createdAt:new Date().toISOString(),...fields};D.cups.push(cup)}
-  if(kind==='cafe'){catStampRoaster(cup);catStampLot(cup);} // author its roaster + lot nodes at save time, not next boot
+  if(kind==='cafe'){catStampRoaster(cup);catStampLot(cup); // author its roaster + lot nodes at save time, not next boot
+    if(!ex){ // new cups only — retire the flat text once a node stands to carry it (edit path untouched, so the retirement proves out on fresh saves first)
+      if(cup.roasterRef)cup.roaster=''; // own surfaces read cupRoaster (node-first), the circle reads circleRoaster (flat-first-node-floor) — a friend still sees it through the group catalog
+      if(cup.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>cup[k]=''); // the lot node carries the structured origin (lotRead/circleLot read through); the free-text `origin` line has no node and stays intact
+    }
+  }
   editingCupId=null;
   save();closeSheet();
   if(kind==='cafe'){go('cafes');toast(ex?'Cup updated':(firstOut?'Kept — your first cup out.':'Kept.'));}
