@@ -756,6 +756,19 @@ function catRepoint(){
   });
   D=load(); // refresh the viewing ledger so in-memory D carries the fresh refs
 }
+// The write-path half of the repoint: author a record's roaster node the moment the
+// record is saved, not only at the next boot sweep. Same upsert catSeed makes, keyed
+// identically, so it stays idempotent with the boot pass (blanks-only, earliest
+// provenance via {at}); it just lands the node and stamps the ref now, so a freshly
+// logged bag or café cup reads through its roaster this session instead of next boot.
+// Additive and reversible — the flat roaster stays authoritative; this only lifts the
+// derivation earlier. A blank roaster clears the ref. The precondition for the flat
+// field ever going legacy: the node no longer waits on a reboot to exist.
+function catStampRoaster(rec){
+  if(!rec)return;
+  const n=regSubstance(rec.roaster)?catUpsert('roasters',catNorm(rec.roaster),{name:rec.roaster,site:rec.site,palette:rec.palette},activeName(),{at:rec.createdAt||null}):null;
+  setRef(rec,'roasterRef',n);
+}
 
 /* ============ the reach ============ */
 /* A classification of depth, not worth — four marks for how much of a coffee's
@@ -2149,9 +2162,9 @@ function saveBag(id){
     boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),
     site:(val('f_site')||'').trim(),palette:brandPalette};
   if(!rec.roaster&&!rec.name){toast('Name the coffee — everything else is optional');return}
-  if(id){Object.assign(bagById(id),rec,{updatedAt:new Date().toISOString()});save();setAccent(roastLevel);closeSheet();render();toast('The record, revised');return}
+  if(id){const b=bagById(id);Object.assign(b,rec,{updatedAt:new Date().toISOString()});catStampRoaster(b);save();setAccent(roastLevel);closeSheet();render();toast('The record, revised');return}
   const nb={id:uid(),createdAt:new Date().toISOString(),archived:false,...rec};
-  D.bags.push(nb);curBagId=nb.id;
+  D.bags.push(nb);curBagId=nb.id;catStampRoaster(nb);
   save();setAccent(roastLevel);closeSheet();
   go(depth()>=3?'field':'bags');toast('On the shelf. The first brew starts whenever you do.');
 }
@@ -2382,8 +2395,10 @@ function saveCup(kind,brewId,bagId,skip,editId){
   }
   const firstOut=kind==='cafe'&&!ex&&!cafeCups().length;
   const firstHome=kind==='home'&&!ex&&!skip&&!D.cups.some(c=>c.kind==='home'&&c.hedonic!=null);
-  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()})}
-  else{D.cups.push({id:uid(),createdAt:new Date().toISOString(),...fields})}
+  let cup;
+  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});cup=ex}
+  else{cup={id:uid(),createdAt:new Date().toISOString(),...fields};D.cups.push(cup)}
+  if(kind==='cafe')catStampRoaster(cup); // author its roaster node at save time, not next boot
   editingCupId=null;
   save();closeSheet();
   if(kind==='cafe'){go('cafes');toast(ex?'Cup updated':(firstOut?'Kept — your first cup out.':'Kept.'));}
