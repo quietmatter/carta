@@ -668,6 +668,7 @@ CAT_KINDS.forEach(k=>{CAT[k]=loadDoc(k)});
 // one kind up: a write fills blanks, never erases; {full:true} overwrites; {at}
 // backdates provenance so the earliest record to name a node holds it.
 const catByKey=(kind,key)=>CAT[kind].entries.find(e=>e._key===String(key))||null;
+const catNode=(kind,id)=>id&&CAT[kind]?CAT[kind].entries.find(e=>e.id===id)||null:null;
 function catUpsert(kind,key,fields,who,opts){
   key=String(key||'').trim(); if(!key||!CAT[kind])return null;
   opts=opts||{};
@@ -1309,10 +1310,14 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.11.0';
+const APP_VERSION='4.12.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.12.0',date:'Jul 22, 2026',title:'Your journal, by roaster',items:[
+    'Your record now folds by roaster: one row per roaster behind your bags and café cups, with variants of a name gathered together and a bag at home counted beside a cup you had out. Tap a roaster to see every record under it.',
+    'It reads from what you\'ve already logged — no roaster, no row — and appears only once there\'s more than one record to gather, so it stays a reading over your journal, never another thing to fill in.',
+  ]},
   {v:'4.11.0',date:'Jul 22, 2026',title:'More from this roaster',items:[
     'A bag or a café cup now also shows more from the same roaster elsewhere in your journal — a bag you brewed at home and a cup you had out under one roaster, tied even when the name was written a little differently each time.',
     'It sits under the same-lot line and never repeats a record already shown there; like that line, it reads from what you\'ve logged and appears only when there\'s truly something to connect.',
@@ -1588,6 +1593,30 @@ function kinHTML(rec){
   if(roaster.length)out+=kinLine(`More from ${rec.roaster?esc(rec.roaster):'this roaster'}, elsewhere:`,roaster);
   return out;
 }
+// The read-through, aggregated — the same refs the detail sheets lean on, now folded
+// over the WHOLE journal. Every bag and café cup gathers under the roaster node it
+// resolved to, so spelling variants a keeper couldn't reliably eyeball-match collapse
+// into one row and a bag brewed home sits beside a cup had out under one roaster. A
+// reading over the refs, not a store: no roasterRef, no row (grounded in what's
+// logged, absent when nothing resolved), so like the detail lines it stays reversible.
+function roasterIndex(){
+  const g=new Map();
+  const add=(ref,rec,t)=>{if(!ref)return;let e=g.get(ref);if(!e){const n=catNode('roasters',ref);e={ref,name:(n&&n.name)||'a roaster',bags:0,cups:0,recs:[]};g.set(ref,e)}e[t==='bag'?'bags':'cups']++;e.recs.push({t,id:rec.id})};
+  (D.bags||[]).forEach(b=>{if(b)add(b.roasterRef,b,'bag')});
+  (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe')add(c.roasterRef,c,'cup')});
+  return [...g.values()].sort((a,b)=>(b.bags+b.cups)-(a.bags+a.cups)||a.name.localeCompare(b.name));
+}
+const roasterTally=r=>[r.bags&&`${r.bags} ${r.bags===1?'bag':'bags'}`,r.cups&&`${r.cups} ${r.cups===1?'cup out':'cups out'}`].filter(Boolean).join(' · ');
+function openRoasterKin(ref){
+  const r=roasterIndex().find(x=>x.ref===ref); if(!r)return;
+  const row=m=>{const rec=m.t==='bag'?bagById(m.id):cupById(m.id);if(!rec)return'';
+    const label=m.t==='bag'?bagName(rec):([rec.shop,rec.drink].filter(Boolean).join(' · ')||'a café cup');
+    return `<button class="wc-item" onclick="${m.t==='bag'?'openBagDetail':'openCupDetail'}(${jsq(m.id)})">
+      <span class="tx"><span class="tt">${esc(label)}</span><span class="dd">${m.t==='bag'?'on your shelf':'a cup out'}</span></span><span class="go">→</span></button>`};
+  openSheet(`<h3 style="margin:0 0 4px">${esc(r.name)}</h3>
+    <div class="muted small" style="margin:0 0 10px">${roasterTally(r)}, folded from what you've logged.</div>
+    ${r.recs.map(row).join('')}`);
+}
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
   const b=bagById(c.bagId);
@@ -1712,6 +1741,11 @@ function vMore(){
   counts.push(['Places saved',(D.cafeWants||[]).length]);
   const putAway=D.bags.filter(b=>b.archived).length;
   if(putAway)counts.push(['Bags put away',putAway]);
+  const rIdx=roasterIndex(),rTot=rIdx.reduce((s,r)=>s+r.bags+r.cups,0);
+  const roasterHTML=rIdx.length&&rTot>=2?`<h2>By roaster</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Your journal folded onto the roasters behind it — variants of a name gathered, a bag at home beside a cup out.</div>
+  ${rIdx.map(r=>`<button class="wc-item" onclick="openRoasterKin(${jsq(r.ref)})">
+    <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${roasterTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
   return `
   <h2>${readOnly()?esc(viewingUser().name)+"'s record":'Your record'}</h2>
   <div class="card">${counts.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>
@@ -1722,6 +1756,7 @@ function vMore(){
     <button class="text-action" onclick="go('bags')">The shelf — every bag</button>
     <button class="text-action" onclick="go('setups')">The tools — your Setups</button>
   </div>`:''}
+  ${roasterHTML}
   ${readOnly()?'':`
   <h2>How deep you go</h2>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">CARTA opens a room at a time. Step in whenever you're ready — nothing is ever taken away.</div>
