@@ -738,7 +738,14 @@ function catSeed(){
 // read-only remote ledger is never mutated. Flat fields go inert (legacy) only in a
 // later version, once the catalog is trusted and the UI reads through the refs.
 const catRefsFor=r=>({
-  roaster:regSubstance(r.roaster)?catByKey('roasters',catNorm(r.roaster)):null,
+  // Flat roaster present → the text is authoritative (re-derives renames/edits at boot,
+  // exactly as before). Flat roaster blank → fall back to the ref already standing, so a
+  // record whose flat roaster has gone legacy keeps reading through its node instead of
+  // being struck by the sweep. A genuinely-cleared record carries no ref (the save-time
+  // stamp already struck it), so it stays struck; only a dangling ref (its node gone)
+  // falls to null. A pure no-op on today's data — every ref-bearing record still has flat
+  // text — this only takes effect once the flat field is nulled: the precondition for it.
+  roaster:regSubstance(r.roaster)?catByKey('roasters',catNorm(r.roaster)):catNode('roasters',r.roasterRef),
   lot:[r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)?catByKey('lots',lotKeyOf(r,r.id)):null
 });
 const setRef=(rec,k,node)=>{const id=node?node.id:null;if((rec[k]||null)===id)return false;if(id)rec[k]=id;else delete rec[k];return true};
