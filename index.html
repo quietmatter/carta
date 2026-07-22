@@ -707,6 +707,39 @@ const lotKeyOf=(o,fallbackId)=>{
   const parts=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].map(catNorm);
   return parts.filter(Boolean).length>=2 ? 'fp:'+parts.join('|') : 'lot:'+fallbackId;   // too thin to trust → fork
 };
+// The lot's process family, mapped conservatively from the roaster's free-text process.
+// A recognised word carries; anything unclear reads 'unspecified' — the honest default,
+// never a guessed 'experimental' (SCHEMA/LOT_IDENTITY: process admits the unspecified).
+const PROC_FAM=['washed','natural','honey','anaerobic','experimental'];
+const procFamily=p=>{const s=catNorm(p);if(!s)return'unspecified';const hit=PROC_FAM.find(f=>s.indexOf(f)>=0);if(hit)return hit;
+  if(s.indexOf('wash')>=0)return'washed';if(s.indexOf('nat')>=0)return'natural';if(s.indexOf('hon')>=0)return'honey';if(s.indexOf('anaerob')>=0||s.indexOf('carbonic')>=0)return'anaerobic';return'unspecified'};
+// The lot's identity columns (SCHEMA's ladder, as fields), added ALONGSIDE the flat origin the
+// read/retirement paths still use — never replacing it (see the branch decision). Migration is
+// honest, never precise: grain follows the finest token actually present; scope, hardIds, harvest
+// and intermediary stay unread because flat text carries no channel to read them from; the
+// fingerprint mirrors the flat fields so the resolver (a later pass) has a cluster to score, not a
+// verdict. Blanks-only through catUpsert, so re-derivation each boot is idempotent.
+function lotIdentity(o){
+  const head=regSubstance(o.producer)?{headName:o.producer,headTier:'producer'}
+    :regSubstance(o.lot)?{headName:o.lot,headTier:'farm'}
+    :regSubstance(o.originRegion)?{headName:o.originRegion,headTier:'region'}
+    :regSubstance(o.originCountry)?{headName:o.originCountry,headTier:null}
+    :regSubstance(o.origin)?{headName:o.origin,headTier:null}:{headName:null,headTier:null};
+  const grain=(regSubstance(o.producer)||regSubstance(o.lot))?'green-lot'
+    :regSubstance(o.originRegion)?'station-season'
+    :regSubstance(o.originCountry)?'region-grade':null;
+  return {grain,hardIds:[],
+    fingerprint:{headName:head.headName,headTier:head.headTier,country:o.originCountry||null,region:o.originRegion||null,
+      varieties:regSubstance(o.variety)?[o.variety]:[],
+      process:{family:procFamily(o.process),stages:[]},
+      harvest:{crop:null,year:null,hemisphere:null},intermediary:null},
+    lineage:{mergedFrom:[],splitFrom:null},processingBatchRef:null};
+}
+// The whole field object a lot upsert carries — the flat origin (the read surface) plus the
+// identity columns above — so catSeed, catStampLot and any later writer stamp one shape. A loose
+// free-text origin (no structured fields) keeps only `origin`; structured records keep the six.
+const lotFields=o=>{const struct=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].some(regSubstance);
+  return Object.assign({country:o.originCountry,region:o.originRegion,producer:o.producer,variety:o.variety,process:o.process,lotName:o.lot,origin:struct?undefined:o.origin},lotIdentity(o))};
 function catSeed(){
   const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
   remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
@@ -720,10 +753,8 @@ function catSeed(){
     let roaster=null,lot=null;
     if(regSubstance(r.roaster))roaster=catUpsert('roasters',catNorm(r.roaster),{name:r.roaster,site:r.site,palette:r.palette},who,o);
     else if(r.roasterRef)roaster=catNode('roasters',r.roasterRef); // flat gone legacy → resolve via the standing ref, so the roasts key below stays identical to catRepoint's
-    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance))
-      lot=catUpsert('lots',lotKeyOf(r,r.id),{country:r.originCountry,region:r.originRegion,producer:r.producer,variety:r.variety,process:r.process,lotName:r.lot},who,o);
-    else if(regSubstance(r.origin)) // a café cup with only a loose free-text origin → its own singleton lot (lotKeyOf forks to lot:<id> with no tokens), never keyed, so it can't union two greens
-      lot=catUpsert('lots',lotKeyOf(r,r.id),{origin:r.origin},who,o);
+    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin)) // structured tokens OR a loose free-text origin (its own singleton lot — lotKeyOf forks to lot:<id>, never keyed, so it can't union two greens)
+      lot=catUpsert('lots',lotKeyOf(r,r.id),lotFields(r),who,o);
     else if(r.lotRef)lot=catNode('lots',r.lotRef); // flat origin gone legacy → resolve the lot via its standing ref, so the roasts key below stays identical to catRepoint's (mirror of the roaster fallback above)
     if(j.type==='bag'){
       const rk=[roaster?roaster.id:'',lot?lot.id:'',catNorm(r.name),r.roastDate||''].join('|');
@@ -843,7 +874,7 @@ function catStampLot(rec){
   // singleton lot (lotKeyOf forks to lot:<id>) — never on a shared fp-keyed lot, so node-first
   // reads and the retirement strike can never surface one cup's origin onto a co-keyed sibling.
   const n=(struct||regSubstance(rec.origin))
-    ?catUpsert('lots',lotKeyOf(rec,rec.id),{country:rec.originCountry,region:rec.originRegion,producer:rec.producer,variety:rec.variety,process:rec.process,lotName:rec.lot,origin:struct?undefined:rec.origin},activeName(),{at:rec.createdAt||null}):null;
+    ?catUpsert('lots',lotKeyOf(rec,rec.id),lotFields(rec),activeName(),{at:rec.createdAt||null}):null;
   setRef(rec,'lotRef',n);
 }
 // The roast's write-path half — the bag's third stamp, run beside catStampRoaster and
