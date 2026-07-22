@@ -2192,6 +2192,7 @@ function saveBag(id){
   const nb={id:uid(),createdAt:new Date().toISOString(),archived:false,...rec};
   D.bags.push(nb);curBagId=nb.id;catStampRoaster(nb);catStampLot(nb);
   if(nb.roasterRef)nb.roaster=''; // flat roaster retired on new bags — the node authored above carries it (bagRoaster reads through), and a bag never surfaces to another keeper's circle
+  if(nb.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>nb[k]=''); // flat origin retired on new bags — the lot node authored above carries it (lotRead reads through, node-first). Bags only: a café cup's circle surfaces read flat origin by design, so cup origin stays
   save();setAccent(roastLevel);closeSheet();
   go(depth()>=3?'field':'bags');toast('On the shelf. The first brew starts whenever you do.');
 }
