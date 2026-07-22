@@ -1451,10 +1451,13 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.17.0';
+const APP_VERSION='4.18.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.18.0',date:'Jul 22, 2026',title:'A copy that carries its atlas',items:[
+    'Save a copy now writes the atlas into the file beside your ledger, so a copy opened on a device that never synced reads every roaster, origin and roast in full — not the blanks it would have shown once those had folded onto the green behind them. Bringing a copy in folds its atlas into the device\'s own, matching each record to the green it already knows.',
+  ]},
   {v:'4.17.0',date:'Jul 22, 2026',title:'A café cup, keyed on the green',items:[
     'A café cup now reads its traceability — country, region, variety, producer, process, lot — through the green behind it too, so a cup and a bag of the same lot read as that one lot on the cup\'s page, however loosely either was typed. As on your shelf, it only re-spells an origin you already wrote and never adds a field the cup didn\'t log; a cup shared into your circle still shows exactly what its keeper wrote.',
   ]},
@@ -3243,7 +3246,12 @@ function deleteUser(id){
 
 /* ============ export / import ============ */
 function exportJSON(){
-  const out={...D,exportedAt:new Date().toISOString(),user:viewingUser().name,schema:'carta-phase0-v1'};
+  // Bundle the whole spine into the copy so it stands alone. A retired origin/roaster/roast
+  // lives only on its catalog node now, so a copy opened on a device that never synced would
+  // read blanks without it. The catalog is a shared group document (catSeed sweeps every
+  // ledger into it), so exporting it whole is faithful to what it is; import folds it back.
+  const catalog={};CAT_KINDS.forEach(k=>{catalog[k]={version:1,entries:CAT[k].entries,deleted:CAT[k].deleted}});
+  const out={...D,catalog,exportedAt:new Date().toISOString(),user:viewingUser().name,schema:'carta-phase0-v1'};
   const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   const slug=viewingUser().name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'ledger';
@@ -3271,12 +3279,14 @@ function importAsUser(){
   if(!pendingImport)return;
   const name=val('u_name');
   if(!name){toast('Give them a name');return}
+  const cat=pendingImport.catalog;delete pendingImport.catalog; // the spine folds into the device atlas, not into the stored ledger
+  foldCatalog(cat,pendingImport);
   const nu={id:uid(),name,createdAt:new Date().toISOString()};
   try{localStorage.setItem(dataKey(nu.id),JSON.stringify(pendingImport))}
   catch(e){toast('Storage full — could not import');return}
   USERS.users.push(nu);saveUsers();
   pendingImport=null;closeSheet();
-  regSeed(); // an imported record may name cafés the Register hasn't met
+  regSeed();catSeed();catRepoint(); // an imported record may name cafés/greens the device hasn't met
   viewLedger(nu.id);
 }
 function importReplace(){
@@ -3284,7 +3294,34 @@ function importReplace(){
   if(guard())return;
   const me=userById(USERS.activeId).name;
   if(!confirm(`Replace ${me}'s current ledger with the import?\n\nThis cannot be undone.`))return;
-  D=pendingImport;pendingImport=null;save();regSeed();closeSheet();render();toast('Ledger imported');
+  const cat=pendingImport.catalog;delete pendingImport.catalog; // fold the copy's spine before it becomes the ledger, so retired fields read through
+  D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catRepoint();closeSheet();render();toast('Ledger imported');
+}
+// Fold an imported catalog into the device's spine, then heal the imported ledger's refs.
+// A copy carries the whole atlas (exportJSON); bringing it in unions it into the local spine
+// kind by kind — the same merge sync runs (by id, then collapse entries sharing a _key). That
+// collapse can retire an imported node id in favour of a co-keyed local one; a retired record
+// keys off its ref, not flat text, so before the merge can strand it we note each imported id's
+// _key, then re-point any now-dangling ref to whichever id survived. Marks a kind dirty only
+// when the fold actually changed it, so a synced device pushes the gain (the atlas is the
+// group's) and a re-import is a clean no-op. No catalog in the file (an older export) → nothing
+// to fold; the ledger's own flat text and refs stand, and catSeed/catRepoint re-derive at import.
+function foldCatalog(catIn,led){
+  if(!catIn||!led)return;
+  const wasKey={};   // kind → (imported id → _key), captured before the merge collapses ids
+  CAT_KINDS.forEach(kind=>{
+    const inc=catIn[kind]; if(!inc||!Array.isArray(inc.entries))return;
+    wasKey[kind]={};inc.entries.forEach(e=>{if(e&&e.id&&e._key)wasKey[kind][e.id]=e._key});
+    const canon=mergeCatalog({entries:CAT[kind].entries,deleted:CAT[kind].deleted},{entries:[],deleted:[]}); // local, canonicalised, for an honest change test
+    const merged=mergeCatalog({entries:CAT[kind].entries,deleted:CAT[kind].deleted},{entries:inc.entries,deleted:inc.deleted||[]});
+    if(JSON.stringify(merged)!==JSON.stringify(canon))CAT[kind].dirty=true;
+    CAT[kind].entries=merged.entries;CAT[kind].deleted=merged.deleted;saveDoc(kind);
+  });
+  const survivor={};CAT_KINDS.forEach(kind=>{survivor[kind]={};CAT[kind].entries.forEach(e=>{if(e._key)survivor[kind][e._key]=e.id})});
+  const heal=(rec,k,kind)=>{const id=rec[k];if(!id||catNode(kind,id))return; // absent, or still resolves → leave it
+    const key=wasKey[kind]&&wasKey[kind][id],to=key&&survivor[kind]&&survivor[kind][key];if(to)rec[k]=to};
+  (led.bags||[]).forEach(b=>{if(b){heal(b,'roasterRef','roasters');heal(b,'lotRef','lots');heal(b,'roastRef','roasts')}});
+  (led.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'){heal(c,'roasterRef','roasters');heal(c,'lotRef','lots')}});
 }
 
 /* ============ sync ============ */

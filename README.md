@@ -289,7 +289,7 @@ The app now appears as an icon on your home screen. Tap it to open in fullscreen
 
 ## Export Your Data (IMPORTANT)
 
-Everything is stored locally in your browser. **Export monthly** using **More → Save a copy**. Keep backups safe. Each keeper exports their own ledger (exports are stamped with the keeper's name).
+Everything is stored locally in your browser. **Export monthly** using **More → Save a copy**. Keep backups safe. Each keeper exports their own ledger (exports are stamped with the keeper's name). A copy is self-contained: it carries the catalog alongside the ledger, so it reads every roaster, origin and roast in full even on a device that never synced. Bringing a copy back in folds that catalog into the device's own.
 
 If you clear browser data or Safari storage fills up, your ledger is gone — there is no server.
 
