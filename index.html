@@ -722,6 +722,8 @@ function catSeed(){
     else if(r.roasterRef)roaster=catNode('roasters',r.roasterRef); // flat gone legacy → resolve via the standing ref, so the roasts key below stays identical to catRepoint's
     if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance))
       lot=catUpsert('lots',lotKeyOf(r,r.id),{country:r.originCountry,region:r.originRegion,producer:r.producer,variety:r.variety,process:r.process,lotName:r.lot},who,o);
+    else if(regSubstance(r.origin)) // a café cup with only a loose free-text origin → its own singleton lot (lotKeyOf forks to lot:<id> with no tokens), never keyed, so it can't union two greens
+      lot=catUpsert('lots',lotKeyOf(r,r.id),{origin:r.origin},who,o);
     else if(r.lotRef)lot=catNode('lots',r.lotRef); // flat origin gone legacy → resolve the lot via its standing ref, so the roasts key below stays identical to catRepoint's (mirror of the roaster fallback above)
     if(j.type==='bag'){
       const rk=[roaster?roaster.id:'',lot?lot.id:'',catNorm(r.name),r.roastDate||''].join('|');
@@ -748,7 +750,7 @@ const catRefsFor=r=>({
   // falls to null. A pure no-op on today's data — every ref-bearing record still has flat
   // text — this only takes effect once the flat field is nulled: the precondition for it.
   roaster:regSubstance(r.roaster)?catByKey('roasters',catNorm(r.roaster)):catNode('roasters',r.roasterRef),
-  lot:[r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)?catByKey('lots',lotKeyOf(r,r.id)):catNode('lots',r.lotRef) // flat origin blank → keep the standing lotRef, exactly as the roaster line above (a no-op until a lot null-out)
+  lot:([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin))?catByKey('lots',lotKeyOf(r,r.id)):catNode('lots',r.lotRef) // structured fields OR a loose free-text origin re-derive by key; both blank → keep the standing lotRef, exactly as the roaster line above (a no-op until a lot null-out)
 });
 const setRef=(rec,k,node)=>{const id=node?node.id:null;if((rec[k]||null)===id)return false;if(id)rec[k]=id;else delete rec[k];return true};
 function catRepoint(){
@@ -776,8 +778,10 @@ function catRepoint(){
 // text, is where the green lives. Gated on a LIVE node (never null a field the catalog
 // can't surface): a lot node is a faithful copy of the record's own fields, keyed by the
 // full six-field fingerprint, so co-keyed records logged the same positions and lotRead/
-// circleLot re-surface exactly what was struck, re-spelled to the atlas canonical. The
-// free-text `origin` line has no node and is never touched; a bag's name keeps its flat field.
+// circleLot re-surface exactly what was struck, re-spelled to the atlas canonical. A café
+// cup's loose free-text `origin` retires too — but only when it has NO structured fields, so
+// its lot is the cup's own singleton (lot:<id>) carrying that one line, never a shared fp node
+// where a co-keyed sibling could differ. A bag's name keeps its flat field.
 // On a bag it also retires the flat roast level + roast date under a standing roast node (a café
 // cup has no roast, so its strike is roaster + origin only).
 // Like catRepoint this is a device-local normalisation — deterministic, idempotent,
@@ -793,7 +797,9 @@ function catRepoint(){
 function catRetire(){
   const strike=r=>{if(!r)return false;let hit=false;
     if(r.roasterRef&&catNode('roasters',r.roasterRef)&&regSubstance(r.roaster)){r.roaster='';hit=true} // roaster node stands → the text retires
-    if(r.lotRef&&catNode('lots',r.lotRef))['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>{if(regSubstance(r[k])){r[k]='';hit=true}}); // lot node stands → the six structured origin fields retire; free-text `origin` has none and stays
+    const lotN=r.lotRef&&catNode('lots',r.lotRef);
+    if(lotN){['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>{if(regSubstance(r[k])){r[k]='';hit=true}}); // lot node stands → the six structured origin fields retire
+      if(regSubstance(r.origin)&&regSubstance(lotN.origin)){r.origin='';hit=true}} // the loose free-text origin retires only when its own singleton lot carries it — homed on lot:<id>, so lotN.origin is this record's alone, never a co-keyed sibling's
     if(r.roastRef&&catNode('roasts',r.roastRef)){ // roast node stands → the flat roast level (index 0 is unset) + roast date retire; a café cup carries no roastRef, so this fires on bags alone
       if(regSubstance(ROAST_LEVELS[r.roastLevel])){r.roastLevel=0;hit=true}
       if(regSubstance(r.roastDate)){r.roastDate='';hit=true}
@@ -827,12 +833,17 @@ function catStampRoaster(rec){
 // {at}); it just lands the node and stamps lotRef now, so a freshly logged bag or
 // café cup reads through its lot this session instead of next boot. Additive and
 // reversible — the flat origin stays authoritative; this only lifts the derivation
-// earlier. A record with no structured origin clears the ref. The precondition for
-// the flat origin ever going legacy: the lot node no longer waits on a reboot.
+// earlier. A record with neither structured origin nor a loose free-text one clears the
+// ref. The precondition for the flat origin ever going legacy: the node no longer waits on
+// a reboot.
 function catStampLot(rec){
   if(!rec)return;
-  const n=[rec.originCountry,rec.originRegion,rec.producer,rec.variety,rec.process,rec.lot].some(regSubstance)
-    ?catUpsert('lots',lotKeyOf(rec,rec.id),{country:rec.originCountry,region:rec.originRegion,producer:rec.producer,variety:rec.variety,process:rec.process,lotName:rec.lot},activeName(),{at:rec.createdAt||null}):null;
+  const struct=[rec.originCountry,rec.originRegion,rec.producer,rec.variety,rec.process,rec.lot].some(regSubstance);
+  // A café cup's loose free-text origin, with no structured fields, is homed on the cup's own
+  // singleton lot (lotKeyOf forks to lot:<id>) — never on a shared fp-keyed lot, so node-first
+  // reads and the retirement strike can never surface one cup's origin onto a co-keyed sibling.
+  const n=(struct||regSubstance(rec.origin))
+    ?catUpsert('lots',lotKeyOf(rec,rec.id),{country:rec.originCountry,region:rec.originRegion,producer:rec.producer,variety:rec.variety,process:rec.process,lotName:rec.lot,origin:struct?undefined:rec.origin},activeName(),{at:rec.createdAt||null}):null;
   setRef(rec,'lotRef',n);
 }
 // The roast's write-path half — the bag's third stamp, run beside catStampRoaster and
@@ -1163,7 +1174,9 @@ const cupRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.
 // Clear the ref and every field reverts, byte for byte, to what was typed.
 const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
   const f=(flat,nk)=>{const v=(rec&&rec[flat])||'';return (n&&n[nk])||v};
-  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName')}};
+  // origin is a café cup's loose free-text line — homed only on the cup's own singleton
+  // lot (never a shared fp node), so node-first is safe: the node's origin is this cup's alone.
+  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
 // The circle reads a cup that belongs to ANOTHER keeper. It honours their exact words
 // FIRST — the circle's standing invariant, "what the keeper wrote" — and consults the
 // group-shared catalog node only as the floor beneath a field they've since retired.
@@ -1176,7 +1189,7 @@ const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
 const circleRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.roasterRef);return c.roaster||(n&&n.name)||''};
 const circleLot=c=>{const n=c&&c.lotRef&&catNode('lots',c.lotRef);
   const f=(flat,nk)=>{const v=(c&&c[flat])||'';return v||(n&&n[nk])||''};
-  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName')}};
+  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
 const setupById=id=>D.setups.find(s=>s.id===id);
 const bagById=id=>D.bags.find(b=>b.id===id);
 const cupById=id=>D.cups.find(c=>c.id===id);
@@ -1296,7 +1309,7 @@ function crossContext(key){
   const k={roaster:normName(key.roaster),origin:normName(key.origin||key.originCountry),variety:normName(key.variety)};
   const hit=(r,o,v)=>{const R=normName(r),O=normName(o),V=normName(v);
     return (k.roaster&&R===k.roaster)||(k.variety&&V===k.variety)||(k.origin&&O&&O===k.origin)};
-  const cafe=cafeCups().filter(c=>{const o=lotRead(c);return hit(cupRoaster(c),c.origin||o.country,o.variety)});
+  const cafe=cafeCups().filter(c=>{const o=lotRead(c);return hit(cupRoaster(c),o.origin||o.country,o.variety)});
   const home=D.cups.filter(c=>c.kind==='home').filter(c=>{const b=bagById(c.bagId);if(!b)return false;const o=lotRead(b);return hit(bagRoaster(b),o.country,o.variety)});
   return {home:{n:home.length,avg:avgHedonic(home)},cafe:{n:cafe.length,avg:avgHedonic(cafe)}};
 }
@@ -1699,7 +1712,7 @@ function cupRow(c,showKind){
   const cafe=c.kind==='cafe';
   const what=cafe?`${esc(c.shop||'café')}${c.drink?` · ${esc(c.drink)}`:''}`:esc(bagName(b));
   const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
-  const beans=[cupRoaster(c),c.origin].filter(Boolean).map(esc).join(' · ');
+  const beans=[cupRoaster(c),lotRead(c).origin].filter(Boolean).map(esc).join(' · ');
   const meta=brew
     ?`<span class="num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span>`
     :cafe
@@ -1800,7 +1813,7 @@ function openCupDetail(id){
   const setup=brew?setupById(brew.setupId):null;
   const o=lotRead(c);
   const trace=cafe?[o.country,o.region,o.variety,o.producer,o.process,o.lot&&('lot '+o.lot)].filter(Boolean).map(esc).join(' · '):'';
-  const x=cafe&&(cupRoaster(c)||c.origin||o.country||o.variety)?crossContext({roaster:cupRoaster(c),origin:c.origin||o.country,variety:o.variety}):null;
+  const x=cafe&&(cupRoaster(c)||o.origin||o.country||o.variety)?crossContext({roaster:cupRoaster(c),origin:o.origin||o.country,variety:o.variety}):null;
   openSheet(`
   <h3>${what}</h3>
   <div class="sub">${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${cafe&&c.city?` · ${esc(c.city)}`:''}</div>
@@ -1812,7 +1825,7 @@ function openCupDetail(id){
     <div class="kv"><span class="k">Hedonic</span><span class="v num">${c.hedonic??'—'}</span></div>
     <div class="kv"><span class="k">Kind</span><span class="v">${cafe?'café cup':'brew'}</span></div>
     ${cafe&&c.style?`<div class="kv"><span class="k">Style</span><span class="v">${esc(c.style)}</span></div>`:''}
-    ${cafe&&(cupRoaster(c)||c.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[cupRoaster(c),c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${cafe&&(cupRoaster(c)||o.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[cupRoaster(c),o.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
     ${trace?`<div class="kv"><span class="k">Traceability</span><span class="v">${trace}</span></div>`:''}
     ${cafe&&c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
     ${cafe&&c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'order again':'pass'}</span></div>`:''}
@@ -2518,7 +2531,10 @@ function saveCup(kind,brewId,bagId,skip,editId){
   if(kind==='cafe'){catStampRoaster(cup);catStampLot(cup); // author its roaster + lot nodes at save time, not next boot
     if(!ex){ // new cups only — retire the flat text once a node stands to carry it (edit path untouched, so the retirement proves out on fresh saves first)
       if(cup.roasterRef)cup.roaster=''; // own surfaces read cupRoaster (node-first), the circle reads circleRoaster (flat-first-node-floor) — a friend still sees it through the group catalog
-      if(cup.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>cup[k]=''); // the lot node carries the structured origin (lotRead/circleLot read through); the free-text `origin` line has no node and stays intact
+      if(cup.lotRef){const ln=catNode('lots',cup.lotRef);
+        ['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>cup[k]=''); // the lot node carries the structured origin (lotRead/circleLot read through)
+        if(ln&&regSubstance(ln.origin))cup.origin=''; // a loose free-text origin (no structured fields) was homed on this cup's own singleton lot → retire the flat copy too
+      }
     }
   }
   editingCupId=null;
@@ -2542,7 +2558,7 @@ function openCafe(pre,editId){
   const sc=sightChipsHTML();
   const o=lotRead(pre); // node-first, so editing a cup whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
   // The fold opens on edit only if the cup already carries something under it.
-  const more=!!(pre.city||pre.roaster||cupRoaster(pre)||pre.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.producer||o.variety||o.lot||o.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
+  const more=!!(pre.city||pre.roaster||cupRoaster(pre)||o.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.producer||o.variety||o.lot||o.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
   openSheet(`
   <h3>${editId?'Edit the cup':'Remember a cup'}</h3>
   <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and one tap is plenty. The rest can wait.'}</div>
@@ -2572,7 +2588,7 @@ function openCafe(pre,editId){
     <div class="grid2">
       <label class="f"><span class="l">Beans <span class="opt">optional</span></span><input type="text" id="c_roaster" list="roasterlist" value="${esc(pre.roaster||cupRoaster(pre))}" placeholder="roaster">
         <datalist id="roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
-      <label class="f"><span class="l">Origin <span class="opt">optional</span></span><input type="text" id="c_origin" value="${esc(pre.origin||'')}" placeholder="Ethiopia / blend"></label>
+      <label class="f"><span class="l">Origin <span class="opt">optional</span></span><input type="text" id="c_origin" value="${esc(o.origin||'')}" placeholder="Ethiopia / blend"></label>
     </div>
     <label class="f"><span class="l">Beans website <span class="opt">optional</span></span>
       <input type="text" id="c_beansite" value="${esc(pre.site||'')}" placeholder="the roaster’s site — CARTA reads the rest" inputmode="url" autocapitalize="off" autocorrect="off"></label>
@@ -2745,7 +2761,7 @@ function vPlace(){
   const people=[...new Set(others.map(c=>c._who))];
   const fav=isCafeFav(shop);
   const roaster=modeOf(mine.map(cupRoaster).filter(Boolean));
-  const origin=modeOf(mine.map(c=>c.origin||lotRead(c).country).filter(Boolean));
+  const origin=modeOf(mine.map(c=>{const o=lotRead(c);return o.origin||o.country}).filter(Boolean));
   const x=roaster||origin?crossContext({roaster,origin}):null;
   const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
   const place=[city,nbhood].filter(Boolean).join(' · ');
@@ -3817,7 +3833,7 @@ function affinityOf(srcId){
 // beans worth chasing — roasters and origins the circle scored, best average first.
 function circleBeans(){
   const m={};
-  circleCups().forEach(c=>{const label=(circleRoaster(c)||c.origin||circleLot(c).country||'').trim();
+  circleCups().forEach(c=>{const o=circleLot(c);const label=(circleRoaster(c)||o.origin||o.country||'').trim();
     if(!label||c.hedonic==null)return;const k=normName(label);
     (m[k]=m[k]||{label,cups:[],who:new Set()});m[k].cups.push(c);m[k].who.add(c._who)});
   return Object.values(m).map(b=>({label:b.label,n:b.cups.length,avg:avgHedonic(b.cups),people:[...b.who]}))
@@ -3857,7 +3873,7 @@ function circleSearch(q){
   const toks=normName(q).split(/\s+/).filter(Boolean);
   if(!toks.length)return null;
   const match=s=>toks.every(t=>s.includes(t));
-  const hay=c=>{const o=circleLot(c);return normName([c.shop,c.city,c.drink,c.style,circleRoaster(c),c.origin,o.country,o.region,o.variety,o.producer,o.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '))};
+  const hay=c=>{const o=circleLot(c);return normName([c.shop,c.city,c.drink,c.style,circleRoaster(c),o.origin,o.country,o.region,o.variety,o.producer,o.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '))};
   const cups=circleCups().filter(c=>match(hay(c)));
   const places=circlePlaces(cups);
   const regHits=REG.entries.filter(e=>match(normName([e.name,e.city,e.neighborhood,e.notes,...(e.tags||[])].filter(Boolean).join(' '))))
@@ -3956,7 +3972,8 @@ async function circleRefresh(){
   if(changed&&tab==='circle'&&!document.getElementById('sheet').classList.contains('open')&&document.activeElement!==document.getElementById('circleSearch'))render();
 }
 function feedRow(c){
-  const beans=[circleRoaster(c),c.origin||circleLot(c).country].filter(Boolean).map(esc).join(' · ');
+  const o=circleLot(c);
+  const beans=[circleRoaster(c),o.origin||o.country].filter(Boolean).map(esc).join(' · ');
   const verdict=c.again===true?' <span class="badge">again</span>':c.again===false?' <span class="badge ghost">pass</span>':'';
   const pal=palOf(c),vars=pal?cafeVars(pal):''; // their cup's beans-brand, if they read one
   return `<div class="card tap"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openCircleCup(${jsq(c._src)},${jsq(c.id)})">
@@ -3981,7 +3998,7 @@ function openCircleCup(src,id){
   <div class="card">
     <div class="kv"><span class="k">Their score</span><span class="v num">${c.hedonic!=null?c.hedonic+' / 9':'—'}</span></div>
     ${c.drink||c.style?`<div class="kv"><span class="k">The order</span><span class="v">${esc([c.style,c.drink].filter(Boolean).join(' · '))}</span></div>`:''}
-    ${circleRoaster(c)||c.origin?`<div class="kv"><span class="k">Beans</span><span class="v">${[circleRoaster(c),c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${circleRoaster(c)||o.origin?`<div class="kv"><span class="k">Beans</span><span class="v">${[circleRoaster(c),o.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
     ${trace?`<div class="kv"><span class="k">Traceability</span><span class="v">${trace}</span></div>`:''}
     ${c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
     ${c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'would order again':'would pass'}</span></div>`:''}
