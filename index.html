@@ -1309,10 +1309,14 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.9.0';
+const APP_VERSION='4.10.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.10.0',date:'Jul 22, 2026',title:'The same lot, wherever it landed',items:[
+    'A bag or a café cup now shows the same green lot elsewhere in your journal — the coffee you brewed at home and the one you had out can be a single lot, a tie the origin words alone could state but never connect. Tap it to cross to the other record.',
+    'It reads from what you already logged and appears only when a lot truly recurs; nothing new to fill in, nothing shown when there\'s no match yet.',
+  ]},
   {v:'4.9.0',date:'Jul 19, 2026',title:'Streets under the pins',items:[
     'The map surfaces — Find\'s results, the discover map, a café\'s page — now draw real streets behind the pins: OpenStreetMap, repainted in CARTA\'s own paper and ink. No key, no account, nothing tracked.',
     'Offline nothing changes. The drawn plot stands, exact as ever, and streets slot in quietly only when the tiles can be fetched. The map is an enhancement, never a dependency.',
@@ -1543,6 +1547,25 @@ function cupRow(c,showKind){
     <div class="muted" style="font-size:11px">${new Date(c.createdAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
   </div>`;
 }
+// The spine, read at last — the first surface to lean on a ref instead of the
+// flat text beside it. A record's lotRef points at its node in the atlas; other
+// records that resolved to the SAME node are the same green wherever it landed —
+// a bag you brewed and a cup you had out can be one lot, a tie the flat origin
+// words can state but never connect. Still grounded in those words (the label is
+// built from them; a record with no lotRef simply shows nothing here), so reading
+// through the ref earns only what the atlas alone can say and stays reversible.
+function lotKin(rec){
+  const ref=rec&&rec.lotRef; if(!ref)return [];
+  const out=[];
+  (D.bags||[]).forEach(b=>{if(b&&b.id!==rec.id&&b.lotRef===ref)out.push({t:'bag',id:b.id,label:bagName(b)})});
+  (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&c.id!==rec.id&&c.lotRef===ref)out.push({t:'cup',id:c.id,label:[c.shop,c.drink].filter(Boolean).join(' · ')||'a café cup'})});
+  return out;
+}
+function sameLotHTML(rec){
+  const kin=lotKin(rec); if(!kin.length)return '';
+  const links=kin.map(k=>`<a class="link" onclick="${k.t==='bag'?'openBagDetail':'openCupDetail'}(${jsq(k.id)})">${esc(k.label)}</a>`).join(', ');
+  return `<div class="muted small" style="margin:-4px 0 12px">Same lot, elsewhere in your journal: ${links}.</div>`;
+}
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
   const b=bagById(c.bagId);
@@ -1571,6 +1594,7 @@ function openCupDetail(id){
     ${brew?`<div class="kv"><span class="k">Brew</span><span class="v num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span></div>`:''}
     ${setup?`<div class="kv"><span class="k">Setup</span><span class="v">${esc(setup.name)}</span></div>`:''}
   </div>
+  ${sameLotHTML(c)}
   ${x&&x.home.n?`<div class="cafeback">You have had beans like these at home — <strong>${x.home.avg}</strong> across ${x.home.n} home cup${x.home.n>1?'s':''} vs <strong>${x.cafe.avg}</strong> out. How the preference travels.</div>`:''}
   ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
@@ -2071,6 +2095,7 @@ function openBagDetail(id){
     <div class="kv"><span class="k">Bought at</span><span class="v">${esc(b.boughtAt)||'—'}</span></div>
     <div class="kv"><span class="k">Brews</span><span class="v num">${brews.length}</span></div>
   </div>
+  ${sameLotHTML(b)}
   ${b.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${esc(b.notes)}</div>`:''}
   ${readOnly()?`<button class="btn btn-quiet" onclick="closeSheet()">Close</button>`:`<button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
   <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`}`);
