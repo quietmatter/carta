@@ -553,7 +553,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 /* ============ store ============ */
 const KEY='carta.v1';           // legacy single-user key — migrated to per-user keys on first boot
 const USERS_KEY='carta.users';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafes:[],cafeFavs:[],cafeWants:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],pours:[],cafes:[],cafeFavs:[],cafeWants:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dataKey=id=>KEY+'.'+id;
 function loadUsers(){
@@ -959,6 +959,52 @@ function brewRepoint(){
     const bagRoast={};(d.bags||[]).forEach(b=>{if(b)bagRoast[b.id]=b.roastRef||null});
     (d.brews||[]).forEach(x=>{if(!x)return;const rr=x.bagId&&bagRoast[x.bagId]?catNode('roasts',bagRoast[x.bagId]):null;
       if(setRef(x,'roastRef',rr))changed=true});
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
+  });
+  D=load();
+}
+/* ---- A cup is a Reading over a Preparation. A home cup reads over its Brew (the prep already
+ * exists — brewRef is the brewId). A café cup reads over a Pour: the venue's preparation, the
+ * availability edge of the atlas's first branch — a roast (or, honestly, just a green) seen at a
+ * venue, dated and signed, its recipe unknown and NEVER invented. Pours are keyed
+ * deterministically ('pour:'+cup.id) so every device and every re-derivation lands the SAME
+ * record — no dirty flag, no cross-device duplicate; a merge unions them by id. Local, reversible.
+ * ---- */
+function pourFor(c,who){
+  const e=regByName(c.shop);
+  return {id:'pour:'+c.id,kind:'pour',createdAt:c.createdAt||new Date().toISOString(),at:c.createdAt||null,by:who||'',
+    venueRef:e?e.id:null,shop:c.shop||null,roastRef:c.roastRef||null,roasterRef:c.roasterRef||null,lotRef:c.lotRef||null,cupRef:c.id};
+}
+// Save-time: mint or refresh this café cup's Pour and stamp the cup's prepKind/pourRef. Rides the
+// normal save() push — a genuine new availability record, not a silent derivation.
+function catStampPour(c,who){
+  if(!c||c.kind!=='cafe'||!regSubstance(c.shop))return;
+  const p=pourFor(c,who||activeName());
+  D.pours=D.pours||[];const i=D.pours.findIndex(x=>x.id===p.id);
+  if(i>=0)D.pours[i]=Object.assign(D.pours[i],p,{updatedAt:new Date().toISOString()});else D.pours.push(p);
+  c.prepKind='pour';c.pourRef=p.id;
+}
+// Boot sweep: backfill prepKind + brewRef/pourRef on every cup and mint the café cups' Pours.
+// Deterministic ids mean each device derives the identical set, so no push is needed — it rides
+// the next genuine edit, exactly as catRepoint's refs do. Prunes a pour whose café cup is gone.
+function cupPrepRepoint(){
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    d.pours=d.pours||[];
+    (d.cups||[]).forEach(c=>{if(!c)return;
+      if(c.kind==='cafe'){
+        if(c.prepKind!=='pour'){c.prepKind='pour';changed=true}
+        const p=pourFor(c,u.name);const i=d.pours.findIndex(x=>x.id===p.id);
+        if(i<0){d.pours.push(p);changed=true}
+        else['venueRef','shop','roastRef','roasterRef','lotRef','at'].forEach(k=>{if((d.pours[i][k]||null)!==(p[k]||null)){d.pours[i][k]=p[k];changed=true}});
+        if((c.pourRef||null)!==p.id){c.pourRef=p.id;changed=true}
+      }else{
+        if(c.prepKind!=='brew'){c.prepKind='brew';changed=true}
+        if((c.brewRef||null)!==(c.brewId||null)){c.brewRef=c.brewId||null;changed=true}
+      }
+    });
+    const live=new Set((d.cups||[]).filter(c=>c&&c.kind==='cafe').map(c=>'pour:'+c.id));
+    const before=d.pours.length;d.pours=d.pours.filter(p=>live.has(p.id));if(d.pours.length!==before)changed=true;
     if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
   });
   D=load();
@@ -1956,6 +2002,8 @@ function removeCup(id){
   if(i<0)return;
   D.cups.splice(i,1);
   (D.deleted=D.deleted||[]).push({id,at:new Date().toISOString()}); // tombstone: survives sync merges
+  if(c.kind==='cafe'){const pid='pour:'+id,pi=(D.pours||[]).findIndex(x=>x.id===pid); // the café cup's Pour goes with it — tombstone so no device resurrects the availability edge
+    if(pi>=0)D.pours.splice(pi,1);D.deleted.push({id:pid,at:new Date().toISOString()})}
   save();closeSheet();render();toast('Cup removed');
 }
 
@@ -2641,7 +2689,8 @@ function saveCup(kind,brewId,bagId,skip,editId){
         if(ln&&regSubstance(ln.origin))cup.origin=''; // a loose free-text origin (no structured fields) was homed on this cup's own singleton lot → retire the flat copy too
       }
     }
-  }
+    catStampPour(cup,activeName()); // the café cup is a Reading over a Pour — mint the venue availability edge
+  }else{cup.prepKind='brew';cup.brewRef=cup.brewId||null} // a home cup is a Reading over its Brew
   editingCupId=null;
   save();closeSheet();
   if(kind==='cafe'){go('cafes');toast(ex?'Cup updated':(firstOut?'Kept — your first cup out.':'Kept.'));}
@@ -3407,7 +3456,7 @@ function importAsUser(){
   catch(e){toast('Storage full — could not import');return}
   USERS.users.push(nu);saveUsers();
   pendingImport=null;closeSheet();
-  regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();brewRepoint(); // an imported record may name cafés/greens/tools the device hasn't met
+  regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();brewRepoint();cupPrepRepoint(); // an imported record may name cafés/greens/tools the device hasn't met
   viewLedger(nu.id);
 }
 function importReplace(){
@@ -3416,7 +3465,7 @@ function importReplace(){
   const me=userById(USERS.activeId).name;
   if(!confirm(`Replace ${me}'s current ledger with the import?\n\nThis cannot be undone.`))return;
   const cat=pendingImport.catalog;delete pendingImport.catalog; // fold the copy's spine before it becomes the ledger, so retired fields read through
-  D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();brewRepoint();closeSheet();render();toast('Ledger imported');
+  D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();brewRepoint();cupPrepRepoint();closeSheet();render();toast('Ledger imported');
 }
 // Fold an imported catalog into the device's spine, then heal the imported ledger's refs.
 // A copy carries the whole atlas (exportJSON); bringing it in unions it into the local spine
@@ -3482,7 +3531,7 @@ function mergeLedgers(loc,rem){
   const out=clone(blank);
   const dead=new Map();[...(rem.deleted||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
   out.deleted=[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-  ['setups','bags','brews','cups','cafes'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
+  ['setups','bags','brews','cups','pours','cafes'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
   const f=new Map();[...(rem.cafeFavs||[]),...(loc.cafeFavs||[])].forEach(x=>f.set(String(x).toLowerCase(),x));
   out.cafeFavs=[...f.values()].sort((a,b)=>a.localeCompare(b));
   const w=new Map();[...(rem.cafeWants||[]),...(loc.cafeWants||[])].forEach(x=>w.set(String(x).toLowerCase(),x));
@@ -3693,6 +3742,7 @@ async function syncNow(manual){
     catRepoint();                                      // re-point local ledgers onto the merged ids
     gearRepoint();                                      // and Setups onto their Gear
     brewRepoint();                                      // and brews onto their Roast
+    cupPrepRepoint();                                   // and cups onto their Preparation
     if(tab==='cafes'&&!document.getElementById('sheet').classList.contains('open'))render();
     try{
       const dir=await api('/api/users');
@@ -5000,6 +5050,7 @@ catSeedGear(); // Gear too — grinder/brewer models swept from every Setup
 catRepoint(); // then the ledger leans on it: each bag/cup carries the id of its node (additive, reversible — step 2)
 gearRepoint(); // and each Setup carries grinderRef/brewerRef
 brewRepoint(); // and each brew reads its Roast through its bag
+cupPrepRepoint(); // and each cup is a Reading over its Preparation — a Brew or a Pour
 catRetire(); // then the flat roaster + structured origin (and a bag's roast level + date) retire under those refs — the node is the only copy now (step 3)
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
