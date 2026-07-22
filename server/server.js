@@ -14,13 +14,16 @@
  *   <data>/users.json          users + tokens (small, held in memory)
  *   <data>/ledgers/<id>.json   {rev, updatedAt, ledger} per user (read on demand)
  *   <data>/register.json       {rev, updatedAt, register} — the shared café Register
+ *   <data>/catalog-<kind>.json {rev, updatedAt, catalog} — one per spine kind
  *
  * Auth model: name + passcode per user. Every authenticated user can READ
  * every ledger — seeing each other's records is the point. Only the owner
- * can WRITE their own. The café Register is the one shared document: any
- * authenticated user may read AND write it, so the group keeps a single
- * record of each café. This is trust-your-friends auth for a small group,
- * not a hardened public service. See server/README.md.
+ * can WRITE their own. The café Register and the catalog (the spine upstream
+ * of the café — producers, lots, roasters, roasts and the rest) are the shared
+ * documents: any authenticated user may read AND write them, so the group keeps
+ * a single record of each café and each node of the road. This is
+ * trust-your-friends auth for a small group, not a hardened public service.
+ * See server/README.md.
  * ============================================================ */
 
 const http = require('node:http');
@@ -100,6 +103,18 @@ function readLedger(id) {
 const REGISTER_FILE = path.join(DATA, 'register.json');
 function readRegister() {
   return readJSON(REGISTER_FILE) || { rev: 0, updatedAt: null, register: null };
+}
+
+/* ---------- the catalog (the spine, upstream of the café) ----------
+ * The Register pattern, widened: one shared, group-writable document per entity
+ * kind, each with its own rev/409. The client keeps the same eight envelopes
+ * locally (carta.catalog.<kind>.v1) and syncs each independently. Whitelisted so
+ * a stray path can't mint an arbitrary file; an unknown kind 404s and the client
+ * keeps that document device-local, exactly as an old server 404s this route. */
+const CATALOG_KINDS = ['producers', 'processors', 'aggregators', 'lots', 'blends', 'roasters', 'roasts', 'gear'];
+const catalogFile = kind => path.join(DATA, 'catalog-' + kind + '.json');
+function readCatalog(kind) {
+  return readJSON(catalogFile(kind)) || { rev: 0, updatedAt: null, catalog: null };
 }
 function counts(ledger) {
   const n = k => (ledger && Array.isArray(ledger[k]) ? ledger[k].length : 0);
@@ -220,6 +235,28 @@ function handlePutRegister(req, res, auth) {
   });
 }
 
+function handleGetCatalog(res, kind, metaOnly) {
+  const c = readCatalog(kind);
+  send(res, 200, metaOnly ? { rev: c.rev, updatedAt: c.updatedAt } : c);
+}
+
+// A catalog kind, like the café Register, is group-writable — the whole party
+// keeps the shared spine together. Same optimistic concurrency: a stale baseRev
+// gets a 409 carrying the server copy to merge against.
+function handlePutCatalog(req, res, auth, kind) {
+  readBody(req, res, body => {
+    if (typeof body.baseRev !== 'number' || !body.catalog || typeof body.catalog !== 'object' ||
+        !Array.isArray(body.catalog.entries))
+      return err(res, 400, 'bad-input', 'Expected {baseRev, catalog} with an entries array');
+    const cur = readCatalog(kind);
+    if (body.baseRev !== cur.rev)
+      return send(res, 409, { error: 'conflict', message: 'Catalog changed since your base revision', rev: cur.rev, updatedAt: cur.updatedAt, catalog: cur.catalog });
+    const next = { rev: cur.rev + 1, updatedAt: new Date().toISOString(), updatedBy: auth.name, catalog: body.catalog };
+    writeJSON(catalogFile(kind), next);
+    send(res, 200, { rev: next.rev, updatedAt: next.updatedAt });
+  });
+}
+
 function handlePutLedger(req, res, auth, id) {
   if (auth.id !== id) return err(res, 403, 'not-owner', 'You can only write your own ledger');
   readBody(req, res, body => {
@@ -268,6 +305,13 @@ const server = http.createServer((req, res) => {
   if (p === '/api/cafes') {
     if (req.method === 'GET') return handleGetRegister(res, u.searchParams.get('meta') === '1');
     if (req.method === 'PUT') return handlePutRegister(req, res, auth);
+  }
+
+  // /api/catalog/<kind> — the spine, one shared document per whitelisted kind.
+  const cm = /^\/api\/catalog\/([a-z]+)$/.exec(p);
+  if (cm && CATALOG_KINDS.includes(cm[1])) {
+    if (req.method === 'GET') return handleGetCatalog(res, cm[1], u.searchParams.get('meta') === '1');
+    if (req.method === 'PUT') return handlePutCatalog(req, res, auth, cm[1]);
   }
 
   const m = /^\/api\/ledgers\/([a-f0-9]{16})$/.exec(p);

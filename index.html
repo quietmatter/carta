@@ -640,6 +640,230 @@ function regSeed(){
   sights.sort((a,b)=>a.at.localeCompare(b.at)).forEach(s=>regUpsert(s.name,s.fields,s.who,{at:s.at||null}));
 }
 
+/* ============ the catalog ============ */
+/* The spine, upstream of the café. The Register keeps ONE shared document — the
+ * Venue (a café). The catalog keeps the rest of the road as the SAME shape: a
+ * set of Register-enveloped documents, one per entity kind, each
+ * {version,rev,dirty,entries,deleted}. loadDoc/saveDoc/catUpsert/compile are
+ * loadReg/saveReg/regUpsert/reachCompile, generalised — no new sync machinery,
+ * the pattern is already proven in the café (see SCHEMA.md). Device-local until a
+ * catalog-aware server exists: an old server 404s the endpoint and this stays
+ * local, exactly as the Register degrades. Nothing renders it yet — this is the
+ * substrate the restructure is built on; step 1, normalise the spine. */
+const CAT_KINDS=['producers','processors','aggregators','lots','blends','roasters','roasts','gear'];
+const catKey=kind=>'carta.catalog.'+kind+'.v1';
+const catSingular={producers:'producer',processors:'processor',aggregators:'aggregator',lots:'lot',blends:'blend',roasters:'roaster',roasts:'roast',gear:'gear'};
+const CAT={};
+function loadDoc(kind){
+  try{const r=localStorage.getItem(catKey(kind));const g=r?JSON.parse(r):null;
+    if(g&&Array.isArray(g.entries))return{version:1,rev:g.rev||0,dirty:!!g.dirty,entries:g.entries,deleted:g.deleted||[]};
+  }catch(e){}
+  return{version:1,rev:0,dirty:false,entries:[],deleted:[]};
+}
+function saveDoc(kind){try{localStorage.setItem(catKey(kind),JSON.stringify(CAT[kind]))}catch(e){}}
+CAT_KINDS.forEach(k=>{CAT[k]=loadDoc(k)});
+// Find-or-create by a caller-supplied collapse key. The key is NOT identity — it
+// is how THIS caller chose to dedup (the seed's timid fingerprint below; a lot's
+// real identity is the resolver, a later pass). Sparse by default, the café's law
+// one kind up: a write fills blanks, never erases; {full:true} overwrites; {at}
+// backdates provenance so the earliest record to name a node holds it.
+const catByKey=(kind,key)=>CAT[kind].entries.find(e=>e._key===String(key))||null;
+const catNode=(kind,id)=>id&&CAT[kind]?CAT[kind].entries.find(e=>e.id===id)||null:null;
+function catUpsert(kind,key,fields,who,opts){
+  key=String(key||'').trim(); if(!key||!CAT[kind])return null;
+  opts=opts||{};
+  const now=new Date().toISOString(),at=opts.at||now;
+  let e=catByKey(kind,key),changed=false;
+  if(!e){e={id:uid(),kind:catSingular[kind],_key:key,createdAt:at,firstBy:who||'',firstAt:at,sightings:[],status:'proposed'};CAT[kind].entries.push(e);changed=true}
+  else if(at<(e.firstAt||e.createdAt||'')){e.firstAt=at;if(who)e.firstBy=who;changed=true}
+  Object.keys(fields||{}).forEach(k=>{const v=fields[k];
+    if(opts.full ? ((regSubstance(v)||regSubstance(e[k]))&&e[k]!==v) : (regSubstance(v)&&!regSubstance(e[k]))){e[k]=v==null?null:v;changed=true}});
+  if(changed){e.updatedAt=now;if(who)e.by=who;CAT[kind].dirty=true;saveDoc(kind)}
+  return e;
+}
+// Compile an entry's visible fields from its standing sightings — reachCompile,
+// generalised from bag/seen to arbitrary fields. Newest standing line per field
+// carries; a struck line keeps its ink; silence is not denial. The mechanism that
+// lets a value be a READING over attestations — correctable by a later line, never
+// a cell someone overwrote. No sighting is written yet in this slice; the fold is
+// here for the resolver and ingestion passes to write into.
+function compile(e,asOf){
+  const st=((e&&e.sightings)||[]).filter(s=>asOf?(s.at<=asOf&&(!s.withdrawnAt||s.withdrawnAt>asOf)&&(!s.supersededAt||s.supersededAt>asOf)):sightStanding(s)).sort(bySight);
+  const carry={};
+  st.forEach(s=>{Object.keys(s.fields||{}).forEach(k=>{if(regSubstance(s.fields[k]))carry[k]=s})});
+  const fields={};Object.keys(carry).forEach(k=>{fields[k]=carry[k].fields[k]});
+  return {fields,carry,standing:st};
+}
+// Seed the catalog from every readable ledger — the move regSeed makes for cafés,
+// widened to the spine. Each bag becomes a roaster + a lot (a timid fingerprint) +
+// a roast; each café cup contributes its roaster and, when structured, its lot.
+// Timid on purpose: a lot collapses only when two-plus origin tokens match —
+// thinner origins fork rather than risk unioning two different greens (over-merge
+// is the worse failure; the atlas starts granular and is merged UP by curation,
+// never auto-merged down). Chronological, so the earliest record holds provenance;
+// idempotent, blanks-only, exactly as regSeed.
+const catNorm=s=>normName(s||'');
+const lotKeyOf=(o,fallbackId)=>{
+  const parts=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].map(catNorm);
+  return parts.filter(Boolean).length>=2 ? 'fp:'+parts.join('|') : 'lot:'+fallbackId;   // too thin to trust → fork
+};
+function catSeed(){
+  const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
+  remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
+  const jobs=[];
+  srcs.forEach(s=>{const d=s.led;if(!d)return;
+    (d.bags||[]).forEach(b=>{if(b)jobs.push({at:b.createdAt||'',who:s.who,type:'bag',r:b})});
+    (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&(regSubstance(c.roaster)||[c.originCountry,c.originRegion,c.producer,c.variety,c.process,c.lot].some(regSubstance)))jobs.push({at:c.createdAt||'',who:s.who,type:'cup',r:c})});
+  });
+  jobs.sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(j=>{
+    const r=j.r,o={at:j.at||null},who=j.who;
+    let roaster=null,lot=null;
+    if(regSubstance(r.roaster))roaster=catUpsert('roasters',catNorm(r.roaster),{name:r.roaster,site:r.site,palette:r.palette},who,o);
+    else if(r.roasterRef)roaster=catNode('roasters',r.roasterRef); // flat gone legacy → resolve via the standing ref, so the roasts key below stays identical to catRepoint's
+    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance))
+      lot=catUpsert('lots',lotKeyOf(r,r.id),{country:r.originCountry,region:r.originRegion,producer:r.producer,variety:r.variety,process:r.process,lotName:r.lot},who,o);
+    else if(regSubstance(r.origin)) // a café cup with only a loose free-text origin → its own singleton lot (lotKeyOf forks to lot:<id> with no tokens), never keyed, so it can't union two greens
+      lot=catUpsert('lots',lotKeyOf(r,r.id),{origin:r.origin},who,o);
+    else if(r.lotRef)lot=catNode('lots',r.lotRef); // flat origin gone legacy → resolve the lot via its standing ref, so the roasts key below stays identical to catRepoint's (mirror of the roaster fallback above)
+    if(j.type==='bag'){
+      const rk=[roaster?roaster.id:'',lot?lot.id:'',catNorm(r.name),r.roastDate||''].join('|');
+      catUpsert('roasts',rk,{roasterRef:roaster?roaster.id:null,lotRef:lot?lot.id:null,offeringName:r.name,level:ROAST_LEVELS[r.roastLevel]||'',roastDate:r.roastDate,site:r.site,palette:r.palette},who,o);
+    }
+  });
+}
+// Re-point the ledger onto the spine — migration step 2. Every bag and café cup
+// gains the id of the catalog node it seeded (roasterRef/lotRef, +roastRef for a
+// bag), stamped BESIDE the flat origin text, never over it: the words stay
+// authoritative and every render/edit path still reads them. Purely additive, so
+// it is reversible (drop the refs and nothing is lost) and idempotent (re-derived
+// each boot from the SAME collapse keys catSeed used). A ref is a local derivation,
+// not a keeper's edit — it never touches updatedAt, so sync sees no spurious push
+// and a merge that drops one simply re-stamps next boot. Local users only; a
+// read-only remote ledger is never mutated. Flat fields go inert (legacy) only in a
+// later version, once the catalog is trusted and the UI reads through the refs.
+const catRefsFor=r=>({
+  // Flat roaster present → the text is authoritative (re-derives renames/edits at boot,
+  // exactly as before). Flat roaster blank → fall back to the ref already standing, so a
+  // record whose flat roaster has gone legacy keeps reading through its node instead of
+  // being struck by the sweep. A genuinely-cleared record carries no ref (the save-time
+  // stamp already struck it), so it stays struck; only a dangling ref (its node gone)
+  // falls to null. A pure no-op on today's data — every ref-bearing record still has flat
+  // text — this only takes effect once the flat field is nulled: the precondition for it.
+  roaster:regSubstance(r.roaster)?catByKey('roasters',catNorm(r.roaster)):catNode('roasters',r.roasterRef),
+  lot:([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin))?catByKey('lots',lotKeyOf(r,r.id)):catNode('lots',r.lotRef) // structured fields OR a loose free-text origin re-derive by key; both blank → keep the standing lotRef, exactly as the roaster line above (a no-op until a lot null-out)
+});
+const setRef=(rec,k,node)=>{const id=node?node.id:null;if((rec[k]||null)===id)return false;if(id)rec[k]=id;else delete rec[k];return true};
+function catRepoint(){
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    (d.bags||[]).forEach(b=>{if(!b)return;const{roaster,lot}=catRefsFor(b);
+      // roastDate is part of the roast key; once it is retired the key can't be recomputed, so
+      // fall back to the standing roastRef — the mirror of catRefsFor's roaster/lot fallback. A
+      // date still present recomputes the key (catching a re-dated roast); a genuinely date-less
+      // bag with no ref yet still finds the empty-date node catSeed authored.
+      const rk=d0=>[roaster?roaster.id:'',lot?lot.id:'',catNorm(b.name),d0].join('|');
+      const roast=regSubstance(b.roastDate)?catByKey('roasts',rk(b.roastDate)):(catNode('roasts',b.roastRef)||catByKey('roasts',rk('')));
+      if([setRef(b,'roasterRef',roaster),setRef(b,'lotRef',lot),setRef(b,'roastRef',roast)].some(Boolean))changed=true;
+    });
+    (d.cups||[]).forEach(c=>{if(!c||c.kind!=='cafe')return;const{roaster,lot}=catRefsFor(c);
+      if([setRef(c,'roasterRef',roaster),setRef(c,'lotRef',lot)].some(Boolean))changed=true;
+    });
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
+  });
+  D=load(); // refresh the viewing ledger so in-memory D carries the fresh refs
+}
+// Migration step 3 — the retirement. catRepoint stamped every bag and café cup with
+// the id of its catalog node; catRetire now strikes the flat roaster + structured origin
+// those nodes carry, so the lot node becomes the record's sole copy — the atlas, not the
+// text, is where the green lives. Gated on a LIVE node (never null a field the catalog
+// can't surface): a lot node is a faithful copy of the record's own fields, keyed by the
+// full six-field fingerprint, so co-keyed records logged the same positions and lotRead/
+// circleLot re-surface exactly what was struck, re-spelled to the atlas canonical. A café
+// cup's loose free-text `origin` retires too — but only when it has NO structured fields, so
+// its lot is the cup's own singleton (lot:<id>) carrying that one line, never a shared fp node
+// where a co-keyed sibling could differ. A bag's name keeps its flat field.
+// On a bag it also retires the flat roast level + roast date under a standing roast node (a café
+// cup has no roast, so its strike is roaster + origin only).
+// Like catRepoint this is a device-local normalisation — deterministic, idempotent,
+// re-derived each boot — so it never bumps updatedAt or marks the ledger dirty:
+// mergeColl's local-wins-on-tie shields a retired record from an equal-timestamp flat
+// remote, and a genuine remote edit (newer) legitimately re-fills the words. It rides
+// the next real edit's push like the refs do; a stale device reading the server's flat
+// copy still reads correctly, and an up-to-date device re-retires it at its own boot.
+// Local users only; a read-only remote ledger is never mutated. This is the irreversible
+// step: once the text is struck, the node is the only copy — clearing the ref reverts
+// nothing (unlike catRepoint). It runs only after catSeed + catRepoint have stood a node
+// under every ref.
+function catRetire(){
+  const strike=r=>{if(!r)return false;let hit=false;
+    if(r.roasterRef&&catNode('roasters',r.roasterRef)&&regSubstance(r.roaster)){r.roaster='';hit=true} // roaster node stands → the text retires
+    const lotN=r.lotRef&&catNode('lots',r.lotRef);
+    if(lotN){['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>{if(regSubstance(r[k])){r[k]='';hit=true}}); // lot node stands → the six structured origin fields retire
+      if(regSubstance(r.origin)&&regSubstance(lotN.origin)){r.origin='';hit=true}} // the loose free-text origin retires only when its own singleton lot carries it — homed on lot:<id>, so lotN.origin is this record's alone, never a co-keyed sibling's
+    if(r.roastRef&&catNode('roasts',r.roastRef)){ // roast node stands → the flat roast level (index 0 is unset) + roast date retire; a café cup carries no roastRef, so this fires on bags alone
+      if(regSubstance(ROAST_LEVELS[r.roastLevel])){r.roastLevel=0;hit=true}
+      if(regSubstance(r.roastDate)){r.roastDate='';hit=true}
+    }
+    return hit;
+  };
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    (d.bags||[]).forEach(b=>{if(strike(b))changed=true});
+    (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&strike(c))changed=true}); // café cups only — a home cup's beans live on its bag
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){} // write back only a ledger that actually changed — a re-run is a clean no-op
+  });
+  D=load(); // refresh the viewing ledger so in-memory D carries the retired records
+}
+// The write-path half of the repoint: author a record's roaster node the moment the
+// record is saved, not only at the next boot sweep. Same upsert catSeed makes, keyed
+// identically, so it stays idempotent with the boot pass (blanks-only, earliest
+// provenance via {at}); it just lands the node and stamps the ref now, so a freshly
+// logged bag or café cup reads through its roaster this session instead of next boot.
+// Additive and reversible — the flat roaster stays authoritative; this only lifts the
+// derivation earlier. A blank roaster clears the ref. The precondition for the flat
+// field ever going legacy: the node no longer waits on a reboot to exist.
+function catStampRoaster(rec){
+  if(!rec)return;
+  const n=regSubstance(rec.roaster)?catUpsert('roasters',catNorm(rec.roaster),{name:rec.roaster,site:rec.site,palette:rec.palette},activeName(),{at:rec.createdAt||null}):null;
+  setRef(rec,'roasterRef',n);
+}
+// The lot's write-path half, the mirror of catStampRoaster: author a record's lot
+// node the moment it is saved, keyed by lotKeyOf exactly as catSeed/catRefsFor, so
+// it stays idempotent with the boot sweep (blanks-only, earliest provenance via
+// {at}); it just lands the node and stamps lotRef now, so a freshly logged bag or
+// café cup reads through its lot this session instead of next boot. Additive and
+// reversible — the flat origin stays authoritative; this only lifts the derivation
+// earlier. A record with neither structured origin nor a loose free-text one clears the
+// ref. The precondition for the flat origin ever going legacy: the node no longer waits on
+// a reboot.
+function catStampLot(rec){
+  if(!rec)return;
+  const struct=[rec.originCountry,rec.originRegion,rec.producer,rec.variety,rec.process,rec.lot].some(regSubstance);
+  // A café cup's loose free-text origin, with no structured fields, is homed on the cup's own
+  // singleton lot (lotKeyOf forks to lot:<id>) — never on a shared fp-keyed lot, so node-first
+  // reads and the retirement strike can never surface one cup's origin onto a co-keyed sibling.
+  const n=(struct||regSubstance(rec.origin))
+    ?catUpsert('lots',lotKeyOf(rec,rec.id),{country:rec.originCountry,region:rec.originRegion,producer:rec.producer,variety:rec.variety,process:rec.process,lotName:rec.lot,origin:struct?undefined:rec.origin},activeName(),{at:rec.createdAt||null}):null;
+  setRef(rec,'lotRef',n);
+}
+// The roast's write-path half — the bag's third stamp, run beside catStampRoaster and
+// catStampLot (which set the refs this key reads). Authors the bag's roast node the moment
+// it is saved, keyed EXACTLY as catSeed/catRepoint (roaster.id | lot.id | name | roastDate),
+// and stamps roastRef, so a fresh bag reads its roast through the spine this session, not next
+// boot — the precondition for nulling the flat roast fields on save. Stable fields fill
+// blanks-only (earliest provenance via {at}), but `level` is written THROUGH: it is a mutable
+// property with no place in the key, so a keeper's re-grade must land on the node itself or it
+// would be lost the moment the flat field retires (last local writer holds, as the café editor
+// overwrites shared café fields). Bags only — a café cup has no roast.
+function catStampRoast(rec){
+  if(!rec)return;
+  const rr=catNode('roasters',rec.roasterRef),lr=catNode('lots',rec.lotRef),lv=ROAST_LEVELS[rec.roastLevel]||'';
+  const n=catUpsert('roasts',[rr?rr.id:'',lr?lr.id:'',catNorm(rec.name),rec.roastDate||''].join('|'),
+    {roasterRef:rr?rr.id:null,lotRef:lr?lr.id:null,offeringName:rec.name,level:lv,roastDate:rec.roastDate,site:rec.site,palette:rec.palette},activeName(),{at:rec.createdAt||null});
+  if(n&&regSubstance(lv)&&n.level!==lv){n.level=lv;n.updatedAt=new Date().toISOString();n.by=activeName();CAT.roasts.dirty=true;saveDoc('roasts')} // level is mutable and unkeyed → write it through so a re-grade survives the flat field's retirement
+  setRef(rec,'roastRef',n);
+}
+
 /* ============ the reach ============ */
 /* A classification of depth, not worth — four marks for how much of a coffee's
  * road reads from the customer's side of the counter. A Register fact, like the
@@ -905,12 +1129,22 @@ function roastAccent(lv){
   return map[lv]||'hsl(30,55%,42%)';
 }
 function setAccent(lv){/* The v2 customer surface uses one fixed ember accent. Roast data never repaints the interface. */}
+// A bag's roast — level and date — read flat-FIRST with its roast node as the floor. Unlike the
+// roaster/lot reads (node-first, re-spelling to the atlas canonical) this follows the circle's
+// discipline: a roast level is an enum and a date is a date, neither has a canonical spelling to
+// gain, and the roast node is keyed by roaster+coffee+date WITHOUT the level — so a node shared
+// by two differently-graded bags must never overwrite a keeper's own reading. The typed value
+// wins while present (a strict no-op on un-retired data); the node is consulted only once the
+// flat field is struck. `roastLevel` comes back as the ROAST_LEVELS index the app expects (0 unread).
+const roastRead=b=>{const n=b&&b.roastRef&&catNode('roasts',b.roastRef);
+  const level=(b&&regSubstance(ROAST_LEVELS[b.roastLevel])?ROAST_LEVELS[b.roastLevel]:'')||(n&&n.level)||'';
+  return {level, roastLevel:Math.max(0,ROAST_LEVELS.indexOf(level)), roastDate:(b&&b.roastDate)||(n&&n.roastDate)||''}};
 // rest window heuristic (days off roast) by roast level — an opinion, shown as one
 function restWindow(lv){ if(lv<=2)return[7,28]; if(lv===3)return[5,21]; return[3,14]; }
-function daysOff(bag){ if(!bag.roastDate)return null; return Math.floor((Date.now()-new Date(bag.roastDate+'T00:00'))/864e5); }
+function daysOff(bag){ const rd=roastRead(bag).roastDate; if(!rd)return null; return Math.floor((Date.now()-new Date(rd+'T00:00'))/864e5); }
 function restState(bag){
   const d=daysOff(bag); if(d==null)return null;
-  const[a,b]=restWindow(bag.roastLevel||3);
+  const[a,b]=restWindow(roastRead(bag).roastLevel||3);
   return {d, state: d<a?'resting':(d<=b?'window':'past'), a, b};
 }
 function restChip(bag){
@@ -918,7 +1152,44 @@ function restChip(bag){
   const lbl=r.state==='resting'?`resting · day ${r.d}`:r.state==='window'?`in window · day ${r.d}`:`day ${r.d} · past window`;
   return `<span class="chip ${r.state} num">${lbl}</span>`;
 }
-const bagName=b=>b?`${b.roaster?b.roaster+' — ':''}${b.name||'(unnamed)'}`:'—';
+// The roaster on a bag, read through its catalog node when one resolved: the node's
+// canonical name gathers spelling variants typed differently across bags into the one
+// roaster they are. The flat `roaster` is the floor (no ref, no node: exactly what was
+// written), so this stays a reading over the ref — reversible, the flat field untouched
+// and still authoritative. First surface to source a field from the spine, not the text.
+const bagRoaster=b=>{if(!b)return '';const n=b.roasterRef&&catNode('roasters',b.roasterRef);return (n&&n.name)||b.roaster||''};
+const bagName=b=>{if(!b)return '—';const r=bagRoaster(b);return `${r?r+' — ':''}${b.name||'(unnamed)'}`};
+// A café cup's beans-roaster, read the same way as a bag's: through the resolved
+// node when one stands, the flat `roaster` as the floor. Scoped to your own cups —
+// a circle cup keeps exactly the text its keeper wrote (their ref is theirs, not ours).
+const cupRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.roasterRef);return (n&&n.name)||c.roaster||''};
+// A record's green, read through its lot node when one stands — the node the floor,
+// the flat field the fallback (node-first, as the roaster read above), so once flat
+// origin is retired the node still carries the display. Each field is re-spelled to
+// the atlas's canonical (variants that collapsed to one green read as that green
+// wherever they landed). Today the two agree: a lot key is the full six-field
+// fingerprint, so co-keyed records logged the same positions — the node surfaces only
+// fields the record itself logged, never a sibling's. (A curation merge across
+// differently-logged lots is the one case that would over-surface; revisit then.)
+// Clear the ref and every field reverts, byte for byte, to what was typed.
+const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
+  const f=(flat,nk)=>{const v=(rec&&rec[flat])||'';return (n&&n[nk])||v};
+  // origin is a café cup's loose free-text line — homed only on the cup's own singleton
+  // lot (never a shared fp node), so node-first is safe: the node's origin is this cup's alone.
+  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
+// The circle reads a cup that belongs to ANOTHER keeper. It honours their exact words
+// FIRST — the circle's standing invariant, "what the keeper wrote" — and consults the
+// group-shared catalog node only as the floor beneath a field they've since retired.
+// (These are the inverse of the own-cup reads above, which re-spell to the atlas.) The
+// catalog is one group document, so their ref resolves against our merged copy by the
+// same global id; the comment on cupRoaster — "their ref is theirs, not ours" — predates
+// that sync and no longer holds. Purely additive: today every circle cup still carries
+// flat text, so the node is never reached; it earns its keep only once a keeper's flat
+// field goes legacy, keeping their cup readable across the circle instead of blank.
+const circleRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.roasterRef);return c.roaster||(n&&n.name)||''};
+const circleLot=c=>{const n=c&&c.lotRef&&catNode('lots',c.lotRef);
+  const f=(flat,nk)=>{const v=(c&&c[flat])||'';return v||(n&&n[nk])||''};
+  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
 const setupById=id=>D.setups.find(s=>s.id===id);
 const bagById=id=>D.bags.find(b=>b.id===id);
 const cupById=id=>D.cups.find(c=>c.id===id);
@@ -944,7 +1215,7 @@ const cafeCups=()=>D.cups.filter(c=>c.kind==='cafe');
 const modeOf=arr=>{if(!arr.length)return null;const m={};let best=null,bn=0;arr.forEach(v=>{m[v]=(m[v]||0)+1;if(m[v]>bn){bn=m[v];best=v}});return best};
 const avgHedonic=cups=>{const h=cups.map(c=>c.hedonic).filter(v=>v!=null);return h.length?(h.reduce((a,b)=>a+b,0)/h.length).toFixed(1):null};
 const money=n=>n==null?null:'$'+(n%1===0?String(n):n.toFixed(2));
-const roasterList=()=>[...new Set([...D.bags.map(b=>b.roaster),...cafeCups().map(c=>c.roaster)].filter(Boolean))];
+const roasterList=()=>[...new Set([...D.bags.map(bagRoaster),...cafeCups().map(cupRoaster)].filter(Boolean))];
 // escape a string for use inside a single-quoted JS call within a double-quoted HTML attribute
 const jsq=s=>`'${String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;')}'`;
 // café profiles — branding/location that belongs to the café, not one cup. Keyed by name.
@@ -1038,8 +1309,8 @@ function crossContext(key){
   const k={roaster:normName(key.roaster),origin:normName(key.origin||key.originCountry),variety:normName(key.variety)};
   const hit=(r,o,v)=>{const R=normName(r),O=normName(o),V=normName(v);
     return (k.roaster&&R===k.roaster)||(k.variety&&V===k.variety)||(k.origin&&O&&O===k.origin)};
-  const cafe=cafeCups().filter(c=>hit(c.roaster,c.origin||c.originCountry,c.variety));
-  const home=D.cups.filter(c=>c.kind==='home').filter(c=>{const b=bagById(c.bagId);return b&&hit(b.roaster,b.originCountry,b.variety)});
+  const cafe=cafeCups().filter(c=>{const o=lotRead(c);return hit(cupRoaster(c),o.origin||o.country,o.variety)});
+  const home=D.cups.filter(c=>c.kind==='home').filter(c=>{const b=bagById(c.bagId);if(!b)return false;const o=lotRead(b);return hit(bagRoaster(b),o.country,o.variety)});
   return {home:{n:home.length,avg:avgHedonic(home)},cafe:{n:cafe.length,avg:avgHedonic(cafe)}};
 }
 
@@ -1193,10 +1464,44 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.9.0';
+const APP_VERSION='4.19.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.19.0',date:'Jul 22, 2026',title:'The loose line, on the green too',items:[
+    'A café cup\'s loose origin — the quick "Ethiopia / blend" you jot when there\'s no lot to spell out — now rests on the green behind the cup like its every other origin field, so the whole cup reads from one place. As everywhere else it re-spells nothing you wrote and falls back to exactly what you typed; a cup shared into your circle still shows precisely its keeper\'s own words.',
+  ]},
+  {v:'4.18.0',date:'Jul 22, 2026',title:'A copy that carries its atlas',items:[
+    'Save a copy now writes the atlas into the file beside your ledger, so a copy opened on a device that never synced reads every roaster, origin and roast in full — not the blanks it would have shown once those had folded onto the green behind them. Bringing a copy in folds its atlas into the device\'s own, matching each record to the green it already knows.',
+  ]},
+  {v:'4.17.0',date:'Jul 22, 2026',title:'A café cup, keyed on the green',items:[
+    'A café cup now reads its traceability — country, region, variety, producer, process, lot — through the green behind it too, so a cup and a bag of the same lot read as that one lot on the cup\'s page, however loosely either was typed. As on your shelf, it only re-spells an origin you already wrote and never adds a field the cup didn\'t log; a cup shared into your circle still shows exactly what its keeper wrote.',
+  ]},
+  {v:'4.16.0',date:'Jul 22, 2026',title:'One green, spelled once',items:[
+    'A bag now reads its origin — country, region, producer, variety, process — through the green behind it, so bags of the one lot spelled a little differently read as that one lot across your shelf, its page, and the brew screen. It only ever re-spells an origin you already wrote; the atlas never adds a field the bag didn\'t log, and everything falls back to exactly what you typed.',
+  ]},
+  {v:'4.15.0',date:'Jul 22, 2026',title:'Café beans, one name too',items:[
+    'A café cup now reads its beans-roaster the same way your shelf does — variants of a roaster you\'ve typed differently across cups read as the one roaster they are, on the cup\'s row and its page. As on the shelf, nothing you wrote is changed and it falls back to exactly what you typed. A cup shared into your circle still shows precisely what its keeper wrote.',
+  ]},
+  {v:'4.14.0',date:'Jul 22, 2026',title:'One roaster, one name',items:[
+    'A bag now shows its roaster under one canonical name across your shelf — when you\'ve written a roaster a little differently on different bags, they read as the one roaster they are. Nothing you typed is changed; the bag just reads through to the roaster behind it, and falls back to exactly what you wrote wherever there\'s nothing to read through.',
+  ]},
+  {v:'4.13.0',date:'Jul 22, 2026',title:'Your journal, by lot',items:[
+    'Your record now also folds by lot: when the same green shows up in more than one record — a bag you brewed and a cup you had out that trace back to one lot — it gathers into a single row, tied where the loose origin words alone could never connect them. Tap a lot to see every record on it.',
+    'Only lots that appear in two or more records show — a green logged once just echoes its own record, so it stays out of the way. Like the rest, it reads from what you\'ve already written and adds nothing to fill in.',
+  ]},
+  {v:'4.12.0',date:'Jul 22, 2026',title:'Your journal, by roaster',items:[
+    'Your record now folds by roaster: one row per roaster behind your bags and café cups, with variants of a name gathered together and a bag at home counted beside a cup you had out. Tap a roaster to see every record under it.',
+    'It reads from what you\'ve already logged — no roaster, no row — and appears only once there\'s more than one record to gather, so it stays a reading over your journal, never another thing to fill in.',
+  ]},
+  {v:'4.11.0',date:'Jul 22, 2026',title:'More from this roaster',items:[
+    'A bag or a café cup now also shows more from the same roaster elsewhere in your journal — a bag you brewed at home and a cup you had out under one roaster, tied even when the name was written a little differently each time.',
+    'It sits under the same-lot line and never repeats a record already shown there; like that line, it reads from what you\'ve logged and appears only when there\'s truly something to connect.',
+  ]},
+  {v:'4.10.0',date:'Jul 22, 2026',title:'The same lot, wherever it landed',items:[
+    'A bag or a café cup now shows the same green lot elsewhere in your journal — the coffee you brewed at home and the one you had out can be a single lot, a tie the origin words alone could state but never connect. Tap it to cross to the other record.',
+    'It reads from what you already logged and appears only when a lot truly recurs; nothing new to fill in, nothing shown when there\'s no match yet.',
+  ]},
   {v:'4.9.0',date:'Jul 19, 2026',title:'Streets under the pins',items:[
     'The map surfaces — Find\'s results, the discover map, a café\'s page — now draw real streets behind the pins: OpenStreetMap, repainted in CARTA\'s own paper and ink. No key, no account, nothing tracked.',
     'Offline nothing changes. The drawn plot stands, exact as ever, and streets slot in quietly only when the tiles can be fetched. The map is an enhancement, never a dependency.',
@@ -1410,7 +1715,7 @@ function cupRow(c,showKind){
   const cafe=c.kind==='cafe';
   const what=cafe?`${esc(c.shop||'café')}${c.drink?` · ${esc(c.drink)}`:''}`:esc(bagName(b));
   const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
-  const beans=[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ');
+  const beans=[cupRoaster(c),lotRead(c).origin].filter(Boolean).map(esc).join(' · ');
   const meta=brew
     ?`<span class="num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span>`
     :cafe
@@ -1427,6 +1732,81 @@ function cupRow(c,showKind){
     <div class="muted" style="font-size:11px">${new Date(c.createdAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
   </div>`;
 }
+// The spine, read at last — the first surface to lean on a ref instead of the
+// flat text beside it. A record's lotRef points at its node in the atlas; other
+// records that resolved to the SAME node are the same green wherever it landed —
+// a bag you brewed and a cup you had out can be one lot, a tie the flat origin
+// words can state but never connect. Still grounded in those words (the label is
+// built from them; a record with no lotRef simply shows nothing here), so reading
+// through the ref earns only what the atlas alone can say and stays reversible.
+// Records that resolved to the same node as `rec` on ref `k`, bag and café cup
+// alike. Grounded in flat text throughout — the labels are the flat names, no
+// ref no kin — so this only ever reads what a resolved id can say that loose
+// words can't: the CONNECTION between two records the spine collapsed to one.
+function refKin(rec,k,skip){
+  const ref=rec&&rec[k]; if(!ref)return [];
+  const seen=new Set(skip||[]),out=[];
+  (D.bags||[]).forEach(b=>{if(b&&b.id!==rec.id&&b[k]===ref&&!seen.has(b.id))out.push({t:'bag',id:b.id,label:bagName(b)})});
+  (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&c.id!==rec.id&&c[k]===ref&&!seen.has(c.id))out.push({t:'cup',id:c.id,label:[c.shop,c.drink].filter(Boolean).join(' · ')||'a café cup'})});
+  return out;
+}
+const lotKin=rec=>refKin(rec,'lotRef');
+// The second surface to lean on a ref. Lot first — the deepest tie the atlas
+// draws (one green, two records the origin words could never link). Roaster
+// second, and only for records the lot line didn't already claim: the roaster
+// node collapses spelling variants a keeper couldn't reliably match by eye, and
+// ties a bag brewed home to a cup had out under one roaster. Both stay a reading
+// OVER what's logged — absent with no ref, no match — so it's reversible still.
+function kinLine(label,kin){
+  const links=kin.map(k=>`<a class="link" onclick="${k.t==='bag'?'openBagDetail':'openCupDetail'}(${jsq(k.id)})">${esc(k.label)}</a>`).join(', ');
+  return `<div class="muted small" style="margin:-4px 0 12px">${label} ${links}.</div>`;
+}
+function kinHTML(rec){
+  const lot=lotKin(rec);
+  const roaster=refKin(rec,'roasterRef',lot.map(k=>k.id));
+  let out='';
+  if(lot.length)out+=kinLine('Same lot, elsewhere in your journal:',lot);
+  if(roaster.length){const n=rec.roasterRef&&catNode('roasters',rec.roasterRef),rn=(n&&n.name)||rec.roaster;out+=kinLine(`More from ${rn?esc(rn):'this roaster'}, elsewhere:`,roaster);}
+  return out;
+}
+// The read-through, aggregated — the same refs the detail sheets lean on, now folded
+// over the WHOLE journal on one ref. Every bag and café cup gathers under the node it
+// resolved to, so variants the flat words couldn't reliably tie collapse into one row
+// and a bag brewed home sits beside a cup had out. A reading over the refs, not a
+// store: no ref, no row (grounded in what's logged, absent when nothing resolved), so
+// like the detail lines it stays reversible. `key` is the ref field on the records;
+// `name` labels a resolved node id for the surface. Roaster folds on one token, so
+// every roaster shows; a lot forks unless two-plus origin tokens agree, so its rows
+// are the rarer, deeper ties — the same green in more than one record.
+function refIndex(key,name){
+  const g=new Map();
+  const add=(ref,rec,t)=>{if(!ref)return;let e=g.get(ref);if(!e){e={ref,name:name(ref),bags:0,cups:0,recs:[]};g.set(ref,e)}e[t==='bag'?'bags':'cups']++;e.recs.push({t,id:rec.id})};
+  (D.bags||[]).forEach(b=>{if(b)add(b[key],b,'bag')});
+  (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe')add(c[key],c,'cup')});
+  return [...g.values()].sort((a,b)=>(b.bags+b.cups)-(a.bags+a.cups)||a.name.localeCompare(b.name));
+}
+const roasterName=ref=>{const n=catNode('roasters',ref);return (n&&n.name)||'a roaster'};
+// A lot has no single name — build one from the origin words it collapsed: who (the
+// producer, or the lot name), where (region, country), and the variety, terse.
+const lotLabel=n=>{if(!n)return 'a lot';const place=[n.region,n.country].filter(Boolean).join(', ');const parts=[n.producer||n.lotName,place,n.variety].filter(Boolean);return parts.length?parts.join(' · '):'a lot'};
+const roasterIndex=()=>refIndex('roasterRef',roasterName);
+const lotIndex=()=>refIndex('lotRef',ref=>lotLabel(catNode('lots',ref)));
+const kinTally=r=>[r.bags&&`${r.bags} ${r.bags===1?'bag':'bags'}`,r.cups&&`${r.cups} ${r.cups===1?'cup out':'cups out'}`].filter(Boolean).join(' · ');
+const kinRow=m=>{const rec=m.t==='bag'?bagById(m.id):cupById(m.id);if(!rec)return'';
+  const label=m.t==='bag'?bagName(rec):([rec.shop,rec.drink].filter(Boolean).join(' · ')||'a café cup');
+  return `<button class="wc-item" onclick="${m.t==='bag'?'openBagDetail':'openCupDetail'}(${jsq(m.id)})"><span class="tx"><span class="tt">${esc(label)}</span><span class="dd">${m.t==='bag'?'on your shelf':'a cup out'}</span></span><span class="go">→</span></button>`};
+function openRoasterKin(ref){
+  const r=roasterIndex().find(x=>x.ref===ref); if(!r)return;
+  openSheet(`<h3 style="margin:0 0 4px">${esc(r.name)}</h3>
+    <div class="muted small" style="margin:0 0 10px">${kinTally(r)}, folded from what you've logged.</div>
+    ${r.recs.map(kinRow).join('')}`);
+}
+function openLotKin(ref){
+  const r=lotIndex().find(x=>x.ref===ref); if(!r)return;
+  openSheet(`<h3 style="margin:0 0 4px">${esc(r.name)}</h3>
+    <div class="muted small" style="margin:0 0 10px">one green · ${kinTally(r)}, wherever it landed in your journal.</div>
+    ${r.recs.map(kinRow).join('')}`);
+}
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
   const b=bagById(c.bagId);
@@ -1434,8 +1814,9 @@ function openCupDetail(id){
   const what=cafe?`${esc(c.shop||'café')}${c.drink?` · ${esc(c.drink)}`:''}`:esc(bagName(b));
   const brew=c.brewId?D.brews.find(x=>x.id===c.brewId):null;
   const setup=brew?setupById(brew.setupId):null;
-  const trace=cafe?[c.originCountry,c.originRegion,c.variety,c.producer,c.process,c.lot&&('lot '+c.lot)].filter(Boolean).map(esc).join(' · '):'';
-  const x=cafe&&(c.roaster||c.origin||c.originCountry||c.variety)?crossContext({roaster:c.roaster,origin:c.origin||c.originCountry,variety:c.variety}):null;
+  const o=lotRead(c);
+  const trace=cafe?[o.country,o.region,o.variety,o.producer,o.process,o.lot&&('lot '+o.lot)].filter(Boolean).map(esc).join(' · '):'';
+  const x=cafe&&(cupRoaster(c)||o.origin||o.country||o.variety)?crossContext({roaster:cupRoaster(c),origin:o.origin||o.country,variety:o.variety}):null;
   openSheet(`
   <h3>${what}</h3>
   <div class="sub">${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${cafe&&c.city?` · ${esc(c.city)}`:''}</div>
@@ -1447,7 +1828,7 @@ function openCupDetail(id){
     <div class="kv"><span class="k">Hedonic</span><span class="v num">${c.hedonic??'—'}</span></div>
     <div class="kv"><span class="k">Kind</span><span class="v">${cafe?'café cup':'brew'}</span></div>
     ${cafe&&c.style?`<div class="kv"><span class="k">Style</span><span class="v">${esc(c.style)}</span></div>`:''}
-    ${cafe&&(c.roaster||c.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${cafe&&(cupRoaster(c)||o.origin)?`<div class="kv"><span class="k">Beans</span><span class="v">${[cupRoaster(c),o.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
     ${trace?`<div class="kv"><span class="k">Traceability</span><span class="v">${trace}</span></div>`:''}
     ${cafe&&c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
     ${cafe&&c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'order again':'pass'}</span></div>`:''}
@@ -1455,6 +1836,7 @@ function openCupDetail(id){
     ${brew?`<div class="kv"><span class="k">Brew</span><span class="v num">${brew.grind??'—'} grind · ${brew.doseG??'—'}g → ${brew.waterG??'—'}g · ${fmtTime(brew.timeSec)}</span></div>`:''}
     ${setup?`<div class="kv"><span class="k">Setup</span><span class="v">${esc(setup.name)}</span></div>`:''}
   </div>
+  ${kinHTML(c)}
   ${x&&x.home.n?`<div class="cafeback">You have had beans like these at home — <strong>${x.home.avg}</strong> across ${x.home.n} home cup${x.home.n>1?'s':''} vs <strong>${x.cafe.avg}</strong> out. How the preference travels.</div>`:''}
   ${c.descriptors&&c.descriptors.length?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${c.descriptors.map(esc).join(', ')}</div>`:''}
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
@@ -1482,10 +1864,10 @@ function vBags(){
   return `<button class="text-action" style="margin:2px 0 10px" onclick="go('field')">← Back</button>
   ${readOnly()?'':`<button class="btn btn-primary" onclick="openBagForm()">Put a coffee on the shelf</button>`}
   <h2>The shelf <span class="n-note">n=${bags.length}</span></h2>
-  ${bags.length? bags.map(b=>{const pal=palOf(b),vars=pal?cafeVars(pal):'';return `
+  ${bags.length? bags.map(b=>{const pal=palOf(b),vars=pal?cafeVars(pal):'',o=lotRead(b);return `
     <div class="card tap"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openBagDetail('${b.id}')">
       <div class="row"><strong>${esc(bagName(b))}</strong>${restChip(b)}</div>
-      <div class="muted small">${esc([b.originCountry,b.producer,b.process].filter(Boolean).join(' · '))||'&nbsp;'}</div>
+      <div class="muted small">${esc([o.country,o.producer,o.process].filter(Boolean).join(' · '))||'&nbsp;'}</div>
     </div>`}).join('') : `<div class="empty">Name the bag in your hand — every brew after remembers it.</div>`}`;
 }
 
@@ -1550,6 +1932,18 @@ function vMore(){
   counts.push(['Places saved',(D.cafeWants||[]).length]);
   const putAway=D.bags.filter(b=>b.archived).length;
   if(putAway)counts.push(['Bags put away',putAway]);
+  const rIdx=roasterIndex(),rTot=rIdx.reduce((s,r)=>s+r.bags+r.cups,0);
+  const roasterHTML=rIdx.length&&rTot>=2?`<h2>By roaster</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Your journal folded onto the roasters behind it — variants of a name gathered, a bag at home beside a cup out.</div>
+  ${rIdx.map(r=>`<button class="wc-item" onclick="openRoasterKin(${jsq(r.ref)})">
+    <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
+  // Only lots that gather two-plus records — the atlas tying a bag and a cup out to one
+  // green where the origin words alone couldn't. A singleton lot just echoes its record.
+  const lIdx=lotIndex().filter(r=>r.bags+r.cups>=2);
+  const lotHTML=lIdx.length?`<h2>By lot</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">The same green in more than one record — a bag you brewed and a cup you had out that are one lot, tied where the origin words couldn't reach.</div>
+  ${lIdx.map(r=>`<button class="wc-item" onclick="openLotKin(${jsq(r.ref)})">
+    <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
   return `
   <h2>${readOnly()?esc(viewingUser().name)+"'s record":'Your record'}</h2>
   <div class="card">${counts.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>
@@ -1560,6 +1954,8 @@ function vMore(){
     <button class="text-action" onclick="go('bags')">The shelf — every bag</button>
     <button class="text-action" onclick="go('setups')">The tools — your Setups</button>
   </div>`:''}
+  ${roasterHTML}
+  ${lotHTML}
   ${readOnly()?'':`
   <h2>How deep you go</h2>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">CARTA opens a room at a time. Step in whenever you're ready — nothing is ever taken away.</div>
@@ -1853,12 +2249,14 @@ function openBagForm(id){
   const b=id?bagById(id):{};
   brandPalette=palOf(b);brandAccent=(brandPalette&&brandPalette.brand)||null;
   brandCtx={kicker:'On the shelf',title:'The bag, in its own colours',cta:'Brew this'};
-  const more=!!(b.originCountry||b.originRegion||b.producer||b.variety||b.process||b.lot||b.roastDate||b.boughtAt||b.price!=null||b.notes);
+  const o=lotRead(b); // node-first, so a bag whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
+  const rr=roastRead(b); // likewise for the roast — a retired level/date prefills from its roast node, so an edit re-populates the flat fields instead of silently blanking them
+  const more=!!(o.country||o.region||o.producer||o.variety||o.process||o.lot||rr.roastDate||b.boughtAt||b.price!=null||b.notes);
   openSheet(`
   <h3>${id?'Edit the coffee':'Put a coffee on the shelf'}</h3>
   <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'The bag in your hand — two lines is plenty. Or give its website and CARTA reads the rest.'}</div>
   <div class="grid2">
-    <label class="f"><span class="l">Roaster</span><input type="text" id="f_roaster" value="${esc(b.roaster)}" placeholder="Sey"></label>
+    <label class="f"><span class="l">Roaster</span><input type="text" id="f_roaster" value="${esc(b.roaster||bagRoaster(b))}" placeholder="Sey"></label>
     <label class="f"><span class="l">Coffee</span><input type="text" id="f_name" value="${esc(b.name)}" placeholder="Gesha Village"></label>
   </div>
   <label class="f"><span class="l">Website <span class="opt">optional</span></span>
@@ -1868,16 +2266,16 @@ function openBagForm(id){
   <div id="bagsiteresults"></div>
   <div id="brandpreview" style="margin-top:12px">${brandPalette?brandPreviewHTML(brandPalette):''}</div>
   <label class="f"><span class="l">Roast level</span>
-    ${seg('roast',ROAST_LEVELS.slice(1),ROAST_LEVELS[b.roastLevel]||'Medium')}</label>
+    ${seg('roast',ROAST_LEVELS.slice(1),rr.level||'Medium')}</label>
   <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">origin, roast date, price — now or later</span></summary>
     <div class="grid2">
-      <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry)}" placeholder="Ethiopia"></label>
-      <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion)}" placeholder="Bench Maji"></label>
-      <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer)}" placeholder="free text"></label>
-      <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety)}" placeholder="Gesha 1931"></label>
-      <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process)}" placeholder="washed"></label>
-      <label class="f"><span class="l">Lot no.</span><input type="text" id="f_lot" value="${esc(b.lot)}" placeholder="free text"></label>
-      <label class="f"><span class="l">Roast date</span><input type="date" id="f_roastDate" value="${esc(b.roastDate)}"></label>
+      <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry||o.country)}" placeholder="Ethiopia"></label>
+      <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion||o.region)}" placeholder="Bench Maji"></label>
+      <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer||o.producer)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety||o.variety)}" placeholder="Gesha 1931"></label>
+      <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process||o.process)}" placeholder="washed"></label>
+      <label class="f"><span class="l">Lot no.</span><input type="text" id="f_lot" value="${esc(b.lot||o.lot)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Roast date</span><input type="date" id="f_roastDate" value="${esc(rr.roastDate)}"></label>
       <label class="f"><span class="l">Bought at</span><input type="text" id="f_boughtAt" value="${esc(b.boughtAt)}" placeholder="Kumquat, LA"></label>
       <label class="f"><span class="l">Price</span><input type="number" id="f_price" value="${b.price??''}" placeholder="$" inputmode="decimal"></label>
     </div>
@@ -1894,9 +2292,12 @@ function saveBag(id){
     boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),
     site:(val('f_site')||'').trim(),palette:brandPalette};
   if(!rec.roaster&&!rec.name){toast('Name the coffee — everything else is optional');return}
-  if(id){Object.assign(bagById(id),rec,{updatedAt:new Date().toISOString()});save();setAccent(roastLevel);closeSheet();render();toast('The record, revised');return}
+  if(id){const b=bagById(id);Object.assign(b,rec,{updatedAt:new Date().toISOString()});catStampRoaster(b);catStampLot(b);catStampRoast(b);save();setAccent(roastLevel);closeSheet();render();toast('The record, revised');return}
   const nb={id:uid(),createdAt:new Date().toISOString(),archived:false,...rec};
-  D.bags.push(nb);curBagId=nb.id;
+  D.bags.push(nb);curBagId=nb.id;catStampRoaster(nb);catStampLot(nb);catStampRoast(nb);
+  if(nb.roasterRef)nb.roaster=''; // flat roaster retired on new bags — the node authored above carries it (bagRoaster reads through), and a bag never surfaces to another keeper's circle
+  if(nb.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>nb[k]=''); // flat origin retired on new bags — the lot node authored above carries it (lotRead reads through, node-first). Bags only: a café cup's circle surfaces read flat origin by design, so cup origin stays
+  if(nb.roastRef){nb.roastLevel=0;nb.roastDate=''} // flat roast level + date retired on new bags — the roast node authored above carries them (roastRead reads through, flat-first-node-floor)
   save();setAccent(roastLevel);closeSheet();
   go(depth()>=3?'field':'bags');toast('On the shelf. The first brew starts whenever you do.');
 }
@@ -1924,13 +2325,13 @@ function archiveBag(id){if(guard())return;const b=bagById(id);b.archived=!b.arch
 function openArchiveSheet(id){
   if(guard())return;
   const b=bagById(id);if(!b)return;
-  const a=archivedBagLine(b);
+  const a=archivedBagLine(b),o=lotRead(b);
   openSheet(`
   <h3>Put the bag away</h3>
   <div class="sub">The bag goes. The record stays.</div>
   <div class="card">
     <div class="row"><strong class="small">${esc(bagName(b))}</strong><span class="num muted small">${a.stat}</span></div>
-    <div class="muted small">${esc([b.originCountry,b.originRegion,b.process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
+    <div class="muted small">${esc([o.country,o.region,o.process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
     <div class="muted small" style="margin-top:4px">${a.line}</div>
   </div>
   <div class="muted small serif" style="font-style:italic;margin:10px 2px">It waits under <strong>Put away</strong>. Buy the same bag again and the first brew starts where you left off — nothing to re-learn.</div>
@@ -1938,23 +2339,24 @@ function openArchiveSheet(id){
   <button class="btn btn-quiet" onclick="closeSheet()">Not yet — there's a cup left in it</button>`);
 }
 function openBagDetail(id){
-  const b=bagById(id),r=restState(b),brews=brewsOf(id);
+  const b=bagById(id),r=restState(b),brews=brewsOf(id),o=lotRead(b),rr=roastRead(b);
   const pal=palOf(b),vars=pal?cafeVars(pal):''; // the bag wears the palette read from its website
   openSheet(`
   <h3>${esc(bagName(b))}</h3>
-  <div class="sub">${esc([b.originCountry,b.originRegion,b.producer].filter(Boolean).join(' · '))||'origin unrecorded'}</div>
+  <div class="sub">${esc([o.country,o.region,o.producer].filter(Boolean).join(' · '))||'origin unrecorded'}</div>
   ${pal?`<div class="cafe-theme" style="${vars};margin:2px 0 12px;padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius)">
     <div class="palette">${paletteSwatches(pal)}</div>
     <div class="muted small" style="margin-top:8px">${b.site?`Its colours, read from <strong>${esc(b.site.replace(/^https?:\/\/(www\.)?/,''))}</strong>.`:'Its own colours, on the record.'}</div>
   </div>`:''}
   <div class="card">
-    <div class="kv"><span class="k">Process</span><span class="v">${esc(b.process)||'—'}</span></div>
-    <div class="kv"><span class="k">Variety</span><span class="v">${esc(b.variety)||'—'}</span></div>
-    <div class="kv"><span class="k">Roast</span><span class="v">${ROAST_LEVELS[b.roastLevel]||'—'} · ${esc(b.roastDate)||'no date'}</span></div>
+    <div class="kv"><span class="k">Process</span><span class="v">${esc(o.process)||'—'}</span></div>
+    <div class="kv"><span class="k">Variety</span><span class="v">${esc(o.variety)||'—'}</span></div>
+    <div class="kv"><span class="k">Roast</span><span class="v">${esc(rr.level)||'—'} · ${esc(rr.roastDate)||'no date'}</span></div>
     ${r?`<div class="kv"><span class="k">Rest</span><span class="v num">day ${r.d} · window ${r.a}–${r.b}d</span></div>`:''}
     <div class="kv"><span class="k">Bought at</span><span class="v">${esc(b.boughtAt)||'—'}</span></div>
     <div class="kv"><span class="k">Brews</span><span class="v num">${brews.length}</span></div>
   </div>
+  ${kinHTML(b)}
   ${b.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${esc(b.notes)}</div>`:''}
   ${readOnly()?`<button class="btn btn-quiet" onclick="closeSheet()">Close</button>`:`<button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
   <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`}`);
@@ -2126,8 +2528,18 @@ function saveCup(kind,brewId,bagId,skip,editId){
   }
   const firstOut=kind==='cafe'&&!ex&&!cafeCups().length;
   const firstHome=kind==='home'&&!ex&&!skip&&!D.cups.some(c=>c.kind==='home'&&c.hedonic!=null);
-  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()})}
-  else{D.cups.push({id:uid(),createdAt:new Date().toISOString(),...fields})}
+  let cup;
+  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});cup=ex}
+  else{cup={id:uid(),createdAt:new Date().toISOString(),...fields};D.cups.push(cup)}
+  if(kind==='cafe'){catStampRoaster(cup);catStampLot(cup); // author its roaster + lot nodes at save time, not next boot
+    if(!ex){ // new cups only — retire the flat text once a node stands to carry it (edit path untouched, so the retirement proves out on fresh saves first)
+      if(cup.roasterRef)cup.roaster=''; // own surfaces read cupRoaster (node-first), the circle reads circleRoaster (flat-first-node-floor) — a friend still sees it through the group catalog
+      if(cup.lotRef){const ln=catNode('lots',cup.lotRef);
+        ['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>cup[k]=''); // the lot node carries the structured origin (lotRead/circleLot read through)
+        if(ln&&regSubstance(ln.origin))cup.origin=''; // a loose free-text origin (no structured fields) was homed on this cup's own singleton lot → retire the flat copy too
+      }
+    }
+  }
   editingCupId=null;
   save();closeSheet();
   if(kind==='cafe'){go('cafes');toast(ex?'Cup updated':(firstOut?'Kept — your first cup out.':'Kept.'));}
@@ -2147,8 +2559,9 @@ function openCafe(pre,editId){
   brandCtx={kicker:'This cup',title:'The beans, in their colours',cta:'Keep this cup'};
   sightBag=null;sightSeen=[];sightShop=null;sightHeld=false;amendFrom=null; // the sighting rides the cup, fresh each time
   const sc=sightChipsHTML();
+  const o=lotRead(pre); // node-first, so editing a cup whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
   // The fold opens on edit only if the cup already carries something under it.
-  const more=!!(pre.city||pre.roaster||pre.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||pre.originCountry||pre.originRegion||pre.producer||pre.variety||pre.lot||pre.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
+  const more=!!(pre.city||pre.roaster||cupRoaster(pre)||o.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.producer||o.variety||o.lot||o.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
   openSheet(`
   <h3>${editId?'Edit the cup':'Remember a cup'}</h3>
   <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and one tap is plenty. The rest can wait.'}</div>
@@ -2176,9 +2589,9 @@ function openCafe(pre,editId){
     <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="c_city" list="citylist" value="${esc(pre.city||'')}" placeholder="Los Angeles">
       <datalist id="citylist">${cities.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
     <div class="grid2">
-      <label class="f"><span class="l">Beans <span class="opt">optional</span></span><input type="text" id="c_roaster" list="roasterlist" value="${esc(pre.roaster||'')}" placeholder="roaster">
+      <label class="f"><span class="l">Beans <span class="opt">optional</span></span><input type="text" id="c_roaster" list="roasterlist" value="${esc(pre.roaster||cupRoaster(pre))}" placeholder="roaster">
         <datalist id="roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
-      <label class="f"><span class="l">Origin <span class="opt">optional</span></span><input type="text" id="c_origin" value="${esc(pre.origin||'')}" placeholder="Ethiopia / blend"></label>
+      <label class="f"><span class="l">Origin <span class="opt">optional</span></span><input type="text" id="c_origin" value="${esc(o.origin||'')}" placeholder="Ethiopia / blend"></label>
     </div>
     <label class="f"><span class="l">Beans website <span class="opt">optional</span></span>
       <input type="text" id="c_beansite" value="${esc(pre.site||'')}" placeholder="the roaster’s site — CARTA reads the rest" inputmode="url" autocapitalize="off" autocorrect="off"></label>
@@ -2187,12 +2600,12 @@ function openCafe(pre,editId){
     <div id="beansiteresults"></div>
     <div id="brandpreview" style="margin-top:12px">${brandPalette?brandPreviewHTML(brandPalette):''}</div>
     <div class="grid2">
-      <label class="f"><span class="l">Country</span><input type="text" id="c_country" value="${esc(pre.originCountry||'')}" placeholder="Ethiopia"></label>
-      <label class="f"><span class="l">Region</span><input type="text" id="c_region" value="${esc(pre.originRegion||'')}" placeholder="Bench Maji"></label>
-      <label class="f"><span class="l">Producer / station</span><input type="text" id="c_producer" value="${esc(pre.producer||'')}" placeholder="free text"></label>
-      <label class="f"><span class="l">Variety</span><input type="text" id="c_variety" value="${esc(pre.variety||'')}" placeholder="Gesha 1931"></label>
-      <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" value="${esc(pre.lot||'')}" placeholder="free text"></label>
-      <label class="f"><span class="l">Process</span><input type="text" id="c_process" value="${esc(pre.process||'')}" placeholder="washed"></label>
+      <label class="f"><span class="l">Country</span><input type="text" id="c_country" value="${esc(pre.originCountry||o.country)}" placeholder="Ethiopia"></label>
+      <label class="f"><span class="l">Region</span><input type="text" id="c_region" value="${esc(pre.originRegion||o.region)}" placeholder="Bench Maji"></label>
+      <label class="f"><span class="l">Producer / station</span><input type="text" id="c_producer" value="${esc(pre.producer||o.producer)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Variety</span><input type="text" id="c_variety" value="${esc(pre.variety||o.variety)}" placeholder="Gesha 1931"></label>
+      <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" value="${esc(pre.lot||o.lot)}" placeholder="free text"></label>
+      <label class="f"><span class="l">Process</span><input type="text" id="c_process" value="${esc(pre.process||o.process)}" placeholder="washed"></label>
     </div>
     <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" value="${pre.price??''}" placeholder="$"></label>
     <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow(pre.descriptors)}</label>
@@ -2350,8 +2763,8 @@ function vPlace(){
   const theirAvg=avgHedonic(others);
   const people=[...new Set(others.map(c=>c._who))];
   const fav=isCafeFav(shop);
-  const roaster=modeOf(mine.map(c=>c.roaster).filter(Boolean));
-  const origin=modeOf(mine.map(c=>c.origin||c.originCountry).filter(Boolean));
+  const roaster=modeOf(mine.map(cupRoaster).filter(Boolean));
+  const origin=modeOf(mine.map(c=>{const o=lotRead(c);return o.origin||o.country}).filter(Boolean));
   const x=roaster||origin?crossContext({roaster,origin}):null;
   const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
   const place=[city,nbhood].filter(Boolean).join(' · ');
@@ -2641,12 +3054,12 @@ function vField(){
   const scored=brewsOf(bag.id).map(b=>({brew:b,cup:D.cups.find(c=>c.brewId===b.id)}))
     .filter(x=>x.cup&&x.cup.hedonic!=null).sort((a,b)=>b.cup.hedonic-a.cup.hedonic);
   const best=scored[0]||null;
-  const notes=lastCup&&(lastCup.notes||((lastCup.descriptors||[]).join(' · ')));
+  const notes=lastCup&&(lastCup.notes||((lastCup.descriptors||[]).join(' · '))),o=lotRead(bag);
   return `
     <div class="hero">
       <div class="eyebrow">The cup at home</div>
       <h2 style="max-width:13ch">${esc(bagName(bag))}</h2>
-      <div class="origin">${esc([bag.originCountry,bag.originRegion,bag.process].filter(Boolean).join(' · '))||'origin unwritten'} ${restChip(bag)}</div>
+      <div class="origin">${esc([o.country,o.region,o.process].filter(Boolean).join(' · '))||'origin unwritten'} ${restChip(bag)}</div>
     </div>
     ${last?`<div class="continuation">
       <div class="row">
@@ -2667,7 +3080,7 @@ function vField(){
     ${bags.filter(b=>b.id!==bag.id).map(b=>`
       <div class="card tap coffee-card" onclick="pickCoffee('${b.id}')">
         <strong>${esc(bagName(b))}</strong>
-        <div class="muted small">${esc([b.originCountry,b.process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
+        <div class="muted small">${esc([lotRead(b).country,lotRead(b).process].filter(Boolean).join(' · '))||'origin unwritten'}</div>
         <span class="count num">${brewsOf(b.id).length?brewsOf(b.id).length+(brewsOf(b.id).length>1?' brews':' brew'):'no brews yet'}</span>
       </div>`).join('')}
     ${readOnly()?'':`<div style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:2px 0 4px">
@@ -2852,7 +3265,12 @@ function deleteUser(id){
 
 /* ============ export / import ============ */
 function exportJSON(){
-  const out={...D,exportedAt:new Date().toISOString(),user:viewingUser().name,schema:'carta-phase0-v1'};
+  // Bundle the whole spine into the copy so it stands alone. A retired origin/roaster/roast
+  // lives only on its catalog node now, so a copy opened on a device that never synced would
+  // read blanks without it. The catalog is a shared group document (catSeed sweeps every
+  // ledger into it), so exporting it whole is faithful to what it is; import folds it back.
+  const catalog={};CAT_KINDS.forEach(k=>{catalog[k]={version:1,entries:CAT[k].entries,deleted:CAT[k].deleted}});
+  const out={...D,catalog,exportedAt:new Date().toISOString(),user:viewingUser().name,schema:'carta-phase0-v1'};
   const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   const slug=viewingUser().name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'ledger';
@@ -2880,12 +3298,14 @@ function importAsUser(){
   if(!pendingImport)return;
   const name=val('u_name');
   if(!name){toast('Give them a name');return}
+  const cat=pendingImport.catalog;delete pendingImport.catalog; // the spine folds into the device atlas, not into the stored ledger
+  foldCatalog(cat,pendingImport);
   const nu={id:uid(),name,createdAt:new Date().toISOString()};
   try{localStorage.setItem(dataKey(nu.id),JSON.stringify(pendingImport))}
   catch(e){toast('Storage full — could not import');return}
   USERS.users.push(nu);saveUsers();
   pendingImport=null;closeSheet();
-  regSeed(); // an imported record may name cafés the Register hasn't met
+  regSeed();catSeed();catRepoint(); // an imported record may name cafés/greens the device hasn't met
   viewLedger(nu.id);
 }
 function importReplace(){
@@ -2893,7 +3313,34 @@ function importReplace(){
   if(guard())return;
   const me=userById(USERS.activeId).name;
   if(!confirm(`Replace ${me}'s current ledger with the import?\n\nThis cannot be undone.`))return;
-  D=pendingImport;pendingImport=null;save();regSeed();closeSheet();render();toast('Ledger imported');
+  const cat=pendingImport.catalog;delete pendingImport.catalog; // fold the copy's spine before it becomes the ledger, so retired fields read through
+  D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catRepoint();closeSheet();render();toast('Ledger imported');
+}
+// Fold an imported catalog into the device's spine, then heal the imported ledger's refs.
+// A copy carries the whole atlas (exportJSON); bringing it in unions it into the local spine
+// kind by kind — the same merge sync runs (by id, then collapse entries sharing a _key). That
+// collapse can retire an imported node id in favour of a co-keyed local one; a retired record
+// keys off its ref, not flat text, so before the merge can strand it we note each imported id's
+// _key, then re-point any now-dangling ref to whichever id survived. Marks a kind dirty only
+// when the fold actually changed it, so a synced device pushes the gain (the atlas is the
+// group's) and a re-import is a clean no-op. No catalog in the file (an older export) → nothing
+// to fold; the ledger's own flat text and refs stand, and catSeed/catRepoint re-derive at import.
+function foldCatalog(catIn,led){
+  if(!catIn||!led)return;
+  const wasKey={};   // kind → (imported id → _key), captured before the merge collapses ids
+  CAT_KINDS.forEach(kind=>{
+    const inc=catIn[kind]; if(!inc||!Array.isArray(inc.entries))return;
+    wasKey[kind]={};inc.entries.forEach(e=>{if(e&&e.id&&e._key)wasKey[kind][e.id]=e._key});
+    const canon=mergeCatalog({entries:CAT[kind].entries,deleted:CAT[kind].deleted},{entries:[],deleted:[]}); // local, canonicalised, for an honest change test
+    const merged=mergeCatalog({entries:CAT[kind].entries,deleted:CAT[kind].deleted},{entries:inc.entries,deleted:inc.deleted||[]});
+    if(JSON.stringify(merged)!==JSON.stringify(canon))CAT[kind].dirty=true;
+    CAT[kind].entries=merged.entries;CAT[kind].deleted=merged.deleted;saveDoc(kind);
+  });
+  const survivor={};CAT_KINDS.forEach(kind=>{survivor[kind]={};CAT[kind].entries.forEach(e=>{if(e._key)survivor[kind][e._key]=e.id})});
+  const heal=(rec,k,kind)=>{const id=rec[k];if(!id||catNode(kind,id))return; // absent, or still resolves → leave it
+    const key=wasKey[kind]&&wasKey[kind][id],to=key&&survivor[kind]&&survivor[kind][key];if(to)rec[k]=to};
+  (led.bags||[]).forEach(b=>{if(b){heal(b,'roasterRef','roasters');heal(b,'lotRef','lots');heal(b,'roastRef','roasts')}});
+  (led.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'){heal(c,'roasterRef','roasters');heal(c,'lotRef','lots')}});
 }
 
 /* ============ sync ============ */
@@ -2994,6 +3441,40 @@ function mergeRegister(loc,rem){
   });
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
 }
+/* Catalog merge: the Register's law, keyed on _key instead of name. Union by id
+ * (newer updatedAt wins; a tie breaks to substance, then bytes, so both sides
+ * converge), sightings union and never race, then collapse entries that share a
+ * _key but were born on different devices — the same node seeded twice — keeping
+ * the earliest provenance. _key is the deterministic dedup the seed already used,
+ * so the two copies of one node always land together; a ledger ref left dangling
+ * by the collapse re-points next boot through the same _key. */
+function mergeCatalog(loc,rem){
+  const fuller=e=>Object.keys(e).filter(k=>regSubstance(e[k])).length;
+  const beats=(l,r)=>{const lu=l.updatedAt||'',ru=r.updatedAt||'';if(lu!==ru)return lu>ru;
+    const lf=fuller(l),rf=fuller(r);if(lf!==rf)return lf>rf;
+    return JSON.stringify(l)>=JSON.stringify(r)};
+  const dead=new Map();[...((rem&&rem.deleted)||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
+  const m=new Map();((rem&&rem.entries)||[]).forEach(r=>m.set(r.id,r));
+  (loc.entries||[]).forEach(l=>{const r=m.get(l.id);
+    if(!r){m.set(l.id,l);return}
+    const w={...(beats(l,r)?l:r)};
+    if(l.sightings||r.sightings)w.sightings=mergeSightings(l.sightings||[],r.sightings||[]);
+    m.set(l.id,w)});
+  const groups={};
+  [...m.values()].filter(e=>e&&e._key&&!dead.has(e.id)).forEach(e=>{(groups[e._key]=groups[e._key]||[]).push(e)});
+  const entries=Object.keys(groups).sort().map(k=>{
+    const g=groups[k].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')||String(a.id).localeCompare(String(b.id)));
+    const w={...g[0]};
+    g.slice(1).forEach(e=>{
+      Object.keys(e).forEach(f=>{if(!regSubstance(w[f])&&regSubstance(e[f]))w[f]=e[f]});
+      if(e.firstAt&&(!w.firstAt||e.firstAt<w.firstAt)){w.firstAt=e.firstAt;w.firstBy=e.firstBy||w.firstBy}
+    });
+    const sg=mergeSightings(...g.map(e=>e.sightings||[]));
+    if(sg.length)w.sightings=sg;
+    return w;
+  });
+  return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
+}
 // The Register rides the same heartbeat as the ledger: poll meta, pull + merge
 // when the server moved, push while dirty (409 → merge, retry). Any keeper may
 // push — the document is the group's. Older servers without /api/cafes answer
@@ -3020,6 +3501,38 @@ async function syncRegister(){
       REG.rev=r.body.rev;REG.entries=merged.entries;REG.deleted=merged.deleted;saveReg();
     }
     else break;
+  }
+}
+// The catalog rides the same heartbeat as the Register, one document per kind:
+// poll each kind's meta, pull + merge when the server moved, push while dirty
+// (409 → merge, retry). Group-writable like the café Register. An older server
+// 404s /api/catalog and the whole spine stays device-local, exactly as the
+// Register degrades — the atlas is still useful offline.
+async function syncCatalog(){
+  for(const kind of CAT_KINDS){
+    const doc=CAT[kind];
+    const meta=await api('/api/catalog/'+kind+'?meta=1');
+    if(meta.status!==200)return;   // old server (404) — the endpoint is absent, skip the spine
+    if(meta.body.rev>doc.rev){
+      const full=await api('/api/catalog/'+kind);
+      if(full.status===200&&full.body.catalog){
+        const merged=mergeCatalog({entries:doc.entries,deleted:doc.deleted},full.body.catalog);
+        doc.rev=full.body.rev;doc.entries=merged.entries;doc.deleted=merged.deleted;
+        doc.dirty=JSON.stringify(merged)!==JSON.stringify({entries:full.body.catalog.entries||[],deleted:full.body.catalog.deleted||[]});
+        saveDoc(kind);
+      }
+    }
+    let tries=0;
+    while(doc.dirty&&tries<3){
+      tries++;
+      const r=await api('/api/catalog/'+kind,'PUT',{baseRev:doc.rev,catalog:{version:1,entries:doc.entries,deleted:doc.deleted}});
+      if(r.status===200){doc.rev=r.body.rev;doc.dirty=false;saveDoc(kind)}
+      else if(r.status===409){
+        const merged=mergeCatalog({entries:doc.entries,deleted:doc.deleted},r.body.catalog||{});
+        doc.rev=r.body.rev;doc.entries=merged.entries;doc.deleted=merged.deleted;saveDoc(kind);
+      }
+      else break;
+    }
   }
 }
 
@@ -3072,6 +3585,9 @@ async function syncNow(manual){
     if(SYNC.dirty&&manual)toast('Sync conflict — will retry');
     await syncRegister();                              // the café Register, same heartbeat
     regSeed();                                         // pulled ledgers may have named new cafés
+    catSeed();                                         // and new spine nodes — producers, lots, roasters
+    await syncCatalog();                               // the spine of the atlas, same heartbeat
+    catRepoint();                                      // re-point local ledgers onto the merged ids
     if(tab==='cafes'&&!document.getElementById('sheet').classList.contains('open'))render();
     try{
       const dir=await api('/api/users');
@@ -3320,7 +3836,7 @@ function affinityOf(srcId){
 // beans worth chasing — roasters and origins the circle scored, best average first.
 function circleBeans(){
   const m={};
-  circleCups().forEach(c=>{const label=(c.roaster||c.origin||c.originCountry||'').trim();
+  circleCups().forEach(c=>{const o=circleLot(c);const label=(circleRoaster(c)||o.origin||o.country||'').trim();
     if(!label||c.hedonic==null)return;const k=normName(label);
     (m[k]=m[k]||{label,cups:[],who:new Set()});m[k].cups.push(c);m[k].who.add(c._who)});
   return Object.values(m).map(b=>({label:b.label,n:b.cups.length,avg:avgHedonic(b.cups),people:[...b.who]}))
@@ -3360,7 +3876,7 @@ function circleSearch(q){
   const toks=normName(q).split(/\s+/).filter(Boolean);
   if(!toks.length)return null;
   const match=s=>toks.every(t=>s.includes(t));
-  const hay=c=>normName([c.shop,c.city,c.drink,c.style,c.roaster,c.origin,c.originCountry,c.originRegion,c.variety,c.producer,c.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '));
+  const hay=c=>{const o=circleLot(c);return normName([c.shop,c.city,c.drink,c.style,circleRoaster(c),o.origin,o.country,o.region,o.variety,o.producer,o.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '))};
   const cups=circleCups().filter(c=>match(hay(c)));
   const places=circlePlaces(cups);
   const regHits=REG.entries.filter(e=>match(normName([e.name,e.city,e.neighborhood,e.notes,...(e.tags||[])].filter(Boolean).join(' '))))
@@ -3459,7 +3975,8 @@ async function circleRefresh(){
   if(changed&&tab==='circle'&&!document.getElementById('sheet').classList.contains('open')&&document.activeElement!==document.getElementById('circleSearch'))render();
 }
 function feedRow(c){
-  const beans=[c.roaster,c.origin||c.originCountry].filter(Boolean).map(esc).join(' · ');
+  const o=circleLot(c);
+  const beans=[circleRoaster(c),o.origin||o.country].filter(Boolean).map(esc).join(' · ');
   const verdict=c.again===true?' <span class="badge">again</span>':c.again===false?' <span class="badge ghost">pass</span>':'';
   const pal=palOf(c),vars=pal?cafeVars(pal):''; // their cup's beans-brand, if they read one
   return `<div class="card tap"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openCircleCup(${jsq(c._src)},${jsq(c.id)})">
@@ -3475,7 +3992,8 @@ function openCircleCup(src,id){
   const s=circleSources().find(x=>x.id===src);if(!s)return;
   const d=circleLedger(s);const c=d&&(d.cups||[]).find(x=>x.id===id);if(!c)return;
   const p=c.shop?circleProfile(c.shop):null;
-  const trace=[c.originCountry,c.originRegion,c.variety,c.producer,c.process,c.lot&&('lot '+c.lot)].filter(Boolean).map(esc).join(' · ');
+  const o=circleLot(c);
+  const trace=[o.country,o.region,o.variety,o.producer,o.process,o.lot&&('lot '+o.lot)].filter(Boolean).map(esc).join(' · ');
   openSheet(`
   <h3>${esc(c.shop||'A café cup')}${c.drink?` · ${esc(c.drink)}`:''}</h3>
   <div class="sub">${esc(s.name)}'s cup · ${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${c.city?` · ${esc(c.city)}`:''}</div>
@@ -3483,7 +4001,7 @@ function openCircleCup(src,id){
   <div class="card">
     <div class="kv"><span class="k">Their score</span><span class="v num">${c.hedonic!=null?c.hedonic+' / 9':'—'}</span></div>
     ${c.drink||c.style?`<div class="kv"><span class="k">The order</span><span class="v">${esc([c.style,c.drink].filter(Boolean).join(' · '))}</span></div>`:''}
-    ${c.roaster||c.origin?`<div class="kv"><span class="k">Beans</span><span class="v">${[c.roaster,c.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
+    ${circleRoaster(c)||o.origin?`<div class="kv"><span class="k">Beans</span><span class="v">${[circleRoaster(c),o.origin].filter(Boolean).map(esc).join(' · ')}</span></div>`:''}
     ${trace?`<div class="kv"><span class="k">Traceability</span><span class="v">${trace}</span></div>`:''}
     ${c.price!=null?`<div class="kv"><span class="k">Price</span><span class="v num">${money(c.price)}</span></div>`:''}
     ${c.again!=null?`<div class="kv"><span class="k">Verdict</span><span class="v">${c.again?'would order again':'would pass'}</span></div>`:''}
@@ -4372,6 +4890,9 @@ function finishWelcome(d,t,msg){
 /* ============ boot ============ */
 applyTheme();
 regSeed(); // the Register meets every ledger already on this device
+catSeed(); // and the catalog spine is normalised from the same ledgers (device-local, unrendered — step 1)
+catRepoint(); // then the ledger leans on it: each bag/cup carries the id of its node (additive, reversible — step 2)
+catRetire(); // then the flat roaster + structured origin (and a bag's roast level + date) retire under those refs — the node is the only copy now (step 3)
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
 // The deepest open room is where the day starts — Home, else Café, else Find.

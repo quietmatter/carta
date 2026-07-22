@@ -187,6 +187,49 @@ let srv2 = null, DATA2 = null;
   assert.equal(r.status, 400);
   ok('malformed Register rejected with 400');
 
+  // ---- the catalog: one shared, group-writable document per spine kind ----
+  const CATDOC = who => ({
+    version: 1, deleted: [],
+    entries: [{ id: 'lot-1', _key: 'fp:ethiopia|guji', kind: 'lot', country: 'Ethiopia', firstBy: who, updatedAt: '2026-01-01T00:00:00Z' }],
+  });
+
+  r = await req('GET', '/api/catalog/lots');
+  assert.equal(r.status, 401);
+  ok('catalog requires auth');
+
+  r = await req('GET', '/api/catalog/lots', { token: alice.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 0); assert.equal(r.body.catalog, null);
+  ok('unpushed catalog kind reads as rev 0 / null');
+
+  r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 0, catalog: CATDOC('alice') } });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 1);
+  ok('first catalog push accepted, rev 1');
+
+  r = await req('PUT', '/api/catalog/lots', { token: bob.token, body: { baseRev: 1, catalog: CATDOC('bob') } });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 2);
+  ok('another keeper CAN write the catalog (shared, like the Register)');
+
+  r = await req('GET', '/api/catalog/lots?meta=1', { token: alice.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 2); assert.equal(r.body.catalog, undefined);
+  ok('catalog meta poll returns rev without the blob');
+
+  r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 0, catalog: CATDOC('stale') } });
+  assert.equal(r.status, 409); assert.equal(r.body.error, 'conflict'); assert.equal(r.body.rev, 2);
+  assert.equal(r.body.catalog.entries[0].firstBy, 'bob');
+  ok('stale catalog baseRev rejected with 409 carrying the server copy');
+
+  r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 2, catalog: { nope: true } } });
+  assert.equal(r.status, 400);
+  ok('malformed catalog rejected with 400');
+
+  r = await req('GET', '/api/catalog/roasters', { token: alice.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 0);
+  ok('a second kind is an independent document at rev 0');
+
+  r = await req('GET', '/api/catalog/wombats', { token: alice.token });
+  assert.equal(r.status, 404);
+  ok('an unknown catalog kind is 404 (whitelisted — old clients degrade cleanly)');
+
   // ---- registration code gate (separate server instance) ----
   DATA2 = fs.mkdtempSync(path.join(os.tmpdir(), 'carta-sync-test2-'));
   const BASE2 = `http://127.0.0.1:${PORT + 1}`;
