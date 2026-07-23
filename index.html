@@ -742,6 +742,88 @@ const lotFields=(o,pRef)=>{const struct=[o.originCountry,o.originRegion,o.produc
   const f=Object.assign({country:o.originCountry,region:o.originRegion,producer:o.producer,variety:o.variety,process:o.process,lotName:o.lot,origin:struct?undefined:o.origin},lotIdentity(o));
   if(pRef)f.producerRefs=[pRef];   // the spine edge lot → producer, set once (blanks-only)
   return f};
+/* ---- rung 1: the namespaced hard-ID (RESOLVER §1, LOT_IDENTITY). A few channels mint an
+ * identifier public + stable enough that a shared token binds two records to ONE green
+ * OUTRIGHT — ahead of lotKeyOf's timid fingerprint fork. Zero-or-many per record, {scheme,value},
+ * the value normalised per scheme. The false friends — a warehouse SKU, a per-sale auction seat,
+ * a bare grade — are refused at entry: they name the shipment, the seat, or a quality class,
+ * never the coffee. On the lot the set is append-only and struck-not-deleted (the sighting law):
+ * a mistyped id is withdrawn, never erased, and matching reads only standing tokens. This is the
+ * DETERMINISTIC rung, shippable alone; the fuzzy scorer, propose-and-confirm and merge/split are
+ * designed in RESOLVER.md and built next. ---- */
+const HARDID_SCHEMES=[
+  {k:'kenya-outturn',label:'Kenya outturn',hint:'as sewn in the bag — e.g. 17KF0001, or 17KF0001 AA'},
+  {k:'coe',label:'Cup of Excellence lot',hint:'country · year · rank — e.g. Ethiopia 2024 #7'},
+  {k:'best-of-panama',label:'Best of Panama lot',hint:'estate · year · lot no.'},
+  {k:'gesha-village',label:'Gesha Village lot',hint:'lot no. — e.g. 119'},
+  {k:'ninety-plus',label:'Ninety Plus lot',hint:'e.g. Perci Lot 50'},
+  {k:'esmeralda',label:'Hacienda Esmeralda lot',hint:'year · auction lot no.'},
+  {k:'ico',label:'ICO mark',hint:'country/exporter/parcel — e.g. 001/0001/00001'},
+];
+const HARDID_KEYS=HARDID_SCHEMES.map(s=>s.k);
+const hardIdLabel=k=>{const s=HARDID_SCHEMES.find(x=>x.k===k);return s?s.label:k};
+// A grade names a quality class shared by thousands of lots — the screen, never the coffee.
+const GRADE_ONLY=/^(aa\+?|ab|pb|c|e|tt|t|mh|ml|ub|hb|shb|shg|sc|ep|fw|gw|pea?berry|g\s?[1-5]|grade\s?[1-5])$/i;
+const SKU_MARK=/(whse|warehouse|\bspot\b|\bsku\b|\bref\b)/i;   // an importer's private warehouse reference
+// The false-friend firewall (RESOLVER §1): refuse a non-identity token at entry, with a plain reason.
+// Fires only on a non-empty entry — an empty field is simply no hard-ID, never a refusal.
+function hardIdRefusal(scheme,raw){
+  const v=String(raw==null?'':raw).trim().replace(/\s+/g,' ');
+  if(!v)return null;
+  if(!HARDID_KEYS.includes(scheme))return 'Pick what kind of code this is first.';
+  if(GRADE_ONLY.test(v))return 'A grade names a class of coffee, not the coffee itself — it can’t be an identity.';
+  if(SKU_MARK.test(v))return 'That reads like a warehouse reference — it names the shipment, not the green.';
+  if((scheme==='kenya-outturn'||scheme==='ico')&&/^(lot\s*)?#?\d{1,4}$/i.test(v))return 'A bare lot number is a sale position, not this scheme’s identity.';
+  if(scheme==='ico'&&!/\d[/]\d/.test(v.replace(/\s/g,'')))return 'An ICO mark is country/exporter/parcel — all three, as printed.';
+  return null;
+}
+// Normalise to the {scheme,value} normal form — fold presentation noise (case, spacing, separators),
+// never structure. kenya-outturn is one token, keyed WITH its grade (OUTTURN/GRADE) since one outturn
+// splits AA/AB/PB; ico keeps its slashed triple. Returns null on a firewall refusal or an empty entry.
+function normHardId(scheme,raw){
+  if(hardIdRefusal(scheme,raw))return null;
+  let v=String(raw==null?'':raw).trim().replace(/\s+/g,' ');
+  if(!v||!HARDID_KEYS.includes(scheme))return null;
+  if(scheme==='kenya-outturn'){
+    v=v.toUpperCase().replace(/[·,]/g,'/').replace(/\s*\/\s*/g,'/').replace(/\s+/g,'/'); // an appended grade folds onto OUTTURN/GRADE
+    v=v.split('/').filter(Boolean).join('/');
+  }else if(scheme==='ico'){
+    v=v.replace(/\s*\/\s*/g,'/').replace(/\s+/g,'').toUpperCase();
+  }else{
+    v=v.replace(/\blot\s*#?\s*/i,'#').toUpperCase(); // a lot token canonicalises to #n
+  }
+  return {scheme,value:v};
+}
+// A record's hard-ID array → normalised, deduped, firewall-clean {scheme,value}[].
+const normHardIds=list=>{const out=[],seen={};
+  (list||[]).forEach(h=>{if(!h)return;const n=normHardId(h.scheme,h.value!=null?h.value:h.raw);
+    if(n&&!seen[n.scheme+' '+n.value]){seen[n.scheme+' '+n.value]=1;out.push(n)}});
+  return out;};
+const recHardIds=r=>normHardIds(r&&r.hardIds);
+// A record is worth a lot node when it carries any origin OR a hard-ID — a bag printed with only an
+// outturn is still a green. The seed/stamp/repoint sites all gate on this one predicate.
+const lotWorthy=r=>[r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin)||!!recHardIds(r).length;
+// The standing lot bound to any of these tokens — the deterministic rung. Earliest provenance wins
+// when >1 lot matches (a multi-match is a merge the next pass adjudicates, RESOLVER §5; here we bind
+// stably and never fork). role:'batch' parents are skipped — they hold siblings, not records.
+function lotByHardId(hids){
+  if(!hids||!hids.length)return null;
+  const hit=CAT.lots.entries.filter(l=>l&&!l.role&&(l.hardIds||[]).some(h=>!h.withdrawnAt&&hids.some(x=>x.scheme===h.scheme&&x.value===h.value)));
+  return hit.sort((a,b)=>String(a.firstAt||a.createdAt||'').localeCompare(String(b.firstAt||b.createdAt||''))||String(a.id).localeCompare(String(b.id)))[0]||null;
+}
+// The lot collapse key, strongest rung first: a shared hard-ID binds to the standing lot outright,
+// AHEAD of lotKeyOf's fingerprint fork. No token, or no match → the fingerprint key exactly as today.
+function lotBindKey(r,fallbackId){const l=lotByHardId(recHardIds(r));return l?l._key:lotKeyOf(r,fallbackId)}
+// Accumulate a record's hard-IDs onto its lot — append-only, union by {scheme,value}, signed and
+// dated (a documented-rung attestation, PLATFORM), struck-not-deleted, never erased. mergeCatalog
+// unions the set across devices like it unions sightings, so a bind is never lost in a sync.
+function lotAddHardIds(lot,hids,who,at){
+  if(!lot||lot.role||!hids||!hids.length)return;
+  lot.hardIds=lot.hardIds||[];let changed=false;
+  hids.forEach(h=>{if(!lot.hardIds.some(x=>x.scheme===h.scheme&&x.value===h.value&&!x.withdrawnAt)){
+    lot.hardIds.push({id:uid(),scheme:h.scheme,value:h.value,by:who||'',at:at||null});changed=true}});
+  if(changed){lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots')}
+}
 // The producer node — the grower behind a lot's producer field, keyed by name+country so two
 // growers sharing a name in different origins never collapse (the lot's timidity, one hand up).
 // The ONLY origin actor flat data can seed: the old records carry no processor (washing-station)
@@ -757,16 +839,17 @@ function catSeed(){
   const jobs=[];
   srcs.forEach(s=>{const d=s.led;if(!d)return;
     (d.bags||[]).forEach(b=>{if(b)jobs.push({at:b.createdAt||'',who:s.who,type:'bag',r:b})});
-    (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&(regSubstance(c.roaster)||[c.originCountry,c.originRegion,c.producer,c.variety,c.process,c.lot].some(regSubstance)))jobs.push({at:c.createdAt||'',who:s.who,type:'cup',r:c})});
+    (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&(regSubstance(c.roaster)||lotWorthy(c)))jobs.push({at:c.createdAt||'',who:s.who,type:'cup',r:c})});
   });
   jobs.sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(j=>{
     const r=j.r,o={at:j.at||null},who=j.who;
     let roaster=null,lot=null;
     if(regSubstance(r.roaster))roaster=catUpsert('roasters',catNorm(r.roaster),{name:r.roaster,site:r.site,palette:r.palette},who,o);
     else if(r.roasterRef)roaster=catNode('roasters',r.roasterRef); // flat gone legacy → resolve via the standing ref, so the roasts key below stays identical to catRepoint's
-    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin)){ // structured tokens OR a loose free-text origin (its own singleton lot — lotKeyOf forks to lot:<id>, never keyed, so it can't union two greens)
+    if(lotWorthy(r)){ // structured tokens, a loose free-text origin, OR a hard-ID (a bag printed with only an outturn is still a green)
       const p=catStampProducer(r,who,j.at);
-      lot=catUpsert('lots',lotKeyOf(r,r.id),lotFields(r,p&&p.id),who,o);
+      lot=catUpsert('lots',lotBindKey(r,r.id),lotFields(r,p&&p.id),who,o); // a shared hard-ID binds to the standing lot ahead of the fingerprint fork
+      lotAddHardIds(lot,recHardIds(r),who,j.at);                          // accumulate the token onto the node, append-only
     }
     else if(r.lotRef)lot=catNode('lots',r.lotRef); // flat origin gone legacy → resolve the lot via its standing ref, so the roasts key below stays identical to catRepoint's (mirror of the roaster fallback above)
     if(j.type==='bag'){
@@ -794,7 +877,7 @@ const catRefsFor=r=>({
   // falls to null. A pure no-op on today's data — every ref-bearing record still has flat
   // text — this only takes effect once the flat field is nulled: the precondition for it.
   roaster:regSubstance(r.roaster)?catByKey('roasters',catNorm(r.roaster)):catNode('roasters',r.roasterRef),
-  lot:([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin))?catByKey('lots',lotKeyOf(r,r.id)):catNode('lots',r.lotRef) // structured fields OR a loose free-text origin re-derive by key; both blank → keep the standing lotRef, exactly as the roaster line above (a no-op until a lot null-out)
+  lot:lotWorthy(r)?catByKey('lots',lotBindKey(r,r.id)):catNode('lots',r.lotRef) // structured fields, a loose origin OR a hard-ID re-derive by key (hard-ID ahead of the fingerprint); all blank → keep the standing lotRef, exactly as the roaster line above (a no-op until a lot null-out)
 });
 const setRef=(rec,k,node)=>{const id=node?node.id:null;if((rec[k]||null)===id)return false;if(id)rec[k]=id;else delete rec[k];return true};
 function catRepoint(){
@@ -886,9 +969,11 @@ function catStampLot(rec){
   // A café cup's loose free-text origin, with no structured fields, is homed on the cup's own
   // singleton lot (lotKeyOf forks to lot:<id>) — never on a shared fp-keyed lot, so node-first
   // reads and the retirement strike can never surface one cup's origin onto a co-keyed sibling.
-  const p=(struct||regSubstance(rec.origin))?catStampProducer(rec,activeName(),rec.createdAt):null;
-  const n=(struct||regSubstance(rec.origin))
-    ?catUpsert('lots',lotKeyOf(rec,rec.id),lotFields(rec,p&&p.id),activeName(),{at:rec.createdAt||null}):null;
+  const worthy=struct||regSubstance(rec.origin)||!!recHardIds(rec).length; // a hard-ID alone is worth a green too (a bag printed with only an outturn)
+  const p=worthy?catStampProducer(rec,activeName(),rec.createdAt):null;
+  const n=worthy
+    ?catUpsert('lots',lotBindKey(rec,rec.id),lotFields(rec,p&&p.id),activeName(),{at:rec.createdAt||null}):null; // a shared hard-ID binds ahead of the fingerprint fork
+  lotAddHardIds(n,recHardIds(rec),activeName(),rec.createdAt); // accumulate the token onto the node, append-only
   setRef(rec,'lotRef',n);
 }
 // The roast's write-path half — the bag's third stamp, run beside catStampRoaster and
@@ -1612,10 +1697,14 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.20.0';
+const APP_VERSION='4.21.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.21.0',date:'Jul 23, 2026',title:'A green, bound by its printed code',items:[
+    'A bag or a café cup can now carry a printed lot code — a Kenya outturn, a competition-auction lot, an ICO mark — under the origin. When two records carry the same code, they land on one green outright, even where the words alone read a little differently: the surest way to say “the same green, in another hand.”',
+    'A code that isn’t an identity — a bare grade, a warehouse reference, a per-sale lot number — is turned away with a word on why. What’s entered only ever adds to the green and is never erased; a green bound this way says so on its page.',
+  ]},
   {v:'4.20.0',date:'Jul 23, 2026',title:'The same green, in more than one hand',items:[
     'A bag now opens onto its green — the lot behind it — and every roast of that same lot, each named by its roaster. The first time the record shows one coffee in more than one hand. Reach it from a bag on your shelf, or the by-lot fold under your record.',
   ]},
@@ -1974,10 +2063,15 @@ function openLotPage(lotId){
     return `<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(roasterName(r.roasterRef))}</span><span class="dd">${[esc(r.offeringName||'—'),line].filter(Boolean).join(' — ')}</span></span></div>`;
   }).join('');
   const venues=[...new Set((D.pours||[]).filter(p=>p.lotRef===lotId&&p.shop).map(p=>p.shop))];
+  // The documented rung — a standing hard-ID names the scheme and its token, the confidence on its
+  // face (RESOLVER §6). Monochrome, a fact not a badge: this green is bound by a code, not a guess.
+  const hids=(lot.hardIds||[]).filter(h=>!h.withdrawnAt);
+  const docLine=hids.length?`<div class="muted small" style="margin:0 2px 12px"><strong>Bound by a shared code</strong> — ${hids.map(h=>esc(hardIdLabel(h.scheme)+' '+h.value)).join(' · ')}. The same code in another hand lands on this green.</div>`:'';
   openSheet(`
   <h3>${esc(lotLabel(lot))}</h3>
   <div class="sub">${hands>=2?`The same green, in ${hands} hands.`:'One green on the atlas.'}${meta?` · ${meta}`:''}</div>
   <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${roasts.length} roast${roasts.length===1?'':'s'} reference this green${hands>=2?' — the view nothing else shows: one washing station, more than one reading of it.':'.'}</div>
+  ${docLine}
   ${roasts.length?rows:'<div class="empty">No roast references this green yet.</div>'}
   ${venues.length?`<h2>Poured</h2><div class="muted small" style="margin-bottom:12px">${venues.map(esc).join(' · ')}</div>`:''}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
@@ -1998,6 +2092,24 @@ function devSeed(){
   mk('Onyx Coffee Lab','Ethiopia Nine');
   save();
   toast('Seeded — one green, two roasters');
+  if(b1.lotRef)openLotPage(b1.lotRef);else render();
+}
+// The hard-ID demo — the deterministic rung end to end (RESOLVER §1). Two bags whose FINGERPRINTS
+// DIFFER (one names the station and washed, the other only the region) but that carry the SAME Kenyan
+// outturn: lotKeyOf alone would fork them into two greens; the shared hard-ID binds the second onto
+// the first outright. One lot, two roasts, a documented rung. Reached by #seed-outturn or the console.
+function devSeedOutturn(){
+  if(guard()){toast('Switch to your own ledger to seed');return}
+  const marker='Kirinyaga AA — Tega';
+  const had=D.bags.find(b=>b.name===marker);
+  if(had&&had.lotRef)return openLotPage(had.lotRef);
+  const mk=(roaster,name,origin)=>{const b={id:uid(),createdAt:new Date().toISOString(),name,roaster,...origin,
+    hardIds:[{scheme:'kenya-outturn',value:'20CK0115/AA'}],roastLevel:1,roastDate:today()};
+    D.bags.push(b);catStampRoaster(b);catStampLot(b);catStampRoast(b);if(b.roastRef){b.roastLevel=0;b.roastDate=''}return b};
+  const b1=mk('Tega & Tula',marker,{originCountry:'Kenya',originRegion:'Kirinyaga',producer:'Kabare FCS',variety:'SL28',process:'Washed'});
+  mk('Sey','Kenya Kabare',{originCountry:'Kenya',originRegion:'Kirinyaga'}); // a thinner fingerprint — would fork on lotKeyOf alone
+  save();
+  toast('Seeded — one outturn, two hands');
   if(b1.lotRef)openLotPage(b1.lotRef);else render();
 }
 function openCupDetail(id){
@@ -2438,6 +2550,28 @@ function brandPreviewHTML(pal){
   </div>`;
 }
 
+/* ---- the hard-ID field — a printed lot code, when one exists (RESOLVER §1). Shared by the bag
+ * and the café cup: a scheme picker + the value as printed. Optional and rare by design; the note
+ * says what is and isn't one. On save, readHardIds firewalls it and folds it into the record's set. ---- */
+function hardIdRow(idp,h){h=h||{};
+  return `<label class="f"><span class="l">Hard ID <span class="opt">a printed lot code, when there is one</span></span>
+    <div class="grid2">
+      <select id="${idp}_scheme"><option value="">— none —</option>${HARDID_SCHEMES.map(s=>`<option value="${s.k}"${h.scheme===s.k?' selected':''}>${esc(s.label)}</option>`).join('')}</select>
+      <input type="text" id="${idp}_value" value="${esc(h.value||'')}" placeholder="as printed" autocapitalize="characters" autocorrect="off" spellcheck="false"></div>
+    <div class="muted small" style="margin:6px 2px 0">A shared code — a Kenya outturn, a competition lot — binds this green to the same green in another hand, outright. A grade or a warehouse number isn’t one.</div></label>`;
+}
+// Read the form's hard-ID, firewall it, and fold it into the record's set (preserving any tokens
+// synced from elsewhere, beyond the one this form edits). Returns the {scheme,value}[] — or false on
+// a refusal, which the caller treats as an abort after showing the reason.
+function readHardIds(idp,existing){
+  const scheme=val(idp+'_scheme'),raw=val(idp+'_value');
+  const extras=normHardIds((existing||[]).slice(1));
+  if(!raw)return extras;
+  const reason=hardIdRefusal(scheme,raw);
+  if(reason){toast(reason);return false}
+  return normHardIds([normHardId(scheme,raw),...extras]);
+}
+
 /* ============ bag form ============ */
 function openBagForm(id){
   if(guard())return;
@@ -2446,7 +2580,7 @@ function openBagForm(id){
   brandCtx={kicker:'On the shelf',title:'The bag, in its own colours',cta:'Brew this'};
   const o=lotRead(b); // node-first, so a bag whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
   const rr=roastRead(b); // likewise for the roast — a retired level/date prefills from its roast node, so an edit re-populates the flat fields instead of silently blanking them
-  const more=!!(o.country||o.region||o.producer||o.variety||o.process||o.lot||rr.roastDate||b.boughtAt||b.price!=null||b.notes);
+  const more=!!(o.country||o.region||o.producer||o.variety||o.process||o.lot||(b.hardIds&&b.hardIds.length)||rr.roastDate||b.boughtAt||b.price!=null||b.notes);
   openSheet(`
   <h3>${id?'Edit the coffee':'Put a coffee on the shelf'}</h3>
   <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'The bag in your hand — two lines is plenty. Or give its website and CARTA reads the rest.'}</div>
@@ -2471,6 +2605,9 @@ function openBagForm(id){
       <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process||o.process)}" placeholder="washed"></label>
       <label class="f"><span class="l">Lot no.</span><input type="text" id="f_lot" value="${esc(b.lot||o.lot)}" placeholder="free text"></label>
       <label class="f"><span class="l">Roast date</span><input type="date" id="f_roastDate" value="${esc(rr.roastDate)}"></label>
+    </div>
+    ${hardIdRow('f_hid',(b.hardIds||[])[0])}
+    <div class="grid2">
       <label class="f"><span class="l">Bought at</span><input type="text" id="f_boughtAt" value="${esc(b.boughtAt)}" placeholder="Kumquat, LA"></label>
       <label class="f"><span class="l">Price</span><input type="number" id="f_price" value="${b.price??''}" placeholder="$" inputmode="decimal"></label>
     </div>
@@ -2481,10 +2618,12 @@ function openBagForm(id){
 }
 function saveBag(id){
   if(guard())return;
+  const b0=id?bagById(id):null;
+  const hids=readHardIds('f_hid',b0&&b0.hardIds); if(hids===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
   const roastLevel=ROAST_LEVELS.indexOf(segState.roast);
   const rec={roaster:val('f_roaster'),name:val('f_name'),originCountry:val('f_country'),originRegion:val('f_region'),
     producer:val('f_producer'),variety:val('f_variety'),process:val('f_process'),lot:val('f_lot'),roastDate:val('f_roastDate'),
-    boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),
+    boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),hardIds:hids,
     site:(val('f_site')||'').trim(),palette:brandPalette};
   if(!rec.roaster&&!rec.name){toast('Name the coffee — everything else is optional');return}
   if(id){const b=bagById(id);Object.assign(b,rec,{updatedAt:new Date().toISOString()});catStampRoaster(b);catStampLot(b);catStampRoast(b);save();setAccent(roastLevel);closeSheet();render();toast('The record, revised');return}
@@ -2719,6 +2858,7 @@ function saveCup(kind,brewId,bagId,skip,editId){
     // structured traceability, aligned to the bag schema — the café's aspiration toward the exact coffee
     fields.originCountry=val('c_country');fields.originRegion=val('c_region');fields.producer=val('c_producer');
     fields.variety=val('c_variety');fields.lot=val('c_lot');fields.process=val('c_process');
+    const hids=readHardIds('c_hid',ex&&ex.hardIds); if(hids===false)return; fields.hardIds=hids; // a false-friend hard-ID — the reason is toasted, fix or clear it
     if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
     if(fields.shop&&!ex&&(sightBag||sightSeen.length)){regSight(fields.shop,{bag:sightBag,seen:sightSeen},activeName())} // what the counter showed — one save, no second submit
     sightBag=null;sightSeen=[];
@@ -2760,7 +2900,7 @@ function openCafe(pre,editId){
   const sc=sightChipsHTML();
   const o=lotRead(pre); // node-first, so editing a cup whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
   // The fold opens on edit only if the cup already carries something under it.
-  const more=!!(pre.city||pre.roaster||cupRoaster(pre)||o.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.producer||o.variety||o.lot||o.process||(pre.descriptors&&pre.descriptors.length)||pre.notes);
+  const more=!!(pre.city||pre.roaster||cupRoaster(pre)||o.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.producer||o.variety||o.lot||o.process||(pre.hardIds&&pre.hardIds.length)||(pre.descriptors&&pre.descriptors.length)||pre.notes);
   openSheet(`
   <h3>${editId?'Edit the cup':'Remember a cup'}</h3>
   <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and one tap is plenty. The rest can wait.'}</div>
@@ -2806,6 +2946,7 @@ function openCafe(pre,editId){
       <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" value="${esc(pre.lot||o.lot)}" placeholder="free text"></label>
       <label class="f"><span class="l">Process</span><input type="text" id="c_process" value="${esc(pre.process||o.process)}" placeholder="washed"></label>
     </div>
+    ${hardIdRow('c_hid',(pre.hardIds||[])[0])}
     <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" value="${pre.price??''}" placeholder="$"></label>
     <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow(pre.descriptors)}</label>
     <label class="f"><span class="l">One line <span class="opt">what you found</span></span><input type="text" id="c_notes" value="${esc(pre.notes||'')}" placeholder="bright, a little sharp, gone too fast"></label>
@@ -3609,6 +3750,17 @@ function mergeSightings(...lists){
   });
   return [...m.values()].sort(bySight);
 }
+// The lot's hard-ID set unions across devices exactly as sightings do — append-only, union by id,
+// a strike (withdrawnAt) only ever adds. Two keepers each entering a token on the same green both
+// stand; a bind is never lost in a merge. Deterministic, no conflicts by construction (RESOLVER §1).
+function mergeHardIds(...lists){
+  const m=new Map();
+  lists.flat().filter(h=>h&&h.id).forEach(h=>{const p=m.get(h.id);
+    if(!p){m.set(h.id,{...h});return}
+    if(h.withdrawnAt&&(!p.withdrawnAt||h.withdrawnAt<p.withdrawnAt))p.withdrawnAt=h.withdrawnAt;
+  });
+  return [...m.values()].sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||String(a.id).localeCompare(String(b.id)));
+}
 function mergeRegister(loc,rem){
   // Same id on both sides: newer updatedAt wins; on a tie the copy carrying
   // more substance stands (a collapse fills fields without touching updatedAt,
@@ -3658,6 +3810,7 @@ function mergeCatalog(loc,rem){
     if(!r){m.set(l.id,l);return}
     const w={...(beats(l,r)?l:r)};
     if(l.sightings||r.sightings)w.sightings=mergeSightings(l.sightings||[],r.sightings||[]);
+    if(l.hardIds||r.hardIds)w.hardIds=mergeHardIds(l.hardIds||[],r.hardIds||[]); // the identity set unions — a bind is never lost to the winner
     m.set(l.id,w)});
   const groups={};
   [...m.values()].filter(e=>e&&e._key&&!dead.has(e.id)).forEach(e=>{(groups[e._key]=groups[e._key]||[]).push(e)});
@@ -3670,6 +3823,8 @@ function mergeCatalog(loc,rem){
     });
     const sg=mergeSightings(...g.map(e=>e.sightings||[]));
     if(sg.length)w.sightings=sg;
+    const hg=mergeHardIds(...g.map(e=>e.hardIds||[])); // two devices seeding one node both carry their tokens
+    if(hg.length)w.hardIds=hg;
     return w;
   });
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
@@ -5118,7 +5273,9 @@ if(needsWelcome()){
 if(SYNC)setTimeout(()=>syncNow(false),400);
 // Demo hook for the lot page — window.devSeed() from the console, or open with #seed-lot.
 window.devSeed=devSeed;
+window.devSeedOutturn=devSeedOutturn;
 if(location.hash==='#seed-lot')setTimeout(devSeed,200);
+if(location.hash==='#seed-outturn')setTimeout(devSeedOutturn,200);
 window.addEventListener('online',()=>{syncNow(false);_mlDown=false;smapMount()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyTheme();syncNow(false)}});
 </script>
