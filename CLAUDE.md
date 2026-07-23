@@ -169,7 +169,10 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 - **setups** — a grinder + brewer combination. Key fields: `name`, `grinder`,
   `brewer`, `basket`, `papers`, `water`, and the grinder's real scale
   (`grindMin`, `grindMax`, `grindStep`). **Grind is only comparable within one
-  Setup** — each Setup's grind dial moves the way that grinder does.
+  Setup** — each Setup's grind dial moves the way that grinder does. Also carries
+  `grinderRef`/`brewerRef` — refs into the canonical **Gear** catalog (the shared
+  grinder/brewer model). The grind scale stays per-Setup, untouched; Gear is what
+  transfers, the Setup is how one keeper's dial moves.
 - **bags** — a bag of coffee: `roaster`, `name`, origin fields (`originCountry`,
   `originRegion`, `producer`, `variety`, `process`, `lot`), `roastDate`,
   `roastLevel` (index into `ROAST_LEVELS`), `price`, `archived`, plus its `site`
@@ -180,6 +183,7 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   no picture is captured or stored).
 - **brews** — one brew: `bagId`, `setupId`, `technique`, `grind`, `doseG`,
   `waterG`, `tempC` (stored canonically in °C), `timeSec`, `instrumentation`.
+  Also carries `roastRef` — the spine edge brew → **Roast**, read through its bag.
 - **cups** — a tasting. `kind` is `home` (linked to a `brewId`/`bagId`) or
   `cafe` (with `shop`, `city`, `style`, `drink`, `roaster`, `origin`, `price`,
   `again`, plus optional structured traceability aligned to bags —
@@ -187,7 +191,16 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   `hedonic` (1–9), `descriptors[]`, `notes`. A café cup may also carry the beans'
   brand read from the roaster's website: its `site` and a `palette`
   (`readBrand`), which tints the cup's row and detail. A legacy `photo` may
-  linger on older cups but is inert.
+  linger on older cups but is inert. A cup is a **Reading over a Preparation**:
+  `prepKind` is `brew` (home — `brewRef` = the brew) or `pour` (café — `pourRef`
+  → a Pour). Refs into the catalog spine (`roasterRef`/`lotRef`) sit beside the
+  flat text, which retires onto the node once one stands.
+- **pours** — the café availability edge: a green seen at a venue, dated and
+  signed, its recipe unknown and never invented. `{id, roastRef, roasterRef,
+  lotRef, venueRef, shop, at, by, cupRef}`, id keyed deterministically
+  (`pour:<cupId>`) so every device and every re-derivation lands the same record.
+  A local projection of café cups (`cupPrepRepoint`/`catStampPour`), merged by id
+  in sync; a removed café cup tombstones its pour.
 - **cafes** — per-café profiles keyed by shop name (`saveCafeProfile` writes
   them; reads via `cafeProfile` resolve **Register-first**, falling back to
   this per-user copy, which remains for export/sync back-compat and to seed
@@ -219,6 +232,24 @@ Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
 lines that only ever accumulate; strikes add a date, nothing is removed, and
 `mergeRegister` unions them by id so sync never loses a line). It is shared by
 all users on the device and synced as one group-writable document.
+
+Beside the Register the device keeps **the catalog** (`carta.catalog.<kind>.v1`) —
+the spine upstream of the café, the Register's envelope generalised to eight kinds
+(`producers`, `processors`, `aggregators`, `lots`, `blends`, `roasters`, `roasts`,
+`gear`). `loadReg`/`saveReg`/`mergeRegister` became `loadDoc(kind)`/`saveDoc`/
+`mergeCatalog`; `regUpsert` became `catUpsert(kind, key, …)` (same sparse-fill,
+blanks-only law); `reachCompile` became `compile(entry)` (fold sightings into a
+reading). Each doc is one group-writable rev/409 document at `/api/catalog/:kind`
+(both servers). The **lot** carries its identity columns — `grain`, `scope`,
+`hardIds[]`, `fingerprint{}`, `lineage{}`, `processingBatchRef` — beside its flat
+origin (the read/retirement surface), never over it. Migration seeds the catalog
+from every readable ledger (`catSeed`/`catSeedGear`), re-points the ledger onto it
+(`catRepoint`/`gearRepoint`/`brewRepoint`/`cupPrepRepoint`, additive + reversible),
+then retires the flat text once a node stands (`catRetire`, the one irreversible
+step). Write-path stamps (`catStamp*`) author nodes at save, not next boot. The
+**lot page** (`openLotPage`, drilled into from a bag or the by-lot fold) lists the
+roasts referencing one green, each named by its roaster — the "same green, many
+hands" surface. `devSeed()` (`#seed-lot`) is a demo fixture, never a UI affordance.
 
 ### Invariants to preserve
 

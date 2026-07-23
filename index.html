@@ -553,7 +553,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 /* ============ store ============ */
 const KEY='carta.v1';           // legacy single-user key — migrated to per-user keys on first boot
 const USERS_KEY='carta.users';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],cafes:[],cafeFavs:[],cafeWants:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],pours:[],cafes:[],cafeFavs:[],cafeWants:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dataKey=id=>KEY+'.'+id;
 function loadUsers(){
@@ -707,6 +707,50 @@ const lotKeyOf=(o,fallbackId)=>{
   const parts=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].map(catNorm);
   return parts.filter(Boolean).length>=2 ? 'fp:'+parts.join('|') : 'lot:'+fallbackId;   // too thin to trust → fork
 };
+// The lot's process family, mapped conservatively from the roaster's free-text process.
+// A recognised word carries; anything unclear reads 'unspecified' — the honest default,
+// never a guessed 'experimental' (SCHEMA/LOT_IDENTITY: process admits the unspecified).
+const PROC_FAM=['washed','natural','honey','anaerobic','experimental'];
+const procFamily=p=>{const s=catNorm(p);if(!s)return'unspecified';const hit=PROC_FAM.find(f=>s.indexOf(f)>=0);if(hit)return hit;
+  if(s.indexOf('wash')>=0)return'washed';if(s.indexOf('nat')>=0)return'natural';if(s.indexOf('hon')>=0)return'honey';if(s.indexOf('anaerob')>=0||s.indexOf('carbonic')>=0)return'anaerobic';return'unspecified'};
+// The lot's identity columns (SCHEMA's ladder, as fields), added ALONGSIDE the flat origin the
+// read/retirement paths still use — never replacing it (see the branch decision). Migration is
+// honest, never precise: grain follows the finest token actually present; scope, hardIds, harvest
+// and intermediary stay unread because flat text carries no channel to read them from; the
+// fingerprint mirrors the flat fields so the resolver (a later pass) has a cluster to score, not a
+// verdict. Blanks-only through catUpsert, so re-derivation each boot is idempotent.
+function lotIdentity(o){
+  const head=regSubstance(o.producer)?{headName:o.producer,headTier:'producer'}
+    :regSubstance(o.lot)?{headName:o.lot,headTier:'farm'}
+    :regSubstance(o.originRegion)?{headName:o.originRegion,headTier:'region'}
+    :regSubstance(o.originCountry)?{headName:o.originCountry,headTier:null}
+    :regSubstance(o.origin)?{headName:o.origin,headTier:null}:{headName:null,headTier:null};
+  const grain=(regSubstance(o.producer)||regSubstance(o.lot))?'green-lot'
+    :regSubstance(o.originRegion)?'station-season'
+    :regSubstance(o.originCountry)?'region-grade':null;
+  return {grain,hardIds:[],
+    fingerprint:{headName:head.headName,headTier:head.headTier,country:o.originCountry||null,region:o.originRegion||null,
+      varieties:regSubstance(o.variety)?[o.variety]:[],
+      process:{family:procFamily(o.process),stages:[]},
+      harvest:{crop:null,year:null,hemisphere:null},intermediary:null},
+    lineage:{mergedFrom:[],splitFrom:null},processingBatchRef:null};
+}
+// The whole field object a lot upsert carries — the flat origin (the read surface) plus the
+// identity columns above — so catSeed, catStampLot and any later writer stamp one shape. A loose
+// free-text origin (no structured fields) keeps only `origin`; structured records keep the six.
+const lotFields=(o,pRef)=>{const struct=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].some(regSubstance);
+  const f=Object.assign({country:o.originCountry,region:o.originRegion,producer:o.producer,variety:o.variety,process:o.process,lotName:o.lot,origin:struct?undefined:o.origin},lotIdentity(o));
+  if(pRef)f.producerRefs=[pRef];   // the spine edge lot → producer, set once (blanks-only)
+  return f};
+// The producer node — the grower behind a lot's producer field, keyed by name+country so two
+// growers sharing a name in different origins never collapse (the lot's timidity, one hand up).
+// The ONLY origin actor flat data can seed: the old records carry no processor (washing-station)
+// or aggregator (importer/exporter) field, so those catalogs stay honestly empty until a curator
+// or the resolver (a later pass) names one — never a blank coerced into a fake node.
+function catStampProducer(o,who,at){
+  if(!regSubstance(o.producer))return null;
+  return catUpsert('producers',catNorm(o.producer)+'|'+catNorm(o.originCountry),{name:o.producer,country:o.originCountry,region:o.originRegion},who,{at:at||null});
+}
 function catSeed(){
   const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
   remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
@@ -720,10 +764,10 @@ function catSeed(){
     let roaster=null,lot=null;
     if(regSubstance(r.roaster))roaster=catUpsert('roasters',catNorm(r.roaster),{name:r.roaster,site:r.site,palette:r.palette},who,o);
     else if(r.roasterRef)roaster=catNode('roasters',r.roasterRef); // flat gone legacy → resolve via the standing ref, so the roasts key below stays identical to catRepoint's
-    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance))
-      lot=catUpsert('lots',lotKeyOf(r,r.id),{country:r.originCountry,region:r.originRegion,producer:r.producer,variety:r.variety,process:r.process,lotName:r.lot},who,o);
-    else if(regSubstance(r.origin)) // a café cup with only a loose free-text origin → its own singleton lot (lotKeyOf forks to lot:<id> with no tokens), never keyed, so it can't union two greens
-      lot=catUpsert('lots',lotKeyOf(r,r.id),{origin:r.origin},who,o);
+    if([r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin)){ // structured tokens OR a loose free-text origin (its own singleton lot — lotKeyOf forks to lot:<id>, never keyed, so it can't union two greens)
+      const p=catStampProducer(r,who,j.at);
+      lot=catUpsert('lots',lotKeyOf(r,r.id),lotFields(r,p&&p.id),who,o);
+    }
     else if(r.lotRef)lot=catNode('lots',r.lotRef); // flat origin gone legacy → resolve the lot via its standing ref, so the roasts key below stays identical to catRepoint's (mirror of the roaster fallback above)
     if(j.type==='bag'){
       const rk=[roaster?roaster.id:'',lot?lot.id:'',catNorm(r.name),r.roastDate||''].join('|');
@@ -842,8 +886,9 @@ function catStampLot(rec){
   // A café cup's loose free-text origin, with no structured fields, is homed on the cup's own
   // singleton lot (lotKeyOf forks to lot:<id>) — never on a shared fp-keyed lot, so node-first
   // reads and the retirement strike can never surface one cup's origin onto a co-keyed sibling.
+  const p=(struct||regSubstance(rec.origin))?catStampProducer(rec,activeName(),rec.createdAt):null;
   const n=(struct||regSubstance(rec.origin))
-    ?catUpsert('lots',lotKeyOf(rec,rec.id),{country:rec.originCountry,region:rec.originRegion,producer:rec.producer,variety:rec.variety,process:rec.process,lotName:rec.lot,origin:struct?undefined:rec.origin},activeName(),{at:rec.createdAt||null}):null;
+    ?catUpsert('lots',lotKeyOf(rec,rec.id),lotFields(rec,p&&p.id),activeName(),{at:rec.createdAt||null}):null;
   setRef(rec,'lotRef',n);
 }
 // The roast's write-path half — the bag's third stamp, run beside catStampRoaster and
@@ -862,6 +907,109 @@ function catStampRoast(rec){
     {roasterRef:rr?rr.id:null,lotRef:lr?lr.id:null,offeringName:rec.name,level:lv,roastDate:rec.roastDate,site:rec.site,palette:rec.palette},activeName(),{at:rec.createdAt||null});
   if(n&&regSubstance(lv)&&n.level!==lv){n.level=lv;n.updatedAt=new Date().toISOString();n.by=activeName();CAT.roasts.dirty=true;saveDoc('roasts')} // level is mutable and unkeyed → write it through so a re-grade survives the flat field's retirement
   setRef(rec,'roastRef',n);
+}
+/* ---- Gear — the canonical grinder/brewer model, the key the brew corpus will one day
+ * aggregate on. Seeded from every Setup's free-text grinder/brewer; maker/model can't be
+ * split from free text, so `model` carries the whole string and `maker`/`methodClass` read
+ * unread (a later pass classifies them). A Setup keeps its own grind scale — grind is only
+ * comparable within one Setup, invariant — and merely gains grinderRef/brewerRef, the edges
+ * to the shared model. Keyed by kind+name so a grinder and a brewer sharing a string never
+ * collapse. The Setup is how one keeper's dial moves; Gear is what transfers.
+ * SCHEMA wrote the grinder/brewer distinction as `kind`, but the envelope already owns `kind`
+ * for the entity type ('gear'); the field is named `gearKind` here to avoid that collision. ---- */
+function catStampGear(s){
+  if(!s)return;
+  const g=regSubstance(s.grinder)?catUpsert('gear','grinder:'+catNorm(s.grinder),{gearKind:'grinder',model:s.grinder},activeName(),{at:s.createdAt||null}):null;
+  const b=regSubstance(s.brewer)?catUpsert('gear','brewer:'+catNorm(s.brewer),{gearKind:'brewer',model:s.brewer},activeName(),{at:s.createdAt||null}):null;
+  setRef(s,'grinderRef',g);setRef(s,'brewerRef',b);
+}
+// Boot sweep: seed Gear from every readable ledger's Setups, chronologically so the earliest
+// naming holds provenance — the regSeed/catSeed move, one collection over.
+function catSeedGear(){
+  const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
+  remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
+  const jobs=[];
+  srcs.forEach(s=>{(s.led&&s.led.setups||[]).forEach(st=>{if(st)jobs.push({at:st.createdAt||'',who:s.who,s:st})})});
+  jobs.sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(j=>{const s=j.s,o={at:j.at||null},who=j.who;
+    if(regSubstance(s.grinder))catUpsert('gear','grinder:'+catNorm(s.grinder),{gearKind:'grinder',model:s.grinder},who,o);
+    if(regSubstance(s.brewer))catUpsert('gear','brewer:'+catNorm(s.brewer),{gearKind:'brewer',model:s.brewer},who,o);
+  });
+}
+// Re-point Setups onto Gear — the catRepoint move for the tools. Flat grinder/brewer text stays
+// authoritative (re-derives at boot); a blank falls back to the standing ref. Local users only,
+// additive and reversible, never bumps updatedAt (a local derivation, not a keeper's edit).
+function gearRepoint(){
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    (d.setups||[]).forEach(s=>{if(!s)return;
+      const g=regSubstance(s.grinder)?catByKey('gear','grinder:'+catNorm(s.grinder)):catNode('gear',s.grinderRef);
+      const b=regSubstance(s.brewer)?catByKey('gear','brewer:'+catNorm(s.brewer)):catNode('gear',s.brewerRef);
+      if([setRef(s,'grinderRef',g),setRef(s,'brewerRef',b)].some(Boolean))changed=true;
+    });
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
+  });
+  D=load();
+}
+// A brew's beans are its bag's, so its Roast is the bag's roast — the spine edge brew → roast,
+// read through the shelf. brewStampRoast stamps it at save; brewRepoint sweeps existing brews at
+// boot. Additive and reversible, local users only, no updatedAt bump. The purchase `channel`
+// SCHEMA names stays unread — no source field, and no form asks it yet (a later pass).
+function brewStampRoast(brew){if(!brew)return;const b=bagById(brew.bagId);setRef(brew,'roastRef',b&&catNode('roasts',b.roastRef))}
+function brewRepoint(){
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    const bagRoast={};(d.bags||[]).forEach(b=>{if(b)bagRoast[b.id]=b.roastRef||null});
+    (d.brews||[]).forEach(x=>{if(!x)return;const rr=x.bagId&&bagRoast[x.bagId]?catNode('roasts',bagRoast[x.bagId]):null;
+      if(setRef(x,'roastRef',rr))changed=true});
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
+  });
+  D=load();
+}
+/* ---- A cup is a Reading over a Preparation. A home cup reads over its Brew (the prep already
+ * exists — brewRef is the brewId). A café cup reads over a Pour: the venue's preparation, the
+ * availability edge of the atlas's first branch — a roast (or, honestly, just a green) seen at a
+ * venue, dated and signed, its recipe unknown and NEVER invented. Pours are keyed
+ * deterministically ('pour:'+cup.id) so every device and every re-derivation lands the SAME
+ * record — no dirty flag, no cross-device duplicate; a merge unions them by id. Local, reversible.
+ * ---- */
+function pourFor(c,who){
+  const e=regByName(c.shop);
+  return {id:'pour:'+c.id,kind:'pour',createdAt:c.createdAt||new Date().toISOString(),at:c.createdAt||null,by:who||'',
+    venueRef:e?e.id:null,shop:c.shop||null,roastRef:c.roastRef||null,roasterRef:c.roasterRef||null,lotRef:c.lotRef||null,cupRef:c.id};
+}
+// Save-time: mint or refresh this café cup's Pour and stamp the cup's prepKind/pourRef. Rides the
+// normal save() push — a genuine new availability record, not a silent derivation.
+function catStampPour(c,who){
+  if(!c||c.kind!=='cafe'||!regSubstance(c.shop))return;
+  const p=pourFor(c,who||activeName());
+  D.pours=D.pours||[];const i=D.pours.findIndex(x=>x.id===p.id);
+  if(i>=0)D.pours[i]=Object.assign(D.pours[i],p,{updatedAt:new Date().toISOString()});else D.pours.push(p);
+  c.prepKind='pour';c.pourRef=p.id;
+}
+// Boot sweep: backfill prepKind + brewRef/pourRef on every cup and mint the café cups' Pours.
+// Deterministic ids mean each device derives the identical set, so no push is needed — it rides
+// the next genuine edit, exactly as catRepoint's refs do. Prunes a pour whose café cup is gone.
+function cupPrepRepoint(){
+  USERS.users.forEach(u=>{
+    const d=readJSONLS(dataKey(u.id)); if(!d)return; let changed=false;
+    d.pours=d.pours||[];
+    (d.cups||[]).forEach(c=>{if(!c)return;
+      if(c.kind==='cafe'){
+        if(c.prepKind!=='pour'){c.prepKind='pour';changed=true}
+        const p=pourFor(c,u.name);const i=d.pours.findIndex(x=>x.id===p.id);
+        if(i<0){d.pours.push(p);changed=true}
+        else['venueRef','shop','roastRef','roasterRef','lotRef','at'].forEach(k=>{if((d.pours[i][k]||null)!==(p[k]||null)){d.pours[i][k]=p[k];changed=true}});
+        if((c.pourRef||null)!==p.id){c.pourRef=p.id;changed=true}
+      }else{
+        if(c.prepKind!=='brew'){c.prepKind='brew';changed=true}
+        if((c.brewRef||null)!==(c.brewId||null)){c.brewRef=c.brewId||null;changed=true}
+      }
+    });
+    const live=new Set((d.cups||[]).filter(c=>c&&c.kind==='cafe').map(c=>'pour:'+c.id));
+    const before=d.pours.length;d.pours=d.pours.filter(p=>live.has(p.id));if(d.pours.length!==before)changed=true;
+    if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
+  });
+  D=load();
 }
 
 /* ============ the reach ============ */
@@ -1464,10 +1612,13 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.19.0';
+const APP_VERSION='4.20.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.20.0',date:'Jul 23, 2026',title:'The same green, in more than one hand',items:[
+    'A bag now opens onto its green — the lot behind it — and every roast of that same lot, each named by its roaster. The first time the record shows one coffee in more than one hand. Reach it from a bag on your shelf, or the by-lot fold under your record.',
+  ]},
   {v:'4.19.0',date:'Jul 22, 2026',title:'The loose line, on the green too',items:[
     'A café cup\'s loose origin — the quick "Ethiopia / blend" you jot when there\'s no lot to spell out — now rests on the green behind the cup like its every other origin field, so the whole cup reads from one place. As everywhere else it re-spells nothing you wrote and falls back to exactly what you typed; a cup shared into your circle still shows precisely its keeper\'s own words.',
   ]},
@@ -1805,7 +1956,49 @@ function openLotKin(ref){
   const r=lotIndex().find(x=>x.ref===ref); if(!r)return;
   openSheet(`<h3 style="margin:0 0 4px">${esc(r.name)}</h3>
     <div class="muted small" style="margin:0 0 10px">one green · ${kinTally(r)}, wherever it landed in your journal.</div>
-    ${r.recs.map(kinRow).join('')}`);
+    ${r.recs.map(kinRow).join('')}
+    <button class="btn btn-quiet" style="margin-top:12px" onclick="closeSheet();openLotPage(${jsq(ref)})">The same green, in every hand →</button>`);
+}
+// The lot page — the atlas node, drilled into from a bag or the by-lot fold. The proof the whole
+// restructure exists for: the same green in more than one hand, each roast NAMED BY ITS ROASTER.
+// Reads the catalog, not one ledger, so it holds even for a roast nobody has logged a cup of.
+function openLotPage(lotId){
+  const lot=catNode('lots',lotId); if(!lot){toast('That green isn’t on the atlas yet');return}
+  const roasts=CAT.roasts.entries.filter(r=>r.lotRef===lotId)
+    .sort((a,b)=>(b.roastDate||'').localeCompare(a.roastDate||'')||(b.createdAt||'').localeCompare(a.createdAt||''));
+  const hands=new Set(roasts.map(r=>r.roasterRef).filter(Boolean)).size;
+  const fp=lot.fingerprint||{};
+  const meta=[lot.grain,(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:lot.process),lot.variety].filter(regSubstance).map(esc).join(' · ');
+  const rows=roasts.map(r=>{
+    const line=[r.level,r.roastDate&&fmtMDY(r.roastDate)].filter(regSubstance).map(esc).join(' · ');
+    return `<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(roasterName(r.roasterRef))}</span><span class="dd">${[esc(r.offeringName||'—'),line].filter(Boolean).join(' — ')}</span></span></div>`;
+  }).join('');
+  const venues=[...new Set((D.pours||[]).filter(p=>p.lotRef===lotId&&p.shop).map(p=>p.shop))];
+  openSheet(`
+  <h3>${esc(lotLabel(lot))}</h3>
+  <div class="sub">${hands>=2?`The same green, in ${hands} hands.`:'One green on the atlas.'}${meta?` · ${meta}`:''}</div>
+  <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${roasts.length} roast${roasts.length===1?'':'s'} reference this green${hands>=2?' — the view nothing else shows: one washing station, more than one reading of it.':'.'}</div>
+  ${roasts.length?rows:'<div class="empty">No roast references this green yet.</div>'}
+  ${venues.length?`<h2>Poured</h2><div class="muted small" style="margin-bottom:12px">${venues.map(esc).join(' · ')}</div>`:''}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+// A demo fixture — one genuine "same green, two hands" case, so the lot page can be shown end to
+// end. Two bags with the IDENTICAL green (a five-token origin) bought from two different roasters;
+// the real write path (catStampRoaster/Lot/Roast) collapses them onto one lot with two roasts.
+// Not a UI affordance — reached by the #seed-lot hash or from the console (window.devSeed). Idempotent.
+function devSeed(){
+  if(guard()){toast('Switch to your own ledger to seed');return}
+  const marker='Gedeb natural — Nine';
+  const had=D.bags.find(b=>b.name===marker);
+  if(had&&had.lotRef)return openLotPage(had.lotRef);
+  const green={originCountry:'Ethiopia',originRegion:'Gedeb',producer:'Nine Kilo',variety:'Heirloom',process:'Natural'};
+  const mk=(roaster,name)=>{const b={id:uid(),createdAt:new Date().toISOString(),name,roaster,...green,roastLevel:1,roastDate:today()};
+    D.bags.push(b);catStampRoaster(b);catStampLot(b);catStampRoast(b);if(b.roastRef){b.roastLevel=0;b.roastDate=''}return b};
+  const b1=mk('Nine',marker);
+  mk('Onyx Coffee Lab','Ethiopia Nine');
+  save();
+  toast('Seeded — one green, two roasters');
+  if(b1.lotRef)openLotPage(b1.lotRef);else render();
 }
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
@@ -1856,6 +2049,8 @@ function removeCup(id){
   if(i<0)return;
   D.cups.splice(i,1);
   (D.deleted=D.deleted||[]).push({id,at:new Date().toISOString()}); // tombstone: survives sync merges
+  if(c.kind==='cafe'){const pid='pour:'+id,pi=(D.pours||[]).findIndex(x=>x.id===pid); // the café cup's Pour goes with it — tombstone so no device resurrects the availability edge
+    if(pi>=0)D.pours.splice(pi,1);D.deleted.push({id:pid,at:new Date().toISOString()})}
   save();closeSheet();render();toast('Cup removed');
 }
 
@@ -2357,6 +2552,7 @@ function openBagDetail(id){
     <div class="kv"><span class="k">Brews</span><span class="v num">${brews.length}</span></div>
   </div>
   ${kinHTML(b)}
+  ${b.lotRef&&catNode('lots',b.lotRef)?`<button class="btn btn-quiet" onclick="closeSheet();openLotPage(${jsq(b.lotRef)})">The same green, in other hands →</button>`:''}
   ${b.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${esc(b.notes)}</div>`:''}
   ${readOnly()?`<button class="btn btn-quiet" onclick="closeSheet()">Close</button>`:`<button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
   <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`}`);
@@ -2393,7 +2589,9 @@ function saveSetup(id){
     papers:val('s_papers'),water:val('s_water'),notes:val('s_notes'),
     grindMin:numv('s_grindMin'),grindMax:numv('s_grindMax'),grindStep:numv('s_grindStep')};
   if(!rec.name){toast('Name the Setup');return}
-  if(id){Object.assign(setupById(id),rec,{updatedAt:new Date().toISOString()})}else{D.setups.push({id:uid(),createdAt:new Date().toISOString(),...rec})}
+  let s;
+  if(id){s=setupById(id);Object.assign(s,rec,{updatedAt:new Date().toISOString()})}else{s={id:uid(),createdAt:new Date().toISOString(),...rec};D.setups.push(s)}
+  catStampGear(s); // author its grinder/brewer Gear nodes and stamp the refs at save time, not next boot
   save();closeSheet();render();toast('Setup saved');
 }
 
@@ -2482,16 +2680,16 @@ function saveBrew(editId){
     const g=val('n_grinder'),br=val('n_brewer');
     if(!g&&!br){toast('Name your grinder or brewer — once is enough');return}
     const s={id:uid(),createdAt:new Date().toISOString(),name:[g,br].filter(Boolean).join(' · '),grinder:g,brewer:br};
-    D.setups.push(s);setupId=s.id;
+    D.setups.push(s);setupId=s.id;catStampGear(s); // the first brew names the tools → author their Gear nodes now
   }
   if(!setupId){toast('Refused: a brew requires a Setup');return}
   const fields={bagId:val('b_bag'),setupId,
     technique:val('b_technique'),grind:dialState.grind.v,doseG:dialState.dose.v,waterG:dialState.water.v,
     tempC:dialTempC(),timeSec:dialState.time.v,instrumentation:segState.instr||'measured',notes:val('b_notes')};
   const ex=editId?D.brews.find(x=>x.id===editId):null;
-  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});save();stopTimer(true);closeSheet();go('field');toast('Brew updated');return}
+  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});brewStampRoast(ex);save();stopTimer(true);closeSheet();go('field');toast('Brew updated');return}
   const brew={id:uid(),createdAt:new Date().toISOString(),...fields};
-  D.brews.push(brew);save();stopTimer(true);
+  D.brews.push(brew);brewStampRoast(brew);save();stopTimer(true);
   openImpression(brew);
 }
 function openImpression(brew){
@@ -2539,7 +2737,8 @@ function saveCup(kind,brewId,bagId,skip,editId){
         if(ln&&regSubstance(ln.origin))cup.origin=''; // a loose free-text origin (no structured fields) was homed on this cup's own singleton lot → retire the flat copy too
       }
     }
-  }
+    catStampPour(cup,activeName()); // the café cup is a Reading over a Pour — mint the venue availability edge
+  }else{cup.prepKind='brew';cup.brewRef=cup.brewId||null} // a home cup is a Reading over its Brew
   editingCupId=null;
   save();closeSheet();
   if(kind==='cafe'){go('cafes');toast(ex?'Cup updated':(firstOut?'Kept — your first cup out.':'Kept.'));}
@@ -3305,7 +3504,7 @@ function importAsUser(){
   catch(e){toast('Storage full — could not import');return}
   USERS.users.push(nu);saveUsers();
   pendingImport=null;closeSheet();
-  regSeed();catSeed();catRepoint(); // an imported record may name cafés/greens the device hasn't met
+  regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();brewRepoint();cupPrepRepoint(); // an imported record may name cafés/greens/tools the device hasn't met
   viewLedger(nu.id);
 }
 function importReplace(){
@@ -3314,7 +3513,7 @@ function importReplace(){
   const me=userById(USERS.activeId).name;
   if(!confirm(`Replace ${me}'s current ledger with the import?\n\nThis cannot be undone.`))return;
   const cat=pendingImport.catalog;delete pendingImport.catalog; // fold the copy's spine before it becomes the ledger, so retired fields read through
-  D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catRepoint();closeSheet();render();toast('Ledger imported');
+  D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();brewRepoint();cupPrepRepoint();closeSheet();render();toast('Ledger imported');
 }
 // Fold an imported catalog into the device's spine, then heal the imported ledger's refs.
 // A copy carries the whole atlas (exportJSON); bringing it in unions it into the local spine
@@ -3380,7 +3579,7 @@ function mergeLedgers(loc,rem){
   const out=clone(blank);
   const dead=new Map();[...(rem.deleted||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
   out.deleted=[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-  ['setups','bags','brews','cups','cafes'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
+  ['setups','bags','brews','cups','pours','cafes'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
   const f=new Map();[...(rem.cafeFavs||[]),...(loc.cafeFavs||[])].forEach(x=>f.set(String(x).toLowerCase(),x));
   out.cafeFavs=[...f.values()].sort((a,b)=>a.localeCompare(b));
   const w=new Map();[...(rem.cafeWants||[]),...(loc.cafeWants||[])].forEach(x=>w.set(String(x).toLowerCase(),x));
@@ -3586,8 +3785,12 @@ async function syncNow(manual){
     await syncRegister();                              // the café Register, same heartbeat
     regSeed();                                         // pulled ledgers may have named new cafés
     catSeed();                                         // and new spine nodes — producers, lots, roasters
+    catSeedGear();                                      // and new Gear — grinder/brewer models
     await syncCatalog();                               // the spine of the atlas, same heartbeat
     catRepoint();                                      // re-point local ledgers onto the merged ids
+    gearRepoint();                                      // and Setups onto their Gear
+    brewRepoint();                                      // and brews onto their Roast
+    cupPrepRepoint();                                   // and cups onto their Preparation
     if(tab==='cafes'&&!document.getElementById('sheet').classList.contains('open'))render();
     try{
       const dir=await api('/api/users');
@@ -4891,7 +5094,11 @@ function finishWelcome(d,t,msg){
 applyTheme();
 regSeed(); // the Register meets every ledger already on this device
 catSeed(); // and the catalog spine is normalised from the same ledgers (device-local, unrendered — step 1)
+catSeedGear(); // Gear too — grinder/brewer models swept from every Setup
 catRepoint(); // then the ledger leans on it: each bag/cup carries the id of its node (additive, reversible — step 2)
+gearRepoint(); // and each Setup carries grinderRef/brewerRef
+brewRepoint(); // and each brew reads its Roast through its bag
+cupPrepRepoint(); // and each cup is a Reading over its Preparation — a Brew or a Pour
 catRetire(); // then the flat roaster + structured origin (and a bag's roast level + date) retire under those refs — the node is the only copy now (step 3)
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
@@ -4909,6 +5116,9 @@ if(needsWelcome()){
 // Sync: on boot, when the network returns, and when the app comes back to the
 // foreground (iOS PWAs get no background time — this is the sync heartbeat).
 if(SYNC)setTimeout(()=>syncNow(false),400);
+// Demo hook for the lot page — window.devSeed() from the console, or open with #seed-lot.
+window.devSeed=devSeed;
+if(location.hash==='#seed-lot')setTimeout(devSeed,200);
 window.addEventListener('online',()=>{syncNow(false);_mlDown=false;smapMount()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyTheme();syncNow(false)}});
 </script>
