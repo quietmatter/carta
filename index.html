@@ -914,11 +914,13 @@ function catStampRoast(rec){
  * unread (a later pass classifies them). A Setup keeps its own grind scale — grind is only
  * comparable within one Setup, invariant — and merely gains grinderRef/brewerRef, the edges
  * to the shared model. Keyed by kind+name so a grinder and a brewer sharing a string never
- * collapse. The Setup is how one keeper's dial moves; Gear is what transfers. ---- */
+ * collapse. The Setup is how one keeper's dial moves; Gear is what transfers.
+ * SCHEMA wrote the grinder/brewer distinction as `kind`, but the envelope already owns `kind`
+ * for the entity type ('gear'); the field is named `gearKind` here to avoid that collision. ---- */
 function catStampGear(s){
   if(!s)return;
-  const g=regSubstance(s.grinder)?catUpsert('gear','grinder:'+catNorm(s.grinder),{kind:'grinder',model:s.grinder},activeName(),{at:s.createdAt||null}):null;
-  const b=regSubstance(s.brewer)?catUpsert('gear','brewer:'+catNorm(s.brewer),{kind:'brewer',model:s.brewer},activeName(),{at:s.createdAt||null}):null;
+  const g=regSubstance(s.grinder)?catUpsert('gear','grinder:'+catNorm(s.grinder),{gearKind:'grinder',model:s.grinder},activeName(),{at:s.createdAt||null}):null;
+  const b=regSubstance(s.brewer)?catUpsert('gear','brewer:'+catNorm(s.brewer),{gearKind:'brewer',model:s.brewer},activeName(),{at:s.createdAt||null}):null;
   setRef(s,'grinderRef',g);setRef(s,'brewerRef',b);
 }
 // Boot sweep: seed Gear from every readable ledger's Setups, chronologically so the earliest
@@ -929,8 +931,8 @@ function catSeedGear(){
   const jobs=[];
   srcs.forEach(s=>{(s.led&&s.led.setups||[]).forEach(st=>{if(st)jobs.push({at:st.createdAt||'',who:s.who,s:st})})});
   jobs.sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(j=>{const s=j.s,o={at:j.at||null},who=j.who;
-    if(regSubstance(s.grinder))catUpsert('gear','grinder:'+catNorm(s.grinder),{kind:'grinder',model:s.grinder},who,o);
-    if(regSubstance(s.brewer))catUpsert('gear','brewer:'+catNorm(s.brewer),{kind:'brewer',model:s.brewer},who,o);
+    if(regSubstance(s.grinder))catUpsert('gear','grinder:'+catNorm(s.grinder),{gearKind:'grinder',model:s.grinder},who,o);
+    if(regSubstance(s.brewer))catUpsert('gear','brewer:'+catNorm(s.brewer),{gearKind:'brewer',model:s.brewer},who,o);
   });
 }
 // Re-point Setups onto Gear — the catRepoint move for the tools. Flat grinder/brewer text stays
@@ -1951,7 +1953,49 @@ function openLotKin(ref){
   const r=lotIndex().find(x=>x.ref===ref); if(!r)return;
   openSheet(`<h3 style="margin:0 0 4px">${esc(r.name)}</h3>
     <div class="muted small" style="margin:0 0 10px">one green · ${kinTally(r)}, wherever it landed in your journal.</div>
-    ${r.recs.map(kinRow).join('')}`);
+    ${r.recs.map(kinRow).join('')}
+    <button class="btn btn-quiet" style="margin-top:12px" onclick="closeSheet();openLotPage(${jsq(ref)})">The same green, in every hand →</button>`);
+}
+// The lot page — the atlas node, drilled into from a bag or the by-lot fold. The proof the whole
+// restructure exists for: the same green in more than one hand, each roast NAMED BY ITS ROASTER.
+// Reads the catalog, not one ledger, so it holds even for a roast nobody has logged a cup of.
+function openLotPage(lotId){
+  const lot=catNode('lots',lotId); if(!lot){toast('That green isn’t on the atlas yet');return}
+  const roasts=CAT.roasts.entries.filter(r=>r.lotRef===lotId)
+    .sort((a,b)=>(b.roastDate||'').localeCompare(a.roastDate||'')||(b.createdAt||'').localeCompare(a.createdAt||''));
+  const hands=new Set(roasts.map(r=>r.roasterRef).filter(Boolean)).size;
+  const fp=lot.fingerprint||{};
+  const meta=[lot.grain,(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:lot.process),lot.variety].filter(regSubstance).map(esc).join(' · ');
+  const rows=roasts.map(r=>{
+    const line=[r.level,r.roastDate&&fmtMDY(r.roastDate)].filter(regSubstance).map(esc).join(' · ');
+    return `<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(roasterName(r.roasterRef))}</span><span class="dd">${[esc(r.offeringName||'—'),line].filter(Boolean).join(' — ')}</span></span></div>`;
+  }).join('');
+  const venues=[...new Set((D.pours||[]).filter(p=>p.lotRef===lotId&&p.shop).map(p=>p.shop))];
+  openSheet(`
+  <h3>${esc(lotLabel(lot))}</h3>
+  <div class="sub">${hands>=2?`The same green, in ${hands} hands.`:'One green on the atlas.'}${meta?` · ${meta}`:''}</div>
+  <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${roasts.length} roast${roasts.length===1?'':'s'} reference this green${hands>=2?' — the view nothing else shows: one washing station, more than one reading of it.':'.'}</div>
+  ${roasts.length?rows:'<div class="empty">No roast references this green yet.</div>'}
+  ${venues.length?`<h2>Poured</h2><div class="muted small" style="margin-bottom:12px">${venues.map(esc).join(' · ')}</div>`:''}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+// A demo fixture — one genuine "same green, two hands" case, so the lot page can be shown end to
+// end. Two bags with the IDENTICAL green (a five-token origin) bought from two different roasters;
+// the real write path (catStampRoaster/Lot/Roast) collapses them onto one lot with two roasts.
+// Not a UI affordance — reached by the #seed-lot hash or from the console (window.devSeed). Idempotent.
+function devSeed(){
+  if(guard()){toast('Switch to your own ledger to seed');return}
+  const marker='Gedeb natural — Nine';
+  const had=D.bags.find(b=>b.name===marker);
+  if(had&&had.lotRef)return openLotPage(had.lotRef);
+  const green={originCountry:'Ethiopia',originRegion:'Gedeb',producer:'Nine Kilo',variety:'Heirloom',process:'Natural'};
+  const mk=(roaster,name)=>{const b={id:uid(),createdAt:new Date().toISOString(),name,roaster,...green,roastLevel:1,roastDate:today()};
+    D.bags.push(b);catStampRoaster(b);catStampLot(b);catStampRoast(b);if(b.roastRef){b.roastLevel=0;b.roastDate=''}return b};
+  const b1=mk('Nine',marker);
+  mk('Onyx Coffee Lab','Ethiopia Nine');
+  save();
+  toast('Seeded — one green, two roasters');
+  if(b1.lotRef)openLotPage(b1.lotRef);else render();
 }
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
@@ -2505,6 +2549,7 @@ function openBagDetail(id){
     <div class="kv"><span class="k">Brews</span><span class="v num">${brews.length}</span></div>
   </div>
   ${kinHTML(b)}
+  ${b.lotRef&&catNode('lots',b.lotRef)?`<button class="btn btn-quiet" onclick="closeSheet();openLotPage(${jsq(b.lotRef)})">The same green, in other hands →</button>`:''}
   ${b.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${esc(b.notes)}</div>`:''}
   ${readOnly()?`<button class="btn btn-quiet" onclick="closeSheet()">Close</button>`:`<button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
   <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`}`);
@@ -5068,6 +5113,9 @@ if(needsWelcome()){
 // Sync: on boot, when the network returns, and when the app comes back to the
 // foreground (iOS PWAs get no background time — this is the sync heartbeat).
 if(SYNC)setTimeout(()=>syncNow(false),400);
+// Demo hook for the lot page — window.devSeed() from the console, or open with #seed-lot.
+window.devSeed=devSeed;
+if(location.hash==='#seed-lot')setTimeout(devSeed,200);
 window.addEventListener('online',()=>{syncNow(false);_mlDown=false;smapMount()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyTheme();syncNow(false)}});
 </script>
