@@ -26,9 +26,10 @@ The ladder, walked strongest rung first, and the map of this document:
 6. **Grain & confidence in the UI** — evidence and grain on one tap; station-season a real terminal node.
 7. **Coexistence & reversibility** — the resolver and the shipped `lotKeyOf`; every bind append-only.
 
-Open decisions that are genuinely yours to settle are marked **▸ QUESTION** inline,
-and gathered at the end. Nothing downstream of a marked question is frozen until you
-settle it.
+The five calls SCHEMA left genuinely open are **settled** here — each marked
+**▸ DECISION** inline where it bites, and gathered with its rationale at the end. Every
+one is fixed toward the same bias: **refuse over-merge before you help.** Nothing
+downstream is left hanging on a maybe; §3–§5 can be built straight from these.
 
 ---
 
@@ -44,34 +45,55 @@ sighting its bones and `PLATFORM.md` its rungs; the resolver writes exactly one 
 {
   id, by, at,                       // signed line — as every sighting
   bind: { ref, kind },              // the record bound: {ref:<bagId|cupId>, kind:'bag'|'cup'}
-  rung: 'documented'|'first-party'|'confirmed'|'stated'|'derived',
-  via:  'hard-id'|'fingerprint'|'keeper'|'merge'|'split',   // which rung wrote it
-  evidence: { scheme?, value?, score?, fields?[] },         // why it bound (shown on one tap)
+  rung: 'confirmed'|'derived',       // inferred binds only; 'documented' rides the hardIds[] column
+  via:  'fingerprint'|'keeper'|'merge'|'split',   // never 'hard-id' — that is a column, not a sighting
+  evidence: { score?, fields?[] },   // why it bound (shown on one tap)
   withdrawnAt?, supersededAt?        // struck, never removed — a wrong bind is corrected by a later line
 }
 ```
 
-- A **hard-ID bind** writes `rung:'documented'`, `via:'hard-id'`, `evidence:{scheme,value}`.
 - A **fingerprint auto-bind** writes `rung:'derived'`, `via:'fingerprint'`, `evidence:{score,fields}`.
 - A **confirm** (the keeper says yes to a proposal) writes `rung:'confirmed'`, `via:'keeper'`.
 - A **reject** writes nothing on the old lot and a fresh binding on the forked one.
+- A **merge** / **split** writes `via:'merge'`/`'split'` (§5).
 
-`compile(entry)` (already in the app, waiting) folds these: the lot's bound records
-are the standing binds; its identity confidence is the strongest standing rung. This
-is the single mechanism §2–§5 all reduce to — **they differ only in what evidence
-they gather before writing the same line.**
+Two binds do **not** take this shape, by the decision below: a **hard-ID** match is a
+`documented` fact carried as a set-union *column* (`hardIds[]`, §1), and the
+`lotKeyOf` floor is a pure function of the record's own tokens — both re-derive
+identically every boot, so neither is a judgement a sighting needs to preserve. Every
+bind that *infers a cross-record claim* — auto-bind, confirm, merge, split — writes
+the sighting above; the two deterministic collapses stay column-and-ref.
 
-**▸ QUESTION — the binding sighting's home.** This session's hard-ID rung takes a
-lighter path (an append-only `hardIds[]` *column*, §1) rather than a full
-`bind`-sighting, because a hard-ID is a *set-union on the lot*, not a per-record
-newest-wins field, and because it must be readable by the resolver as an O(1)
-column (schema wrote `hardIds:[{scheme,value}]`). The record→lot edge is already
-carried by the ledger's `lotRef`. **Do you want the fuzzy rungs (§3–§5) to also
-stay column-and-ref, with the `bind` sighting reserved only for the confirm/reject
-*decision* — or should every bind, hard-ID included, become a sighting so
-`compile` is the one identity fold?** The doc below assumes the former (lighter)
-reading, and notes where the heavier one would differ. Settling this fixes the
-write-path for §3 onward.
+`compile(entry)` (already in the app, waiting) folds it all: it reads the
+column-carried binds as the floor and folds the inferred sightings on top; the lot's
+bound records are the standing binds, its identity confidence the strongest standing
+rung. This is the single mechanism §2–§5 all reduce to — **they differ only in what
+evidence they gather before writing the same line.**
+
+**▸ DECISION — the binding sighting's home: split by kind of write.** The hard-ID
+rung keeps its append-only `hardIds[]` *column* (§1); the record→lot edge stays the
+ledger's `lotRef`; the `bind` sighting is reserved for the **judged** binds only —
+the confirm, reject, merge and split of §4–§5. The line is *mechanical vs
+adjudicated*: a hard-ID or a `lotKeyOf` collapse is a deterministic function of the
+record's own columns — a set-union on the lot, re-derivable idempotently every boot,
+carrying no judgement to preserve — so a sighting would buy nothing and cost an O(n)
+fold to read what a column reads in O(1). A confirm/reject/merge/split, by contrast,
+*is* a judgement: it has an author, a moment, a why, and it must reverse. That is
+exactly what a sighting is for, and `compile` folds precisely those. So: **column
+for the deterministic, sighting for the judged.** This does not fork the machinery —
+`compile` still reads the column-carried binds as the floor and folds the judged
+sightings on top, strongest standing rung winning, one identity read.
+
+The dividing line is precise: **a bind writes a column when it is a pure function of
+the record's own tokens** (the hard-ID set-union, the `lotKeyOf` floor — matching is
+not inference, the token is shared by construction, and re-derivation lands the same
+place every boot); **a bind writes a sighting the moment it *infers a cross-record
+identity claim*** — and that includes the fingerprint's `derived` auto-bind, not only
+the keeper's `confirmed` one. An auto-bind is a machine saying *record A is lot B* on
+weighed evidence that can be wrong; its `evidence:{score,fields}` must be on the
+record, visible and strikeable, exactly as a hard-ID token is. So the write-path for
+§3 onward is: **hard-ID and `lotKeyOf` stay column-and-ref; every fingerprint bind —
+`derived`, `confirmed`, `merge`, `split` — is a `bind` sighting `compile` folds.**
 
 ---
 
@@ -240,13 +262,22 @@ headTier ∈ 'farm' | 'producer' | 'station' | 'region'   // already a fingerpri
   out: *Las Flores (farm)* vs *Jhoan Vergara (producer)* can still be one green, so
   the tier mismatch lowers confidence toward *propose*, never forces a fork.
 
-**▸ QUESTION — how aggressive normalisation dares to be.** Two settings to fix: (a)
-does the alias table ship as a **curated closed list** (safe, misses the long tail)
-or may the fold apply **fuzzy string distance** (e.g. edit-distance ≤ 2 on region
-tokens — catches more, risks folding two genuinely different nearby stations)? (b)
-does tier reconciliation ever *rewrite* the head-string to the canonical tier, or
-only *tag* it? The doc assumes **closed table + tag-only** (the conservative
-reading, refusing over-merge first). Loosening either is a posture you set.
+**▸ DECISION — normalisation stays conservative: closed table + tag-only.** (a) The
+alias table ships as a **curated closed list** — a few dozen entries for the origin
+words and varietals that actually collide, data in the file. No fuzzy string
+distance. Edit-distance ≤ 2 on region tokens would fold *Kochere* into *Kochore*,
+two real neighbouring washing stations, into one green — the precise over-merge this
+whole document exists to refuse, and it would do it *silently, upstream of the
+score*, where no threshold or keeper can catch it. A missed transliteration is a
+fail-to-confirm (the variant scores lower and proposes); a wrong fold is a false
+merge with no appeal. The asymmetry is total, so the fold never guesses. (b) Tier
+reconciliation **only tags** (`headTier`), never rewrites the head-string. The
+keeper's own words stand on the record; the tier is a comparison hint the scorer
+reads, not an edit to what was typed — rewriting *Las Flores* to its producer would
+destroy the very string a later reader needs to recognise the farm. Both settings
+refuse over-merge first; loosening either waits for real records to prove the closed
+table misses more than it protects, and even then the loosening is a new proposing
+rung, never a new folding one.
 
 ---
 
@@ -306,15 +337,25 @@ score < τ_prop                        → fork:       a new lot; the record sta
   `τ_auto`-only (no interactive propose during a sweep) — the catalog starts granular
   and is merged **up** by curation, never auto-merged down.
 
-**▸ QUESTION — the confirm/fork threshold posture, and whether an unknown-variety
-fingerprint proposes or stays forked.** Two linked settings: (a) the starting
-`τ_auto` / `τ_prop` values above — hold them where they are, or open auto-bind wider
-/ narrower? (b) a fingerprint whose variety and process are both `unknown/unspecified`
-but whose *place and year* match well — does it **propose** (invite the keeper to
-confirm the green) or **stay forked** (too thin to even ask)? The doc assumes
-`≥ τ_prop on place+year alone ⇒ propose`, because a keeper can often confirm what the
-label omitted — but this is exactly the line between helpful and noisy, and it is
-yours to set.
+**▸ DECISION — hold `τ_auto ≈ 0.90` / `τ_prop ≈ 0.55`; unknown-variety proposes on
+strong place+year.** (a) The thresholds hold at their starting stance, and they are
+*postures against real records, not fabricated precision* — the numbers earn their
+keep only once there are enough resolved lots to measure a false-merge rate against,
+and they move by evidence, never by feel. The bias is deliberate and asymmetric:
+`τ_auto` high enough that an auto-bind is "the same green in all but the noise,"
+`τ_prop` low enough to *ask* generously, the whole band between them routed to a
+keeper who sees what the labels can't. When the two errors are unequal — and here
+over-merge is unrecoverable while over-split is a §5 correction — the threshold sits
+where the recoverable error lives. (b) A fingerprint whose variety and process are
+both `unknown/unspecified` but whose **place and year match well** scores `≥ τ_prop`
+and **proposes** — it never auto-binds (the evidence is too thin to move without a
+human) and it never silently forks (a keeper can often confirm the green the label
+merely omitted). This *is* the "never block, only fail to confirm" rule doing its
+job: absence of a variety is absence of a signal, not evidence of difference, so it
+lowers confidence toward *ask*, never toward *fork-and-hide*. The propose is the
+honest middle — the machine says "these look like the same green; you'd know," and
+the keeper answers. Noisy proposals are a tuning problem on `τ_prop`; a swallowed
+match the keeper never saw is a lost truth. We choose to ask.
 
 ---
 
@@ -322,6 +363,24 @@ yours to set.
 
 The default entry path, not an edge case (`LOT_IDENTITY.md`). The machine proposes;
 the keeper decides the call the labels can't make.
+
+**▸ DECISION — inline-at-save for a single strong candidate; a review queue for the
+rest.** *Auto-bind* and *fork* never interrupt — they write and move on (a fork is
+just "stands alone until evidence merges it"; an auto-bind is a `derived` sighting
+the keeper can find and strike). A *propose* surfaces one of two ways, by how clean
+the call is. **When exactly one candidate lands in the propose band, the sheet asks
+inline, right after save** — the keeper is holding the record, the context is warm,
+and one clear question ("the same green?") is a courtesy, not an interruption. **When
+two or more candidates tie in the band, or the record arrives by ingestion sweep
+rather than a single hand-logged save, the proposal drops into a review queue** the
+keeper works when they choose — because ranking three near-ties or triaging a batch
+is deliberate work, not a yes/no in passing, and interrupting a save with a
+multiple-choice is exactly the friction that trains a keeper to dismiss without
+reading. The queue is the same sheet contract (below), just deferred and batched;
+inline is the queue with one item, shown now. This keeps the common case (one strong
+candidate) a single warm tap and quarantines the hard case where it can be thought
+about — over-split is the safe waiting state for anything unresolved, so nothing is
+lost by deferring.
 
 ### The write contract
 
@@ -463,25 +522,38 @@ says so (`LOT_IDENTITY.md`). The grain and the confidence are one tap from any l
 
 ---
 
-## The open questions, gathered
+## The decisions, settled
 
-1. **The binding sighting's home** — column-and-ref for the fuzzy rungs (lighter,
-   assumed), or every bind a `compile`-folded sighting (heavier, one identity fold)?
-   *(fixes the §3+ write-path)*
-2. **Resolver-at-save vs a review queue** — does the fingerprint scorer propose
-   **inline at save** (interrupt the keeper with one question) or drop candidates
-   into a **review queue** the keeper works later? The doc assumes inline-at-save for
-   a *strong* propose and queue-none for auto-bind/fork; a review queue may suit
-   ingestion. *(§4)*
-3. **The confirm/fork threshold posture** — hold `τ_auto ≈ 0.90` / `τ_prop ≈ 0.55`,
-   or open/narrow either? *(§3)*
-4. **How aggressive normalisation dares to be** — closed alias table vs fuzzy
-   distance; tier tag-only vs rewrite? *(§2)*
-5. **Whether an unknown-variety fingerprint proposes or stays forked** — propose on
-   strong place+year alone, or hold as too thin to ask? *(§3)*
+The five calls SCHEMA left open are fixed here, each biased to refuse over-merge
+before it helps. They are settled, not frozen — the two that carry numbers move by
+evidence once real records exist to measure against; none is a matter of taste to
+re-litigate.
+
+1. **The binding sighting's home — split by kind of write.** Deterministic binds
+   (hard-ID set-union, the `lotKeyOf` floor) stay **column-and-ref**, re-derivable
+   O(1); every bind that *infers a cross-record claim* — the fingerprint's `derived`
+   auto-bind included, not just the keeper's `confirmed` — writes a `bind` sighting
+   `compile` folds. Column for the mechanical, sighting for the inferred. *(fixes the
+   §3+ write-path)*
+2. **Propose surfaces inline for one strong candidate, a review queue for the rest.**
+   Auto-bind and fork never interrupt; a lone propose asks inline at save while the
+   context is warm; ties and ingestion-sweep proposals batch into a queue worked
+   deliberately. Over-split is the safe waiting state, so deferring loses nothing. *(§4)*
+3. **Thresholds hold at `τ_auto ≈ 0.90` / `τ_prop ≈ 0.55`,** as postures to tune
+   against real records, biased hard toward *propose over auto-bind* and *fork over
+   merge* — the threshold sits where the recoverable error lives. *(§3)*
+4. **Normalisation stays conservative: closed alias table, tag-only.** No fuzzy
+   distance (it would fold neighbouring stations silently, upstream of any check); the
+   tier is tagged, never rewritten (the keeper's words stand). A missed fold fails to
+   confirm; a wrong fold is a false merge with no appeal. *(§2)*
+5. **An unknown-variety fingerprint proposes on strong place+year — it does not
+   fork.** Absence of a variety is absence of a signal, not evidence of difference; it
+   routes to *ask*, never to fork-and-hide. A noisy proposal is a tuning problem; a
+   swallowed match is a lost truth. We ask. *(§3)*
 
 None of these block §1. The hard-ID rung is deterministic and ships this session; the
-questions all live downstream of it.
+four downstream decisions above are what §2–§5 are built from next, no semantics left
+to re-decide.
 
 *We do not sell coffee. We keep the record — and the record now knows a green when it
 sees the same one twice, and says how sure it is.*
