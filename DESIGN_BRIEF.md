@@ -167,7 +167,125 @@ with named behaviours:
 
 ## Research and references
 
-*To be completed — see the research appendix below for the surveyed field.*
+The field was surveyed (2024–2026) before this brief was written: the
+quiet-luxury digital canon, the specialty-coffee design landscape, and the
+adjacent categories that keep records beautifully. What follows is the
+distillation — study these before sketching. Site access was partial in
+places; observations marked from secondary sources in the survey should be
+checked against the live sites.
+
+### The quiet-luxury digital canon
+
+- **Anthropic (studio Geist)** — the clearest current warm-paper system in
+  tech: ivory ground, slate ink, essentially no other colour; a text serif
+  (Tiempos) doing real work at scale beside one quiet sans. Reads as "a
+  research publication on parchment." CARTA's paper-and-roasted-ink tokens
+  are the same species — the lesson is how far the discipline can be held.
+- **The Row / Jil Sander / Aesop** — the fashion benchmark for silence:
+  near-monochrome, sparse grids where the whitespace itself signals price;
+  Jil Sander's one ornament is a bespoke typeface; Aesop protects a single
+  personality element and reduces everything else. That last rule is
+  CARTA's ember rule, stated by another house.
+- **Linear (2025 refresh)** — the maturity tell: the redesign *removed*
+  colour. Restraint as the upgrade path; addition reads as insecurity.
+- **Endel / iA Writer** — the calm-instrument pole: an interface that
+  recedes so the product (sound; text) is everything. iA's thesis — web
+  design is 95% typography — is this brief's thesis.
+- **Stripe Press / Kinfolk / Cereal / Monocle** — the editorial systems:
+  print furniture (hairline rules, folios, captions, section numbering) as
+  the whole interface. Monocle matters specifically because it proves a
+  *dense* surface can stay premium — discipline, not emptiness, is the
+  ingredient. That is the permission the Record tab needs.
+- **Motion, by the numbers (Emil Kowalski; Rauno Freiberg)** — UI motion
+  under 300ms; ease-out on anything entering or leaving; custom curves, the
+  built-in easings are too weak; the more often a control is used, the less
+  it should animate. Taste lives in sub-perceptual details. This is the
+  motion charter — adopt it.
+- **Maps** — the current branded-map practice is exactly CARTA's `smapStyle`
+  approach: desaturate the base to the brand's tones, de-emphasise roads,
+  let the pins be the only marked thing. The frontier is how muted the base
+  gets, not how much it shows.
+- **Dark theme as material** — the consolidated guidance matches Dusk:
+  a warm dark that is its own material, elevation by lighter surface rather
+  than shadow, accents re-tuned rather than reused. Never an inversion.
+
+### The coffee field — and where it sits
+
+The high end has two occupied poles. The **mute** pole (Sey, La Cabra,
+% Arabica): white-on-white, small sans, lot essays, total material
+coherence — La Cabra's stated aim, "a materiality that ages gracefully,
+without referring to a time or style period," is the closest thing coffee
+has to quiet luxury. The **loud** pole (Onyx, Ditta Artigianale, Friedhats):
+colour-blocked drops, transparency-as-spectacle, punk irreverence. Both
+poles are imitated to cliché — the field's own critics call it "designed by
+algorithms trained on Pinterest boards."
+
+The clichés to refuse outright: minimal sans on white/kraft; pastel
+geometric per-lot labels; QR-code storytelling; transparency as an inert
+FOB spreadsheet; big lowercase display type; and, in apps, stock platform
+UI, radar charts, star ratings, badges, paywall chrome.
+
+Two moves from the field are worth keeping close: **Coffee Collective sets
+the farmer's name larger than its own** — provenance as hierarchy, not
+footnote — and **Tim Wendelboe's annual transparency report** is a brand
+built on a document. Both are the record's values, executed in packaging
+and PDF. Neither has ever been executed as an interface.
+
+### The apps — an open field
+
+No coffee app currently occupies a design-led position at all; the
+category's ceiling is "clean utility" (Beanconqueror is a lab notebook with
+thirty parameters up front; Filtru's luxury ambitions die on upsell
+chrome). The wine and whisky parallels (Vivino, Untappd, Distilld) define
+the downmarket register — stars, badges, feeds, commerce pressure. The
+instructive adjacents are elsewhere: **InVintory** renders a wine
+collection as a *place* (the 3D cellar); **Chrono24** renders a watch
+collection as a *curve* (the portfolio); **Artlogic and the art-collection
+category** speak the vocabulary the record deserves — *provenance,
+attestation, condition report, first recorded by*. **Hodinkee** proves
+writing is the luxury surface. **Atomix and the fine-dining web** prove the
+high end signals depth by withholding.
+
+### The opening (why this redesign can win)
+
+The register nobody in coffee holds is the **archival** one: the ledger,
+the specimen catalog, the annual report, the estate record. CARTA owns it
+natively — the data model is already archivally correct (append-only
+sightings, strikes that date rather than delete, tombstones, provenance on
+every entry). No competitor has the model, let alone the typography for
+it. The specific opportunities the survey surfaced, each a design brief in
+miniature:
+
+1. **The entry as the object.** Design one cup's record like an auction
+   catalog lot or a condition report: typeset provenance block, dated,
+   signed, sparse. Nobody designs the kept page; everybody designs the form.
+2. **Traceability as typography, not table.** The road — producer → lot →
+   roast → this cup — as a set genealogy, the producer's name in the
+   largest type. Out-design the roasters' PDFs on their own values.
+3. **Serif authority in a sans-locked category.** Coffee digital design is
+   uniformly sans; serif ownership sits with fine dining and horology.
+   Spectral, already in hand, is one register above the field — spend it.
+4. **The ledger palette.** The mute pole owns white; the loud pole owns
+   colour-blocking. Bone ground, near-black ink, one reserved signal is
+   unclaimed — CARTA's ember discipline has no equivalent in the field.
+5. **Time as the collection view.** InVintory renders space; Chrono24
+   renders value; nobody in any tasting category renders *time* — rest
+   windows, the seasons of a shelf, a year in the ledger set like an
+   annual report.
+6. **Attestation, not gamification.** "First entered by —, 12 March 2026"
+   makes the user a keeper, not a scorer. The signed sighting, surfaced as
+   the luxury it is.
+7. **The almost-empty first surface.** The Atomix pattern: the cup, the
+   place, one line — instrumentation folded beneath. The opposite of every
+   coffee app.
+8. **Print-grade export.** Luxury categories end in paper. A lot page or
+   year-book that exports as if from a letterpress annual turns the private
+   ledger into the brand's only advertisement.
+
+The survey's verdict on the existing foundations: warm paper + roasted ink,
+the single rationed accent, the token-repainted basemap, dusk-as-material —
+all already aligned with the state of the art. This redesign is a
+refinement toward a standard the tokens already imply, not a correction.
 
 ## Scope of deliverables
 
