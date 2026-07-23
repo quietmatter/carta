@@ -246,10 +246,27 @@ origin (the read/retirement surface), never over it. Migration seeds the catalog
 from every readable ledger (`catSeed`/`catSeedGear`), re-points the ledger onto it
 (`catRepoint`/`gearRepoint`/`brewRepoint`/`cupPrepRepoint`, additive + reversible),
 then retires the flat text once a node stands (`catRetire`, the one irreversible
-step). Write-path stamps (`catStamp*`) author nodes at save, not next boot. The
-**lot page** (`openLotPage`, drilled into from a bag or the by-lot fold) lists the
-roasts referencing one green, each named by its roaster — the "same green, many
-hands" surface. `devSeed()` (`#seed-lot`) is a demo fixture, never a UI affordance.
+step). Write-path stamps (`catStamp*`) author nodes at save, not next boot.
+
+A record binds to its lot through the resolver's ladder (`RESOLVER.md`, the step-2
+spec), strongest rung first. The **hard-ID rung** is built: a namespaced
+`{scheme,value}` printed lot code (kenya-outturn · coe · best-of-panama ·
+gesha-village · ninety-plus · esmeralda · ico), entered on a bag/café-cup origin
+section (`hardIdRow`/`readHardIds`), normalised per scheme (`normHardId`) and
+firewalled at entry against the false friends — a bare grade, a warehouse SKU, a
+per-sale seat (`hardIdRefusal`). A shared token binds to the standing lot outright
+via `lotBindKey`/`lotByHardId`, **ahead of `lotKeyOf`** — the timid fingerprint
+(collapse only on ≥2 shared tokens, else fork) that stays the offline floor. Tokens
+accumulate on the lot append-only (`lotAddHardIds` — signed, dated, struck-not-
+deleted, a *documented* rung), unioned across devices by `mergeHardIds` in
+`mergeCatalog` exactly as sightings are. Wired through `catStampLot`/`catSeed`/
+`catRefsFor`, reversible and offline-first. The fuzzy scorer, propose-and-confirm and
+merge/split are designed in `RESOLVER.md` and built next; `compile(entry)` waits for
+those passes. The **lot page** (`openLotPage`, drilled into from a bag or the by-lot
+fold) lists the roasts referencing one green, each named by its roaster — the "same
+green, many hands" surface — and names the documented rung when a lot is
+hard-ID-bound. `devSeed()` (`#seed-lot`) and `devSeedOutturn()` (`#seed-outturn`, the
+hard-ID bind end to end) are demo fixtures, never UI affordances.
 
 ### Invariants to preserve
 
