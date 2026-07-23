@@ -217,6 +217,14 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   on older records (branding photos are no longer captured or rendered) but
   is otherwise inert. Merged in sync like any other collection.
 - **cafeFavs** — favorited café shop names.
+- **authored** — the curator's directly-authored roasts (Act II ingestion). A
+  bag-shaped record — `roaster`, origin fields, `hardIds`, a roast
+  (`name`/`roastLevel`/`roastDate`), plus `chart` and `curator` — but **no brew,
+  no shelf, no cup**: it carries no `kind`, so every shared bind/repoint path
+  treats it as a bag (it has a roast). `authorRoast` seeds roaster+lot+roast
+  catalog nodes through the same `catStamp*` machinery and runs `resolveLot`
+  exactly as a bag's origin does, so the atlas fills pre-adjudicated. Swept by
+  `catSeed`/`catRepoint` like a bag; merged in sync like any collection.
 - **deleted** — tombstones so removed records stay removed across a sync merge.
 - **prefs** — per-user preferences (`tempUnit`, `hideTimer`, …) via
   `getPref`/`setPref`. The matching's bookkeeping lives here too: `signal`
@@ -267,6 +275,22 @@ fold) lists the roasts referencing one green, each named by its roaster — the 
 green, many hands" surface — and names the documented rung when a lot is
 hard-ID-bound. `devSeed()` (`#seed-lot`) and `devSeedOutturn()` (`#seed-outturn`, the
 hard-ID bind end to end) are demo fixtures, never UI affordances.
+
+**Curator ingestion (Act II, step 3).** A keeper-curator authors the spine
+*directly* — a roaster, a green and a roast onto the atlas without logging a cup
+(`authorRoast` → `catStampRoaster`/`catStampLot`/`catStampRoast`, an `authored`
+ledger record, no bag/cup). Every authored green runs `resolveLot` exactly as a
+bag's origin does: a sure read auto-binds (`derived`), a lone propose asks inline
+(`openLotPropose`), a tie (band ≥ 2) **forks to the review queue** rather than
+guessing. The **review queue** (`reviewQueue`/`queueCandidates`/`openReviewItem`)
+is *derived, never stored* — own records with a standing propose-band green
+neither confirmed nor kept apart (`rec.lotApart`); working an item reuses the
+propose sheet ranked for ties, `queueConfirm` binds one and leaves the rest
+apart, `queueApart` forks (the safe default). The **Chart No. 1** view (`vCurate`,
+`curateOn`, reached from `vMore` → "Curate the atlas") reads one city's authored
+roasters, greens and same-green cases, reusing `openLotPage`. `devSeedChart()`
+(`#seed-chart`) is the marked-demo fixture. LLM/site-assisted extraction, the
+`proposed`→`stood` moderation ceremony, and the step-4 map are deferred.
 
 ### Invariants to preserve
 

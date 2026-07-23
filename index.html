@@ -553,7 +553,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 /* ============ store ============ */
 const KEY='carta.v1';           // legacy single-user key — migrated to per-user keys on first boot
 const USERS_KEY='carta.users';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],pours:[],cafes:[],cafeFavs:[],cafeWants:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],pours:[],cafes:[],authored:[],cafeFavs:[],cafeWants:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dataKey=id=>KEY+'.'+id;
 function loadUsers(){
@@ -1023,7 +1023,7 @@ function lotBind(lot,rec,rung,via,evidence,who,at){
   lot.sightings=lot.sightings||[];
   const ex=lot.sightings.find(s=>s&&s.bind&&s.bind.ref===rec.id&&sightStanding(s));
   if(ex){if(!(rung==='confirmed'&&ex.rung!=='confirmed'))return;ex.supersededAt=new Date().toISOString()}
-  lot.sightings.push({id:uid(),by:who||'',at:at||new Date().toISOString(),bind:{ref:rec.id,kind:recKind(rec)},rung,via,evidence:evidence||{}});
+  lot.sightings.push({id:uid(),by:who||'',at:at||new Date().toISOString(),bind:{ref:rec.id,kind:recKind(rec)},rung,via,src:'keeper',evidence:evidence||{}}); // src:'keeper' — a hand authored this bind; the assist would stamp 'ingest' (deferred)
   lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots');
 }
 // The producer node — the grower behind a lot's producer field, keyed by name+country so two
@@ -1042,6 +1042,7 @@ function catSeed(){
   srcs.forEach(s=>{const d=s.led;if(!d)return;
     (d.bags||[]).forEach(b=>{if(b)jobs.push({at:b.createdAt||'',who:s.who,type:'bag',r:b})});
     (d.cups||[]).forEach(c=>{if(c&&c.kind==='cafe'&&(regSubstance(c.roaster)||lotWorthy(c)))jobs.push({at:c.createdAt||'',who:s.who,type:'cup',r:c})});
+    (d.authored||[]).forEach(a=>{if(a&&(regSubstance(a.roaster)||lotWorthy(a)))jobs.push({at:a.createdAt||'',who:s.who,type:'bag',r:a})}); // a curator's authored roast — roaster+lot+roast, no bag/cup, swept exactly as a bag (it carries a roast)
   });
   jobs.sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(j=>{
     const r=j.r,o={at:j.at||null},who=j.who;
@@ -1102,6 +1103,11 @@ function catRepoint(){
     });
     (d.cups||[]).forEach(c=>{if(!c||c.kind!=='cafe')return;const{roaster,lot}=catRefsFor(c);
       if([setRef(c,'roasterRef',roaster),setRef(c,'lotRef',lot)].some(Boolean))changed=true;
+    });
+    (d.authored||[]).forEach(a=>{if(!a)return;const{roaster,lot}=catRefsFor(a); // an authored roast re-points exactly as a bag — its refs re-derive from the same keys catStampAuthored stamped
+      const rk=d0=>[roaster?roaster.id:'',lot?lot.id:'',catNorm(a.name),d0].join('|');
+      const roast=regSubstance(a.roastDate)?catByKey('roasts',rk(a.roastDate)):(catNode('roasts',a.roastRef)||catByKey('roasts',rk('')));
+      if([setRef(a,'roasterRef',roaster),setRef(a,'lotRef',lot),setRef(a,'roastRef',roast)].some(Boolean))changed=true;
     });
     if(changed)try{localStorage.setItem(dataKey(u.id),JSON.stringify(d))}catch(e){}
   });
@@ -1915,10 +1921,15 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.23.0';
+const APP_VERSION='4.24.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.24.0',date:'Jul 23, 2026',title:'Charting a city, green by green',items:[
+    'You can now author the atlas directly — a roaster, a green and a roast onto the record without logging a cup you had. Find it under your record: Chart No. 1, Los Angeles, its Ethiopian 2025 greens. Every green you author runs the same resolver a bag does, so the sure ones fold onto a green already charted and the look-alikes wait to be settled.',
+    'When two greens read too close to call on their own, they land in a quiet review queue — never a nag, and empty when there’s nothing to settle. Work each with one deliberate tap: confirm the one that’s truly the same green, and the rest stay honestly apart, or keep them all apart, the safe call.',
+    'The chart shows its own progress — the roasters and greens charted so far, and the page nothing else can render: one washing station, more than one roaster’s reading of it.',
+  ]},
   {v:'4.23.0',date:'Jul 23, 2026',title:'A green, joined or set apart by hand',items:[
     'A green’s page can now be corrected. Two greens you’ve learned are one — join them, and every roast, pour and record on both follows onto the kept green, with nothing lost. A conflation you’ve learned is two — split it back apart, and both greens stand. A string that merely reads alike never joins on its own; a join needs a shared printed code or a matching origin, and every correction can be undone.',
     'Kenya’s outturn now reads as it works: one cherry, graded into sibling export lots. AA and AB of one outturn stand as siblings under a single processing batch; a bag that names only the outturn rests on the batch until its grade surfaces, then splits to its sibling — without re-entering the code.',
@@ -2159,7 +2170,7 @@ let tab='circle';
 let placeView=null;   // a café name — the page currently open over the tab, or null
 function openPlace(shop){placeView=shop;render()}
 function closePlace(){placeView=null;render();if(discOn)discScrollTo(discSel,true)}
-function go(t){tab=t;placeView=null;discOn=false;discMatch=null;clearTimeout(_mt);if(t!=='circle'){reachLens=0;reachTail={}}render()}
+function go(t){tab=t;placeView=null;discOn=false;curateOn=false;discMatch=null;clearTimeout(_mt);if(t!=='circle'){reachLens=0;reachTail={}}render()}
 function render(){
   _affCache=null; // affinity is recomputed once per paint, from the current record
   _mCache=null;   // so is the matching — signal, circle, candidates
@@ -2169,7 +2180,7 @@ function render(){
   document.getElementById('tabs').innerHTML=tabsFor(depth()).map(t=>
     `<button class="${tab===t.id&&!placeView?'on':''}" onclick="go('${t.id}')">${t.label}</button>`).join('');
   const m=document.getElementById('main');
-  m.innerHTML=(readOnly()?viewBanner():'')+(placeView?vPlace():discOn?vDiscover():({today:vToday,field:vField,cafes:vCafes,circle:vCircle,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
+  m.innerHTML=(readOnly()?viewBanner():'')+(curateOn?vCurate():placeView?vPlace():discOn?vDiscover():({today:vToday,field:vField,cafes:vCafes,circle:vCircle,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
   m.scrollTop=0;window.scrollTo(0,0);
   smapMount();
 }
@@ -2343,7 +2354,7 @@ function openLotPage(lotId){
   ${corrections}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
-const findRec=id=>(D.bags||[]).find(b=>b&&b.id===id)||(D.cups||[]).find(c=>c&&c.id===id)||null;
+const findRec=id=>(D.bags||[]).find(b=>b&&b.id===id)||(D.cups||[]).find(c=>c&&c.id===id)||(D.authored||[]).find(a=>a&&a.id===id)||null;
 /* ---- §5 the merge/split affordances, on the lot page. Own+writable only; each shows its reason. A join
  * keeps the earliest-named green (stable identity) and absorbs the other; an undo restores the boundary. ---- */
 function lotJoin(aId,bId){
@@ -2407,14 +2418,20 @@ function openLotPropose(recId,candId,fields){
 }
 // Confirm — bind the record to the proposed green: a confirmed sighting, the ref re-pointed, its
 // preparation (a bag's roast, a café cup's pour) moved onto the green, the flat text filling its blanks.
+// The core a confirm reduces to — a confirmed bind, the green's blanks filled, the ref re-pointed, the
+// preparation (a bag's roast, a café cup's pour) moved onto the green. Shared by the inline propose and the
+// review queue; the callers save + navigate. An authored roast carries no kind, so it moves its roast.
+function bindRecordTo(rec,cand){
+  lotBind(cand,rec,'confirmed','keeper',{},activeName(),new Date().toISOString());
+  catUpsert('lots',cand._key,lotFields(recOrigin(rec)),activeName(),{at:rec.createdAt||null}); // fill the green's blanks from what the record knows
+  setRef(rec,'lotRef',cand); // the node, not its id — setRef reads node.id (a bare id deletes the ref, self-healing only at the next repoint)
+  if(rec.lotApart)rec.lotApart=rec.lotApart.filter(x=>x!==cand.id); // a confirm overrides a past reject
+  if(rec.kind)catStampPour(rec,activeName()); else repointRoast(rec,cand);
+}
 function bindConfirm(recId,candId){
   if(guard())return;
   const rec=findRec(recId),cand=catNode('lots',candId); if(!rec||!cand){closeSheet();return}
-  lotBind(cand,rec,'confirmed','keeper',{},activeName(),new Date().toISOString());
-  catUpsert('lots',cand._key,lotFields(recOrigin(rec)),activeName(),{at:rec.createdAt||null}); // fill the green's blanks from what the record knows
-  setRef(rec,'lotRef',cand.id);
-  if(rec.lotApart)rec.lotApart=rec.lotApart.filter(x=>x!==candId); // a confirm overrides a past reject
-  if(rec.kind)catStampPour(rec,activeName()); else repointRoast(rec,cand);
+  bindRecordTo(rec,cand);
   save();closeSheet();openLotPage(candId);
 }
 // A different one / not sure — fork: the record already stands on its own green (the save bound it to the
@@ -2698,6 +2715,230 @@ function devSeedBatch(){
   toast('Seeded — one outturn, AA & AB siblings, one awaiting its grade');
   if(bare.lotRef)openLotPage(bare.lotRef);else render(); // the bare-outturn bag opens onto the batch parent
 }
+/* ============ Act II · curator ingestion — Chart No. 1 ============ */
+/* VISION step 3. The atlas has only ever filled from a keeper's own bags and cups — the spine derived from
+ * personal consumption. Curation authors the spine DIRECTLY, decoupled from drinking it: a keeper-curator
+ * seeds a city's roasters and the season's greens behind them as facts about coffee, not cups they had.
+ * Every authored roast runs the SAME resolver a bag's origin does (resolveLot), so the atlas fills
+ * pre-adjudicated — the sure greens fold, the look-alikes wait in a review queue (RESOLVER §4's deferred
+ * secondary path, built here). Offline-first and keyless as ever: the floor is fast manual authoring; a
+ * site/LLM-assisted read is a later enhancement (deferred). An authored roast is a ledger record like a bag
+ * — carrying origin + a roast — but with no brew, no shelf, no cup: it lives in D.authored, seeds
+ * roaster+lot+roast catalog nodes through the same catStamp* machinery, and anchors the resolver's bind.
+ * It carries no kind, so every shared bind/repoint path treats it as a bag (it has a roast). Chart No. 1 is
+ * scoped to one city + one origin-season so it is chartable AND stress-tests the ladder where it matters —
+ * Ethiopia's station-vs-region tiers, transliteration drift, mixed heirloom. */
+const CHART1={id:'la',name:'Los Angeles',origin:'Ethiopia',season:'2025 crop',
+  // the real LA specialty roster to chart — a guide, never a claim. The curator confirms the live roster and
+  // each roaster's current offerings against their own pages when authoring (rosters shift). Nothing here
+  // asserts a purchase — VOICE.md forbids fabricated precision; the real chart is authored in-app.
+  roster:['Cognoscenti Coffee','Maru Coffee','Go Get Em Tiger','Bar Nine','Canyon Coffee','Klatch Coffee','Civil Coffee','Woodcat Coffee']};
+const chartRecs=()=>(D.authored||[]).filter(r=>r&&r.chart===CHART1.id);
+const rosterAuthored=name=>!!catByKey('roasters',catNorm(name));   // a roaster is on the atlas once any record names it
+const recLabel=r=>!r?'a record':r.kind==='cafe'?([r.shop,r.drink].filter(Boolean).join(' · ')||'a café cup'):bagName(r);
+const recOriginLine=r=>{const o=recOrigin(r);return [o.originCountry,o.originRegion,o.producer,o.variety,o.process].filter(regSubstance).join(' · ')||(regSubstance(o.origin)?o.origin:'origin unwritten')};
+// Author a roast straight to the catalog — roaster + lot (its origin, run through resolveLot exactly as a
+// bag's) + roast (roaster × lot × offering × level × date). No bag, no cup. Returns the record + the lot
+// resolution so the caller can ask inline on a lone propose (§4). status:'proposed' + firstBy/firstAt land
+// through catUpsert; the bind sighting carries src:'keeper'.
+function authorRoast(f,who){
+  who=who||activeName();
+  const rec={id:uid(),createdAt:new Date().toISOString(),chart:f.chart||CHART1.id,curator:who,
+    roaster:(f.roaster||'').trim(),site:(f.site||'').trim(),name:(f.offering||'').trim(),
+    originCountry:(f.originCountry||'').trim(),originRegion:(f.originRegion||'').trim(),producer:(f.producer||'').trim(),
+    variety:(f.variety||'').trim(),process:(f.process||'').trim(),lot:(f.lot||'').trim(),
+    hardIds:(f.hardIds||[]).slice(),roastLevel:f.roastLevel||0,roastDate:f.roastDate||''};
+  D.authored=D.authored||[];D.authored.push(rec);
+  catStampRoaster(rec);
+  const res=catStampLot(rec);   // the ladder: bound → hard-ID → fingerprint → floor; auto folds, a lone propose returns, a tie forks to the queue
+  catStampRoast(rec);
+  save();
+  return {rec,res};
+}
+// The roast authoring form — the curator's fast, repeatable path. Optional roaster prefill (from the roster).
+function openAuthorRoast(prefRoaster){
+  if(guard())return;
+  const roasters=CAT.roasters.entries.filter(r=>r&&regSubstance(r.name)).map(r=>r.name).sort((a,b)=>a.localeCompare(b));
+  openSheet(`
+  <h3>Author a roast</h3>
+  <div class="sub">A roaster's reading of one green — straight onto the atlas, no cup logged. It runs the resolver a bag does: a sure green folds, a look-alike waits to be settled.</div>
+  <div class="grid2">
+    <label class="f"><span class="l">Roaster</span><input type="text" id="a_roaster" list="a_roasterlist" value="${esc(prefRoaster||'')}" placeholder="Cognoscenti Coffee"></label>
+    <label class="f"><span class="l">Offering</span><input type="text" id="a_offering" placeholder="Konga washed"></label>
+  </div>
+  <datalist id="a_roasterlist">${roasters.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+  <label class="f"><span class="l">Roast level</span>${seg('a_roast',ROAST_LEVELS.slice(1),'Light')}</label>
+  <div class="grid2">
+    <label class="f"><span class="l">Country</span><input type="text" id="a_country" value="Ethiopia" placeholder="Ethiopia"></label>
+    <label class="f"><span class="l">Region / zone</span><input type="text" id="a_region" placeholder="Yirgacheffe"></label>
+    <label class="f"><span class="l">Producer / station</span><input type="text" id="a_producer" placeholder="Konga washing station"></label>
+    <label class="f"><span class="l">Variety</span><input type="text" id="a_variety" placeholder="mixed heirloom"></label>
+    <label class="f"><span class="l">Process</span><input type="text" id="a_process" placeholder="washed"></label>
+    <label class="f"><span class="l">Lot no.</span><input type="text" id="a_lot" placeholder="free text"></label>
+    <label class="f"><span class="l">Roast date</span><input type="date" id="a_roastDate"></label>
+  </div>
+  ${hardIdRow('a_hid')}
+  <button class="btn btn-primary" onclick="saveAuthorRoast()">Author it</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
+}
+function saveAuthorRoast(){
+  if(guard())return;
+  const hids=readHardIds('a_hid'); if(hids===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
+  const lvl=ROAST_LEVELS.indexOf(segState.a_roast||'');
+  const f={roaster:val('a_roaster'),offering:val('a_offering'),originCountry:val('a_country'),originRegion:val('a_region'),
+    producer:val('a_producer'),variety:val('a_variety'),process:val('a_process'),lot:val('a_lot'),
+    roastLevel:lvl<0?0:lvl,roastDate:val('a_roastDate'),hardIds:hids};
+  if(!f.roaster){toast('Name the roaster — a roast is one roaster’s reading of a green');return}
+  if(!lotWorthy({...f,origin:''})){toast('Give the green an origin — a country at least, or a printed code');return}
+  const {rec,res}=authorRoast(f);
+  closeSheet();
+  if(res&&res.action==='propose'&&res.propose){openLotPropose(rec.id,res.propose.lot.id,res.propose.fields);toast('Authored — one green reads close; settle it')}
+  else{toast(res&&res.action==='auto'?'Authored — folded onto a green already charted':'Authored — on the atlas');if(curateOn)render()}
+}
+// A bare roaster, to seed the roster before its offerings are known.
+function openAuthorRoaster(name){
+  if(guard())return;
+  openSheet(`
+  <h3>Add a roaster</h3>
+  <div class="sub">A roaster on the chart. Its offerings come next, authored as roasts.</div>
+  <label class="f"><span class="l">Roaster</span><input type="text" id="ar_name" value="${esc(name||'')}" placeholder="Cognoscenti Coffee"></label>
+  <label class="f"><span class="l">Website <span class="opt">optional</span></span><input type="text" id="ar_site" placeholder="cognoscenticoffee.com" inputmode="url" autocapitalize="off" autocorrect="off"></label>
+  <button class="btn btn-primary" onclick="saveAuthorRoaster()">Add to the chart</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
+}
+function saveAuthorRoaster(){
+  if(guard())return;
+  const name=val('ar_name'); if(!name){toast('Name the roaster');return}
+  catUpsert('roasters',catNorm(name),{name,site:val('ar_site')||undefined},activeName());
+  closeSheet();toast('Roaster added — author a roast next');if(curateOn)render();
+}
+/* ---- The review queue (RESOLVER §4, folded in). DERIVED, never stored: own records (bags, café cups,
+ * authored roasts) that read onto a standing green in the propose band neither confirmed nor kept apart. A
+ * fresh device derives it identically with zero stored proposals; empty reads settled. A phantom green (a
+ * floor node a confirm left behind, no roast, no pour) is never a candidate — only anchored greens propose. ---- */
+function queueCandidates(rec){
+  if(!rec||!lotWorthy(rec)||readOnly())return [];
+  const floorKey=lotKeyOf(rec,rec.id),apart=new Set(rec.lotApart||[]),boundId=rec.lotRef?lotFwd(rec.lotRef):null;
+  const anchored=new Set();CAT.roasts.entries.forEach(r=>{if(r&&r.lotRef)anchored.add(r.lotRef)});(D.pours||[]).forEach(p=>{if(p&&p.lotRef)anchored.add(p.lotRef)});
+  const out=[];
+  CAT.lots.entries.forEach(l=>{if(!lotLive(l)||l._key===floorKey||l.id===boundId||apart.has(l.id)||!anchored.has(l.id))return;
+    const s=scoreLot(rec,l);if(s.score>=TAU_PROP)out.push({lot:l,score:s.score,fields:s.fields})});
+  return out.sort((a,b)=>b.score-a.score||String(a.lot.firstAt||'').localeCompare(String(b.lot.firstAt||'')));
+}
+function reviewQueue(){
+  if(readOnly())return [];
+  const recs=[...(D.bags||[]),...(D.cups||[]).filter(c=>c&&c.kind==='cafe'),...(D.authored||[])];
+  const out=[];recs.forEach(r=>{if(!r)return;const c=queueCandidates(r);if(c.length)out.push({rec:r,cands:c})});
+  return out;
+}
+function openReviewQueue(){
+  const q=reviewQueue();
+  if(!q.length){closeSheet();toast('The queue is clear — every green is settled');if(curateOn)render();return}
+  openSheet(`
+  <h3>Review queue</h3>
+  <div class="sub">Greens the resolver couldn’t call alone — ${q.length} record${q.length===1?'':'s'} with a look-alike to settle. Deliberate work, not a nag; nothing here is final.</div>
+  <div class="muted small" style="margin:2px 2px 12px">Each stands on its own green until you say. Confirm the one that’s truly the same, or keep them apart — the safe call.</div>
+  ${q.map(x=>`<button class="wc-item" onclick="openReviewItem(${jsq(x.rec.id)})"><span class="tx"><span class="tt">${esc(recLabel(x.rec))}</span><span class="dd">${x.cands.length} look-alike${x.cands.length===1?'':'s'} · ${esc(recOriginLine(x.rec))}</span></span><span class="go">→</span></button>`).join('')}
+  <button class="btn btn-quiet" style="margin-top:10px" onclick="closeSheet()">Close</button>`);
+}
+// One queue item — the ranked propose sheet (§4's sheet contract, batched): candidates score-desc, each with
+// its matched fields, and three answers — confirm one (binds it, the rest stay honestly apart), or keep them
+// all apart ("not sure", the safe fork). A score never travels without its reasons.
+function openReviewItem(recId){
+  const rec=findRec(recId); if(!rec)return openReviewQueue();
+  const cands=queueCandidates(rec);
+  if(!cands.length)return openReviewQueue();
+  openSheet(`
+  <h3>The same green?</h3>
+  <div class="sub">${esc(recLabel(rec))} — ${esc(recOriginLine(rec))}</div>
+  <div class="muted small" style="margin:2px 2px 12px">${cands.length} green${cands.length===1?'':'s'} on the atlas read like this one. Confirm the one that’s truly the same — the rest stay apart.</div>
+  ${cands.map(c=>`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(lotLabel(c.lot))}</span><span class="dd">${c.fields&&c.fields.length?'matches on '+esc(c.fields.join(' · ')):'a partial read'}</span></span><button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0" onclick="queueConfirm(${jsq(recId)},${jsq(c.lot.id)})">The same green</button></div>`).join('')}
+  <button class="btn btn-quiet" style="margin-top:10px" onclick="queueApart(${jsq(recId)})">None of these — keep apart</button>
+  <div class="muted small" style="margin-top:8px">Keeping apart is the safe call — over-split corrects, over-merge doesn’t. A green can be joined later from its page.</div>`);
+}
+function afterQueueAction(){if(reviewQueue().length){openReviewQueue();return}closeSheet();if(curateOn)render()}
+function queueConfirm(recId,candId){
+  if(guard())return;
+  const rec=findRec(recId),cand=catNode('lots',candId); if(!rec||!cand){closeSheet();return}
+  const rest=queueCandidates(rec).map(c=>c.lot.id).filter(id=>id!==candId); // the losers — left honestly apart, never re-proposed
+  bindRecordTo(rec,cand);
+  rec.lotApart=[...new Set([...(rec.lotApart||[]),...rest])];
+  save();toast('Joined — one green now');afterQueueAction();
+}
+function queueApart(recId){
+  if(guard())return;
+  const rec=findRec(recId); if(!rec){closeSheet();return}
+  rec.lotApart=[...new Set([...(rec.lotApart||[]),...queueCandidates(rec).map(c=>c.lot.id)])];
+  save();toast('Kept apart — the safe call');afterQueueAction();
+}
+/* ---- The Chart No. 1 curation view — a read surface for the one chart (LA · Ethiopia 2025): the roasters
+ * and the season's greens authored under it, the same-green cases standing on real authored data, and the
+ * review queue's quiet entry point. The Act II gate made visible; reuses openLotPage, adds no new map (that
+ * is step 4's two surfaces). A full-screen overlay, like the discover surface. ---- */
+let curateOn=false;
+function openCurate(){if(guard())return;curateOn=true;placeView=null;discOn=false;render()}
+function closeCurate(){curateOn=false;render()}
+function vCurate(){
+  const recs=chartRecs(),q=reviewQueue();
+  const handsOf=id=>new Set(CAT.roasts.entries.filter(r=>r.lotRef===id&&r.roasterRef).map(r=>r.roasterRef)).size;
+  const lotRows=[...new Set(recs.map(r=>r.lotRef?lotFwd(r.lotRef):null).filter(Boolean))]
+    .filter(id=>lotLive(catNode('lots',id))).map(id=>({id,lot:catNode('lots',id),hands:handsOf(id)}))
+    .sort((a,b)=>b.hands-a.hands||String(a.lot.firstAt||'').localeCompare(String(b.lot.firstAt||'')));
+  const sameGreen=lotRows.filter(x=>x.hands>=2);
+  const authoredExtra=[...new Set(recs.map(r=>r.roasterRef).filter(Boolean).map(roasterName))]
+    .filter(nm=>!CHART1.roster.some(n=>normName(n)===normName(nm)));
+  const lotRow=x=>`<button class="wc-item" onclick="closeCurate();openLotPage(${jsq(x.id)})"><span class="tx"><span class="tt">${esc(lotLabel(x.lot))}</span><span class="dd">${x.hands} hand${x.hands===1?'':'s'}${x.hands>=2?' · the same green':''}</span></span><span class="go">→</span></button>`;
+  return `
+  <button class="text-action" onclick="closeCurate()" style="margin:0 0 12px">← the record</button>
+  <div class="eyebrow">Act II · Chart No. 1</div>
+  <div style="font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-0.02em;color:var(--ink);line-height:1.05">${esc(CHART1.name)}</div>
+  <div class="sub">${esc(CHART1.origin)} · ${esc(CHART1.season)}</div>
+  <div class="muted small serif" style="font-style:italic;margin:8px 2px 16px">One city, one origin-season, charted by hand — its roasters and the greens behind them entered as facts about coffee, not cups you had. Every green you author runs the same resolver a bag does: the sure ones fold, the look-alikes wait to be settled.</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <button class="btn btn-primary" style="width:auto" onclick="openAuthorRoast()">Author a roast</button>
+    <button class="btn btn-quiet" style="width:auto" onclick="openAuthorRoaster()">Add a roaster</button>
+  </div>
+  ${q.length
+    ?`<button class="wc-item" onclick="openReviewQueue()"><span class="tx"><span class="tt">Review queue</span><span class="dd">${q.length} green${q.length===1?'':'s'} the resolver couldn’t call alone — settle each with one tap</span></span><span class="go">${q.length}</span></button>`
+    :`<div class="muted small" style="margin:2px 2px 4px">Review queue — clear. Nothing ambiguous is waiting.</div>`}
+  ${sameGreen.length?`<h2>The same green, in more than one hand</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The page nothing else shows — one washing station, more than one roaster’s reading of it. The Act II gate, standing on real authored data.</div>
+  ${sameGreen.map(lotRow).join('')}`:''}
+  <h2>The season’s greens</h2>
+  ${lotRows.length?`<div class="muted small serif" style="font-style:italic;margin:0 2px 8px">Every green authored under this chart. Drill into one for its roasters, its grain, how sure its identity is.</div>
+  ${lotRows.map(lotRow).join('')}`:'<div class="empty">No green authored yet. Author a roast to put the first one on the atlas.</div>'}
+  <h2>The roster</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">LA’s specialty roasters — a guide, not a claim. Confirm the live roster and each roaster’s current offerings against their own pages as you author.</div>
+  ${CHART1.roster.map(n=>`<button class="wc-item" onclick="openAuthorRoast(${jsq(n)})"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">${rosterAuthored(n)?'on the atlas':'not charted yet'}</span></span><span class="go">→</span></button>`).join('')}
+  ${authoredExtra.length?`<div class="muted small" style="margin:8px 2px 2px">Also authored: ${authoredExtra.map(esc).join(' · ')}.</div>`:''}
+  <div class="muted small serif" style="font-style:italic;text-align:center;margin:20px 2px 2px">Curated, not crowded — the catalog is correct before it is large.</div>`;
+}
+// The chart demo — curator ingestion end to end (VISION step 3), the complement to #seed-merge/#seed-batch.
+// A clearly-marked demo slice of Chart No. 1: two roasters of one Ethiopian green a transliteration apart
+// (the fingerprint folds them — the same green, two hands), two Guji greens a curator keeps distinct, a thin
+// Guji record that ties both and is settled through the queue (a second same-green case falls out of it), and
+// one look-alike left waiting for you to settle. No real roaster is claimed to have bought a specific lot —
+// the demo roasters are fictional; the real chart is authored in-app against actual offering pages. Reached by
+// #seed-chart or window.devSeedChart. Idempotent.
+function devSeedChart(){
+  if(guard()){toast('Switch to your own ledger to seed');return}
+  const marker='Konga washed — Ridgeline';
+  if((D.authored||[]).some(r=>r&&r.name===marker))return openCurate();
+  // (1) the same green, two roasters — a transliteration apart (Yirgacheffe / Yirgachefe), folded by the fingerprint
+  authorRoast({roaster:'Ridgeline (demo)',offering:marker,originCountry:'Ethiopia',originRegion:'Yirgacheffe',producer:'Konga washing station',variety:'Heirloom',process:'Washed',roastLevel:1});
+  authorRoast({roaster:'Seabright (demo)',offering:'Ethiopia Konga',originCountry:'Ethiopia',originRegion:'Yirgachefe',producer:'Konga washing station',variety:'Heirloom',process:'Washed',roastLevel:1});
+  // (2) two Guji greens a curator keeps distinct — the second reads close, so it proposes; kept apart by hand
+  const ga=authorRoast({roaster:'Almanac (demo)',offering:'Guji natural — Hambela',originCountry:'Ethiopia',originRegion:'Guji',producer:'Hambela',variety:'Heirloom',process:'Natural',roastLevel:1});
+  const gb=authorRoast({roaster:'Fernwood (demo)',offering:'Guji natural — Shakiso',originCountry:'Ethiopia',originRegion:'Guji',producer:'Shakiso',variety:'Heirloom',process:'Natural',roastLevel:1});
+  if(gb.res&&gb.res.action==='propose'&&gb.res.propose)bindApart(gb.rec.id,gb.res.propose.lot.id,''); // the curator: a different micro-lot — two greens stand
+  // (3) a thin Guji record that reads onto BOTH — a tie the resolver won't call, so it waits in the queue; settle it
+  const gc=authorRoast({roaster:'Cobble (demo)',offering:'Guji',originCountry:'Ethiopia',originRegion:'Guji',variety:'Heirloom',process:'Natural',roastLevel:1});
+  const aLot=ga.rec.lotRef;
+  if(aLot&&queueCandidates(gc.rec).some(c=>c.lot.id===aLot))queueConfirm(gc.rec.id,aLot); // settle: the same green as Almanac's Guji — a second same-green case falls out
+  closeSheet();
+  toast('Seeded — a chart: one green in two hands, a tie settled, a look-alike waiting');
+  openCurate();
+}
 function openCupDetail(id){
   const c=cupById(id); if(!c)return;
   const b=bagById(c.bagId);
@@ -2849,6 +3090,10 @@ function vMore(){
   </div>`:''}
   ${roasterHTML}
   ${lotHTML}
+  ${readOnly()?'':(()=>{const qn=reviewQueue().length;return `
+  <h2>Curate the atlas</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Author the spine directly — a city's roasters and the season's greens behind them — as facts about coffee, no cup logged. Every green runs the resolver a bag does.</div>
+  <button class="wc-item" onclick="openCurate()"><span class="tx"><span class="tt">Chart No. 1 · ${esc(CHART1.name)}</span><span class="dd">${esc(CHART1.origin)} · ${esc(CHART1.season)}${qn?' · '+qn+' to settle':''}</span></span><span class="go">→</span></button>`})()}
   ${readOnly()?'':`
   <h2>How deep you go</h2>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">CARTA opens a room at a time. Step in whenever you're ready — nothing is ever taken away.</div>
@@ -4309,7 +4554,7 @@ function mergeLedgers(loc,rem){
   const out=clone(blank);
   const dead=new Map();[...(rem.deleted||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
   out.deleted=[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-  ['setups','bags','brews','cups','pours','cafes'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
+  ['setups','bags','brews','cups','pours','cafes','authored'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
   const f=new Map();[...(rem.cafeFavs||[]),...(loc.cafeFavs||[])].forEach(x=>f.set(String(x).toLowerCase(),x));
   out.cafeFavs=[...f.values()].sort((a,b)=>a.localeCompare(b));
   const w=new Map();[...(rem.cafeWants||[]),...(loc.cafeWants||[])].forEach(x=>w.set(String(x).toLowerCase(),x));
@@ -5866,11 +6111,14 @@ window.devSeedOutturn=devSeedOutturn;
 window.devSeedFingerprint=devSeedFingerprint;
 window.devSeedMerge=devSeedMerge;
 window.devSeedBatch=devSeedBatch;
+window.devSeedChart=devSeedChart;
 if(location.hash==='#seed-lot')setTimeout(devSeed,200);
 if(location.hash==='#seed-outturn')setTimeout(devSeedOutturn,200);
 if(location.hash==='#seed-fingerprint')setTimeout(devSeedFingerprint,200);
 if(location.hash==='#seed-merge')setTimeout(devSeedMerge,200);
 if(location.hash==='#seed-batch')setTimeout(devSeedBatch,200);
+if(location.hash==='#seed-chart')setTimeout(devSeedChart,200);
+if(location.hash==='#chart')setTimeout(openCurate,200);
 window.addEventListener('online',()=>{syncNow(false);_mlDown=false;smapMount()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyTheme();syncNow(false)}});
 </script>
