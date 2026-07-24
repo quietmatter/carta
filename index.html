@@ -1037,6 +1037,89 @@ function lotBind(lot,rec,rung,via,evidence,who,at){
   lot.sightings.push({id:uid(),by:who||'',at:at||new Date().toISOString(),bind:{ref:rec.id,kind:recKind(rec)},rung,via,src:'keeper',evidence:evidence||{}}); // src:'keeper' — a hand authored this bind; the assist would stamp 'ingest' (deferred)
   lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots');
 }
+/* ---- The standing (VISION step 5): a coffee's rarity and caliber, compiled from sourced facts —
+ * reborn from the old café reach onto the coffee it always belonged on. THREE INDEPENDENT axes —
+ * caliber, rarity, traceability — the model never infers one from another, and each reads UNREAD
+ * until its own evidence stands, never a default to the low end. Standing is never a verdict on
+ * taste ("an 82-point daily lot you love outranks a 92-point gesha on your overlay"); it states only
+ * what the coffee IS in the world. Marks stay monochrome — a lens, never a rank. ---- */
+// Caliber's source ladder, strongest first. Only 1a–3 ever set the standing; 4 (a roaster's own
+// printed number, no attributable cupper) is CARTA's one poison line — recorded as a claim, shown as
+// "roaster-stated 92 — unverified," and never admitted as the read. Barista-competition scores judge
+// the competitor, not the coffee, and are firewalled out entirely — no tier here names them.
+const CALIBER_TIERS=[
+  {k:'1a',label:'Independently-juried competition',hint:'Cup of Excellence, a national CoE, Best of Panama — blind, dual-jury, published',admissible:true},
+  {k:'1b',label:'Producer- or estate-run auction',hint:'Gesha Village and the like — real and published, scored by the estate or an invited panel',admissible:true},
+  {k:'2',label:'Attributable protocol score',hint:'a named Q-grader or lab, or an importer offer-sheet score with the cupper named',admissible:true},
+  {k:'3',label:'Credentialed keeper cupping',hint:'a CARTA contributor with a stated calibration, signed',admissible:true},
+  {k:'4',label:'Roaster / retail claim',hint:'a number with no attributable cupper — recorded, never admitted',admissible:false},
+];
+const caliberTier=k=>CALIBER_TIERS.find(t=>t.k===k)||null;
+const caliberAdmissible=k=>{const t=caliberTier(k);return!!t&&t.admissible};
+// The firewall: a claimed tier counts only once it NAMES its source — 1a/1b needs the event, 2/3
+// needs the cupper. An unnamed claim downgrades to 4 rather than blocking the save — the record
+// still saves, honestly labelled a claim, exactly the posture the hard-ID firewall already takes.
+function caliberResolveTier(tier,fields){
+  if(tier==='1a'||tier==='1b')return regSubstance(fields.event)?tier:'4';
+  if(tier==='2'||tier==='3')return regSubstance(fields.cupper)?tier:'4';
+  return '4';
+}
+// A caliber reading — a RECORD, never a bare number (VISION). Append-only and struck-not-deleted,
+// exactly like every other sighting in this codebase; a mistyped entry is withdrawn, never erased.
+function lotAddCaliber(lot,fields,who,at){
+  if(!lot||lot.role||!regSubstance(fields.score))return null;
+  lot.caliber=lot.caliber||[];
+  const rec={id:uid(),score:Number(fields.score),protocol:(fields.protocol||'').trim(),cupper:(fields.cupper||'').trim(),
+    event:(fields.event||'').trim(),date:fields.date||'',tier:caliberResolveTier(fields.tier,fields),src:'keeper',by:who||'',at:at||new Date().toISOString()};
+  lot.caliber.push(rec);
+  lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots');
+  return rec;
+}
+function caliberWithdraw(lotId,calId){
+  const lot=catNode('lots',lotId);if(!lot)return;
+  const c=(lot.caliber||[]).find(x=>x&&x.id===calId);if(!c||c.withdrawnAt)return;
+  c.withdrawnAt=new Date().toISOString();
+  lot.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots');
+}
+// Rarity — sourced facts, additive and blanks-only, written directly on the resolved node (mirrors
+// catStampRoast's direct-write pattern rather than re-keying through catUpsert). auctionPrice is a
+// demand signal and NEVER folds into caliber. "How narrowly carried" is deliberately NOT a field
+// here — it's lotHands(id), already built; the standing reads it, never duplicates it.
+const SCARCE_VARIETIES=['gesha','sudan rume','pink bourbon'];
+function lotSetRarity(lot,fields,who){
+  if(!lot||lot.role)return false;
+  let hit=false;
+  ['sizeKg','sizeBags','auctionPrice','scarceVariety'].forEach(k=>{
+    if(regSubstance(fields[k])&&!regSubstance(lot[k])){lot[k]=fields[k];hit=true}
+  });
+  if(hit){lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots')}
+  return hit;
+}
+// The compiled reads, one per axis — kept separate from compile()'s `identity`/`standing` (that
+// `standing` key already names the sightings array; naming the tiering result the same would collide).
+function lotCaliberStanding(lot){
+  const all=((lot&&lot.caliber)||[]).filter(c=>c&&!c.withdrawnAt);
+  const admissible=all.filter(c=>caliberAdmissible(c.tier)),claims=all.filter(c=>!caliberAdmissible(c.tier));
+  if(!admissible.length)return {read:'unread',best:null,claims};
+  const rank={'1a':0,'1b':1,'2':2,'3':3}; // strongest tier first; ties broken by the newest record
+  const best=admissible.slice().sort((a,b)=>rank[a.tier]-rank[b.tier]||String(b.at).localeCompare(String(a.at)))[0];
+  return {read:'sourced',best,claims};
+}
+function lotRarityStanding(lot){
+  const hands=lot?lotHands(lot.id):0; // reused from the atlas, not recomputed
+  const facts=[];
+  if(regSubstance(lot&&lot.sizeKg))facts.push(`${lot.sizeKg} kg`);
+  if(regSubstance(lot&&lot.sizeBags))facts.push(`${lot.sizeBags} bag${lot.sizeBags===1?'':'s'}`);
+  if(regSubstance(lot&&lot.auctionPrice))facts.push(`${money(lot.auctionPrice)}/lb at auction`);
+  if(regSubstance(lot&&lot.scarceVariety))facts.push(`${lot.scarceVariety} — an inherently scarce varietal`);
+  return {read:(facts.length||hands>=2)?'sourced':'unread',facts,hands,narrow:hands>0&&hands<=2};
+}
+// The standing: the three axes, read side by side, never merged into one number. Traceability is
+// the existing grain (RESOLVER §6) — reused here, not reinvented.
+function lotTier(lot){
+  if(!lot)return null;
+  return {caliber:lotCaliberStanding(lot),rarity:lotRarityStanding(lot),traceability:{grain:lot.grain,read:grainRead(lot.grain)}};
+}
 // The producer node — the grower behind a lot's producer field, keyed by name+country so two
 // growers sharing a name in different origins never collapse (the lot's timidity, one hand up).
 // The ONLY origin actor flat data can seed: the old records carry no processor (washing-station)
@@ -1948,10 +2031,15 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.26.0';
+const APP_VERSION='4.27.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.27.0',date:'Jul 24, 2026',title:'The standing — a green’s rarity and caliber, sourced',items:[
+    'A green’s page can now carry its standing — how rare it is, how it has cupped — read beside how far its identity traces. Three independent facts, never merged into one verdict: nothing here is your taste, which stays yours on your own cup.',
+    'A cup score counts only once it names where it came from — a competition, an auction, a named cupper or lab, or your own signed cupping. Leave the source unnamed and a score still saves, but honestly, as a claim: “roaster-stated 92 — unverified,” never printed as the read. A roaster’s own number was never going to be the truth of the coffee, and now the record says so instead of pretending otherwise.',
+    'Rarity reads as sourced facts too — a disclosed lot size, an auction price, a scarce varietal, how few hands carry it. Nothing is scored; nothing is guessed. An unrated, ordinary lot still reads as a complete record — the standing is there to find, never a rank forced onto every green.',
+  ]},
   {v:'4.26.0',date:'Jul 24, 2026',title:'The atlas, drawn on the map',items:[
     'Chart No. 1 now draws as a map, folded into the same atlas surface you already walk: the season’s origins at a coarse-but-honest position, the roasters in their city, the bars on their streets, and a thin line tracing a green from origin to roaster to bar. A stranger opens it read-only and reads the whole scene at a glance; every mark taps into its page — a grower, a roaster, a venue — so the map and the pages are one walk. Map or List, whichever you like.',
     'Coordinates stay honest. A venue sits at its real point, a roaster at its city, a green at its region — coarse where the record is coarse, and never a farm-precise pin invented. A node with no coordinate lists rather than lies. The street layer is an enhancement: the drawn plot renders first from saved positions and stands alone offline, and the whole scene keeps working — pins, taps, lines — with no streets at all.',
@@ -2424,6 +2512,16 @@ function openLotPage(lotId){
   // §6 — the resolution grain, first-class beside the name, in its honest words; monochrome, a lens not a rank.
   const gr=grainRead(lot.grain);
   const grainLine=gr?`<div class="muted small" style="margin:0 2px 12px"><strong>${esc(gr[0])}</strong> — ${esc(gr[1])}.</div>`:'';
+  // The standing (VISION step 5) — caliber and rarity, read beside traceability (grainLine, above).
+  // Three independent axes; each reads unread until its OWN evidence stands, never a bare number,
+  // never a rank. A tier-4 claim (a roaster's own printed number) renders honestly as a claim, never
+  // as the read — the one poison line VISION refuses outright.
+  const tier=lotTier(lot),cal=tier.caliber,rar=tier.rarity;
+  const calLine=cal.best
+    ?`<div class="muted small" style="margin:0 2px 12px"><strong>${esc(String(cal.best.score))}</strong> · ${esc(caliberTier(cal.best.tier).label)}${cal.best.event?' — '+esc(cal.best.event):cal.best.cupper?' — '+esc(cal.best.cupper):''}${cal.best.protocol?' · '+esc(cal.best.protocol):''}. Cupped, sourced, on the record.</div>`
+    :cal.claims.length?`<div class="muted small" style="margin:0 2px 12px">Claimed — ${cal.claims.map(c=>esc(String(c.score))).join(', ')}, unverified. A roaster’s own number names no cupper; it never sets the standing.</div>`:'';
+  const rarLine=(rar.facts.length||rar.narrow)?`<div class="muted small" style="margin:0 2px 12px">${[...rar.facts,rar.narrow?`carried by ${rar.hands} roaster${rar.hands===1?'':'s'} — narrowly held`:''].filter(Boolean).map(esc).join(' · ')}.</div>`:'';
+  const standingAction=readOnly()?'':`<button class="btn btn-quiet" style="margin:0 0 12px" onclick="openLotStanding(${jsq(lotId)})">${(calLine||rarLine)?'Add another reading':'Record the standing'}</button>`;
   // The grower(s) behind this green, each a tap into its page — the station is the finest provable node for
   // much of coffee (LOT_IDENTITY), so naming it here makes it walkable, not inert text in the label.
   const growers=(lot.producerRefs||[]).map(id=>catNode('producers',id)).filter(Boolean);
@@ -2444,6 +2542,9 @@ function openLotPage(lotId){
   <div class="sub">${hands>=2?`The same green, in ${hands} hands.`:'One green on the atlas.'}${meta?` · ${meta}`:''}</div>
   <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${roasts.length} roast${roasts.length===1?'':'s'} reference this green${hands>=2?' — the view nothing else shows: one washing station, more than one reading of it.':'.'}</div>
   ${grainLine}
+  ${calLine}
+  ${rarLine}
+  ${standingAction}
   ${growerLine}
   ${batchLine}
   ${idLine}
@@ -2452,6 +2553,53 @@ function openLotPage(lotId){
   ${venues.length?`<h2>Poured</h2><div class="muted small" style="margin-bottom:12px">${venues.map(s=>`<button class="text-action" onclick="closeSheet();openPlace(${jsq(s)})">${esc(s)}</button>`).join(' · ')}</div>`:''}
   ${corrections}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+// The standing's entry sheet — a caliber reading and a rarity fact, each optional, each a fact about
+// the coffee rather than a taste (that stays on the keeper's own cup, per VISION). The tier picker
+// defaults to nothing: an unnamed source saves the score as a claim, never the read — the firewall
+// (caliberResolveTier) enforces this at save regardless of what a keeper types elsewhere.
+function openLotStanding(lotId){
+  if(guard())return;
+  const lot=catNode('lots',lotId); if(!lot){toast('That green isn’t on the atlas yet');return}
+  openSheet(`
+  <h3>Record the standing</h3>
+  <div class="sub">${esc(lotLabel(lot))}</div>
+  <div class="muted small serif" style="font-style:italic;margin:2px 2px 14px">Facts about the coffee, not your taste — that stays on your own cup. A score counts only once it names where it came from; unnamed, it saves as a claim, never the read.</div>
+  <div class="grid2">
+    <label class="f"><span class="l">Cup score <span class="opt">optional</span></span><input type="number" id="cal_score" min="0" max="100" step="0.1" placeholder="90.5"></label>
+    <label class="f"><span class="l">Date <span class="opt">optional</span></span><input type="date" id="cal_date"></label>
+  </div>
+  <label class="f"><span class="l">Source</span>${seg('cal_tier',['Competition','Auction','Named cupper','My own'],'')}</label>
+  <div class="muted small" style="margin:2px 2px 10px">Competition — Cup of Excellence, Best of Panama, blind-juried. Auction — Gesha Village and the like, estate-scored. Named cupper — a Q-grader, a lab, an importer’s offer sheet. My own — signed, to your calibration. Leave unpicked and a score saves as an unverified claim.</div>
+  <div class="grid2">
+    <label class="f"><span class="l">Event <span class="opt">competition / auction</span></span><input type="text" id="cal_event" placeholder="Ethiopia 2024 · #7"></label>
+    <label class="f"><span class="l">Cupper / lab <span class="opt">named score</span></span><input type="text" id="cal_cupper" placeholder="who cupped it"></label>
+  </div>
+  <label class="f"><span class="l">Protocol <span class="opt">optional</span></span><input type="text" id="cal_protocol" placeholder="SCA CVA, legacy Q, …"></label>
+  <hr style="border:none;border-top:1px solid var(--line);margin:16px 2px">
+  <div class="sub" style="margin-bottom:6px">Rarity</div>
+  <div class="grid2">
+    <label class="f"><span class="l">Lot size, kg <span class="opt">optional</span></span><input type="number" id="rar_kg" min="0" placeholder="300"></label>
+    <label class="f"><span class="l">Lot size, bags <span class="opt">optional</span></span><input type="number" id="rar_bags" min="0" placeholder="5"></label>
+  </div>
+  <div class="grid2">
+    <label class="f"><span class="l">Auction price, $/lb <span class="opt">optional</span></span><input type="number" id="rar_price" min="0" step="0.01" placeholder="45.00"></label>
+    <label class="f"><span class="l">Variety <span class="opt">if inherently scarce</span></span><input type="text" id="rar_variety" list="scarcelist" placeholder="gesha"></label>
+  </div>
+  <datalist id="scarcelist">${SCARCE_VARIETIES.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
+  <button class="btn btn-primary" onclick="saveLotStanding(${jsq(lotId)})">Save</button>
+  <button class="btn btn-quiet" onclick="closeSheet();openLotPage(${jsq(lotId)})">Cancel</button>`);
+}
+function saveLotStanding(lotId){
+  if(guard())return;
+  const lot=catNode('lots',lotId); if(!lot){closeSheet();return}
+  const tierMap={'Competition':'1a','Auction':'1b','Named cupper':'2','My own':'3'};
+  const score=val('cal_score');
+  const calAdded=regSubstance(score)&&!!lotAddCaliber(lot,{score,tier:tierMap[segState.cal_tier]||'',event:val('cal_event'),cupper:val('cal_cupper'),protocol:val('cal_protocol'),date:val('cal_date')},activeName());
+  const rarAdded=lotSetRarity(lot,{sizeKg:val('rar_kg'),sizeBags:val('rar_bags'),auctionPrice:val('rar_price'),scarceVariety:val('rar_variety')},activeName());
+  if(!calAdded&&!rarAdded){toast('Nothing to save — leave a field blank to skip it');return}
+  closeSheet();openLotPage(lotId);
+  toast(calAdded?'Recorded — the reading is on the record':'Rarity recorded');
 }
 const findRec=id=>(D.bags||[]).find(b=>b&&b.id===id)||(D.cups||[]).find(c=>c&&c.id===id)||(D.authored||[]).find(a=>a&&a.id===id)||null;
 /* ---- §5 the merge/split affordances, on the lot page. Own+writable only; each shows its reason. A join
@@ -3165,9 +3313,20 @@ function devSeedChart(){
     .forEach(([n,lat,lon])=>catUpsert('roasters',catNorm(n),{lat,lon,geoGrain:'city',city:'Los Angeles'},demoWho));
   [['Konga washing station',6.1600,38.2050],['Hambela',5.9800,38.9000],['Shakiso',5.6800,38.9100]] // Yirgacheffe · Guji · Guji — region centroids, coarse by design
     .forEach(([p,lat,lon])=>catUpsert('producers',catNorm(p)+'|'+catNorm('Ethiopia'),{lat,lon,geoGrain:'region'},demoWho));
+  // (7) the standing (VISION step 5), demonstrated on the two greens off one station — never a real
+  // competition result, clearly demo-labeled throughout. The washed green (the marquee same-green
+  // case) gets a REAL, sourced reading — the kind that sets the standing — plus a disclosed lot size.
+  // The natural gets a roaster-claimed score with no named cupper — the poison line VISION refuses:
+  // it saves as a claim, never the read, so the demo shows both states end to end.
+  const wgLot=catNode('lots',wg),ngLot=catNode('lots',ng);
+  if(wgLot){
+    lotAddCaliber(wgLot,{score:90.25,tier:'1a',event:'Cup of Excellence Ethiopia (demo) · #7',protocol:'SCA CVA',date:'2025-03-01'},demoWho);
+    lotSetRarity(wgLot,{sizeKg:300},demoWho);
+  }
+  if(ngLot)lotAddCaliber(ngLot,{score:92,tier:''},demoWho); // no named source — resolves to tier 4, a claim only
   save();
   closeSheet();
-  toast('Seeded — a chart to walk and a map to read: one green in two hands, a station with two greens, a roaster’s other greens, a green poured at a bar');
+  toast('Seeded — a chart to walk and a map to read: one green in two hands, a station with two greens, a roaster’s other greens, a green poured at a bar, and a standing on the washed one');
   openCurate();
 }
 function openCupDetail(id){

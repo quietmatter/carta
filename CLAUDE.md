@@ -171,6 +171,25 @@ server/
   offline-degrading — the demo `devSeedChart` stamps demo coordinates directly,
   never the network). Renders read-only for a stranger; the drawn plot is the
   floor, the street tiles the enhancement.
+- **the standing** — a coffee's rarity and caliber, compiled from sourced facts
+  (VISION step 5), reborn from the old café reach onto the coffee it always
+  belonged on. Three independent axes, never merged into one verdict:
+  **caliber** (`lotAddCaliber`, appended to a lot's `caliber[]`, struck-not-
+  deleted) admits a score only through the source ladder (`CALIBER_TIERS`,
+  1a competition · 1b estate auction · 2 named cupper/lab · 3 credentialed
+  keeper), enforced at save by `caliberResolveTier` — an unnamed source
+  downgrades silently to tier 4, CARTA's one poison line: recorded as a claim,
+  never admitted as the read; **rarity** (`lotSetRarity`, blanks-only —
+  `sizeKg`/`sizeBags`/`auctionPrice`/`scarceVariety`) reuses `lotHands` for
+  "how narrowly carried," never a new field; **traceability** is the existing
+  `grain` (RESOLVER §6), reused, not reinvented. `lotTier(lot)` folds all
+  three into the compiled read — named apart from `compile()`'s own
+  `standing` key (the identity sightings array) to avoid colliding with it.
+  Surfaces on `openLotPage` beside the grain/identity lines, monochrome, each
+  axis reading *unread* until its own evidence stands; `openLotStanding`/
+  `saveLotStanding` are the entry sheet, gated by `readOnly()` exactly like
+  the page's other corrections. `devSeedChart` demonstrates both a real
+  sourced reading and an unnamed claim, clearly demo-labeled.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
 - **export / import** — JSON export (stamped with the user's name); import as a
@@ -268,7 +287,12 @@ blanks-only law); `reachCompile` became `compile(entry)` (fold sightings into a
 reading). Each doc is one group-writable rev/409 document at `/api/catalog/:kind`
 (both servers). The **lot** carries its identity columns — `grain`, `scope`,
 `hardIds[]`, `fingerprint{}`, `lineage{}`, `processingBatchRef` — beside its flat
-origin (the read/retirement surface), never over it. Migration seeds the catalog
+origin (the read/retirement surface), never over it. It also carries **the
+standing** (VISION step 5) — `caliber[]` (append-only records, each
+`{score,protocol,cupper,event,date,tier,src,by,at,withdrawnAt?}`) and blanks-only
+rarity fields (`sizeKg`/`sizeBags`/`auctionPrice`/`scarceVariety`) — additive
+beside identity, never touching `lotKeyOf`/the resolver/thresholds; see *the
+standing* above. Migration seeds the catalog
 from every readable ledger (`catSeed`/`catSeedGear`), re-points the ledger onto it
 (`catRepoint`/`gearRepoint`/`brewRepoint`/`cupPrepRepoint`, additive + reversible),
 then retires the flat text once a node stands (`catRetire`, the one irreversible
