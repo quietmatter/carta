@@ -1,0 +1,2014 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="carta/fonts.css">
+<link rel="stylesheet" href="carta/tokens.css">
+<link rel="stylesheet" href="carta/components.css">
+<style>
+/* ── motion charter (the one sanctioned break from inline styles: tokens,
+   keyframes, and the reduced-motion path all live here) ────────────────
+   used more, moves less. nothing bounces; nothing pulses. */
+:root{
+  --mo-fast:130ms;        /* controls touched most — a chip, a dial: barely moves */
+  --mo-base:230ms;        /* a screen settles, a sheet rises — the standard move */
+  --mo-considered:820ms;  /* the one sanctioned moment — arrival, the interlude */
+  --mo-ease:cubic-bezier(.22,.61,.36,1);  /* one shared ease-out */
+}
+html,body{margin:0;padding:0;background:var(--surface-sunk)}
+body{font-family:var(--serif);color:var(--text-primary);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+a:hover{color:var(--link-hover)}
+@keyframes ca-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ca-settle{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes ca-pins-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ca-draw{from{stroke-dashoffset:220}to{stroke-dashoffset:0}}
+.ca-screen{animation:ca-settle var(--mo-base) var(--mo-ease) both}
+.ca-sheet{animation:ca-settle var(--mo-base) var(--mo-ease) both}
+.wc-rise{opacity:0;animation:ca-rise var(--mo-considered) var(--mo-ease) forwards}
+.wc-rise.d2{animation-delay:.12s}.wc-rise.d3{animation-delay:.24s}
+/* the interlude — the one place the map pauses to compose itself */
+.ca-season-line{fill:none;stroke:var(--ink-3);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.7;stroke-dasharray:220;stroke-dashoffset:0}
+.ca-map.is-reading .ca-season-line{animation:ca-draw var(--mo-considered) var(--mo-ease) both}
+.ca-map.is-reading .ca-pin-layer{animation:ca-pins-in var(--mo-considered) var(--mo-ease) both}
+@media (prefers-reduced-motion:reduce){
+  .ca-screen,.ca-sheet,.wc-rise,.ca-map .ca-pin-layer{animation:none!important;opacity:1!important;transform:none!important}
+  .ca-map .ca-season-line{animation:none!important;stroke-dashoffset:0!important}
+}
+</style>
+</helmet>
+
+<div style="min-height:100dvh;display:flex;justify-content:center;background:var(--surface-sunk)">
+<div style="width:100%;max-width:480px;background:var(--surface-page);min-height:100dvh;display:flex;flex-direction:column;border-left:1px solid var(--border-hairline);border-right:1px solid var(--border-hairline);position:relative">
+
+<header class="app" style="position:sticky;top:0">
+  <h1>CARTA</h1>
+  <div class="sub">{{ headerSub }}</div>
+</header>
+
+<main style="flex:1 1 auto;padding:18px 18px 96px">
+
+<!-- ═══════════ TODAY ═══════════ -->
+<sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+<div class="ca-screen" data-screen-label="Today">
+  <div class="hero" style="padding:12px 2px 18px">
+    <div class="eyebrow">{{ todayEyebrow }}</div>
+    <h2 style="font-family:var(--serif);font-size:36px;line-height:1.02;letter-spacing:-.035em;text-transform:none;color:var(--ink);font-weight:600;margin:0;max-width:12ch">The Worka Sakaro, again.</h2>
+    <div class="origin">Ferrous · natural · Gedeb, Ethiopia</div>
+  </div>
+
+  <div class="continuation">
+    <div class="row">
+      <div class="score">8<small> / 9</small></div>
+      <div style="max-width:62%">
+        <div class="recipe">18.0 g → 300 g · 94 °C · 2:38 · Switch</div>
+        <div class="finding">Two clicks finer — it wanted more.</div>
+      </div>
+    </div>
+    <button class="btn btn-graphite" style="margin-top:14px" onClick="{{ goBrew }}">Pick up the brew</button>
+    <button class="text-action" style="display:block;margin:12px auto 0;text-align:center" onClick="{{ goShelf }}">or start from the shelf</button>
+  </div>
+  <div class="bestline"><span>Best so far</span><strong>day 9 · 8/9</strong></div>
+
+  <div class="section-head"><h2>On the atlas, near your taste</h2><button class="text-action" onClick="{{ goAtlas }}">The full chart</button></div>
+
+  <div class="card tap" onClick="{{ lotGo.kia }}">
+    <div class="row">
+      <div><strong>Kiamugumo AA</strong> <button class="badge" style="margin-left:6px;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.outturn }}">outturn 25/0141</button>
+        <div class="muted" style="margin-top:3px">Gichugu, Kenya · washed SL28 · two roasters carry it</div>
+      </div>
+      <span class="num" style="font-family:var(--sans);font-size:18px;color:var(--ink)">8.1</span>
+    </div>
+    <div class="muted" style="margin-top:8px;font-size:12px">Why this — you scored washed Kenyas 8.2 on average · poured at Halfpence, a place you keep</div>
+  </div>
+  <div class="card tap" onClick="{{ lotGo.ilusion }}">
+    <div class="row">
+      <div><strong>La Ilusión</strong>
+        <div class="muted" style="margin-top:3px">Chalatenango, El Salvador · pacamara, honey · one roaster</div>
+      </div>
+      <span class="num" style="font-family:var(--sans);font-size:18px;color:var(--ink)">7.6</span>
+    </div>
+    <div class="muted" style="margin-top:8px;font-size:12px">Why this — pacamara sits beside three of your best readings · Small Hours roasts it</div>
+  </div>
+
+  <div class="section-head"><h2>The cup out</h2><button class="text-action" onClick="{{ cafeGo.halfpence }}">Halfpence</button></div>
+  <div class="cafeback">Last cup out — a <strong>cortado</strong> at <strong>Halfpence</strong>, 8/9, Tuesday.</div>
+</div>
+</sc-if>
+
+<!-- ═══════════ ATLAS ═══════════ -->
+<sc-if value="{{ isAtlas }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Atlas">
+  <label class="f" style="margin:4px 0 16px"><span class="l">Search the atlas</span>
+    <input type="text" placeholder="a coffee, a station, a roaster, a bar…" value="{{ query }}" onChange="{{ setQuery }}">
+  </label>
+  <sc-if value="{{ searching }}" hint-placeholder-val="{{ false }}">
+    <div style="margin:-8px 0 16px">
+      <sc-for list="{{ results }}" as="hit" hint-placeholder-count="2">
+        <button class="card tap" style="width:100%;text-align:left;cursor:pointer;display:block" onClick="{{ hit.go }}">
+          <div class="row"><strong>{{ hit.name }}</strong><span class="n-note">{{ hit.kind }}</span></div>
+          <div class="muted" style="margin-top:3px">{{ hit.sub }}</div>
+        </button>
+      </sc-for>
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div class="muted" style="font-size:13px;font-style:italic;font-family:var(--serif);padding:6px 2px">Nothing by that name on this chart yet. The atlas grows by sightings — log one and the page begins.</div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <div class="hero" style="padding:0 2px 14px">
+    <div class="eyebrow" style="color:var(--ink-3)">Chart No. 1</div>
+    <h2 style="font-family:var(--serif);font-size:34px;line-height:1.03;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">Portland, read for the season.</h2>
+    <div class="origin">14 lots · 6 roasters · 21 bars · harvest 2025/26</div>
+  </div>
+
+  <div style="margin-bottom:12px">
+    <sc-if value="{{ seasonIdle }}" hint-placeholder-val="{{ true }}">
+      <button class="btn btn-quiet" style="transition:background var(--mo-fast) var(--mo-ease)" onClick="{{ readSeason }}">Read the season for me</button>
+      <div class="muted" style="font-size:12px;margin-top:7px;font-style:italic;font-family:var(--serif)">The atlas composes the season around your taste — ranked by what you keep reaching for, shown with its reasons. <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.interlude }}">How the reading is composed</button>.</div>
+    </sc-if>
+    <sc-if value="{{ seasonDone }}" hint-placeholder-val="{{ false }}">
+      <div class="cafeback" style="margin:0"><strong>Read for your taste —</strong> {{ seasonReasons }} <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.interlude }}">how</button> · <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ readSeason }}">compose again</button></div>
+    </sc-if>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:10px">
+    <span class="muted" style="font-size:11px">● a place you keep · ○ not yet — tap a pin to open it</span>
+    <span class="n-note" style="flex:none">the drawn plot · streets join online</span>
+  </div>
+  <div class="ca-map {{ atlasReadingCls }}" style="border:1px solid var(--line);background:var(--paper-card);position:relative;height:224px;margin-bottom:18px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(115deg,transparent 47%,var(--paper-2) 47%,var(--paper-2) 55%,transparent 55%),repeating-linear-gradient(0deg,transparent,transparent 55px,var(--line) 55px,var(--line) 56px),repeating-linear-gradient(90deg,transparent,transparent 55px,var(--line) 55px,var(--line) 56px)"></div>
+    <div style="position:absolute;left:12px;top:10px;font-family:var(--sans);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)">St. Johns</div>
+    <div style="position:absolute;right:12px;top:10px;font-family:var(--sans);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)">Alberta</div>
+    <div style="position:absolute;left:12px;bottom:10px;font-family:var(--sans);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)">Southeast</div>
+    <div style="position:absolute;right:12px;bottom:10px;font-family:var(--sans);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)">Division</div>
+    <sc-if value="{{ seasonShown }}" hint-placeholder-val="{{ false }}">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+        <path class="ca-season-line" d="M22,72 L27,33 L45,48 L72,26 L84,52 L60,72"></path>
+      </svg>
+    </sc-if>
+    <div class="ca-pin-layer" style="position:absolute;inset:0">
+      <sc-for list="{{ mapPins }}" as="pin" hint-placeholder-count="6">
+        <button onClick="{{ pin.go }}" style="position:absolute;left:{{ pin.x }};top:{{ pin.y }};transform:translate(-50%,-50%);min-width:44px;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;padding:0">
+          <span style="width:11px;height:11px;border-radius:50%;background:{{ pin.fill }};border:1.5px solid var(--ink);box-sizing:border-box"></span>
+          <span style="font-family:var(--sans);font-size:10px;letter-spacing:.04em;color:var(--ink-2)">{{ pin.name }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>The season's lots</h2><span class="n-note">n=14 · any mark opens its meaning</span></div>
+
+  <div class="card tap" onClick="{{ lotGo.worka }}">
+    <div class="row">
+      <div><strong>Worka Sakaro — natural</strong>
+        <div class="muted" style="margin-top:3px">Gedeb, Gedeo, Ethiopia · mixed heirloom</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <button class="chip window" style="cursor:pointer" onClick="{{ ex.hands }}">3 roasters · one green</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">
+      <button class="chip" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.resolution }}">station-season</button><button class="chip" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.caliber }}">Q (CVA) 88.5</button><button class="chip" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.rarity }}">24 bags</button>
+    </div>
+  </div>
+
+  <div class="card tap" onClick="{{ lotGo.kia }}">
+    <div class="row">
+      <div><strong>Kiamugumo AA</strong> <button class="badge" style="margin-left:6px;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.outturn }}">25/0141</button>
+        <div class="muted" style="margin-top:3px">Gichugu, Kirinyaga, Kenya · SL28, SL34 · washed</div>
+      </div>
+      <div style="text-align:right;flex:none"><button class="chip window" style="cursor:pointer" onClick="{{ ex.hands }}">2 roasters · one green</button></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">
+      <button class="chip" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.greenlot }}">green-lot</button><button class="chip" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.outturn }}">sibling of AB, same outturn</button>
+    </div>
+  </div>
+
+  <div class="card tap" onClick="{{ lotGo.ilusion }}">
+    <div class="row">
+      <div><strong>La Ilusión — honey</strong>
+        <div class="muted" style="margin-top:3px">Chalatenango, El Salvador · pacamara</div>
+      </div>
+      <div style="text-align:right;flex:none"><div class="chip">1 roaster</div></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">
+      <button class="chip" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.greenlot }}">green-lot</button><button class="chip past" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.unread }}">caliber unread</button>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>The hands</h2></div>
+  <div class="card tap" onClick="{{ roasterGo.ferrous }}">
+    <div class="row"><strong>Ferrous</strong><span class="muted">roaster · 6 lots this season</span></div>
+  </div>
+  <div class="card tap" onClick="{{ cafeGo.halfpence }}">
+    <div class="row"><strong>Halfpence</strong><span class="muted">bar · Alberta · pours 4 lots</span></div>
+  </div>
+  <div class="section-head" style="margin-top:22px"><h2>Add to the atlas</h2><span class="n-note">{{ draftCount }} awaiting</span></div>
+  <div class="card tap" onClick="{{ goPropose }}">
+    <div class="row"><strong>Propose a sighting</strong><span class="muted">→</span></div>
+    <div class="muted" style="margin-top:5px">A bag on a shelf, a roast on a bar. CARTA looks for it on the chart and asks before it binds.</div>
+  </div>
+  <div class="muted" style="font-size:12px;margin-top:14px;font-style:italic;font-family:var(--serif)">The spine is curated — a proposal stands once a keeper approves it. Nothing here is ranked by anything but your own taste.</div>
+</div>
+</sc-if>
+
+<!-- ═══════════ LOT PAGE ═══════════ -->
+<sc-if value="{{ isLot }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Lot — {{ lotLabel }}">
+  <button class="text-action" onClick="{{ goAtlas }}" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← The chart</button>
+  <div class="hero" style="padding:4px 2px 16px">
+    <div class="eyebrow" style="color:var(--ink-3)">{{ lotEyebrow }}</div>
+    <h2 style="font-family:var(--serif);font-size:34px;line-height:1.03;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">{{ lotTitle }}</h2>
+    <div class="origin">{{ lotOrigin }}</div>
+  </div>
+
+  <div style="border:1px solid var(--line);background:var(--paper-card);padding:14px 16px 2px;margin:0 0 10px">
+    <h2 style="margin:0 0 14px">The road</h2>
+    <sc-for list="{{ road }}" as="n" hint-placeholder-count="4">
+      <div style="display:flex;gap:13px">
+        <div style="display:flex;flex-direction:column;align-items:center;width:12px;flex:none">
+          <span style="font-family:var(--sans);font-size:12px;line-height:1;color:var(--ink);margin-top:2px">{{ n.mark }}</span>
+          <span style="flex:1;width:1px;background:{{ n.rail }}"></span>
+        </div>
+        <div style="flex:1;padding-bottom:15px;min-width:0">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+            <span style="font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500">{{ n.stage }}</span>
+            <span class="n-note" style="flex:none">{{ n.when }}</span>
+          </div>
+          <div style="font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink);margin-top:2px">{{ n.who }}</div>
+          <div class="muted" style="font-size:12px;margin-top:1px">{{ n.detail }}</div>
+        </div>
+      </div>
+    </sc-for>
+    <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif);padding:0 0 12px 25px;margin-top:-6px">{{ roadTail }}</div>
+  </div>
+
+  <div class="card">
+    <sc-for list="{{ lotIdentity }}" as="row" hint-placeholder-count="5">
+      <div class="kv"><span class="k">{{ row.k }}</span>
+        <sc-if value="{{ row.tap }}" hint-placeholder-val="{{ false }}"><button class="v" style="font:inherit;color:inherit;text-align:right;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;padding:0" onClick="{{ row.ex }}">{{ row.v }}</button></sc-if>
+        <sc-if value="{{ row.plain }}" hint-placeholder-val="{{ true }}"><span class="v">{{ row.v }}</span></sc-if>
+      </div>
+    </sc-for>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 16px;font-style:italic;font-family:var(--serif)">{{ lotIdentityNote }}</div>
+  <sc-if value="{{ lotDivergenceHas }}" hint-placeholder-val="{{ false }}">
+    <div class="cafeback" style="cursor:pointer;margin:-8px 0 16px" onClick="{{ ex.divergence }}"><strong>Carried, not resolved —</strong> {{ lotDivergence }} <span class="text-action" style="font-size:12px">read</span></div>
+  </sc-if>
+
+  <div class="section-head"><h2>The standing</h2><button class="text-action" onClick="{{ ex.standing }}">How to read it</button></div>
+  <div class="card">
+    <sc-for list="{{ lotStanding }}" as="row" hint-placeholder-count="3">
+      <div class="kv"><span class="k">{{ row.k }}</span>
+        <sc-if value="{{ row.tap }}" hint-placeholder-val="{{ true }}"><button class="v" style="font:inherit;color:inherit;text-align:right;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;padding:0" onClick="{{ row.ex }}">{{ row.v }}</button></sc-if>
+        <sc-if value="{{ row.plain }}" hint-placeholder-val="{{ false }}"><span class="v">{{ row.v }}</span></sc-if>
+      </div>
+    </sc-for>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 20px">{{ lotStandingNote }}</div>
+
+  <div style="margin:26px 0 10px"><h2 style="margin:0 0 3px">Branch one · availability</h2><div style="font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:-.015em;color:var(--ink)">Where can you find it?</div></div>
+  <sc-if value="{{ availHas }}" hint-placeholder-val="{{ true }}">
+    <div class="card">
+      <sc-for list="{{ avail }}" as="pl" hint-placeholder-count="2">
+        <button style="width:100%;background:none;border:none;text-align:left;cursor:pointer;padding:7px 0;display:flex;justify-content:space-between;align-items:baseline;font:inherit;color:inherit" onClick="{{ pl.go }}">
+          <span><strong>{{ pl.name }}</strong> <span class="muted">· {{ pl.area }}</span></span><span class="n-note" style="flex:none">{{ pl.when }}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div class="muted" style="font-size:12px;margin:-4px 0 20px">{{ availNote }}</div>
+  </sc-if>
+  <sc-if value="{{ availEmpty }}" hint-placeholder-val="{{ false }}">
+    <div class="card"><div class="muted" style="font-size:13px;font-style:italic;font-family:var(--serif)">{{ availEmptyLine }}</div></div>
+    <div style="height:20px"></div>
+  </sc-if>
+
+  <div style="margin:26px 0 10px"><h2 style="margin:0 0 3px">Branch two · the roast</h2><div style="font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:-.015em;color:var(--ink)">{{ roastHead }}</div></div>
+  <sc-for list="{{ roasts }}" as="r" hint-placeholder-count="3">
+    <div class="card tap" onClick="{{ r.go }}">
+      <div class="row">
+        <div><strong>{{ r.roaster }}</strong> <span class="muted">· “{{ r.name }}”</span>
+          <div class="muted" style="margin-top:3px">{{ r.level }} · roasted {{ r.date }}</div>
+        </div>
+        <span class="n-note">{{ r.n }}</span>
+      </div>
+      <div class="finding" style="margin-top:7px">“{{ r.notes }}”</div>
+    </div>
+  </sc-for>
+
+  <div style="margin:26px 0 10px"><h2 style="margin:0 0 3px">Branch three · the corpus</h2><div style="font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:-.015em;color:var(--ink)">Who is brewing it, and how?</div></div>
+  <div class="card">
+    <sc-for list="{{ lotCorpus }}" as="row" hint-placeholder-count="4">
+      <div class="kv"><span class="k">{{ row.k }}</span><span class="v">{{ row.v }}</span></div>
+    </sc-for>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 20px">{{ lotCorpusNote }}</div>
+
+  <div class="section-head"><h2>Your overlay</h2><button class="text-action" onClick="{{ ex.overlay }}">What this means</button></div>
+  <sc-if value="{{ hasOverlay }}" hint-placeholder-val="{{ true }}">
+    <div class="continuation" style="margin-bottom:6px">
+      <div class="row">
+        <div class="score">{{ ovScore }}<small> / 9</small></div>
+        <div style="max-width:62%">
+          <div class="recipe">{{ ovRecipe }}</div>
+          <div class="finding">{{ ovFinding }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif)">{{ overlayTail }}</div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ═══════════ ROASTER ═══════════ -->
+<sc-if value="{{ isRoaster }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Roaster — {{ roasterLabel }}">
+  <button class="text-action" onClick="{{ goAtlas }}" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← The chart</button>
+  <div class="hero" style="padding:4px 2px 16px">
+    <div class="eyebrow" style="color:var(--ink-3)">{{ roasterEyebrow }}</div>
+    <h2 style="font-family:var(--serif);font-size:34px;line-height:1.03;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">{{ roasterTitle }}</h2>
+    <div class="origin">{{ roasterOrigin }}</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:9px;margin:-6px 0 16px;flex-wrap:wrap">
+    <sc-if value="{{ roasterSigned }}" hint-placeholder-val="{{ false }}">
+      <button class="badge" style="cursor:pointer" onClick="{{ ex.signed }}">signed</button>
+      <span class="muted" style="font-size:12px">first-party · {{ roasterLabel }} holds the pen</span>
+    </sc-if>
+    <sc-if value="{{ roasterUnclaimed }}" hint-placeholder-val="{{ true }}">
+      <button class="badge ghost" style="cursor:pointer" onClick="{{ ex.unclaimed }}">unclaimed</button>
+      <span class="muted" style="font-size:12px">compiled from sightings</span>
+    </sc-if>
+  </div>
+  <h2>On offer, this season</h2>
+  <sc-for list="{{ roasterOffers }}" as="o" hint-placeholder-count="3">
+    <sc-if value="{{ o.tap }}" hint-placeholder-val="{{ true }}">
+      <div class="card tap" onClick="{{ o.go }}">
+        <div class="row"><strong>{{ o.title }}</strong><span class="n-note">{{ o.n }}</span></div>
+        <div class="muted" style="margin-top:3px">{{ o.sub }}</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ o.plain }}" hint-placeholder-val="{{ false }}">
+      <div class="card">
+        <div class="row"><strong>{{ o.title }}</strong><span class="n-note">{{ o.n }}</span></div>
+        <div class="muted" style="margin-top:3px">{{ o.sub }}</div>
+      </div>
+    </sc-if>
+  </sc-for>
+  <div class="muted" style="font-size:12px;margin-top:12px;font-style:italic;font-family:var(--serif)">{{ roasterNote }}</div>
+
+  <sc-if value="{{ roasterUnclaimed }}" hint-placeholder-val="{{ true }}">
+    <div class="card" style="border-color:var(--border-strong);margin-top:18px">
+      <div class="row"><strong>Is this {{ roasterLabel }}?</strong><span class="n-note">the pen, offered</span></div>
+      <div class="muted" style="margin-top:5px">The record has your page open, and it is nearly right. Signing holds the pen on your own link — it populates nothing, and the page stays the reader’s.</div>
+      <button class="btn btn-graphite" style="margin-top:12px" onClick="{{ openClaimRoaster }}">Hold the pen</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ roasterSigned }}" hint-placeholder-val="{{ false }}">
+    <div class="section-head" style="margin-top:22px"><h2>Your facts</h2><button class="text-action" onClick="{{ ex.firstparty }}">first-party</button></div>
+    <div class="card">
+      <sc-for list="{{ roasterPen }}" as="p" hint-placeholder-count="3">
+        <div class="kv" style="align-items:baseline">
+          <span class="k">{{ p.k }}</span>
+          <span class="v" style="display:flex;gap:8px;align-items:baseline;justify-content:flex-end;flex-wrap:wrap">
+            <sc-if value="{{ p.notEditing }}" hint-placeholder-val="{{ true }}">
+              <span>{{ p.v }}</span>
+              <sc-if value="{{ p.edited }}" hint-placeholder-val="{{ false }}"><button class="chip window" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.firstparty }}">first-party</button></sc-if>
+              <button class="text-action" style="padding:0;font-size:12px" onClick="{{ p.startCorrect }}">correct</button>
+            </sc-if>
+            <sc-if value="{{ p.editing }}" hint-placeholder-val="{{ false }}">
+              <input type="text" value="{{ correctDraft }}" onChange="{{ setCorrectDraft }}" style="width:150px;max-width:52vw;font:inherit;color:var(--ink);background:none;border:none;border-bottom:1px solid var(--border-strong);text-align:right;padding:2px 0">
+              <button class="text-action" style="padding:0;font-size:12px" onClick="{{ saveCorrect }}">save</button>
+              <button class="text-action" style="padding:0;font-size:12px;color:var(--ink-3)" onClick="{{ cancelCorrect }}">cancel</button>
+            </sc-if>
+          </span>
+        </div>
+      </sc-for>
+      <div class="kv"><span class="k">{{ roasterPenOutK }}</span><span class="v" style="color:var(--ink-3)">{{ roasterPenOutV }}</span></div>
+    </div>
+    <div class="muted" style="font-size:12px;margin:-4px 0 4px">Out of your link, your word is only stated — like anyone’s. <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.scoped }}">Scoped authority</button>.</div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ═══════════ CAFÉ ═══════════ -->
+<sc-if value="{{ isCafe }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Café — {{ cafeName }}">
+  <button class="text-action" onClick="{{ goAtlas }}" style="margin-bottom:4px;display:inline-block;padding:10px 0;font-size:12px">← The chart</button>
+  <div style="margin:0 -18px;padding:0 18px 4px">
+    <div class="masthead" style="border:1px solid var(--line)">
+      <div style="width:100%;height:150px;background:{{ cafeGrad }}"></div>
+      <div class="bar" style="background:{{ cafeBar }}"></div>
+      <div class="id">
+        <div class="nm">{{ cafeName }}</div>
+        <div class="ct">{{ cafeCity }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="muted" style="font-size:11px;margin:6px 0 10px">Its own colour, read from its own site. Nothing photographed, nothing fetched again.</div>
+  <div style="display:flex;align-items:center;gap:9px;margin:0 0 16px;flex-wrap:wrap">
+    <sc-if value="{{ cafeSigned }}" hint-placeholder-val="{{ false }}">
+      <button class="badge" style="cursor:pointer" onClick="{{ ex.signed }}">signed</button>
+      <span class="muted" style="font-size:12px">first-party · {{ cafeName }} holds the pen</span>
+    </sc-if>
+    <sc-if value="{{ cafeUnclaimed }}" hint-placeholder-val="{{ true }}">
+      <button class="badge ghost" style="cursor:pointer" onClick="{{ ex.unclaimed }}">unclaimed</button>
+      <span class="muted" style="font-size:12px">compiled from sightings</span>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ cafeVisited }}" hint-placeholder-val="{{ true }}">
+    <div class="card">
+      <div class="kv"><span class="k">Your average</span><span class="v">{{ cafeAvg }}</span></div>
+      <div class="kv"><span class="k">Usual order</span><span class="v">{{ cafeUsual }}</span></div>
+      <div class="kv"><span class="k">Pours from the chart</span><span class="v">{{ cafePours }}</span></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ cafeUnvisited }}" hint-placeholder-val="{{ false }}">
+    <div class="card">
+      <div class="kv"><span class="k">Pours from the chart</span><span class="v">{{ cafePours }}</span></div>
+    </div>
+    <div class="muted" style="font-size:12px;margin:-4px 0 18px;font-style:italic;font-family:var(--serif)">{{ cafeSavedLine }}</div>
+  </sc-if>
+
+  <h2>On the bar, last seen</h2>
+  <sc-for list="{{ cafeBarList }}" as="b" hint-placeholder-count="2">
+    <div class="card tap" onClick="{{ b.go }}">
+      <div class="row"><strong>{{ b.name }}</strong><span class="n-note">{{ b.when }}</span></div>
+      <div class="muted" style="margin-top:3px">{{ b.sub }}</div>
+    </div>
+  </sc-for>
+
+  <sc-if value="{{ cafeVisited }}" hint-placeholder-val="{{ true }}">
+    <h2>Your cups here</h2>
+    <div class="card">
+      <sc-for list="{{ cafeCups }}" as="c" hint-placeholder-count="3">
+        <div class="kv"><span class="k">{{ c.k }}</span><span class="v">{{ c.v }}</span></div>
+      </sc-for>
+    </div>
+    <button class="btn btn-quiet" onClick="{{ logCup }}">Log a cup here</button>
+  </sc-if>
+  <sc-if value="{{ cafeUnvisited }}" hint-placeholder-val="{{ false }}">
+    <button class="btn btn-quiet" onClick="{{ logCup }}">Log your first cup here</button>
+  </sc-if>
+
+  <sc-if value="{{ cafeUnclaimed }}" hint-placeholder-val="{{ true }}">
+    <div class="card" style="border-color:var(--border-strong);margin-top:20px">
+      <div class="row"><strong>Is this {{ cafeName }}?</strong><span class="n-note">the pen, offered</span></div>
+      <div class="muted" style="margin-top:5px">The record already reads your site for your colour. Prove the channel is yours and hold the pen on your own link — the pour, the counter, the hours. The roast’s road stays compiled.</div>
+      <button class="btn btn-graphite" style="margin-top:12px" onClick="{{ openClaimCafe }}">Hold the pen</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ cafeSigned }}" hint-placeholder-val="{{ false }}">
+    <div class="section-head" style="margin-top:22px"><h2>Your facts</h2><button class="text-action" onClick="{{ ex.firstparty }}">first-party</button></div>
+    <div class="card">
+      <sc-for list="{{ cafePen }}" as="p" hint-placeholder-count="3">
+        <div class="kv" style="align-items:baseline">
+          <span class="k">{{ p.k }}</span>
+          <span class="v" style="display:flex;gap:8px;align-items:baseline;justify-content:flex-end;flex-wrap:wrap">
+            <sc-if value="{{ p.notEditing }}" hint-placeholder-val="{{ true }}">
+              <span>{{ p.v }}</span>
+              <sc-if value="{{ p.edited }}" hint-placeholder-val="{{ false }}"><button class="chip window" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.firstparty }}">first-party</button></sc-if>
+              <button class="text-action" style="padding:0;font-size:12px" onClick="{{ p.startCorrect }}">correct</button>
+            </sc-if>
+            <sc-if value="{{ p.editing }}" hint-placeholder-val="{{ false }}">
+              <input type="text" value="{{ correctDraft }}" onChange="{{ setCorrectDraft }}" style="width:150px;max-width:52vw;font:inherit;color:var(--ink);background:none;border:none;border-bottom:1px solid var(--border-strong);text-align:right;padding:2px 0">
+              <button class="text-action" style="padding:0;font-size:12px" onClick="{{ saveCorrect }}">save</button>
+              <button class="text-action" style="padding:0;font-size:12px;color:var(--ink-3)" onClick="{{ cancelCorrect }}">cancel</button>
+            </sc-if>
+          </span>
+        </div>
+      </sc-for>
+      <div class="kv"><span class="k">{{ cafePenOutK }}</span><span class="v" style="color:var(--ink-3)">{{ cafePenOutV }}</span></div>
+    </div>
+    <div class="muted" style="font-size:12px;margin:-4px 0 4px">Out of your link, your word is only stated — like anyone’s. <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.scoped }}">Scoped authority</button>.</div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ═══════════ CUP LOG ═══════════ -->
+<sc-if value="{{ isCuplog }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Cup log — {{ cafeName }}">
+  <button class="text-action" onClick="{{ goCafe }}" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← {{ cafeName }}</button>
+  <div class="hero" style="padding:4px 2px 14px">
+    <div class="eyebrow" style="color:var(--ink-3)">A cup out · {{ cafeName }}</div>
+    <h2 style="font-family:var(--serif);font-size:30px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">What was in the cup?</h2>
+    <div class="origin">One tap, after the coffee — the whole record of a cup out</div>
+  </div>
+
+  <label class="l" style="display:block;margin:2px 0 8px">The drink</label>
+  <div class="seg" style="margin-bottom:18px">
+    <sc-for list="{{ cupDrinks }}" as="d" hint-placeholder-count="4">
+      <button class="{{ d.cls }}" onClick="{{ d.pick }}">{{ d.word }}</button>
+    </sc-for>
+  </div>
+
+  <label class="l" style="display:block;margin:2px 0 8px">The pour <span class="n-note" style="text-transform:none;letter-spacing:0">seen on the bar today</span></label>
+  <div class="desc" style="margin-bottom:20px">
+    <sc-for list="{{ cupPours }}" as="p" hint-placeholder-count="3">
+      <button class="{{ p.cls }}" onClick="{{ p.pick }}">{{ p.word }}</button>
+    </sc-for>
+  </div>
+
+  <h2>The cup</h2>
+  <div class="hedonic">
+    <sc-for list="{{ cupHedonic }}" as="h" hint-placeholder-count="9">
+      <button class="{{ h.cls }}" onClick="{{ h.pick }}">{{ h.n }}</button>
+    </sc-for>
+  </div>
+  <div class="muted" style="font-size:12px;margin:2px 0 14px;font-style:italic;font-family:var(--serif)">A reading, not a verdict — <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.hedonic }}">how the 1–9 is read</button>.</div>
+
+  <div class="desc">
+    <sc-for list="{{ cupDescriptors }}" as="d" hint-placeholder-count="8">
+      <button class="{{ d.cls }}" onClick="{{ d.pick }}">{{ d.word }}</button>
+    </sc-for>
+  </div>
+  <label class="f" style="margin-top:10px"><span class="l">One honest line</span>
+    <input type="text" placeholder="what you found — plainly, after the last sip" value="{{ cupLine }}" onChange="{{ setCupLine }}">
+  </label>
+  <button class="btn btn-primary" onClick="{{ saveCup }}">Keep the cup</button>
+  <div class="muted" style="font-size:12px;text-align:center;margin-top:10px;font-style:italic;font-family:var(--serif)">This joins your record, not the coffee's page. The bar poured it; the reading is yours.</div>
+</div>
+</sc-if>
+
+<!-- ═══════════ PROPOSE A SIGHTING ═══════════ -->
+<sc-if value="{{ isPropose }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Propose a sighting">
+  <button class="text-action" onClick="{{ goAtlas }}" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← The chart</button>
+  <div class="hero" style="padding:4px 2px 14px">
+    <div class="eyebrow" style="color:var(--ink-3)">Add to the atlas · a sighting</div>
+    <h2 style="font-family:var(--serif);font-size:30px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">What did you see?</h2>
+    <div class="origin">A bag on a shelf, a roast on a bar. CARTA looks for it before it binds.</div>
+  </div>
+
+  <label class="f"><span class="l">The coffee, as the bag says it</span>
+    <input type="text" placeholder="name, as printed" value="{{ pfName }}" onChange="{{ setPfName }}"></label>
+  <label class="f"><span class="l">Origin, as printed</span>
+    <input type="text" placeholder="region, country" value="{{ pfOrigin }}" onChange="{{ setPfOrigin }}"></label>
+  <label class="f"><span class="l">Process</span>
+    <input type="text" placeholder="washed · natural · honey…" value="{{ pfProcess }}" onChange="{{ setPfProcess }}"></label>
+  <label class="f"><span class="l">The bag’s own id, if it carries one <span class="n-note" style="text-transform:none;letter-spacing:0">an outturn, an auction lot</span></span>
+    <input type="text" placeholder="e.g. outturn 25/0141" value="{{ pfId }}" onChange="{{ setPfId }}"></label>
+  <button class="btn btn-graphite" style="margin-top:6px" onClick="{{ lookForIt }}">Look for it on the chart</button>
+  <div class="muted" style="font-size:12px;margin-top:10px;font-style:italic;font-family:var(--serif)">Identity is <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.fingerprint }}">a fingerprint</button>, not a key — a cluster of facts, matched and confirmed. <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.propose }}">How proposing works</button>.</div>
+
+  <div class="section-head" style="margin-top:26px"><h2>Assisted drafts</h2><span class="n-note">awaiting a decision</span></div>
+  <sc-for list="{{ drafts }}" as="d" hint-placeholder-count="3">
+    <button class="card tap" style="width:100%;text-align:left;cursor:pointer;display:block" onClick="{{ d.open }}">
+      <div class="row"><strong>{{ d.label }}</strong><span class="n-note">{{ d.rung }}</span></div>
+      <div class="muted" style="margin-top:3px">{{ d.origin }} · {{ d.where }}</div>
+      <div class="n-note" style="margin-top:7px;text-transform:none;letter-spacing:0;font-style:italic;font-family:var(--serif)">{{ d.note }}</div>
+    </button>
+  </sc-for>
+  <sc-if value="{{ draftsEmpty }}" hint-placeholder-val="{{ false }}">
+    <div class="muted" style="font-size:13px;font-style:italic;font-family:var(--serif);padding:6px 2px">The desk is clear. Every sighting decided, every road begun or joined.</div>
+  </sc-if>
+  <div class="muted" style="font-size:12px;margin-top:14px;font-style:italic;font-family:var(--serif)">Drafts are compiled from sourced facts — a roaster’s offering, an importer’s sheet. Nothing binds until you say so.</div>
+</div>
+</sc-if>
+
+<!-- ═══════════ BREW ═══════════ -->
+<sc-if value="{{ isBrew }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Brew">
+  <button class="text-action" onClick="{{ brewBack }}" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← {{ brewBackLabel }}</button>
+  <div class="hero" style="padding:4px 2px 14px">
+    <div class="eyebrow">{{ brewEyebrow }}</div>
+    <h2 style="font-family:var(--serif);font-size:30px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">{{ brewTitle }}</h2>
+    <div class="origin">{{ brewOrigin }}</div>
+  </div>
+
+  <div class="section-head"><h2>The Setup</h2>
+    <sc-if value="{{ setupResting }}" hint-placeholder-val="{{ true }}"><button class="text-action" onClick="{{ setupEdit }}">Adjust</button></sc-if>
+    <sc-if value="{{ setupEditingF }}" hint-placeholder-val="{{ false }}"><button class="text-action" onClick="{{ setupDone }}">Done</button></sc-if>
+  </div>
+  <div class="card">
+    <sc-if value="{{ setupResting }}" hint-placeholder-val="{{ true }}">
+      <div class="kv"><span class="k">Grinder</span><span class="v">{{ setupGrinder }}</span></div>
+      <div class="kv"><span class="k">Brewer</span><span class="v">{{ setupBrewer }}</span></div>
+      <div class="kv"><span class="k">Grind scale</span><span class="v">{{ setupScale }}</span></div>
+    </sc-if>
+    <sc-if value="{{ setupEditingF }}" hint-placeholder-val="{{ false }}">
+      <label class="f" style="margin-bottom:12px"><span class="l">Grinder</span><input type="text" value="{{ setupGrinder }}" onChange="{{ setSetupGrinder }}"></label>
+      <label class="f" style="margin-bottom:12px"><span class="l">Brewer</span><input type="text" value="{{ setupBrewer }}" onChange="{{ setSetupBrewer }}"></label>
+      <label class="f" style="margin-bottom:2px"><span class="l">Grind scale</span><input type="text" value="{{ setupScale }}" onChange="{{ setSetupScale }}"></label>
+    </sc-if>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-2px 0 18px;font-style:italic;font-family:var(--serif)">Grind is comparable only within one Setup — never across grinders. <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.setup }}">Why</button>.</div>
+
+  <div class="dialrow">
+    <div class="dial">
+      <div class="l">Grind</div>
+      <div class="v num">{{ grind }}</div>
+      <div class="ctl"><button onClick="{{ grindMinus }}">−</button><button onClick="{{ grindPlus }}">+</button></div>
+    </div>
+    <div class="dial">
+      <div class="dcorner"><button class="ut on">°C</button><button class="ut">°F</button></div>
+      <div class="l">Water</div>
+      <div class="v num">{{ temp }}<span class="u">°C</span></div>
+      <div class="ctl"><button onClick="{{ tempMinus }}">−</button><button onClick="{{ tempPlus }}">+</button></div>
+    </div>
+  </div>
+  <div class="dialrow">
+    <div class="dial">
+      <div class="l">Dose</div>
+      <div class="v num">{{ dose }}<span class="u">g</span></div>
+      <div class="ctl"><button onClick="{{ doseMinus }}">−</button><button onClick="{{ dosePlus }}">+</button></div>
+    </div>
+    <div class="dial">
+      <div class="l">Water weight</div>
+      <div class="v num">{{ water }}<span class="u">g</span></div>
+      <div class="ctl"><button onClick="{{ waterMinus }}">−</button><button onClick="{{ waterPlus }}">+</button></div>
+    </div>
+  </div>
+
+  <div class="timer">
+    <div class="t">{{ timerText }}</div>
+    <div class="ctl">
+      <button class="go" onClick="{{ timerToggle }}">{{ timerLabel }}</button>
+      <button onClick="{{ timerReset }}">Reset</button>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onClick="{{ goHomecup }}">To the cup →</button>
+  <div class="muted" style="font-size:12px;text-align:center;margin-top:10px;font-style:italic;font-family:var(--serif)">Nothing here needs you while the coffee is being made, except the timer. The cup comes after.</div>
+</div>
+</sc-if>
+
+<!-- ═══════════ SHELF · the coffee ═══════════ -->
+<sc-if value="{{ isShelf }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Shelf">
+  <button class="text-action" onClick="{{ goToday }}" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← Today</button>
+  <div class="hero" style="padding:4px 2px 14px">
+    <div class="eyebrow" style="color:var(--ink-3)">Make a cup · the shelf</div>
+    <h2 style="font-family:var(--serif);font-size:30px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">Which bag is in your hand?</h2>
+    <div class="origin">The coffee resolves to its lot, exactly as a sighting resolves on the atlas.</div>
+  </div>
+
+  <div class="continuation" style="margin-top:0">
+    <div class="eyebrow" style="color:var(--ink-3);margin-bottom:4px">The fast path</div>
+    <div style="font-family:var(--serif);font-size:20px;font-weight:600;color:var(--ink);letter-spacing:-.01em">The Worka Sakaro, again</div>
+    <div class="recipe">18.0 g → 300 g · 94 °C · 2:38 · Switch</div>
+    <button class="btn btn-graphite" style="margin-top:12px" onClick="{{ shelfLast }}">Begin from the last cup</button>
+  </div>
+
+  <div class="section-head"><h2>On your shelf</h2><span class="n-note">the deliberate door</span></div>
+  <sc-for list="{{ shelfList }}" as="c" hint-placeholder-count="3">
+    <div class="card tap" onClick="{{ c.pick }}">
+      <div class="row">
+        <div><strong>{{ c.name }}</strong>
+          <div class="muted" style="margin-top:3px">{{ c.origin }}</div>
+        </div>
+        <button class="chip" style="flex:none;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ c.resEx }}">{{ c.resolution }}</button>
+      </div>
+    </div>
+  </sc-for>
+  <div class="muted" style="font-size:12px;margin-top:8px;font-style:italic;font-family:var(--serif)">The bag names the coffee; your own zero names the grind. Grind is read against your Setup, never across grinders. <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.setup }}">The Setup</button>.</div>
+</div>
+</sc-if>
+
+<!-- ═══════════ HOME CUP · the impression ═══════════ -->
+<sc-if value="{{ isHomecup }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Home cup">
+  <button class="text-action" onClick="{{ goHomeBrewBack }}" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← The brew</button>
+  <div class="hero" style="padding:4px 2px 14px">
+    <div class="eyebrow" style="color:var(--ink-3)">A cup at home · {{ brewCoffeeShort }}</div>
+    <h2 style="font-family:var(--serif);font-size:30px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">What was in the cup?</h2>
+    <div class="origin">One reading, after the coffee — the same shape as a cup out.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="kv"><span class="k">The coffee</span><span class="v">{{ homeCoffee }}</span></div>
+    <div class="kv"><span class="k">The brew</span><span class="v">{{ homeRecipe }}</span></div>
+    <div class="kv"><span class="k">The Setup</span><span class="v">{{ homeSetup }}</span></div>
+  </div>
+
+  <h2>The cup</h2>
+  <div class="hedonic">
+    <sc-for list="{{ homeHedonic }}" as="h" hint-placeholder-count="9">
+      <button class="{{ h.cls }}" onClick="{{ h.pick }}">{{ h.n }}</button>
+    </sc-for>
+  </div>
+  <div class="muted" style="font-size:12px;margin:2px 0 14px;font-style:italic;font-family:var(--serif)">A reading, not a verdict — <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.hedonic }}">how the 1–9 is read</button>.</div>
+
+  <div class="desc">
+    <sc-for list="{{ homeDescriptors }}" as="d" hint-placeholder-count="8">
+      <button class="{{ d.cls }}" onClick="{{ d.pick }}">{{ d.word }}</button>
+    </sc-for>
+  </div>
+  <label class="f" style="margin-top:10px"><span class="l">One honest line</span>
+    <input type="text" placeholder="what you found — plainly, after the last sip" value="{{ homeLine }}" onChange="{{ setHomeLine }}">
+  </label>
+  <button class="btn btn-primary" onClick="{{ saveHomeCup }}">Keep the cup</button>
+  <div class="muted" style="font-size:12px;text-align:center;margin-top:10px;font-style:italic;font-family:var(--serif)">This joins your record — your overlay, never the coffee's shared page. A cup in and a cup out read as one preference.</div>
+</div>
+</sc-if>
+
+<!-- ═══════════ RECORD ═══════════ -->
+<sc-if value="{{ isRecord }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Record">
+  <div class="hero" style="padding:12px 2px 14px">
+    <div class="eyebrow" style="color:var(--ink-3)">The record · yours</div>
+    <h2 style="font-family:var(--serif);font-size:34px;line-height:1.03;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">One taste, the through-line.</h2>
+    <div class="origin">147 readings · 9 coffees on the shelf · since March 2025</div>
+  </div>
+
+  <div class="continuation">
+    <div class="row">
+      <div class="score">7.9<small> avg</small></div>
+      <div style="max-width:62%">
+        <div class="recipe">home 8.1 · out 7.6 · washed Kenya leads both</div>
+        <div class="finding">The shape of a preference, not a verdict.</div>
+      </div>
+    </div>
+    <button class="text-action" style="margin-top:10px" onClick="{{ ex.shape }}">How this is read</button>
+  </div>
+
+  <div class="section-head"><h2>Readings</h2><span class="n-note">newest first</span></div>
+  <sc-for list="{{ readings }}" as="rd" hint-placeholder-count="5">
+    <div class="card">
+      <div class="row">
+        <div><strong>{{ rd.coffee }}</strong>
+          <div class="muted" style="margin-top:3px">{{ rd.road }}</div>
+        </div>
+        <div style="text-align:right;flex:none">
+          <div class="num" style="font-family:var(--sans);font-size:20px;color:var(--ink)">{{ rd.score }}</div>
+          <div class="n-note">{{ rd.when }}</div>
+        </div>
+      </div>
+      <div class="finding" style="margin-top:6px">“{{ rd.line }}”</div>
+    </div>
+  </sc-for>
+
+  <h2>Want to go</h2>
+  <button class="card tap" style="width:100%;text-align:left;cursor:pointer;display:block" onClick="{{ cafeGo.prince }}">
+    <div class="row"><span><strong>Prince</strong> <span class="muted">· St. Johns</span></span><span class="n-note">saved Jul 2</span></div>
+  </button>
+  <button class="card tap" style="width:100%;text-align:left;cursor:pointer;display:block" onClick="{{ cafeGo.deckle }}">
+    <div class="row"><span><strong>The Deckle</strong> <span class="muted">· Division</span></span><span class="n-note">saved Jun 20</span></div>
+  </button>
+  <div class="muted" style="font-size:12px;margin-top:2px">A save unvisited a couple of weeks is asked about once. Letting go is not a mark against the place.</div>
+</div>
+</sc-if>
+
+<!-- ═══════════ MORE ═══════════ -->
+<sc-if value="{{ isMore }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="More">
+  <h2 style="margin-top:8px">Appearance</h2>
+  <div class="seg">
+    <button class="{{ paperCls }}" onClick="{{ setPaper }}">Paper</button>
+    <button class="{{ duskCls }}" onClick="{{ setDusk }}">Dusk</button>
+    <button>Auto</button>
+  </div>
+
+  <h2>How deep you go</h2>
+  <div class="card">
+    <div class="kv"><span class="k">Reading</span><span class="v">the atlas — open</span></div>
+    <div class="kv"><span class="k">Remembering</span><span class="v">the cup out — open</span></div>
+    <div class="kv"><span class="k">Making</span><span class="v">the instrument — open</span></div>
+    <div class="kv"><span class="k">Keeping</span><span class="v">the record — open</span></div>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 20px">Rooms open when you ask. Nothing is ever taken away.</div>
+
+  <h2>The record leaves with you</h2>
+  <div class="card">
+    <div class="row"><strong>Save a copy</strong><button class="badge" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.openschema }}">full export · open schema</button></div>
+    <div class="muted" style="margin-top:5px">Self-contained — it reads in full on a device that never synced. Export monthly.</div>
+    <div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5;color:var(--ink-2);font-family:var(--serif)">What leaves with you — your readings, your shelf and brews, the cups out, the places saved, and any pages you’ve signed. Your overlay only; never the shared page’s numbers.</div>
+    <button class="btn btn-quiet" style="margin-top:13px" onClick="{{ exportLedger }}">Export the ledger</button>
+    <sc-if value="{{ exportedReady }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:12px;padding:12px 13px;border:1px solid var(--line-strong);background:var(--surface-sunk)">
+        <div style="font-family:var(--sans);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Your ledger is ready</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-2);word-break:break-all">{{ exportedFilename }}</div>
+        <div style="display:flex;gap:16px;align-items:center;margin-top:11px;flex-wrap:wrap">
+          <a href="{{ exportedUrl }}" download="{{ exportedFilename }}" style="font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);text-decoration:none;border:1px solid var(--border-strong);padding:9px 15px;line-height:1">Save the file</a>
+          <a href="{{ exportedUrl }}" target="_blank" rel="noopener" style="font-family:var(--sans);font-size:11px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px">Read it now</a>
+        </div>
+        <div class="muted" style="font-size:11.5px;margin-top:10px;font-style:italic;font-family:var(--serif)">The file is yours the moment you save it — offline, no account, open schema.</div>
+      </div>
+    </sc-if>
+    <div style="margin-top:13px;padding-top:13px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <label class="text-action" style="cursor:pointer;font-size:12px">Bring a ledger back<input type="file" accept=".html,.json,text/html,application/json" style="display:none" onChange="{{ onLedgerFile }}"></label>
+      <button class="badge" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ ex.readback }}">read back</button>
+    </div>
+    <div class="muted" style="font-size:12px;margin-top:5px">Read a <span style="font-family:var(--mono);font-size:11.5px">carta.ledger</span> file back in — your overlay, reconstituted and read to you. Nothing is merged.</div>
+  </div>
+
+  <h2>The doors ahead</h2>
+  <div class="card">
+    <div class="kv"><span class="k">Act III</span><span class="v">signed pages — the pen, live on the chart</span></div>
+    <div class="kv"><span class="k">Act IV</span><span class="v">the desks — closed until earned</span></div>
+    <div class="kv"><span class="k">Act V–VI</span><span class="v">the doors, then origin</span></div>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 20px">Each act gated in writing. Tolls follow traffic; they never summon it.</div>
+
+  <h2>The manual</h2>
+  <div class="card tap" onClick="{{ openWelcome }}"><div class="row"><strong>Replay the welcome</strong><span class="muted">→</span></div></div>
+  <div class="card tap" onClick="{{ openWhatsnew }}"><div class="row"><strong>What changed</strong><span class="muted">→</span></div></div>
+  <div class="card tap" onClick="{{ goNotes }}"><div class="row"><strong>About this redesign</strong><span class="muted">→</span></div></div>
+
+  <div class="qm-seal">Quiet Matter<span class="em">We do not sell coffee. We keep the record.</span></div>
+</div>
+</sc-if>
+
+<!-- ═══════════ REDESIGN NOTES ═══════════ -->
+<sc-if value="{{ isNotes }}" hint-placeholder-val="{{ false }}">
+<div class="ca-screen" data-screen-label="Redesign notes">
+  <button class="text-action" onClick="{{ goMore }}" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← More</button>
+  <div class="hero" style="padding:4px 2px 14px">
+    <div class="eyebrow" style="color:var(--ink-3)">The redesign · a note</div>
+    <h2 style="font-family:var(--serif);font-size:30px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);font-weight:600;margin:0">The lot moved to the centre.</h2>
+  </div>
+  <h2>Principles</h2>
+  <div class="card">
+    <div class="kv"><span class="k">1</span><span class="v" style="text-align:left">The lot is the hero; everything else earns its place around it</span></div>
+    <div class="kv"><span class="k">2</span><span class="v" style="text-align:left">Typography is the interface — hierarchy by size, weight, case, space</span></div>
+    <div class="kv"><span class="k">3</span><span class="v" style="text-align:left">One ember per screen — the action or the score, never both decoration</span></div>
+    <div class="kv"><span class="k">4</span><span class="v" style="text-align:left">Never print a number that lied — unread beats invented</span></div>
+    <div class="kv"><span class="k">5</span><span class="v" style="text-align:left">Surface calm, depth one gesture away</span></div>
+  </div>
+  <h2>What changed</h2>
+  <div class="card">
+    <div class="kv"><span class="k">Navigation</span><span class="v" style="text-align:left">Today · Atlas · Record · More — Home and Café become channels, not rooms; the instrument rides off Today</span></div>
+    <div class="kv"><span class="k">Find</span><span class="v" style="text-align:left">retired into the Atlas — search, the chart, the drawn plot</span></div>
+    <div class="kv"><span class="k">Reach</span><span class="v" style="text-align:left">reborn as the standing, on the coffee</span></div>
+    <div class="kv"><span class="k">The column</span><span class="v" style="text-align:left">480 px kept — one hand, one thumb, the ledger's measure</span></div>
+  </div>
+  <h2>The voice</h2>
+  <div class="card">
+    <div class="kv"><span class="k">Identity</span><span class="v" style="text-align:left">The reference record of specialty coffee — one green traced through every hand, your taste the wash over it. We keep the record; we never make the sale.</span></div>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 10px">The gate — every new line is read aloud against it.</div>
+  <div class="card">
+    <div class="kv"><span class="k">Sentence case</span><span class="v" style="text-align:left">body, buttons, labels — headings are uppercased by CSS, written lower in source</span></div>
+    <div class="kv"><span class="k">Terse</span><span class="v" style="text-align:left">fragments welcome; the em-dash over the conjunction</span></div>
+    <div class="kv"><span class="k">Own the refusal</span><span class="v" style="text-align:left">state it plainly, name the reason, never bark</span></div>
+    <div class="kv"><span class="k">Address the reader</span><span class="v" style="text-align:left">not the market — no growth-speak, no exclamation</span></div>
+    <div class="kv"><span class="k">Never a number that lied</span><span class="v" style="text-align:left">no invented precision, date or score; unread is a state</span></div>
+    <div class="kv"><span class="k">Typographic numbers</span><span class="v" style="text-align:left">en-dash ranges, m:ss, n= counts, °C / °F</span></div>
+    <div class="kv"><span class="k">No emoji</span><span class="v" style="text-align:left">meaning by typographic glyph, never an icon or a party mark</span></div>
+    <div class="kv"><span class="k">The seal, sparingly</span><span class="v" style="text-align:left">it closes a thing; it never garnishes one</span></div>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 10px">One line per class, verbatim from a live surface — so this deck and the app can't drift.</div>
+  <div class="card">
+    <div class="kv"><span class="k">Navigation</span><span class="v" style="text-align:left">Today · Atlas · Record · More</span></div>
+    <div class="kv"><span class="k">Empty state</span><span class="v" style="text-align:left">“Nothing by that name on this chart yet. The atlas grows by sightings — log one and the page begins.”</span></div>
+    <div class="kv"><span class="k">Refusal</span><span class="v" style="text-align:left">“A cup needs its reading — the 1–9 first.”</span></div>
+    <div class="kv"><span class="k">Confirmation</span><span class="v" style="text-align:left">“Signed. The pen is yours — within your link.”</span></div>
+    <div class="kv"><span class="k">Onboarding</span><span class="v" style="text-align:left">“One coffee, from the ground to the cup in your hand.”</span></div>
+    <div class="kv"><span class="k">The seal</span><span class="v" style="text-align:left">“We do not sell coffee. We keep the record.”</span></div>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 10px">The full standard travels beside this file as <span style="font-family:var(--mono);font-size:11.5px">VOICE-redesign.md</span> — the gate, re-cut for the ecosystem the app now speaks.</div>
+
+  <h2>Motion</h2>
+  <div class="card">
+    <div class="kv"><span class="k">Fast · 130ms</span><span class="v" style="text-align:left">controls touched most — a chip, a dial: barely moves</span></div>
+    <div class="kv"><span class="k">Base · 230ms</span><span class="v" style="text-align:left">a screen settles, a sheet rises — the standard physical move</span></div>
+    <div class="kv"><span class="k">Considered · 820ms</span><span class="v" style="text-align:left">the one sanctioned moment — arrival, the interlude</span></div>
+    <div class="kv"><span class="k">The curve</span><span class="v" style="text-align:left">one shared ease-out; nothing bounces, nothing pulses</span></div>
+  </div>
+  <div class="card">
+    <div class="kv"><span class="k">The rule</span><span class="v" style="text-align:left">used more, moves less — the more often a control is touched, the less it animates</span></div>
+    <div class="kv"><span class="k">Reduced motion</span><span class="v" style="text-align:left">first-class — the OS setting stills the interlude and the sheets to their end frame; every screen stays legible</span></div>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 20px">Motion tokens are the one sanctioned break from inline styles — declared once as custom properties beside the type resets, referenced everywhere the interface moves.</div>
+
+  <h2>The home cup</h2>
+  <div class="card">
+    <div class="kv"><span class="k">The arc</span><span class="v" style="text-align:left">Coffee → Preparation → Cup — the shelf, the dials, the reading. The same shape a cup out keeps, so a cup in and a cup out compare.</span></div>
+    <div class="kv"><span class="k">The Setup</span><span class="v" style="text-align:left">composed, minimally — grinder, brewer, grind scale. The reasoned call: the grind dial is only honest anchored to a named Setup, since a grind number never crosses grinders.</span></div>
+    <div class="kv"><span class="k">The overlay</span><span class="v" style="text-align:left">a kept cup joins the reader's record, never the coffee's shared page</span></div>
+  </div>
+
+  <h2>Migration</h2>
+  <div class="card">
+    <div class="kv"><span class="k">1</span><span class="v" style="text-align:left">Normalise the spine; keep every screen running on legacy aliases</span></div>
+    <div class="kv"><span class="k">2</span><span class="v" style="text-align:left">Ship the lot page behind the existing bag page — a door, not a flag-day</span></div>
+    <div class="kv"><span class="k">3</span><span class="v" style="text-align:left">Fold Find into Atlas once the chart is legible; retire the tab last</span></div>
+  </div>
+</div>
+</sc-if>
+
+</main>
+
+<!-- ═══════════ WELCOME OVERLAY ═══════════ -->
+<sc-if value="{{ welcomeOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:120;background:var(--surface-page);display:flex;flex-direction:column;overflow-y:auto" data-screen-label="Welcome">
+  <div style="flex:1;display:flex;flex-direction:column;padding:28px 28px 24px">
+    <div class="wc-top"><div class="wc-mark">CARTA</div></div>
+    <div class="wc-body">
+      <div class="wc-eyebrow wc-rise">The record of specialty coffee</div>
+      <h2 class="wc-head wc-rise d2" style="text-transform:none;letter-spacing:-.04em">One coffee, from the ground to the cup in your hand.</h2>
+      <p class="wc-lede wc-rise d3">Every lot traced — farm, process, roast, pour. Your taste is a wash laid over the trace. <em>The record is yours; the atlas is everyone's.</em></p>
+      <div class="wc-list wc-rise d3">
+        <button class="wc-item" onClick="{{ welcomeRead }}">
+          <span class="tx"><span class="tt">I read, mostly</span><span class="dd">The atlas opens. Keep nothing, ever.</span></span><span class="go">→</span>
+        </button>
+        <button class="wc-item" onClick="{{ welcomeOut }}">
+          <span class="tx"><span class="tt">Someone else makes it</span><span class="dd">A bar and one tap is a whole record.</span></span><span class="go">→</span>
+        </button>
+        <button class="wc-item" onClick="{{ welcomeMake }}">
+          <span class="tx"><span class="tt">I make my own</span><span class="dd">The instrument opens — begin from the last cup.</span></span><span class="go">→</span>
+        </button>
+      </div>
+    </div>
+    <div class="wc-foot">
+      <div class="wc-seal">We do not sell coffee. We keep the record.</div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ primerOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(26,26,22,.42);z-index:40" onClick="{{ closePrimer }}"></div>
+<div style="position:fixed;left:0;right:0;margin:0 auto;bottom:0;width:100%;max-width:480px;background:var(--surface-page);border-top:1px solid var(--border-strong);z-index:50;padding:8px 18px calc(22px + env(safe-area-inset-bottom))" class="ca-sheet">
+  <div style="height:26px;display:flex;align-items:center;justify-content:center"><span style="width:34px;height:3px;background:var(--ink-3);border-radius:2px"></span></div>
+  <div style="font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:500;margin-bottom:7px">How to read the record</div>
+  <h3 style="font-family:var(--serif);font-size:19px;font-weight:600;margin:0 0 7px;color:var(--ink)">{{ primerTitle }}</h3>
+  <p style="font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);max-width:37ch;margin:0 0 16px">{{ primerBody }}</p>
+  <button class="btn btn-quiet" onClick="{{ closePrimer }}">Read on</button>
+</div>
+</sc-if>
+
+<!-- ═══════════ SAME-LOT CONFIRM SHEET ═══════════ -->
+<sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(26,26,22,.42);z-index:36" onClick="{{ closeConfirm }}"></div>
+<div style="position:fixed;left:0;right:0;margin:0 auto;bottom:0;width:100%;max-width:480px;background:var(--surface-page);border-top:1px solid var(--border-strong);z-index:38;padding:8px 18px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto" class="ca-sheet">
+  <div style="height:26px;display:flex;align-items:center;justify-content:center"><span style="width:34px;height:3px;background:var(--ink-3);border-radius:2px"></span></div>
+  <div style="font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:{{ cfOverColor }};font-weight:500;margin-bottom:7px">{{ cfOverline }}</div>
+  <h3 style="font-family:var(--serif);font-size:21px;font-weight:600;margin:0 0 12px;color:var(--ink);letter-spacing:-.01em">{{ cfClaim }}</h3>
+
+  <div style="font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px">You saw</div>
+  <div class="card" style="margin:0 0 10px">
+    <div class="kv" style="border:none;padding:2px 0"><span class="k">Coffee</span><span class="v">{{ cfSawName }}</span></div>
+    <div class="kv" style="border:none;padding:2px 0"><span class="k">Origin</span><span class="v">{{ cfSawOrigin }}</span></div>
+    <sc-if value="{{ cfSawId }}" hint-placeholder-val="{{ false }}"><div class="kv" style="border:none;padding:2px 0"><span class="k">Bag id</span><span class="v">{{ cfSawId }}</span></div></sc-if>
+  </div>
+
+  <sc-if value="{{ cfHasLot }}" hint-placeholder-val="{{ false }}">
+  <div style="font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:12px 0 6px">On the chart</div>
+  <div class="card" style="margin:0 0 12px">
+    <div class="row"><strong>{{ cfLotName }}</strong><button class="chip" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" onClick="{{ cfResEx }}">{{ cfResolution }}</button></div>
+    <div class="muted" style="margin-top:3px">{{ cfLotSub }}</div>
+    <sc-if value="{{ cfHasShared }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">
+      <sc-for list="{{ cfShared }}" as="e" hint-placeholder-count="2"><span class="chip">{{ e.k }} · {{ e.v }}</span></sc-for>
+    </div></sc-if>
+  </div></sc-if>
+
+  <p style="font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);max-width:39ch;margin:0 0 14px">{{ cfBody }}</p>
+
+  <sc-if value="{{ cfDiverge }}" hint-placeholder-val="{{ false }}">
+  <div class="cafeback" style="margin:0 0 16px"><strong>{{ cfDivergeLabel }}</strong> {{ cfDiverge }}</div>
+  </sc-if>
+
+  <sc-if value="{{ cfEditing }}" hint-placeholder-val="{{ false }}">
+    <label class="f" style="margin-top:2px"><span class="l">{{ cfEditLabel }}</span>
+      <input type="text" value="{{ cfEditValue }}" onChange="{{ setCfEdit }}"></label>
+    <button class="btn btn-graphite" onClick="{{ cfLookAgain }}">Look again</button>
+  </sc-if>
+  <sc-if value="{{ cfNotEditing }}" hint-placeholder-val="{{ true }}">
+    <button class="{{ cfPrimaryCls }}" onClick="{{ cfPrimary }}">{{ cfPrimaryLabel }}</button>
+    <sc-if value="{{ cfHasSecondary }}" hint-placeholder-val="{{ true }}">
+      <button class="btn btn-quiet" style="margin-top:8px" onClick="{{ cfSecondary }}">{{ cfSecondaryLabel }}</button>
+    </sc-if>
+    <button class="text-action" style="display:block;margin:14px auto 2px" onClick="{{ cfStartCorrect }}">Correct a fact</button>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ═══════════ CLAIM · ACT III ═══════════ -->
+<sc-if value="{{ claimOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(26,26,22,.42);z-index:42" onClick="{{ claimClose }}"></div>
+<div style="position:fixed;left:0;right:0;margin:0 auto;bottom:0;width:100%;max-width:480px;background:var(--surface-page);border-top:1px solid var(--border-strong);z-index:44;padding:8px 18px calc(22px + env(safe-area-inset-bottom));max-height:90vh;overflow-y:auto" class="ca-sheet">
+  <div style="height:26px;display:flex;align-items:center;justify-content:center"><span style="width:34px;height:3px;background:var(--ink-3);border-radius:2px"></span></div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px">
+    <span style="font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600">{{ claimOverline }}</span>
+    <span class="n-note" style="flex:none">{{ claimStepLabel }}</span>
+  </div>
+  <h3 style="font-family:var(--serif);font-size:21px;font-weight:600;margin:0 0 12px;color:var(--ink);letter-spacing:-.01em">{{ claimHead }}</h3>
+
+  <sc-if value="{{ claimStep0 }}" hint-placeholder-val="{{ true }}">
+    <div class="card" style="margin:0 0 12px">
+      <sc-for list="{{ claimSummary }}" as="r" hint-placeholder-count="4"><div class="kv" style="border:none;padding:3px 0"><span class="k">{{ r.k }}</span><span class="v">{{ r.v }}</span></div></sc-for>
+    </div>
+    <p style="font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);max-width:39ch;margin:0 0 16px">{{ claimBody }}</p>
+  </sc-if>
+
+  <sc-if value="{{ claimStep1 }}" hint-placeholder-val="{{ false }}">
+    <p style="font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);max-width:39ch;margin:0 0 12px">{{ claimBody }}</p>
+    <div class="card" style="margin:0 0 10px">
+      <div class="row" style="align-items:center">
+        <span><span style="font-family:var(--sans);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)">Your channel</span><br><strong>{{ claimSite }}</strong></span>
+        <sc-if value="{{ claimVerified }}" hint-placeholder-val="{{ false }}"><span class="chip window" style="flex:none">control shown ✓</span></sc-if>
+        <sc-if value="{{ claimNotVerified }}" hint-placeholder-val="{{ true }}"><button class="btn btn-quiet" style="flex:none;margin:0;width:auto;padding:9px 14px" onClick="{{ claimVerify }}">Show control</button></sc-if>
+      </div>
+    </div>
+    <div class="muted" style="font-size:12px;margin:0 0 14px;font-style:italic;font-family:var(--serif)">Or a documented instrument — an importer’s attestation, a co-op registry. Your claim is itself a sighting: provenance-carried, strikeable, revocable. Contested claims are a moderation case, not a race.</div>
+  </sc-if>
+
+  <sc-if value="{{ claimStep2 }}" hint-placeholder-val="{{ false }}">
+    <div class="card" style="margin:0 0 10px">
+      <div style="font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Yours to sign</div>
+      <sc-for list="{{ claimIn }}" as="i" hint-placeholder-count="3"><div style="display:flex;gap:9px;align-items:baseline;padding:3px 0"><span style="color:var(--ink);flex:none">●</span><span style="font-family:var(--serif);font-size:14px;color:var(--ink-2)">{{ i }}</span></div></sc-for>
+    </div>
+    <div class="card" style="margin:0 0 12px">
+      <div style="font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Never yours to sign</div>
+      <sc-for list="{{ claimOut }}" as="o" hint-placeholder-count="2"><div style="display:flex;gap:9px;align-items:baseline;padding:3px 0"><span style="color:var(--ink-3);flex:none">○</span><span style="font-family:var(--serif);font-size:14px;color:var(--ink-3)">{{ o }}</span></div></sc-for>
+    </div>
+    <p style="font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);max-width:39ch;margin:0 0 6px">{{ claimBody }}</p>
+    <div class="muted" style="font-size:12px;margin:0 0 14px"><button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.scoped }}">Scoped authority</button> · <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onClick="{{ ex.firstparty }}">the first-party rung</button></div>
+  </sc-if>
+
+  <button class="btn btn-primary" onClick="{{ claimPrimary }}">{{ claimPrimaryLabel }}</button>
+  <sc-if value="{{ claimBackShow }}" hint-placeholder-val="{{ false }}"><button class="btn btn-quiet" style="margin-top:8px" onClick="{{ claimBack }}">← Back</button></sc-if>
+</div>
+</sc-if>
+
+<!-- ═══════════ LEDGER READ-BACK SHEET ═══════════ -->
+<sc-if value="{{ readbackOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(26,26,22,.42);z-index:36" onClick="{{ closeReadback }}"></div>
+<div style="position:fixed;left:0;right:0;margin:0 auto;bottom:0;width:100%;max-width:480px;background:var(--surface-page);border-top:1px solid var(--border-strong);z-index:38;padding:8px 18px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto" class="ca-sheet">
+  <div style="height:26px;display:flex;align-items:center;justify-content:center"><span style="width:34px;height:3px;background:var(--ink-3);border-radius:2px"></span></div>
+  <div style="font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:{{ rbOverColor }};font-weight:500;margin-bottom:7px">{{ rbOverline }}</div>
+  <h3 style="font-family:var(--serif);font-size:21px;font-weight:600;margin:0 0 12px;color:var(--ink);letter-spacing:-.01em">{{ rbHead }}</h3>
+
+  <sc-if value="{{ rbOk }}" hint-placeholder-val="{{ true }}">
+    <p style="font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);max-width:40ch;margin:0 0 14px">{{ rbSummary }}</p>
+    <div class="card">
+      <sc-for list="{{ rbReadings }}" as="r" hint-placeholder-count="3">
+        <div style="display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--line);align-items:baseline">
+          <div style="min-width:0"><strong>{{ r.coffee }}</strong>
+            <div class="muted" style="font-size:12px;margin-top:2px">{{ r.road }}</div>
+            <sc-if value="{{ r.hasLine }}" hint-placeholder-val="{{ false }}"><div style="font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-2);margin-top:5px">“{{ r.line }}”</div></sc-if>
+          </div>
+          <span style="font-family:var(--sans);font-size:17px;font-weight:500;color:var(--ink);flex:none">{{ r.hedonic }}<span style="font-size:11px;color:var(--ink-3)"> / 9</span></span>
+        </div>
+      </sc-for>
+    </div>
+    <div class="muted" style="font-size:12.5px;margin:11px 0 16px;line-height:1.55;font-family:var(--serif)">This is the reader’s own overlay, reconstituted — read back from the file, never merged into the shared page and never averaged into anything. <button class="text-action" style="padding:0" onClick="{{ ex.readback }}">Read back</button></div>
+  </sc-if>
+  <sc-if value="{{ rbBad }}" hint-placeholder-val="{{ false }}">
+    <p style="font-family:var(--serif);font-size:15px;line-height:1.6;color:var(--ink-2);max-width:40ch;margin:0 0 16px">{{ rbDeclineText }}</p>
+  </sc-if>
+
+  <button class="btn btn-quiet" onClick="{{ closeReadback }}">{{ rbDismiss }}</button>
+</div>
+</sc-if>
+
+<!-- ═══════════ WHAT'S NEW SHEET ═══════════ -->
+<sc-if value="{{ whatsnewOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(26,26,22,.42);z-index:36" onClick="{{ closeWhatsnew }}"></div>
+<div class="ca-sheet" style="position:fixed;left:0;right:0;margin:0 auto;bottom:0;width:100%;max-width:480px;background:var(--surface-page);border-top:1px solid var(--border-strong);z-index:38;padding:8px 18px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto">
+  <div style="height:26px;display:flex;align-items:center;justify-content:center"><span style="width:34px;height:3px;background:var(--ink-3);border-radius:2px"></span></div>
+  <div style="font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:500;margin-bottom:7px">{{ appVersionLabel }}</div>
+  <h3 style="font-family:var(--serif);font-size:21px;font-weight:600;margin:0 0 8px;color:var(--ink);letter-spacing:-.01em">What changed in this redesign.</h3>
+  <p style="font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);max-width:40ch;margin:0 0 18px">Dated to the month it landed — no finer than the record knows. Nothing here celebrates; it records.</p>
+  <sc-for list="{{ changelog }}" as="rel" hint-placeholder-count="2">
+    <div class="{{ rel.cls }}">
+      <div class="rel-h"><span class="rel-v">{{ rel.v }}</span><span class="rel-d">{{ rel.d }}</span><sc-if value="{{ rel.latest }}" hint-placeholder-val="{{ true }}"><span class="rel-new">new</span></sc-if></div>
+      <div class="rel-t">{{ rel.title }}</div>
+      <ul class="rel-l">
+        <sc-for list="{{ rel.items }}" as="it" hint-placeholder-count="3"><li>{{ it }}</li></sc-for>
+      </ul>
+    </div>
+  </sc-for>
+  <button class="btn btn-quiet" onClick="{{ closeWhatsnew }}">Close</button>
+</div>
+</sc-if>
+
+<nav class="tabs" style="position:sticky;bottom:0">
+  <button class="{{ tabToday }}" onClick="{{ goToday }}">Today</button>
+  <button class="{{ tabAtlas }}" onClick="{{ goAtlas }}">Atlas</button>
+  <button class="{{ tabRecord }}" onClick="{{ goRecord }}">Record</button>
+  <button class="{{ tabMore }}" onClick="{{ goMore }}">More</button>
+</nav>
+
+<sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+  <div class="toast show">{{ toastText }}</div>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:900},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;paper&quot;,&quot;dusk&quot;],&quot;default&quot;:&quot;paper&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Appearance&quot;},&quot;showWelcome&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Arrival&quot;},&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;}}">
+class Component extends DCLogic {
+  APP_VERSION = 'carta-redesign/2026-07';
+  state = {
+    screen: 'today', welcome: false, theme: 'paper', lotKey: 'worka', roasterKey: 'ferrous', cafeKey: 'halfpence',
+    grind: 62, temp: 94, dose: 18.0, water: 300,
+    secs: 0, running: false,
+    hedonic: 0, descs: [],
+    cupScore: 0, cupDescs: [], cupDrink: 'Cortado', cupPour: '', cupLine: '',
+    toast: '', toastOn: false, primer: null, query: '',
+    confirm: null, cfEdit: null, decided: [], propForm: { name: '', origin: '', process: '', id: '' },
+    claim: null, signed: {}, corrections: {}, correcting: null, correctDraft: '',
+    exported: null, readback: null,
+    season: null, whatsnew: false,
+    brewCoffee: 'worka', brewFrom: 'today',
+    setup: { grinder: 'Fellow Ode Gen 2', brewer: 'Hario Switch', scale: 'clicks from zero' }, setupEditing: false,
+    homeScore: 0, homeDescs: [], homeLine: ''
+  };
+  reduceMotion() { if (this.props.reduceMotion) return true; try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } }
+  pickBrew(k) { this.setState({ brewCoffee: k, brewFrom: 'shelf' }); this.go('brew'); }
+  componentDidMount() {
+    this.applyTheme();
+    if (this.props.showWelcome) { this.setState({ welcome: true }); return; }
+    try {
+      const seen = window.localStorage.getItem('carta.redesign.seenVersion');
+      if (seen !== this.APP_VERSION) {
+        this.setState({ whatsnew: true });
+        try { window.localStorage.setItem('carta.redesign.seenVersion', this.APP_VERSION); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+  componentWillUnmount() { clearInterval(this._tick); clearTimeout(this._season); if (this.state.exported && this.state.exported.url) { try { URL.revokeObjectURL(this.state.exported.url); } catch (e) {} } }
+  applyTheme() {
+    const t = this.state.theme || this.props.theme || 'paper';
+    document.documentElement.setAttribute('data-theme', t === 'dusk' ? 'dusk' : 'paper');
+  }
+  toast(msg) {
+    clearTimeout(this._tt);
+    this.setState({ toast: msg, toastOn: true });
+    this._tt = setTimeout(() => this.setState({ toastOn: false }), 2200);
+  }
+  go(s) { this.setState({ screen: s }); const m = document.querySelector('main'); if (m) m.scrollTop = 0; window.scrollTo(0, 0); }
+  openLot(k) { this.setState({ lotKey: k, screen: 'lot' }); const m = document.querySelector('main'); if (m) m.scrollTop = 0; window.scrollTo(0, 0); }
+  openRoaster(k) { this.setState({ roasterKey: k, screen: 'roaster' }); const m = document.querySelector('main'); if (m) m.scrollTop = 0; window.scrollTo(0, 0); }
+  openCafe(k) { this.setState({ cafeKey: k, screen: 'cafe' }); const m = document.querySelector('main'); if (m) m.scrollTop = 0; window.scrollTo(0, 0); }
+  downloadLedger(data) {
+    let built = null;
+    try {
+      const html = this.renderLedgerHtml(data);
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      built = { url, filename: data.filename };
+      try {
+        const a = document.createElement('a');
+        a.href = url; a.download = data.filename; a.rel = 'noopener';
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { try { a.remove(); } catch (err) {} }, 1500);
+      } catch (err) {}
+    } catch (err) { built = null; }
+    if (built) {
+      this.setState(st => {
+        if (st.exported && st.exported.url && st.exported.url !== built.url) { try { URL.revokeObjectURL(st.exported.url); } catch (e) {} }
+        return { exported: built };
+      });
+      this.toast('Your ledger is ready — the file is below.');
+    } else {
+      this.toast('The ledger could not be written just now.');
+    }
+  }
+  readLedgerFile(ev) {
+    const input = ev && ev.target;
+    const file = input && input.files && input.files[0];
+    if (input) { try { input.value = ''; } catch (e) {} }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { this.setState({ readback: this.parseLedger(String(reader.result || '')) }); };
+    reader.onerror = () => this.setState({ readback: { status: 'bad' } });
+    try { reader.readAsText(file); } catch (e) { this.setState({ readback: { status: 'bad' } }); }
+  }
+  parseLedger(text) {
+    let json = null;
+    try {
+      const lower = text.toLowerCase();
+      const marker = lower.indexOf('carta-ledger');
+      if (marker >= 0) {
+        const gt = text.indexOf('>', marker);
+        const closeTag = '<' + '/script>';
+        const end = gt >= 0 ? lower.indexOf(closeTag, gt) : -1;
+        if (gt >= 0 && end >= 0) { try { json = JSON.parse(text.slice(gt + 1, end).trim()); } catch (e) {} }
+      }
+      if (!json) { try { json = JSON.parse(text.trim()); } catch (e) {} }
+    } catch (e) { json = null; }
+    if (!json || typeof json !== 'object') return { status: 'bad' };
+    const schema = typeof json.schema === 'string' ? json.schema : '';
+    if (schema.indexOf('carta.ledger/') !== 0) return { status: 'bad' };
+    const ver = parseInt((schema.split('/v')[1] || '0'), 10) || 0;
+    if (ver > 1) return { status: 'newer', schema };
+    if (schema !== 'carta.ledger/v1') return { status: 'bad' };
+    const R = json.reader || {};
+    const readings = Array.isArray(json.readings) ? json.readings : [];
+    const shelf = Array.isArray(json.shelf) ? json.shelf : [];
+    const cups = Array.isArray(json.cups_out) ? json.cups_out : [];
+    return {
+      status: 'ok', schema,
+      readingsTotal: (R.readings_total != null ? R.readings_total : readings.length),
+      shelfCount: shelf.length,
+      cupsCount: cups.length,
+      since: R.keeping_since || '',
+      readings: readings.map(r => ({ coffee: r.coffee || '—', road: r.road || (r.where || ''), hedonic: (r.hedonic != null ? r.hedonic : ''), when: r.when || '', line: r.line || '' }))
+    };
+  }
+  renderLedgerHtml(d) {
+    const e = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const R = d.record;
+    const readingRows = d.readings.map(r => `
+      <div class="entry"><div class="txt"><div class="co">${e(r.coffee)}</div><div class="rd">${e(r.road)}</div>${r.line ? `<div class="ln">\u201c${e(r.line)}\u201d</div>` : ''}</div><div class="mk"><div class="sc">${e(r.hedonic)}<span>&#8202;/&#8202;9</span></div><div class="wn">${e(r.when)}</div></div></div>`).join('');
+    const shelfRows = d.shelf.map(x => `
+      <div class="entry col"><div class="row"><span class="co">${e(x.coffee)}</span><span class="tag">${e(x.resolution)}</span></div>${x.reading ? `<div class="your">Your reading &middot; <b>${e(x.reading.hedonic)}&#8202;/&#8202;9</b> &middot; ${e(x.reading.recipe)}</div>${x.reading.line ? `<div class="ln">\u201c${e(x.reading.line)}\u201d</div>` : ''}` : `<div class="your unread">unread &mdash; no reading of yours yet</div>`}</div>`).join('');
+    const cupRows = d.cupsOut.map(c => `
+      <div class="entry"><div class="txt"><div class="co">${e(c.place)}</div><div class="rd">${e(c.city)} &middot; ${e(c.cup)}</div></div><div class="mk"><div class="sc sm">${e(c.reading)}</div></div></div>`).join('');
+    const savedRows = d.saved.map(x => `
+      <div class="entry"><div class="txt"><div class="co">${e(x.place)}</div><div class="rd">${e(x.city)} &middot; saved ${e(x.saved)}</div></div><div class="mk"><div class="wn">${e(x.state)}</div></div></div>`).join('');
+    const signedSection = d.signedPages.length ? `
+  <section>
+    <h2>Pages you&rsquo;ve signed <span class="n">first-party &middot; within your link</span></h2>
+    ${d.signedPages.map(p => `<div class="entry col"><div class="row"><span class="co">${e(p.page)}</span><span class="tag">${e(p.kind)}</span></div>${p.corrections.length ? p.corrections.map(c => `<div class="your">${e(c.field)} &mdash; <b>${e(c.value)}</b> <span class="fp">first-party</span></div>`).join('') : `<div class="your unread">signed &mdash; no corrections made</div>`}</div>`).join('')}
+    <p class="fine">A signed line is not final &mdash; a later one, better sourced, supersedes it. Outside your own link your word here is only stated, like anyone&rsquo;s.</p>
+  </section>` : '';
+    const schema = {
+      schema: 'carta.ledger/v1',
+      generated: d.generatedISO,
+      kind: 'reader-record',
+      note: "The reader's own overlay \u2014 hedonic 1\u20139 readings, brews, cups out. Never averaged into any shared page.",
+      scale: { readings: '1\u20139 hedonic \u00b7 preference, not caliber', unread: 'a state, never a low default' },
+      reader: { readings_total: R.total, coffees_on_shelf: R.coffees, keeping_since: R.since, hedonic_average: Number(R.avg), home_average: Number(R.home), out_average: Number(R.out) },
+      readings: d.readings.map(r => ({ coffee: r.coffee, where: r.where, road: r.road, hedonic: r.hedonic, when: r.when, line: r.line })),
+      shelf: d.shelf.map(x => ({ coffee: x.coffee, resolution: x.resolution, your_reading: x.reading ? { hedonic: Number(x.reading.hedonic), recipe: x.reading.recipe, line: x.reading.line } : null })),
+      cups_out: d.cupsOut,
+      saved_unvisited: d.saved,
+      signed_pages: d.signedPages,
+      laws: [
+        "The record is the reader's \u2014 offline-first, full export, no lock-in.",
+        'Never a number that lied: hedonic readings are preference, not caliber; unread stays a state.',
+        'Resolution is stated, never rounded up.',
+        'Authority is scoped to your own link; every binding is a signed line a later one can supersede.'
+      ]
+    };
+    const json = JSON.stringify(schema, null, 2).replace(/</g, '\\u003c');
+    const OPEN = '<' + 'script type="application/json" id="carta-ledger">';
+    const CLOSE = '<' + '/' + 'script>';
+    return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CARTA \u2014 the record, exported \u00b7 ${e(d.generatedHuman)}</title>
+<style>
+:root{--pg:#f2eee6;--cd:#f8f5ee;--snk:#e9e3d8;--ink:#241d18;--ink2:#554a41;--ink3:#776b60;--line:rgba(36,29,24,.13);--ember:#a63f2b;--serif:'Spectral',Georgia,'Times New Roman',serif;--sans:'Libre Franklin',system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--snk)}
+body{font-family:var(--serif);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main{max-width:660px;margin:0 auto;background:var(--pg);min-height:100vh;padding:52px 44px 72px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.mark{font-family:var(--sans);font-weight:600;letter-spacing:.24em;font-size:12px;color:var(--ink)}
+.eyebrow{font-family:var(--sans);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-top:26px}
+h1{font-size:40px;line-height:1.02;letter-spacing:-.032em;font-weight:600;margin:6px 0 12px}
+.meta{font-family:var(--sans);font-size:12px;color:var(--ink3);letter-spacing:.02em}
+.rule{height:1px;background:var(--line);margin:24px 0}
+.avgs{display:flex;align-items:baseline;gap:36px}
+.avgs .big{font-family:var(--sans);font-size:34px;font-weight:500;color:var(--ember);line-height:1}
+.avgs .u{font-family:var(--sans);font-size:11px;color:var(--ink3);letter-spacing:.04em;margin-top:6px}
+.avgs .n{font-family:var(--sans);font-size:19px;font-weight:500;color:var(--ink);line-height:1}
+.note p{font-family:var(--serif);font-size:15.5px;line-height:1.62;color:var(--ink2);max-width:54ch;margin:0}
+h2{font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:600;margin:44px 0 8px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:9px}
+h2 .n{font-family:var(--serif);text-transform:none;letter-spacing:0;font-style:italic;color:var(--ink3);font-size:13px;font-weight:400}
+.entry{display:flex;justify-content:space-between;gap:20px;padding:15px 0;border-bottom:1px solid var(--line)}
+.entry.col{display:block}
+.entry .row{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.co{font-family:var(--serif);font-weight:600;font-size:17px;color:var(--ink)}
+.rd{font-family:var(--sans);font-size:11.5px;color:var(--ink3);margin-top:4px;letter-spacing:.02em}
+.ln{font-family:var(--serif);font-style:italic;font-size:14.5px;color:var(--ink2);margin-top:7px}
+.mk{text-align:right;flex:none}
+.sc{font-family:var(--sans);font-size:22px;font-weight:500;color:var(--ink)}
+.sc span{font-size:12px;color:var(--ink3);font-weight:400}
+.sc.sm{font-size:14px}
+.wn{font-family:var(--sans);font-size:11px;color:var(--ink3);margin-top:3px}
+.tag{font-family:var(--sans);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border:1px solid var(--line);border-radius:2px;padding:3px 7px;flex:none;white-space:nowrap}
+.your{font-family:var(--serif);font-size:14.5px;color:var(--ink2);margin-top:8px}
+.your b{color:var(--ink);font-weight:600}
+.your.unread{font-style:italic;color:var(--ink3)}
+.fp{font-family:var(--sans);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border:1px solid var(--line);border-radius:2px;padding:2px 5px;margin-left:4px}
+.fine{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink3);max-width:52ch;margin:14px 0 0}
+footer{margin-top:52px}
+.schemaline{font-family:var(--sans);font-size:11px;color:var(--ink3);letter-spacing:.02em}
+.schemaline code{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;background:var(--snk);padding:1px 5px;border-radius:2px;color:var(--ink2)}
+.seal{font-family:var(--sans);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-top:14px}
+.seal b{display:block;font-family:var(--serif);text-transform:none;letter-spacing:0;font-style:italic;font-size:14px;color:var(--ink2);font-weight:400;margin-top:5px}
+@media(max-width:560px){main{padding:34px 22px 56px}h1{font-size:32px}}
+</style></head>
+<body>
+<main>
+  <header>
+    <div class="mark">CARTA</div>
+    <div class="eyebrow">The record &middot; exported</div>
+    <h1>One taste, the through-line.</h1>
+    <div class="meta">${e(R.total)} readings &middot; ${e(R.coffees)} coffees on the shelf &middot; keeping since ${e(R.since)}</div>
+    <div class="rule"></div>
+    <div class="avgs"><div><div class="big">${e(R.avg)}</div><div class="u">hedonic average &middot; 1&#8202;&ndash;&#8202;9</div></div><div><div class="n">${e(R.home)}</div><div class="u">home</div></div><div><div class="n">${e(R.out)}</div><div class="u">out</div></div></div>
+  </header>
+  <section class="note" style="margin-top:28px">
+    <p>This file is your overlay &mdash; the readings, brews and cups that are only yours. It carries none of the shared page&rsquo;s compiled numbers, and nothing here is ever averaged into them. It reads in full on a device that never synced; the same record travels below in an open, documented layout &mdash; yours to keep, to move, to leave with. Exported ${e(d.generatedHuman)}.</p>
+  </section>
+  <section>
+    <h2>Readings <span class="n">newest first</span></h2>${readingRows}
+  </section>
+  <section>
+    <h2>The shelf <span class="n">your brews, by coffee</span></h2>${shelfRows}
+  </section>
+  <section>
+    <h2>Cups out <span class="n">by place</span></h2>${cupRows}
+  </section>
+  <section>
+    <h2>Saved, not yet read <span class="n">unread is a state</span></h2>${savedRows}
+  </section>${signedSection}
+  <footer>
+    <div class="rule"></div>
+    <div class="schemaline">Machine-readable &middot; schema <code>carta.ledger/v1</code> &middot; embedded in this file as JSON</div>
+    <div class="seal">Quiet Matter<b>We do not sell coffee. We keep the record.</b></div>
+  </footer>
+</main>
+${OPEN}${json}${CLOSE}
+</body></html>`;
+  }
+  renderVals() {
+    const s = this.state;
+    const scr = s.screen;
+    const subs = { today: 'the day’s surface', atlas: 'chart no. 1 — Portland', lot: 'the lot', roaster: 'the roaster', cafe: 'the bar', brew: 'the instrument', record: 'the keeper’s ledger', more: 'the rooms', notes: 'the redesign', cuplog: 'a cup out', propose: 'add to the atlas', shelf: 'the shelf', homecup: 'a cup at home' };
+    const BREW_COFFEES = {
+      worka: { name: 'Worka Sakaro — natural', short: 'the Worka Sakaro', roaster: 'Ferrous roast', origin: 'Gedeb, Ethiopia · station-season', resKey: 'resolution', resolution: 'station-season' },
+      kia: { name: 'Kiamugumo AA', short: 'the Kiamugumo', roaster: 'Ferrous roast', origin: 'Kirinyaga, Kenya · outturn 25/0141', resKey: 'greenlot', resolution: 'green-lot' },
+      ilusion: { name: 'La Ilusión — honey', short: 'La Ilusión', roaster: 'Small Hours roast', origin: 'Chalatenango, El Salvador · pacamara', resKey: 'greenlot', resolution: 'green-lot' }
+    };
+    const CHANGELOG = [
+      { v: 'The redesign', d: 'July 2026', latest: true, title: 'The record moved to the centre.', items: [
+        'The voice, written down — the standard re-cut to the ecosystem register the app now speaks.',
+        'A motion charter — a fast / base / considered token set, one shared ease-out; used more, moves less; reduced motion first-class.',
+        'The interlude — ask the atlas to read the season and it composes once, ranked only by your taste.',
+        'The home cup, end to end — coffee, preparation, cup — the same shape a cup out already keeps.'
+      ] },
+      { v: 'Earlier', d: 'July 2026', latest: false, title: 'The record round-trips, and the pen arrives.', items: [
+        'The ledger leaves and returns — export, a download that always reaches you, and read-back.',
+        'Act III · the signed page — hold the pen on your own link; first-party facts, scoped.',
+        'Arrival — three doors, each opening a room.'
+      ] }
+    ];
+    const adj = (k, d, min, max, step) => () => this.setState(st => ({ [k]: Math.min(max, Math.max(min, Math.round((st[k] + d * step) * 10) / 10)) }));
+    const mm = Math.floor(s.secs / 60), ss = String(s.secs % 60).padStart(2, '0');
+    const PR = {
+      resolution: { t: 'Station-season', b: 'How finely this coffee’s origin is proven. Here the trail proves to the washing station and the harvest — ≈740 smallholders’ cherry, honestly indistinguishable past the wet mill. A finer claim would be invented. The grain is stated, never rounded up.' },
+      greenlot: { t: 'Green-lot', b: 'Proven to the exact green lot — one harvest, one parcel, one identity the trade bought and sold it under. The finest grain the ladder reaches.' },
+      caliber: { t: '88.5 · Q (CVA)', b: 'A cup score never travels bare. This one: a named Q grader at Collective Lab, cupped to the SCA’s CVA protocol, 2025. The roaster’s own 92 is on file as a claim — unverified, and it never prints as the score.' },
+      standing: { t: 'The standing', b: 'What the coffee is in the world — caliber, rarity, traceability — compiled from sourced facts, never picked. It is not whether you’ll love it. That stays yours, on the overlay.' },
+      rarity: { t: '24 bags', b: 'How much of it exists: 24 export bags landed, per the importer’s offer sheet — carried by three roasters, poured at five bars. Scarcity stated as a fact, never as a countdown.' },
+      outturn: { t: 'Outturn 25/0141', b: 'Kenya sews an identifier into the bag: one cherry delivery, milled and graded into sibling lots — AA, AB, PB — under one outturn. Two records naming this code are the same green, outright.' },
+      hands: { t: 'One green, many hands', b: 'The same green lot, bought by more than one roaster — each a different reading of one coffee. The page nothing else can render.' },
+      shape: { t: 'The shape of a preference', b: 'Averages of your own 1–9 readings, split by where the cup was made — home against out, origin against origin. Enough readings and a through-line appears. It describes what you keep reaching for; it never tells you what to order.' },
+      overlay: { t: 'Your overlay', b: 'The atlas is everyone’s: one shared page per coffee, compiled from sourced facts. Your scores, brews, and one honest line sit on top as a private wash — visible only to you, never averaged into the page. The spine stands without you.' },
+      unread: { t: 'Unread', b: 'No admissible score exists yet, so no number prints. Unread is a state, never a verdict — and never a default to the low end. The row is the door to reading it.' },
+      hedonic: { t: 'The 1–9 reading', b: 'A hedonic scale — how much you liked the cup, in front of you, at this moment. Nine is not perfection and one is not failure; it is preference, not grading. It never travels as a coffee’s caliber, and it is never averaged into the shared page. It is the truest thing you can keep, because it is only yours.' },
+      fingerprint: { t: 'Fingerprint', b: 'Most bags carry no shared id, so identity is matched on a cluster of facts — producer or station, country and region, harvest, variety, process — never one field alone. CARTA finds the overlap and asks; it never merges on a name by itself. The cluster is the identity; you confirm it.' },
+      propose: { t: 'Propose and confirm', b: 'The spine is curated, so a new sighting enters as a proposal. CARTA compiles a candidate from sourced facts and asks before it binds — confirm joins the existing road, reject forks a new one. The machine proposes; the keeper decides, and every binding is a signed line a later one can supersede.' },
+      unclaimed: { t: 'Unclaimed', b: 'No one has signed this page yet. It stands anyway — compiled from sightings, true without permission. Unclaimed is a door, not a doubt: the record describes you before you arrive, and waits with the pen.' },
+      signed: { t: 'The signed page', b: 'A page claimed by the hand it describes — a roaster on its own roast, a bar on its own pour. Signing buys three things and no more: the first-party rung, a monochrome mark, and the right to correct your own facts. It never touches the reader’s overlay, and the page was true before it was signed.' },
+      firstparty: { t: 'First-party', b: 'The rung a signed page writes inside its own link — the strongest word on the facts that are truly yours. Scoped, never sovereign: outside your link your word is only stated, exactly like anyone’s. It is what keeps a signature from becoming a megaphone.' },
+      scoped: { t: 'Scoped authority', b: 'Authority ends where your link does. The roaster owns the roast, never the farm; the bar owns the pour, never the road. The road is compiled from many hands and owned by none — which is the only way it stays true.' },
+      documented: { t: 'Documented', b: 'A line carrying a public instrument — an outturn certificate, a co-op registry, an export licence, checkable by any reader. It outranks every rung, including the page’s own signer: a first party can supply a document, never outvote one.' },
+      openschema: { t: 'Open schema', b: 'The export is one self-contained file — it opens and reads in full on a device that never synced, and carries its record in a documented layout any reader can open or move. No lock-in: the record is yours to keep and to leave with. It writes out your overlay — your readings, your brews, your cups — never the shared page’s compiled numbers, and never a figure without the protocol that earned it.' },
+      divergence: { t: 'Carried, not resolved', b: 'Two standing lines can disagree — a roaster’s altitude against the station’s documented record. CARTA prints the stronger rung and keeps the other one tap deep, attributed. Flattening the trade’s disagreements would be a quiet lie; the record would rather show its seams.' },
+      readback: { t: 'The record, returned', b: 'A record leaves as one file and returns whole — read back on any device, offline, no account required. What returns is the reader’s own overlay: readings, shelf, cups. It is read to you, never merged — never averaged into the shared page, which stood without it and stands after. What can be written out can be read back: the proof the schema is open, and the record truly yours.' },
+      interlude: { t: 'Reading the season', b: 'Ask, and the atlas composes the season in front of you — the pins settle and a line is drawn through them, once, over about a second. It is a reading being composed, not a screen loading, and never a score revealed; the ember stays reserved. What it ranks is only ever your own taste — the coffees you keep reaching for, the places you keep — and it shows its reasons. Ask again and it composes again; it never plays on its own.' },
+      setup: { t: 'The Setup', b: 'Grinder, brewer, and the scale your grind is read on. A grind number means one thing on your grinder and nothing on another — so grind lives inside a Setup and never travels between them. Name the Setup once and the dial is read against it, and only against it. The bag names the coffee; your own zero names the grind.' }
+    };
+    const ex = Object.fromEntries(Object.keys(PR).map(k => [k, (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ primer: k }); }]));
+    const norm = v => (v || '').toString().trim().toLowerCase();
+    const titleCase = v => (v || '').replace(/\b\w/g, c => c.toUpperCase());
+    const LOTS = [
+      { key: 'worka', name: 'Worka Sakaro — natural', short: 'Worka Sakaro, natural', sub: 'Gedeb, Gedeo, Ethiopia · station-season', station: 'worka sakaro', station2: 'Worka Sakaro', region: 'gedeb', regionName: 'Gedeb', country: 'ethiopia', process: 'natural', harvest: '2025/26', resolution: 'station-season', hardIds: [] },
+      { key: 'kia', name: 'Kiamugumo AA', short: 'Kiamugumo AA', sub: 'Gichugu, Kirinyaga, Kenya · washed · outturn 25/0141', station: 'kiamugumo', station2: 'Kiamugumo factory', region: 'kirinyaga', regionName: 'Kirinyaga', country: 'kenya', process: 'washed', harvest: '2025/26', resolution: 'green-lot', hardIds: ['25/0141'] },
+      { key: 'ilusion', name: 'La Ilusión — honey', short: 'La Ilusión — honey', sub: 'Chalatenango, El Salvador · pacamara', station: 'la ilusión', station2: 'La Ilusión', region: 'chalatenango', regionName: 'Chalatenango', country: 'el salvador', process: 'honey', harvest: '2025/26', resolution: 'green-lot', hardIds: [] }
+    ];
+    const DRAFTS = [
+      { id: 'd1', label: 'Kiamugumo AB', origin: 'Kirinyaga, Kenya', where: 'Small Hours · new offering', note: 'the bag prints an outturn', rung: 'outturn 25/0141', s: { name: 'Kiamugumo AB', originText: 'Kirinyaga, Kenya', region: 'kirinyaga', country: 'kenya', process: 'washed', harvest: '2025/26', id: 'outturn 25/0141' } },
+      { id: 'd2', label: 'A Gedeb natural', origin: 'Gedeb, Ethiopia', where: 'seen at The Deckle', note: 'names the region, not the station', rung: 'region only', s: { name: 'Gedeb natural', originText: 'Gedeb, Ethiopia', region: 'gedeb', country: 'ethiopia', process: 'natural', harvest: '2025/26', id: '' } },
+      { id: 'd3', label: 'La Ilusión — washed', origin: 'Chalatenango, El Salvador', where: 'a new importer offer', note: 'same estate name, different process', rung: 'same name', s: { name: 'La Ilusión', originText: 'Chalatenango, El Salvador', region: 'chalatenango', country: 'el salvador', process: 'washed', harvest: '2025/26', id: '' } }
+    ];
+    const matchSighting = (sg) => {
+      const nm = norm(sg.name), reg = norm(sg.region || sg.originText), ctry = norm(sg.country || sg.originText), pr = norm(sg.process), hv = norm(sg.harvest || '2025/26');
+      const sid = norm(sg.id).replace(/[^0-9a-z\/]/g, '');
+      if (sid) { for (const L of LOTS) { if (L.hardIds.some(h => sid.includes(norm(h)))) return { kind: 'hardid', lot: L, shared: [{ k: 'Shared id', v: sg.id }] }; } }
+      for (const L of LOTS) { const base = norm(L.short.split(' —')[0]); const nameHit = nm && (nm.includes(L.station) || nm.includes(base)); if (nameHit && pr && pr !== norm(L.process)) return { kind: 'guard', lot: L, shared: [{ k: 'Name', v: L.short.split(' —')[0] }], diverge: { k: 'Process', was: L.process, now: sg.process } }; }
+      let best = null, bs = 0;
+      for (const L of LOTS) { let sc = 0; const shared = []; const regHit = reg && (reg === L.region || reg.includes(L.region)); if (regHit) { sc += 2; shared.push({ k: 'Region', v: L.regionName }); } if (ctry && (ctry === L.country || ctry.includes(L.country))) { sc += 1; shared.push({ k: 'Country', v: titleCase(L.country) }); } if (pr && pr === norm(L.process)) { sc += 1; shared.push({ k: 'Process', v: L.process }); } if (hv && hv === norm(L.harvest)) { sc += 1; shared.push({ k: 'Harvest', v: L.harvest }); } if (sc > bs) { bs = sc; best = { kind: 'fingerprint', lot: L, shared, regionName: L.regionName, diverge: nm.includes(L.station) ? null : { k: 'Resolution' } }; } }
+      if (best && bs >= 3) return best;
+      return { kind: 'none', shared: [] };
+    };
+    const openLotK = (k) => () => this.openLot(k);
+    const openCafeK = (k) => () => this.openCafe(k);
+    const openRoasterK = (k) => () => this.openRoaster(k);
+    const rkMap = { 'Ferrous': 'ferrous', 'Small Hours': 'smallhours', 'Meridian': 'meridian' };
+    const mkRows = (rows) => rows.map(r => ({ k: r.k, v: r.v, tap: !!r.exKey, plain: !r.exKey, ex: r.exKey ? ex[r.exKey] : (() => {}) }));
+    const LOT_PAGES = {
+      worka: {
+        label: 'Worka Sakaro',
+        eyebrow: 'Lot · harvest 2025/26', title: 'Worka Sakaro, natural.', origin: 'Gedeb, Gedeo Zone, Ethiopia',
+        road: [
+          { mark: '○', rail: 'var(--line)', stage: 'Grown', when: 'Nov 2025', who: '≈740 smallholders', detail: 'Gedeb, Gedeo Zone · smallholder plots' },
+          { mark: '◎', rail: 'var(--line)', stage: 'Processed', when: 'Nov–Jan', who: 'Worka Sakaro washing station', detail: '72 h cherry ferment → 21 d raised beds' },
+          { mark: '◉', rail: 'var(--line)', stage: 'Roasted', when: 'from Jul 8', who: 'Ferrous · Small Hours · Meridian', detail: 'three hands on one green — below' },
+          { mark: '●', rail: 'transparent', stage: 'Poured', when: 'seen Jul 19', who: 'Halfpence · The Deckle', detail: 'dated, signed sightings' }
+        ],
+        roadTail: 'Your reading rests at the end of it — below.',
+        identity: [
+          { k: 'Processor', v: 'Worka Sakaro washing station' },
+          { k: 'Producers', v: '≈740 smallholders' },
+          { k: 'Altitude', v: '1,800–1,900 m · documented', exKey: 'documented' },
+          { k: 'Variety', v: 'mixed heirloom' },
+          { k: 'Process', v: '72 h cherry ferment → 21 d raised bed' },
+          { k: 'Resolution', v: 'station-season', exKey: 'resolution' }
+        ],
+        identityNote: 'Identity resolves to the station and the season — the finest unit the trade can prove here. That is the record, not a gap in it.',
+        divergence: 'Ferrous prints 1,950–2,100 m on the bag — the record carries it, one rung below the station’s documented figure.',
+        standing: [
+          { k: 'Caliber', v: '88.5 · Q (CVA) · Collective Lab, 2025', exKey: 'caliber' },
+          { k: 'Rarity', v: '24 bags landed · 3 roasters · 5 bars', exKey: 'rarity' },
+          { k: 'Traceability', v: 'station-season', exKey: 'resolution' }
+        ],
+        standingNote: 'Compiled from sourced facts, never picked. The roaster’s own 92 is on file as a claim — unverified, and it never prints as the score.',
+        avail: [
+          { name: 'Halfpence', area: 'Alberta, Portland', when: 'seen Jul 19', go: openCafeK('halfpence') },
+          { name: 'The Deckle', area: 'Division, Portland', when: 'seen Jul 12', go: openCafeK('deckle') }
+        ],
+        availNote: 'Each pour is a dated, signed sighting — the shelf may have moved since.',
+        roastHead: 'Same green, three hands.',
+        roasts: [
+          { roaster: 'Ferrous', name: 'Sakaro', level: 'their “light”', date: 'Jul 15', n: 'n=3 readings', notes: 'blueberry, violet, black tea' },
+          { roaster: 'Small Hours', name: 'Worka Sakaro', level: 'their “filter”', date: 'Jul 11', n: 'n=2 readings', notes: 'jammy — strawberry, cacao nib' },
+          { roaster: 'Meridian', name: 'Gedeb Natural', level: 'their “medium-light”', date: 'Jul 8', n: 'unread', notes: 'winey, dried fig, long finish' }
+        ],
+        corpus: [
+          { k: 'Brews on record', v: '12 · Fellow Ode Gen 2 · conical cluster' },
+          { k: 'Ratio', v: '1:16.4 median' },
+          { k: 'Water', v: '93–95 °C' },
+          { k: 'Grind', v: '6.2–7.1 on this model' }
+        ],
+        corpusNote: 'Grind is a distribution, never a figure — calibrate to your own zero. Espresso keeps its own corpus.',
+        overlay: { score: '8', recipe: 'Ferrous roast · 3 readings · again', finding: 'Blueberry held through the cool-down.' },
+        overlayTail: 'The spine stands without you. This wash is yours.'
+      },
+      kia: {
+        label: 'Kiamugumo AA',
+        eyebrow: 'Lot · harvest 2025/26', title: 'Kiamugumo AA, washed.', origin: 'Gichugu, Kirinyaga, Kenya · 1,650–1,800 m',
+        road: [
+          { mark: '○', rail: 'var(--line)', stage: 'Grown', when: 'Oct–Dec 2025', who: '≈900 society members', detail: 'Gichugu, Kirinyaga · Rungeto FCS' },
+          { mark: '◎', rail: 'var(--line)', stage: 'Processed', when: 'Nov–Jan', who: 'Kiamugumo Factory', detail: 'double ferment → washed → 14 d raised beds' },
+          { mark: '◑', rail: 'var(--line)', stage: 'Milled & graded', when: 'Jan 2026', who: 'dry mill · outturn 25/0141', detail: 'screen-sorted into AA · AB · PB' },
+          { mark: '◉', rail: 'var(--line)', stage: 'Roasted', when: 'from Jul 12', who: 'Small Hours · Ferrous', detail: 'two hands on one green — below' },
+          { mark: '●', rail: 'transparent', stage: 'Poured', when: 'seen Jul 19', who: 'Halfpence · Roseline', detail: 'dated, signed sightings' }
+        ],
+        roadTail: 'The grading is where the outturn is minted — and where AA parts from AB. Your reading rests at the end — below.',
+        identity: [
+          { k: 'Processor', v: 'Kiamugumo Factory' },
+          { k: 'Society', v: 'Rungeto FCS' },
+          { k: 'Producers', v: '≈900 smallholder members' },
+          { k: 'Variety', v: 'SL28, SL34 · Ruiru 11' },
+          { k: 'Process', v: 'washed · double ferment, soaked, raised beds' },
+          { k: 'Grade', v: 'AA — sibling of AB, PB', exKey: 'outturn' },
+          { k: 'Resolution', v: 'green-lot', exKey: 'greenlot' }
+        ],
+        identityNote: 'Kenya sews an identifier into the bag — outturn 25/0141, one cherry delivery milled into sibling grades. Identity resolves to the exact green lot, the finest the ladder reaches.',
+        standing: [
+          { k: 'Caliber', v: '87.5 · Q (CVA) · Collective Lab, 2025', exKey: 'caliber' },
+          { k: 'Rarity', v: 'AA 12 · AB 9 bags · 2 roasters · 3 bars', exKey: 'rarity' },
+          { k: 'Traceability', v: 'green-lot', exKey: 'greenlot' }
+        ],
+        standingNote: 'Compiled from sourced facts, never picked. Kenya’s outturn makes the green-lot claim provable — the record reaches its finest grain here.',
+        avail: [
+          { name: 'Halfpence', area: 'Alberta, Portland', when: 'seen Jul 19', go: openCafeK('halfpence') },
+          { name: 'Roseline', area: 'St. Johns, Portland', when: 'seen Jul 16', go: openCafeK('roseline') }
+        ],
+        availNote: 'Each pour is a dated, signed sighting — the shelf may have moved since.',
+        roastHead: 'Same green, two hands.',
+        roasts: [
+          { roaster: 'Small Hours', name: 'Kiamugumo AA', level: 'their “espresso”', date: 'Jul 17', n: 'n=2 readings', notes: 'blackcurrant, tomato leaf, cane sugar' },
+          { roaster: 'Ferrous', name: 'Kiamugumo', level: 'their “filter”', date: 'Jul 18', n: 'n=5 readings', notes: 'blackberry, savoury depth, syrupy' }
+        ],
+        corpus: [
+          { k: 'Brews on record', v: '9 · Fellow Ode Gen 2 · conical cluster' },
+          { k: 'Ratio', v: '1:16.0 median' },
+          { k: 'Water', v: '94–96 °C' },
+          { k: 'Grind', v: '5.8–6.6 on this model' }
+        ],
+        corpusNote: 'Grind is a distribution, never a figure — calibrate to your own zero. Espresso keeps its own corpus.',
+        overlay: { score: '9', recipe: 'Ferrous roast · V60 · 1 reading', finding: 'Blackcurrant like a bell. The one.' },
+        overlayTail: 'The spine stands without you. This wash is yours — your highest, so far.'
+      },
+      ilusion: {
+        label: 'La Ilusión',
+        eyebrow: 'Lot · harvest 2025/26', title: 'La Ilusión, honey.', origin: 'Chalatenango, El Salvador · 1,500–1,650 m',
+        road: [
+          { mark: '○', rail: 'var(--line)', stage: 'Grown', when: 'Dec 2025', who: 'La Ilusión — single farm', detail: 'Chalatenango, El Salvador · 1,500–1,650 m' },
+          { mark: '◎', rail: 'var(--line)', stage: 'Processed', when: 'Dec–Jan', who: 'on the farm', detail: 'honey · 18 d in mucilage, raised beds' },
+          { mark: '◉', rail: 'var(--line)', stage: 'Roasted', when: 'from Jul 9', who: 'Small Hours', detail: 'one hand — below' },
+          { mark: '○', rail: 'transparent', stage: 'Poured', when: 'unread', who: 'no pour on a bar yet', detail: 'the branch opens with the first sighting' }
+        ],
+        roadTail: 'The road stops where the record does. Unread is a state, not a gap invented shut.',
+        identity: [
+          { k: 'Producer', v: 'La Ilusión — single farm' },
+          { k: 'Processor', v: 'on-farm, honey' },
+          { k: 'Variety', v: 'pacamara' },
+          { k: 'Process', v: 'honey · 18 d in mucilage, raised beds' },
+          { k: 'Resolution', v: 'green-lot', exKey: 'greenlot' }
+        ],
+        identityNote: 'A single farm, one parcel — identity resolves to the green lot outright. What it lacks is a score, not a road.',
+        standing: [
+          { k: 'Caliber', v: 'unread', exKey: 'unread' },
+          { k: 'Rarity', v: '6 bags landed · 1 roaster', exKey: 'rarity' },
+          { k: 'Traceability', v: 'green-lot', exKey: 'greenlot' }
+        ],
+        standingNote: 'No admissible cup score exists yet, so none prints. Unread is the truth here — never a low number standing in for one.',
+        avail: [],
+        availEmptyLine: 'No bar has poured it into the record yet. The branch opens with the first signed sighting.',
+        availNote: '',
+        roastHead: 'One hand, so far.',
+        roasts: [
+          { roaster: 'Small Hours', name: 'La Ilusión', level: 'their “medium”', date: 'Jul 9', n: 'n=1 reading', notes: 'red apple, panela, soft finish' }
+        ],
+        corpus: [
+          { k: 'Brews on record', v: '3 · Fellow Ode Gen 2 · conical cluster' },
+          { k: 'Ratio', v: '1:15.5 median' },
+          { k: 'Water', v: '92–94 °C' },
+          { k: 'Grind', v: '6.8–7.4 on this model' }
+        ],
+        corpusNote: 'Three brews is a whisper, not a distribution — read it as a starting point, not a truth. Calibrate to your own zero.',
+        overlay: { score: '7', recipe: 'Small Hours roast · Switch · 1 reading', finding: 'Round, quiet. Wants a coarser read.' },
+        overlayTail: 'The spine stands without you. This wash is yours.'
+      }
+    };
+    const P = LOT_PAGES[s.lotKey] || LOT_PAGES.worka;
+    const lotVals = {
+      lotLabel: P.label, lotEyebrow: P.eyebrow, lotTitle: P.title, lotOrigin: P.origin,
+      road: P.road, roadTail: P.roadTail,
+      lotIdentity: mkRows(P.identity), lotIdentityNote: P.identityNote,
+      lotStanding: mkRows(P.standing), lotStandingNote: P.standingNote,
+      avail: P.avail, availHas: P.avail.length > 0, availEmpty: P.avail.length === 0,
+      availEmptyLine: P.availEmptyLine || '', availNote: P.availNote,
+      roastHead: P.roastHead, roasts: P.roasts.map(r => ({ ...r, go: openRoasterK(rkMap[r.roaster] || 'ferrous') })),
+      lotCorpus: P.corpus, lotCorpusNote: P.corpusNote,
+      hasOverlay: !!P.overlay, ovScore: P.overlay ? P.overlay.score : '', ovRecipe: P.overlay ? P.overlay.recipe : '', ovFinding: P.overlay ? P.overlay.finding : '',
+      overlayTail: P.overlayTail,
+      lotDivergence: P.divergence || '', lotDivergenceHas: !!P.divergence
+    };
+
+    const ROASTERS = {
+      ferrous: { label: 'Ferrous', eyebrow: 'Roaster · Portland', title: 'Ferrous.', origin: 'Southeast · roasting since 2016', site: 'ferrous.coffee',
+        offers: [
+          { title: '“Sakaro” — Worka Sakaro, natural', n: 'n=3', sub: 'their “light” · last roast Jul 15', lot: 'worka' },
+          { title: '“Kiamugumo” — Kiamugumo AA', n: 'n=5', sub: 'their “filter” · last roast Jul 18', lot: 'kia' },
+          { title: '“Streetcar” — a blend of two lots', n: 'n=2', sub: 'composition dated Jun 2026 · only as traceable as its vaguest component', lot: null }
+        ],
+        pen: [ { field: 'roast', k: 'Roast date · Sakaro', v: 'Jul 15' }, { field: 'name', k: 'Offering name', v: '“Sakaro”' }, { field: 'door', k: 'Where to buy', v: 'the roastery · Southeast' } ],
+        penOut: { k: 'Origin · Worka Sakaro', v: 'Gedeb, Ethiopia — stated' } },
+      smallhours: { label: 'Small Hours', eyebrow: 'Roaster · Portland', title: 'Small Hours.', origin: 'St. Johns · roasting since 2019', site: 'smallhours.coffee',
+        offers: [
+          { title: '“Worka Sakaro” — natural', n: 'n=2', sub: 'their “filter” · last roast Jul 11', lot: 'worka' },
+          { title: '“Kiamugumo AA” — washed', n: 'n=2', sub: 'their “espresso” · last roast Jul 17', lot: 'kia' },
+          { title: '“La Ilusión” — honey', n: 'n=1', sub: 'their “medium” · last roast Jul 9', lot: 'ilusion' }
+        ],
+        pen: [ { field: 'roast', k: 'Roast date · Kiamugumo', v: 'Jul 17' }, { field: 'name', k: 'Offering name', v: '“Kiamugumo AA”' }, { field: 'door', k: 'Where to buy', v: 'the roastery · St. Johns' } ],
+        penOut: { k: 'Origin · La Ilusión', v: 'Chalatenango — stated' } },
+      meridian: { label: 'Meridian', eyebrow: 'Roaster · Portland', title: 'Meridian.', origin: 'Southeast · roasting since 2014', site: 'meridian.coffee',
+        offers: [
+          { title: '“Gedeb Natural” — Worka Sakaro', n: 'unread', sub: 'their “medium-light” · last roast Jul 8', lot: 'worka' }
+        ],
+        pen: [ { field: 'roast', k: 'Roast date · Gedeb Natural', v: 'Jul 8' }, { field: 'name', k: 'Offering name', v: '“Gedeb Natural”' }, { field: 'door', k: 'Where to buy', v: 'the roastery · Southeast' } ],
+        penOut: { k: 'Origin · Worka Sakaro', v: 'Gedeb, Ethiopia — stated' } }
+    };
+    const RO = ROASTERS[s.roasterKey] || ROASTERS.ferrous;
+    const buildPen = (entKey, list) => {
+      const corr = s.corrections[entKey] || {};
+      return (list || []).map(f => {
+        const cid = entKey + ':' + f.field;
+        const cur = corr[f.field] != null ? corr[f.field] : f.v;
+        return { k: f.k, v: cur, edited: corr[f.field] != null, editing: s.correcting === cid, notEditing: s.correcting !== cid, startCorrect: () => this.setState({ correcting: cid, correctDraft: cur }) };
+      });
+    };
+    const roasterSignedKey = 'roaster:' + s.roasterKey;
+    const roasterIsSigned = !!s.signed[roasterSignedKey];
+    const roasterVals = {
+      roasterLabel: RO.label, roasterEyebrow: RO.eyebrow, roasterTitle: RO.title, roasterOrigin: RO.origin,
+      roasterOffers: RO.offers.map(o => ({ title: o.title, n: o.n, sub: o.sub, tap: !!o.lot, plain: !o.lot, go: o.lot ? openLotK(o.lot) : (() => {}) })),
+      roasterSigned: roasterIsSigned, roasterUnclaimed: !roasterIsSigned,
+      roasterPen: buildPen(roasterSignedKey, RO.pen), roasterPenOutK: (RO.penOut || {}).k || '', roasterPenOutV: (RO.penOut || {}).v || '',
+      openClaimRoaster: () => this.setState({ claim: { entity: 'roaster', key: s.roasterKey, step: 0, proof: 'channel', verified: false } }),
+      roasterNote: roasterIsSigned
+        ? RO.label + ' holds the pen. In-scope facts are theirs to correct; everything else stays compiled. The reader’s overlay is untouched — the record is still the reader’s.'
+        : 'This page is compiled from sightings. When ' + RO.label + ' signs it, they hold the pen on their own link — the record stays the reader’s.'
+    };
+
+    const CAFES = {
+      halfpence: { name: 'Halfpence', city: 'Alberta · Portland', grad: 'linear-gradient(150deg,#1e3a34 0%,#2f6e63 62%,#4a8f7f 100%)', bar: '#2f6e63', gradDusk: 'linear-gradient(150deg,#254b44 0%,#429484 62%,#66b7a4 100%)', barDusk: '#4ab5a0',
+        visited: true, avg: '7.8 · 11 cups', usual: 'cortado', pours: '4 lots · 2 roasters',
+        pen: [ { field: 'pour', k: 'On the bar', v: 'Sakaro · Kiamugumo AA' }, { field: 'hours', k: 'Hours', v: 'Tue–Sun · 7–4' }, { field: 'pin', k: 'The pin', v: 'Alberta · NE Portland' } ],
+        penOut: { k: 'The pour’s road', v: 'compiled — not the bar’s to sign' },
+        onBar: [
+          { name: 'Worka Sakaro — natural', sub: 'Ferrous roast · filter', when: 'Jul 19', lot: 'worka' },
+          { name: 'Kiamugumo AA', sub: 'Small Hours roast · espresso', when: 'Jul 19', lot: 'kia' }
+        ],
+        cups: [
+          { k: 'Tue · cortado', v: '8 / 9 · again' },
+          { k: 'Jul 12 · filter, Sakaro', v: '8 / 9 · again' },
+          { k: 'Jun 30 · espresso', v: '6 / 9' }
+        ] },
+      deckle: { name: 'The Deckle', city: 'Division · Portland', grad: 'linear-gradient(150deg,#2a1d14 0%,#6b4a34 58%,#a2643f 100%)', bar: '#a2643f', gradDusk: 'linear-gradient(150deg,#3c281b 0%,#935b39 58%,#c37e55 100%)', barDusk: '#cf764a',
+        visited: true, avg: '7.4 · 5 cups', usual: 'filter', pours: '3 lots · 2 roasters',
+        pen: [ { field: 'pour', k: 'On the bar', v: 'Worka Sakaro · Meridian' }, { field: 'hours', k: 'Hours', v: 'Wed–Sun · 8–3' }, { field: 'pin', k: 'The pin', v: 'Division · SE Portland' } ],
+        penOut: { k: 'The pour’s road', v: 'compiled — not the bar’s to sign' },
+        onBar: [
+          { name: 'Worka Sakaro — natural', sub: 'Meridian roast · filter', when: 'Jul 12', lot: 'worka' }
+        ],
+        cups: [
+          { k: 'Jul 12 · filter, Gedeb', v: '7 / 9' },
+          { k: 'Jun 28 · cortado', v: '8 / 9 · again' }
+        ] },
+      roseline: { name: 'Roseline', city: 'St. Johns · Portland', grad: 'linear-gradient(150deg,#2b1720 0%,#6b2f45 58%,#a5546c 100%)', bar: '#a5546c', gradDusk: 'linear-gradient(150deg,#401c28 0%,#933957 58%,#bc627d 100%)', barDusk: '#c5597d',
+        visited: true, avg: '8.0 · 4 cups', usual: 'espresso', pours: '5 lots · 3 roasters',
+        pen: [ { field: 'pour', k: 'On the bar', v: 'Kiamugumo AA · Small Hours' }, { field: 'hours', k: 'Hours', v: 'daily · 7–5' }, { field: 'pin', k: 'The pin', v: 'St. Johns · N Portland' } ],
+        penOut: { k: 'The pour’s road', v: 'compiled — not the bar’s to sign' },
+        onBar: [
+          { name: 'Kiamugumo AA', sub: 'Small Hours roast · espresso', when: 'Jul 16', lot: 'kia' }
+        ],
+        cups: [
+          { k: 'Jul 16 · espresso, Kiamugumo', v: '8 / 9 · again' },
+          { k: 'Jul 3 · cortado', v: '8 / 9 · again' }
+        ] },
+      prince: { name: 'Prince', city: 'St. Johns · Portland', grad: 'linear-gradient(150deg,#181c26 0%,#3a4055 58%,#6b7392 100%)', bar: '#6b7392', gradDusk: 'linear-gradient(150deg,#252b3c 0%,#515e85 58%,#7e89b4 100%)', barDusk: '#7686bc',
+        visited: false, pours: '4 lots · 2 roasters',
+        pen: [ { field: 'pour', k: 'On the bar', v: 'Worka Sakaro · Ferrous' }, { field: 'hours', k: 'Hours', v: 'Thu–Mon · 7:30–4' }, { field: 'pin', k: 'The pin', v: 'St. Johns · N Portland' } ],
+        penOut: { k: 'The pour’s road', v: 'compiled — not the bar’s to sign' },
+        onBar: [
+          { name: 'Worka Sakaro — natural', sub: 'Ferrous roast · filter', when: 'Jul 18', lot: 'worka' }
+        ],
+        savedLine: 'Saved Jul 2, not yet visited. No cup of yours here to read — a blank, not a verdict. The page stands on the atlas; your overlay begins with the first cup.' }
+    };
+    const CF = CAFES[s.cafeKey] || CAFES.halfpence;
+    const cafeDusk = (s.theme || this.props.theme || 'paper') === 'dusk';
+    const cafePourOpts = CF.onBar.map(b => b.name.split(' —')[0].trim() + ' · ' + b.sub.split(' roast')[0].trim()).concat(['Not sure']);
+    const cafeSignedKey = 'cafe:' + s.cafeKey;
+    const cafeIsSigned = !!s.signed[cafeSignedKey];
+    const cafeVals = {
+      cafeName: CF.name, cafeCity: CF.city, cafeGrad: cafeDusk ? (CF.gradDusk || CF.grad) : CF.grad, cafeBar: cafeDusk ? (CF.barDusk || CF.bar) : CF.bar,
+      cafeVisited: CF.visited, cafeUnvisited: !CF.visited,
+      cafeAvg: CF.avg || '', cafeUsual: CF.usual || '', cafePours: CF.pours,
+      cafeBarList: CF.onBar.map(b => ({ name: b.name, sub: b.sub, when: b.when, go: openLotK(b.lot) })),
+      cafeCups: CF.cups || [], cafeSavedLine: CF.savedLine || '',
+      cafeSigned: cafeIsSigned, cafeUnclaimed: !cafeIsSigned,
+      cafePen: buildPen(cafeSignedKey, CF.pen), cafePenOutK: (CF.penOut || {}).k || '', cafePenOutV: (CF.penOut || {}).v || '',
+      openClaimCafe: () => this.setState({ claim: { entity: 'cafe', key: s.cafeKey, step: 0, proof: 'channel', verified: false } })
+    };
+
+    const READINGS = [
+      { coffee: 'Worka Sakaro — natural', road: 'home · Ferrous roast · Switch', score: '8', when: 'today', line: 'Two clicks finer — it wanted more.' },
+      { coffee: 'Cortado at Halfpence', road: 'out · Small Hours on the Kiamugumo', score: '8', when: 'Tue', line: 'Sweetness carried through the milk.' },
+      { coffee: 'Kiamugumo AA', road: 'home · Ferrous roast · V60', score: '9', when: 'Jul 14', line: 'Blackcurrant like a bell. The one.' },
+      { coffee: 'Filter at The Deckle', road: 'out · Meridian on the Gedeb', score: '7', when: 'Jul 12', line: 'Good, poured a touch cool.' },
+      { coffee: 'La Ilusión — honey', road: 'home · Small Hours roast · Switch', score: '7', when: 'Jul 9', line: 'Round, quiet. Wants a coarser read.' }
+    ];
+    const RECORD = { total: 147, coffees: 9, since: 'March 2025', avg: '7.9', home: '8.1', out: '7.6' };
+    const ledgerData = (() => {
+      const lotOrder = ['worka', 'kia', 'ilusion'];
+      const rowVal = (rows, k) => { const r = (rows || []).find(x => x.k === k); return r ? r.v : ''; };
+      const shelf = lotOrder.map(k => {
+        const LP = LOT_PAGES[k]; if (!LP) return null;
+        return { coffee: (LP.title || '').replace(/\.\s*$/, ''), resolution: rowVal(LP.identity, 'Resolution'), reading: LP.overlay ? { hedonic: LP.overlay.score, recipe: LP.overlay.recipe, line: LP.overlay.finding } : null };
+      }).filter(Boolean);
+      const cupsOut = [];
+      ['halfpence', 'deckle', 'roseline'].forEach(k => { const C = CAFES[k]; if (C) (C.cups || []).forEach(cp => cupsOut.push({ place: C.name, city: C.city, cup: cp.k, reading: cp.v })); });
+      const saved = [
+        { place: 'Prince', city: 'St. Johns · Portland', saved: 'Jul 2', state: 'unvisited — no cup of yours here yet' },
+        { place: 'The Deckle', city: 'Division · Portland', saved: 'Jun 20', state: 'saved to return' }
+      ];
+      const signedPages = Object.keys(s.signed).filter(k => s.signed[k]).map(key => {
+        const parts = key.split(':'), ent = parts[0], id = parts[1];
+        const src = ent === 'cafe' ? (CAFES[id] || {}) : (ROASTERS[id] || {});
+        const nm = ent === 'cafe' ? src.name : src.label;
+        const corr = s.corrections[key] || {}, pen = src.pen || [];
+        const corrections = Object.keys(corr).map(field => { const f = pen.find(p => p.field === field) || {}; return { field: f.k || field, value: corr[field] }; });
+        return { page: nm || id, kind: ent, corrections };
+      });
+      const readings = READINGS.map(r => ({ coffee: r.coffee, where: /^out\b/.test(r.road) ? 'out' : (/^home\b/.test(r.road) ? 'home' : ''), road: r.road, hedonic: Number(r.score), when: r.when, line: r.line }));
+      const g = new Date(), iso = g.toISOString(), ym = iso.slice(0, 7);
+      return { filename: 'carta-ledger-' + ym + '.html', generatedISO: iso, generatedHuman: g.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), record: RECORD, readings, shelf, cupsOut, saved, signedPages };
+    })();
+    const BC = BREW_COFFEES[s.brewCoffee] || BREW_COFFEES.worka;
+    const brewerShort = (s.setup.brewer || '').trim().split(/\s+/).pop() || s.setup.brewer;
+    const now = new Date();
+    const day = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const part = now.getHours() < 12 ? 'morning' : now.getHours() < 18 ? 'afternoon' : 'evening';
+    return {
+      headerSub: subs[scr] || '',
+      todayEyebrow: day + ' · ' + part,
+      isToday: scr === 'today', isAtlas: scr === 'atlas', isLot: scr === 'lot',
+      isRoaster: scr === 'roaster', isCafe: scr === 'cafe', isBrew: scr === 'brew',
+      isRecord: scr === 'record', isMore: scr === 'more', isNotes: scr === 'notes', isCuplog: scr === 'cuplog',
+      isShelf: scr === 'shelf', isHomecup: scr === 'homecup',
+      goToday: () => this.go('today'), goAtlas: () => this.go('atlas'), goLot: () => this.openLot('worka'), lotGo: { worka: () => this.openLot('worka'), kia: () => this.openLot('kia'), ilusion: () => this.openLot('ilusion') },
+      goRoaster: () => this.openRoaster('ferrous'), goCafe: () => this.go('cafe'),
+      goBrew: () => { this.setState({ brewCoffee: 'worka', brewFrom: 'today' }); this.go('brew'); },
+      goShelf: () => this.go('shelf'), goHomecup: () => this.go('homecup'),
+      shelfLast: () => { this.setState({ brewCoffee: 'worka', brewFrom: 'shelf' }); this.go('brew'); },
+      roasterGo: { ferrous: () => this.openRoaster('ferrous'), smallhours: () => this.openRoaster('smallhours'), meridian: () => this.openRoaster('meridian') },
+      cafeGo: { halfpence: () => this.openCafe('halfpence'), deckle: () => this.openCafe('deckle'), roseline: () => this.openCafe('roseline'), prince: () => this.openCafe('prince') },
+      goRecord: () => this.go('record'), goMore: () => this.go('more'), goNotes: () => this.go('notes'), goCuplog: () => this.go('cuplog'),
+      tabToday: (scr === 'today' || scr === 'brew' || scr === 'shelf' || scr === 'homecup') ? 'on' : '',
+      tabAtlas: (scr === 'atlas' || scr === 'lot' || scr === 'roaster' || scr === 'cafe' || scr === 'cuplog' || scr === 'propose') ? 'on' : '',
+      tabRecord: scr === 'record' ? 'on' : '',
+      tabMore: (scr === 'more' || scr === 'notes') ? 'on' : '',
+      welcomeOpen: s.welcome,
+      openWelcome: () => this.setState({ welcome: true }),
+      closeWelcome: () => this.setState({ welcome: false }),
+      welcomeRead: () => { this.go('atlas'); this.setState({ welcome: false }); },
+      welcomeOut: () => { this.openCafe('halfpence'); this.setState({ welcome: false }); },
+      welcomeMake: () => { this.go('brew'); this.setState({ welcome: false }); },
+      paperCls: s.theme === 'paper' ? 'on' : '',
+      duskCls: s.theme === 'dusk' ? 'on' : '',
+      setPaper: () => this.setState({ theme: 'paper' }, () => this.applyTheme()),
+      setDusk: () => this.setState({ theme: 'dusk' }, () => this.applyTheme()),
+      grind: s.grind, temp: s.temp, dose: s.dose.toFixed(1), water: s.water,
+      grindMinus: adj('grind', -1, 0, 200, 1), grindPlus: adj('grind', 1, 0, 200, 1),
+      tempMinus: adj('temp', -1, 70, 100, 1), tempPlus: adj('temp', 1, 70, 100, 1),
+      doseMinus: adj('dose', -1, 5, 40, 0.5), dosePlus: adj('dose', 1, 5, 40, 0.5),
+      waterMinus: adj('water', -1, 50, 900, 10), waterPlus: adj('water', 1, 50, 900, 10),
+      timerText: mm + ':' + ss,
+      timerLabel: s.running ? 'Pause' : 'Start',
+      timerToggle: () => {
+        if (this.state.running) { clearInterval(this._tick); this.setState({ running: false }); }
+        else { this._tick = setInterval(() => this.setState(st => ({ secs: st.secs + 1 })), 1000); this.setState({ running: true }); }
+      },
+      timerReset: () => { clearInterval(this._tick); this.setState({ secs: 0, running: false }); },
+      hedonic: [1,2,3,4,5,6,7,8,9].map(n => ({ n, cls: s.hedonic === n ? 'on' : '', pick: () => this.setState({ hedonic: n }) })),
+      descriptors: ['blueberry','floral','stone fruit','cocoa','tea-like','syrupy','clean','winey'].map(w => ({
+        word: w, cls: s.descs.includes(w) ? 'on' : '',
+        pick: () => this.setState(st => ({ descs: st.descs.includes(w) ? st.descs.filter(x => x !== w) : st.descs.concat(w) }))
+      })),
+      saveBrew: () => { this.toast('Kept. Day 12 joins the record.'); this.go('today'); },
+      logCup: () => this.go('cuplog'),
+      cupDrinks: ['Cortado','Filter','Espresso','Batch'].map(w => ({ word: w, cls: s.cupDrink === w ? 'on' : '', pick: () => this.setState({ cupDrink: w }) })),
+      cupPours: cafePourOpts.map(w => ({ word: w, cls: s.cupPour === w ? 'on' : '', pick: () => this.setState(st => ({ cupPour: st.cupPour === w ? '' : w })) })),
+      cupHedonic: [1,2,3,4,5,6,7,8,9].map(n => ({ n, cls: s.cupScore === n ? 'on' : '', pick: () => this.setState({ cupScore: n }) })),
+      cupDescriptors: ['blueberry','floral','stone fruit','cocoa','tea-like','syrupy','clean','winey'].map(w => ({
+        word: w, cls: s.cupDescs.includes(w) ? 'on' : '',
+        pick: () => this.setState(st => ({ cupDescs: st.cupDescs.includes(w) ? st.cupDescs.filter(x => x !== w) : st.cupDescs.concat(w) }))
+      })),
+      cupLine: s.cupLine,
+      setCupLine: (e) => this.setState({ cupLine: e.target.value }),
+      saveCup: () => {
+        if (!this.state.cupScore) { this.toast('A cup needs its reading — the 1–9 first.'); return; }
+        this.toast('Kept. ' + this.state.cupDrink + ' at ' + CF.name + ' — ' + this.state.cupScore + '/9.');
+        this.setState({ cupScore: 0, cupDescs: [], cupPour: '', cupLine: '' });
+        this.go('cafe');
+      },
+      exportLedger: () => this.downloadLedger(ledgerData),
+      exportedReady: !!s.exported,
+      exportedFilename: s.exported ? s.exported.filename : '',
+      exportedUrl: s.exported ? s.exported.url : '',
+      onLedgerFile: (e) => this.readLedgerFile(e),
+      mapPins: [
+        { x: '72%', y: '26%', name: 'Halfpence', fill: 'var(--ink)', go: () => this.openCafe('halfpence') },
+        { x: '27%', y: '33%', name: 'Prince', fill: 'transparent', go: () => this.openCafe('prince') },
+        { x: '60%', y: '72%', name: 'Deckle', fill: 'transparent', go: () => this.openCafe('deckle') },
+        { x: '45%', y: '48%', name: 'Ferrous', fill: 'var(--ink)', go: () => this.openRoaster('ferrous') },
+        { x: '22%', y: '72%', name: 'Roseline', fill: 'transparent', go: () => this.openCafe('roseline') },
+        { x: '84%', y: '52%', name: 'Keeper', fill: 'transparent', go: () => this.toast('Keeper — unread yet. The row is the door.') }
+      ],
+      ex,
+      query: s.query,
+      setQuery: (e) => this.setState({ query: e.target.value }),
+      searching: s.query.trim().length > 0,
+      ...(() => {
+        const q = s.query.trim().toLowerCase();
+        const idx = [
+          { name: 'Worka Sakaro — natural', kind: 'lot', sub: 'Gedeb, Ethiopia · station-season', go: () => this.openLot('worka'), k: 'worka sakaro gedeb ethiopia natural heirloom' },
+          { name: 'Kiamugumo AA', kind: 'lot', sub: 'Kirinyaga, Kenya · outturn 25/0141', go: () => this.openLot('kia'), k: 'kiamugumo kenya kirinyaga sl28 washed outturn' },
+          { name: 'La Ilusión — honey', kind: 'lot', sub: 'Chalatenango, El Salvador · pacamara', go: () => this.openLot('ilusion'), k: 'la ilusion el salvador pacamara honey chalatenango' },
+          { name: 'Ferrous', kind: 'roaster', sub: 'Southeast · 6 lots this season', go: () => this.openRoaster('ferrous'), k: 'ferrous roaster' },
+          { name: 'Small Hours', kind: 'roaster', sub: '3 lots on the chart', go: () => this.openRoaster('smallhours'), k: 'small hours roaster' },
+          { name: 'Meridian', kind: 'roaster', sub: '1 lot on the chart', go: () => this.openRoaster('meridian'), k: 'meridian roaster' },
+          { name: 'Halfpence', kind: 'bar', sub: 'Alberta · pours 4 lots', go: () => this.openCafe('halfpence'), k: 'halfpence bar cafe alberta' },
+          { name: 'The Deckle', kind: 'bar', sub: 'Division · pours 3 lots', go: () => this.openCafe('deckle'), k: 'deckle bar cafe division' },
+          { name: 'Roseline', kind: 'bar', sub: 'St. Johns · pours 5 lots', go: () => this.openCafe('roseline'), k: 'roseline bar cafe st johns' },
+          { name: 'Prince', kind: 'bar', sub: 'St. Johns · saved, not yet visited', go: () => this.openCafe('prince'), k: 'prince bar cafe st johns' },
+          { name: 'Worka Sakaro washing station', kind: 'station', sub: 'Gedeo Zone · ≈740 smallholders', go: () => this.openLot('worka'), k: 'worka sakaro washing station gedeo' }
+        ];
+        const results = q ? idx.filter(i => i.k.includes(q)).slice(0, 5) : [];
+        return { results, noResults: !!q && results.length === 0 };
+      })(),
+      isPropose: scr === 'propose',
+      goPropose: () => this.go('propose'),
+      draftCount: DRAFTS.filter(d => !s.decided.includes(d.id)).length,
+      draftsEmpty: DRAFTS.filter(d => !s.decided.includes(d.id)).length === 0,
+      drafts: DRAFTS.filter(d => !s.decided.includes(d.id)).map(d => ({
+        label: d.label, origin: d.origin, where: d.where, note: d.note, rung: d.rung,
+        open: () => this.setState({ confirm: { s: { ...d.s }, draftId: d.id }, cfEdit: null })
+      })),
+      pfName: s.propForm.name, pfOrigin: s.propForm.origin, pfProcess: s.propForm.process, pfId: s.propForm.id,
+      setPfName: (e) => { const v = e.target.value; this.setState(st => ({ propForm: { ...st.propForm, name: v } })); },
+      setPfOrigin: (e) => { const v = e.target.value; this.setState(st => ({ propForm: { ...st.propForm, origin: v } })); },
+      setPfProcess: (e) => { const v = e.target.value; this.setState(st => ({ propForm: { ...st.propForm, process: v } })); },
+      setPfId: (e) => { const v = e.target.value; this.setState(st => ({ propForm: { ...st.propForm, id: v } })); },
+      lookForIt: () => { const p = this.state.propForm; this.setState({ confirm: { s: { name: p.name, originText: p.origin, process: p.process, id: p.id, harvest: '2025/26' }, draftId: null }, cfEdit: null }); },
+      ...(() => {
+        const c = s.confirm;
+        if (!c) return { confirmOpen: false };
+        const m = matchSighting(c.s);
+        const resKey = { 'green-lot': 'greenlot', 'station-season': 'resolution', 'region-grade': 'resolution' };
+        const close = () => this.setState({ confirm: null, cfEdit: null });
+        const decide = (msg, nav) => { const did = c.draftId; this.setState(st => ({ confirm: null, cfEdit: null, decided: did ? st.decided.concat(did) : st.decided })); this.toast(msg); if (nav) this.go(nav); };
+        const bind = (L) => { this.setState({ lotKey: L.key }); decide('Bound to ' + L.name + '. The sighting joins its road.', 'lot'); };
+        const forkNew = () => decide('Filed as a new lot. The road begins — unread until read.', null);
+        const override = (L) => { this.setState({ lotKey: L.key }); decide('Bound on your word. The correction is a signed line — a later one can supersede it.', 'lot'); };
+        const L = m.lot;
+        const cf = {
+          confirmOpen: true, closeConfirm: close,
+          cfSawName: c.s.name || '—',
+          cfSawOrigin: c.s.originText || [c.s.region, c.s.country].filter(Boolean).join(', ') || '—',
+          cfSawId: c.s.id || '',
+          cfHasLot: !!L, cfLotName: L ? L.name : '', cfLotSub: L ? L.sub : '', cfResolution: L ? L.resolution : '',
+          cfResEx: L ? (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ primer: resKey[L.resolution] || 'resolution' }); } : () => {},
+          cfShared: (m.shared || []).map(e => ({ k: e.k, v: e.v })), cfHasShared: (m.shared || []).length > 0,
+          cfEditing: !!s.cfEdit, cfNotEditing: !s.cfEdit
+        };
+        if (m.kind === 'hardid') {
+          cf.cfOverline = 'The same lot'; cf.cfOverColor = 'var(--ink-3)';
+          cf.cfClaim = 'The same green, outright.';
+          cf.cfBody = 'Kenya sews one identifier into the bag. This bag and the ' + L.name + ' already on the chart are one cherry delivery — milled and graded into sibling lots under outturn ' + (c.s.id || '25/0141').replace(/^outturn\s*/i, '') + '. Two records naming this code are the same green.';
+          cf.cfDiverge = ''; cf.cfDivergeLabel = '';
+          cf.cfPrimaryCls = 'btn btn-primary'; cf.cfPrimaryLabel = 'Bind to ' + L.name; cf.cfPrimary = () => bind(L);
+          cf.cfHasSecondary = true; cf.cfSecondaryLabel = 'Not the same — file as new'; cf.cfSecondary = forkNew;
+        } else if (m.kind === 'fingerprint') {
+          cf.cfOverline = 'The same lot?'; cf.cfOverColor = 'var(--ink-3)';
+          cf.cfClaim = 'This looks like ' + L.short + '. The same lot?';
+          cf.cfBody = 'No shared id on the bag, so this is a match on facts, not a key — region, country, process and harvest all line up. Confirm and the sighting resolves to the station and season. Reject and it files as its own, coarser record.';
+          if (m.diverge) { cf.cfDivergeLabel = 'The gap —'; cf.cfDiverge = 'the bag names the region (' + m.regionName + '), not the station (' + L.station2 + ').'; } else { cf.cfDiverge = ''; cf.cfDivergeLabel = ''; }
+          cf.cfPrimaryCls = 'btn btn-primary'; cf.cfPrimaryLabel = 'Confirm — the same lot'; cf.cfPrimary = () => bind(L);
+          cf.cfHasSecondary = true; cf.cfSecondaryLabel = 'Not the same — file as new'; cf.cfSecondary = forkNew;
+        } else if (m.kind === 'guard') {
+          cf.cfOverline = 'Not the same lot'; cf.cfOverColor = 'var(--danger)';
+          cf.cfClaim = 'Same name is not the same lot.';
+          cf.cfBody = 'This shares ' + L.short.split(' —')[0] + '’s name, but the process differs. A rebranded split, a rotating house name, a neighbouring parcel — same string, different coffee. CARTA won’t merge on a name alone.';
+          cf.cfDivergeLabel = 'The tell —'; cf.cfDiverge = 'process: ' + (m.diverge ? m.diverge.was : '') + ' on the chart, ' + (m.diverge ? m.diverge.now : '') + ' on this bag.';
+          cf.cfPrimaryCls = 'btn btn-primary'; cf.cfPrimaryLabel = 'File as a new lot'; cf.cfPrimary = forkNew;
+          cf.cfHasSecondary = true; cf.cfSecondaryLabel = 'Actually the same — bind anyway'; cf.cfSecondary = () => override(L);
+        } else {
+          cf.cfOverline = 'New to the chart'; cf.cfOverColor = 'var(--ink-3)';
+          cf.cfClaim = 'Nothing like it on the chart yet.';
+          cf.cfBody = 'No shared id, no fingerprint overlap. This files as a new lot and its road begins — a proposal that stands once a keeper approves it. Unread until it is read.';
+          cf.cfDiverge = ''; cf.cfDivergeLabel = '';
+          cf.cfPrimaryCls = 'btn btn-primary'; cf.cfPrimaryLabel = 'File as a new lot'; cf.cfPrimary = forkNew;
+          cf.cfHasSecondary = false; cf.cfSecondaryLabel = ''; cf.cfSecondary = () => {};
+        }
+        const editFieldFor = { hardid: 'id', fingerprint: 'name', guard: 'process', none: 'name' }[m.kind];
+        const editLabelFor = { id: 'The bag’s id', name: 'The coffee, as the bag says it', process: 'Process', originText: 'Origin' };
+        cf.cfStartCorrect = () => this.setState({ cfEdit: editFieldFor });
+        cf.cfEditLabel = s.cfEdit ? (editLabelFor[s.cfEdit] || 'Correct') : '';
+        cf.cfEditValue = s.cfEdit ? (c.s[s.cfEdit] || '') : '';
+        cf.setCfEdit = (e) => { const v = e.target.value; this.setState(st => ({ confirm: { ...st.confirm, s: { ...st.confirm.s, [st.cfEdit]: v } } })); };
+        cf.cfLookAgain = () => this.setState({ cfEdit: null });
+        return cf;
+      })(),
+      ...(() => {
+        const rb = s.readback;
+        if (!rb) return { readbackOpen: false, rbOk: false, rbBad: false, rbReadings: [] };
+        const ok = rb.status === 'ok';
+        const out = { readbackOpen: true, closeReadback: () => this.setState({ readback: null }), rbOk: ok, rbBad: !ok, rbOverColor: 'var(--ink-3)', rbReadings: [] };
+        if (ok) {
+          out.rbOverline = 'A record, read back';
+          out.rbHead = 'The record, returned.';
+          out.rbSummary = 'A record, read back — ' + rb.readingsTotal + ' readings · ' + rb.shelfCount + ' on the shelf · ' + rb.cupsCount + ' cups out · kept since ' + (rb.since || 'a date unstated') + '.';
+          out.rbReadings = (rb.readings || []).map(r => ({ coffee: r.coffee, road: r.road, hedonic: (r.hedonic === '' ? '—' : r.hedonic), line: r.line, hasLine: !!r.line }));
+          out.rbDismiss = 'Close — nothing merged';
+        } else {
+          out.rbOverline = 'Not read';
+          if (rb.status === 'newer') {
+            out.rbHead = 'A newer record than this reads.';
+            out.rbDeclineText = 'This ledger is written to ' + rb.schema + ' — a newer record than this one reads. It has been left untouched: nothing changed, nothing merged.';
+          } else {
+            out.rbHead = 'This one didn’t read.';
+            out.rbDeclineText = 'This isn’t a CARTA ledger, or it’s from a newer record than this one reads. Nothing was changed.';
+          }
+          out.rbDismiss = 'Close';
+        }
+        return out;
+      })(),
+      primerOpen: !!s.primer,
+      primerTitle: s.primer ? PR[s.primer].t : '',
+      primerBody: s.primer ? PR[s.primer].b : '',
+      closePrimer: () => this.setState({ primer: null }),
+      correctDraft: s.correctDraft,
+      setCorrectDraft: (e) => this.setState({ correctDraft: e.target.value }),
+      cancelCorrect: () => this.setState({ correcting: null }),
+      saveCorrect: () => {
+        const cid = this.state.correcting; if (!cid) return;
+        const parts = cid.split(':'); const field = parts[2]; const entKey = parts[0] + ':' + parts[1];
+        const val = this.state.correctDraft;
+        this.setState(st => ({ corrections: { ...st.corrections, [entKey]: { ...(st.corrections[entKey] || {}), [field]: val } }, correcting: null }));
+        this.toast('Corrected. A first-party line — a later one can supersede it.');
+      },
+      ...(() => {
+        const c = s.claim;
+        if (!c) return { claimOpen: false };
+        const isCafe = c.entity === 'cafe';
+        const src = isCafe ? (CAFES[c.key] || CAFES.halfpence) : (ROASTERS[c.key] || ROASTERS.ferrous);
+        const name = isCafe ? src.name : src.label;
+        const site = src.site || (isCafe ? 'the café’s site' : 'the roaster’s site');
+        const kindWord = isCafe ? 'bar' : 'roaster';
+        const setStep = (n) => this.setState(st => ({ claim: { ...st.claim, step: n } }));
+        const close = () => this.setState({ claim: null });
+        const inScope = isCafe
+          ? ['Menus & pours — what’s on the bar', 'Counter facts, hours, the pin', 'Your own doors — where you sell']
+          : ['Roasts, blends & compositions', 'Offering names & roast dates', 'Your own doors & buying confirms'];
+        const outScope = isCafe
+          ? ['The roast’s road — its provenance', 'Any other venue’s page']
+          : ['Origin facts — stated, like anyone', 'Any venue’s menu but your own'];
+        const summary = isCafe
+          ? [ { k: 'The bar', v: name }, { k: 'Where', v: src.city }, { k: 'Pours', v: src.pours }, { k: 'Compiled from', v: 'sightings · unsigned' } ]
+          : [ { k: 'The roaster', v: name }, { k: 'On the chart', v: src.origin }, { k: 'On offer', v: (src.offers || []).length + ' lots this season' }, { k: 'Compiled from', v: 'sightings · unsigned' } ];
+        const doSign = () => {
+          const key = c.entity + ':' + c.key;
+          this.setState(st => ({ signed: { ...st.signed, [key]: true }, claim: null }));
+          this.toast('Signed. The pen is yours — within your link.');
+        };
+        const cl = {
+          claimOpen: true, claimClose: close,
+          claimOverline: 'Act III · the signed page',
+          claimStep0: c.step === 0, claimStep1: c.step === 1, claimStep2: c.step === 2,
+          claimSummary: summary, claimIn: inScope, claimOut: outScope,
+          claimSite: site, claimVerified: !!c.verified, claimNotVerified: !c.verified,
+          claimVerify: () => this.setState(st => ({ claim: { ...st.claim, verified: true } })),
+          claimBackShow: c.step > 0, claimBack: () => setStep(c.step - 1)
+        };
+        if (c.step === 0) {
+          cl.claimStepLabel = '1 / 3 · the record as it stands';
+          cl.claimHead = 'The record already keeps your page.';
+          cl.claimBody = 'This is what the record says about you, compiled from sightings. It is nearly right. Signing populates nothing — it lets you hold the pen on your own link. The page was true before you; it stays the reader’s after.';
+          cl.claimPrimaryLabel = 'Hold the pen'; cl.claimPrimary = () => setStep(1);
+        } else if (c.step === 1) {
+          cl.claimStepLabel = '2 / 3 · proof of control';
+          cl.claimHead = 'Prove the channel is yours.';
+          cl.claimBody = isCafe
+            ? 'CARTA already reads your site for your colour. Prove you control that channel and the pen is yours — no lawyer, no account first.'
+            : 'Prove you control the channel the record already reads for you — a domain, or a documented instrument like an importer’s attestation.';
+          cl.claimPrimaryLabel = c.verified ? 'The channel is mine' : 'Show control first';
+          cl.claimPrimary = () => { if (this.state.claim && this.state.claim.verified) setStep(2); else this.toast('Show control of the channel first — one tap.'); };
+        } else {
+          cl.claimStepLabel = '3 / 3 · what the pen reaches';
+          cl.claimHead = 'Sign your own link — no further.';
+          cl.claimBody = 'Authority ends where your link does. The ' + kindWord + ' owns ' + (isCafe ? 'the pour, never the road' : 'the roast, never the farm') + '. Your claim is itself a sighting — strikeable, revocable; a later signed line can supersede it.';
+          cl.claimPrimaryLabel = 'Sign — within this scope'; cl.claimPrimary = doSign;
+        }
+        return cl;
+      })(),
+      // ── the shelf → brew → home cup arc (Coffee → Preparation → Cup) ──
+      shelfList: Object.keys(BREW_COFFEES).map(k => { const b = BREW_COFFEES[k]; return { name: b.name, origin: b.origin, resolution: b.resolution, pick: () => this.pickBrew(k), resEx: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ primer: b.resKey }); } }; }),
+      brewCoffeeShort: BC.short,
+      brewEyebrow: 'Make a cup · ' + BC.short,
+      brewTitle: s.brewFrom === 'shelf' ? 'Set the dials.' : 'Begin from the last cup.',
+      brewOrigin: s.setup.grinder + ' + ' + brewerShort + ' · turn the one dial you mean to',
+      brewBack: () => this.go(s.brewFrom === 'shelf' ? 'shelf' : 'today'),
+      brewBackLabel: s.brewFrom === 'shelf' ? 'The shelf' : 'Today',
+      goHomeBrewBack: () => this.go('brew'),
+      setupGrinder: s.setup.grinder, setupBrewer: s.setup.brewer, setupScale: s.setup.scale,
+      setupResting: !s.setupEditing, setupEditingF: s.setupEditing,
+      setupEdit: () => this.setState({ setupEditing: true }),
+      setupDone: () => this.setState({ setupEditing: false }),
+      setSetupGrinder: (e) => { const v = e.target.value; this.setState(st => ({ setup: { ...st.setup, grinder: v } })); },
+      setSetupBrewer: (e) => { const v = e.target.value; this.setState(st => ({ setup: { ...st.setup, brewer: v } })); },
+      setSetupScale: (e) => { const v = e.target.value; this.setState(st => ({ setup: { ...st.setup, scale: v } })); },
+      homeCoffee: BC.name + ' · ' + BC.roaster,
+      homeRecipe: s.dose.toFixed(1) + ' g → ' + s.water + ' g · ' + s.temp + ' °C · ' + mm + ':' + ss + ' · ' + brewerShort,
+      homeSetup: s.setup.grinder + ' · ' + brewerShort + ' · ' + s.setup.scale,
+      homeHedonic: [1,2,3,4,5,6,7,8,9].map(n => ({ n, cls: s.homeScore === n ? 'on' : '', pick: () => this.setState({ homeScore: n }) })),
+      homeDescriptors: ['blueberry','floral','stone fruit','cocoa','tea-like','syrupy','clean','winey'].map(w => ({ word: w, cls: s.homeDescs.includes(w) ? 'on' : '', pick: () => this.setState(st => ({ homeDescs: st.homeDescs.includes(w) ? st.homeDescs.filter(x => x !== w) : st.homeDescs.concat(w) })) })),
+      homeLine: s.homeLine, setHomeLine: (e) => this.setState({ homeLine: e.target.value }),
+      saveHomeCup: () => { if (!this.state.homeScore) { this.toast('A cup needs its reading — the 1–9 first.'); return; } this.toast('Kept. ' + BC.short + ' at home — ' + this.state.homeScore + '/9.'); this.setState({ homeScore: 0, homeDescs: [], homeLine: '' }); this.go('today'); },
+      // ── the interlude (a considered moment, once per session, ranked by taste) ──
+      seasonIdle: !s.season, seasonDone: !!s.season,
+      seasonShown: s.season === 'reading' || s.season === 'read',
+      atlasReadingCls: s.season === 'reading' ? 'is-reading' : '',
+      seasonReasons: 'the washed Kenyas and the naturals you keep reaching for lead, and the pins fall where you already keep.',
+      readSeason: () => {
+        if (this.reduceMotion()) { this.setState({ season: 'read' }); return; }
+        this.setState({ season: 'reading' });
+        clearTimeout(this._season);
+        this._season = setTimeout(() => this.setState(st => (st.season === 'reading' ? { season: 'read' } : null)), 980);
+      },
+      // ── What's New (version-flag sheet, replayable from More → the manual) ──
+      whatsnewOpen: s.whatsnew,
+      openWhatsnew: () => this.setState({ whatsnew: true }),
+      closeWhatsnew: () => this.setState({ whatsnew: false }),
+      appVersionLabel: 'The redesign · July 2026',
+      changelog: CHANGELOG.map(r => ({ v: r.v, d: r.d, latest: r.latest, title: r.title, items: r.items, cls: r.latest ? 'rel latest' : 'rel' })),
+      ...lotVals, ...roasterVals, ...cafeVals,
+      readings: READINGS,
+      toastOn: s.toastOn, toastText: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
