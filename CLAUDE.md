@@ -152,7 +152,25 @@ server/
   persist across repaints (`_smapCam`). Pins are HTML markers wearing the same
   `.pin` classes as the drawn plot. The café-page locator (`placeMapHTML`)
   tints only its pin to the café's hue (near-neutral floors to the ember);
-  the basemap never moves.
+  the basemap never moves. Edges (lot → roast → bar) draw as a GeoJSON line
+  layer over the tiles (`smapEdges`, monochrome, re-added on restyle) with the
+  drawn-plot SVG (`svg.atlas-edges`) as the offline floor.
+- **the atlas map** — the lot-keyed graph drawn geographically (VISION step 4),
+  folded into `vCurate` as a **Map / List** toggle (`atlasView`/`atlasSetView`,
+  Map by default when a scene exists). `atlasGraph` walks the chart's greens
+  (`chartRecs` → `lotRows`) into nodes — producers at a coarse origin, roasters
+  in their cities, venues on their streets — and edges (each grower→roaster,
+  each pour's roaster→venue). `atlasMapHTML` renders the drawn plot + registers
+  the live config (`_smapCfg.atlasmap`, `atlasMarks`); every pin taps its 4a
+  page (`openProducerPage`/`openRoasterPage`/`openPlace`), so map and pages are
+  one walk. Coordinates are honest and additive: a venue's real Register point,
+  a roaster's `city` point, a producer's `region`/`country` centroid, each with
+  a `geoGrain` — **never a farm-precise pin**; a node with no coordinate lists
+  rather than lies. Filled from the optional keyless `geoLookup` (via `geoOne`)
+  at author time through `atlasGeoFill` (blanks-only, online-only,
+  offline-degrading — the demo `devSeedChart` stamps demo coordinates directly,
+  never the network). Renders read-only for a stranger; the drawn plot is the
+  floor, the street tiles the enhancement.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
 - **export / import** — JSON export (stamped with the user's name); import as a
@@ -288,9 +306,12 @@ neither confirmed nor kept apart (`rec.lotApart`); working an item reuses the
 propose sheet ranked for ties, `queueConfirm` binds one and leaves the rest
 apart, `queueApart` forks (the safe default). The **Chart No. 1** view (`vCurate`,
 `curateOn`, reached from `vMore` → "Curate the atlas") reads one city's authored
-roasters, greens and same-green cases, reusing `openLotPage`. `devSeedChart()`
-(`#seed-chart`) is the marked-demo fixture. LLM/site-assisted extraction, the
-`proposed`→`stood` moderation ceremony, and the step-4 map are deferred.
+roasters, greens and same-green cases, reusing `openLotPage`, and draws them
+geographically in a **Map / List** toggle (step 4, "the map" — see *the atlas
+map* above). `devSeedChart()` (`#seed-chart`) is the marked-demo fixture, and
+draws the LA scene end to end (demo coordinates). LLM/site-assisted extraction and
+the `proposed`→`stood` moderation ceremony are deferred; the standing (step 5),
+the brew corpus (step 6) and discovery (step 7) follow.
 
 ### Invariants to preserve
 
