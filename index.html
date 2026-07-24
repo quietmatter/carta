@@ -1921,10 +1921,15 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.24.0';
+const APP_VERSION='4.25.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.25.0',date:'Jul 24, 2026',title:'The encyclopedia — every node a page',items:[
+    'A green’s page is no longer a dead end past its roasts. Its grower, each of its roasters, and every venue that pours it are now taps — walk from a green to the washing station behind it, to a roaster and every other green that hand has touched, to a café and what else it pours. Nothing is a dead end; the pleasure is the drilling-in.',
+    'A grower opens onto the greens traced to it — a washing station gathers cherry from many hands, so its greens stand apart, each its own lot, never one blurred farm. A roaster opens onto every green it has touched, with the offering and level it gave each. A venue opens onto the greens poured at its counter.',
+    'Chart No. 1 is walkable read-only now — a stranger reads it without the pen: its roasters, the season’s greens, and the page nothing else shows, one washing station in more than one hand. Each page still says how far its green resolves and how sure its identity is — a lens, never a rank, its marks monochrome.',
+  ]},
   {v:'4.24.0',date:'Jul 23, 2026',title:'Charting a city, green by green',items:[
     'You can now author the atlas directly — a roaster, a green and a roast onto the record without logging a cup you had. Find it under your record: Chart No. 1, Los Angeles, its Ethiopian 2025 greens. Every green you author runs the same resolver a bag does, so the sure ones fold onto a green already charted and the look-alikes wait to be settled.',
     'When two greens read too close to call on their own, they land in a quiet review queue — never a nag, and empty when there’s nothing to settle. Work each with one deliberate tap: confirm the one that’s truly the same green, and the rest stay honestly apart, or keep them all apart, the safe call.',
@@ -2266,6 +2271,9 @@ const roasterName=ref=>{const n=catNode('roasters',ref);return (n&&n.name)||'a r
 // A lot has no single name — build one from the origin words it collapsed: who (the
 // producer, or the lot name), where (region, country), and the variety, terse.
 const lotLabel=n=>{if(!n)return 'a lot';const place=[n.region,n.country].filter(Boolean).join(', ');const parts=[n.producer||n.lotName,place,n.variety].filter(Boolean);return parts.length?parts.join(' · '):'a lot'};
+// How many roasters' hands a green has passed through — the shared-spine fold (CAT.roasts by lotRef), the
+// "same green, in N hands" count the atlas exists to show. Read by the lot, producer, roaster and venue pages.
+const lotHands=id=>new Set(CAT.roasts.entries.filter(r=>r&&r.lotRef===id&&r.roasterRef).map(r=>r.roasterRef)).size;
 // The resolution grain, read honestly (RESOLVER §6, LOT_IDENTITY): the level identity actually reached.
 // A green-lot is the finest; a station-season is a legitimate TERMINAL node, not a half-filled lot; a
 // region-grade is the honest ECX floor, no finer identity printed. Monochrome — a lens, never a rank.
@@ -2293,6 +2301,56 @@ function openLotKin(ref){
     ${r.recs.map(kinRow).join('')}
     <button class="btn btn-quiet" style="margin-top:12px" onclick="closeSheet();openLotPage(${jsq(ref)})">The same green, in every hand →</button>`);
 }
+/* ---- The encyclopedia's node pages (VISION step 4, "the encyclopedia"): every node a page, every page
+ * drilling into the next, so a green is never a dead end. These fold the SHARED spine (per-catalog) — NOT
+ * one keeper's journal (openRoasterKin/openLotKin do that, per-ledger; don't conflate them). Pure catalog
+ * reads: offline, keyless, no network, and walkable read-only (a stranger reads Chart No. 1 without the pen).
+ * Each self-explains its grain where identity applies — a lens, never a sort; marks monochrome. ---- */
+// The grower node — the producer/station behind a green, opening onto the greens traced to it. Honest about
+// grain (LOT_IDENTITY): a washing station gathers cherry from many growers, so its greens are distinct lots,
+// each a legitimate terminal node — never one blurred, half-filled farm. Reached from any lot page's grower link.
+function openProducerPage(producerId){
+  const p=catNode('producers',producerId); if(!p){toast('That grower isn’t on the atlas yet');return}
+  const lots=CAT.lots.entries.filter(l=>lotLive(l)&&(l.producerRefs||[]).includes(producerId))
+    .sort((a,b)=>lotHands(b.id)-lotHands(a.id)||String(a.firstAt||a.createdAt||'').localeCompare(String(b.firstAt||b.createdAt||'')));
+  const place=[p.region,p.country].filter(regSubstance).map(esc).join(', ');
+  const row=l=>{const h=lotHands(l.id),gr=grainRead(l.grain);
+    const dd=[h?`${h} hand${h===1?'':'s'}${h>=2?' · the same green':''}`:'',gr?gr[0]:''].filter(Boolean).join(' · ');
+    return `<button class="wc-item" onclick="closeSheet();openLotPage(${jsq(l.id)})"><span class="tx"><span class="tt">${esc(lotLabel(l))}</span><span class="dd">${esc(dd)||'a green on the atlas'}</span></span><span class="go">→</span></button>`};
+  openSheet(`
+  <h3>${esc(p.name)}</h3>
+  <div class="sub">A grower on the atlas${place?` · ${place}`:''}.</div>
+  <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${lots.length
+    ?`${lots.length} green${lots.length===1?'':'s'} traced to this grower, each its own lot. A washing station gathers cherry from many hands — its greens stand apart, never one blurred farm.`
+    :'No green traces to this grower yet.'}</div>
+  ${lots.length?lots.map(row).join(''):'<div class="empty">No green on the atlas names this grower.</div>'}
+  <button class="btn btn-quiet" style="margin-top:10px" onclick="closeSheet()">Close</button>`);
+}
+// The roaster node — every green this roaster has touched, folded from CAT.roasts by roasterRef, each drilling
+// to its lot page with the offering name + level the roaster gave it. "Every lot this roaster has touched" —
+// the atlas roaster, distinct from openRoasterKin (which folds this keeper's own bags/cups). Reached from a
+// roaster name on any lot page, and from the chart's roster read-only.
+function openRoasterPage(roasterRef){
+  const r=catNode('roasters',roasterRef); if(!r){toast('That roaster isn’t on the atlas yet');return}
+  const byLot=new Map();
+  CAT.roasts.entries.forEach(x=>{if(!x||x.roasterRef!==roasterRef||!x.lotRef)return;
+    const id=lotFwd(x.lotRef),l=catNode('lots',id);if(!l||!lotLive(l))return;
+    let e=byLot.get(id);if(!e){e={id,lot:l,offers:[]};byLot.set(id,e)}
+    const line=[x.offeringName,x.level,x.roastDate&&fmtMDY(x.roastDate)].filter(regSubstance).map(esc).join(' · ');
+    if(line&&e.offers.indexOf(line)<0)e.offers.push(line)});
+  const greens=[...byLot.values()].sort((a,b)=>lotHands(b.id)-lotHands(a.id)||String(a.lot.firstAt||'').localeCompare(String(b.lot.firstAt||'')));
+  const place=[r.city,r.country].filter(regSubstance).map(esc).join(', ');
+  const row=e=>{const h=lotHands(e.id),dd=[e.offers.join(' · '),h>=2?`${h} hands · the same green`:''].filter(Boolean).join(' — ');
+    return `<button class="wc-item" onclick="closeSheet();openLotPage(${jsq(e.id)})"><span class="tx"><span class="tt">${esc(lotLabel(e.lot))}</span><span class="dd">${esc(dd)||'a green on the atlas'}</span></span><span class="go">→</span></button>`};
+  openSheet(`
+  <h3>${esc(r.name)}</h3>
+  <div class="sub">A roaster on the atlas${place?` · ${place}`:''}.</div>
+  <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${greens.length
+    ?`Every green this roaster has touched — ${greens.length} on the record, each drilling to the same green in other hands.`
+    :'No green on the atlas names this roaster yet.'}</div>
+  ${greens.length?greens.map(row).join(''):'<div class="empty">No roast on the atlas names this roaster.</div>'}
+  <button class="btn btn-quiet" style="margin-top:10px" onclick="closeSheet()">Close</button>`);
+}
 // The lot page — the atlas node, drilled into from a bag or the by-lot fold. The proof the whole
 // restructure exists for: the same green in more than one hand, each roast NAMED BY ITS ROASTER.
 // Reads the catalog, not one ledger, so it holds even for a roast nobody has logged a cup of.
@@ -2307,7 +2365,11 @@ function openLotPage(lotId){
   const meta=[lot.grain,(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:lot.process),lot.variety].filter(regSubstance).map(esc).join(' · ');
   const rows=roasts.map(r=>{
     const line=[r.level,r.roastDate&&fmtMDY(r.roastDate)].filter(regSubstance).map(esc).join(' · ');
-    return `<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(roasterName(r.roasterRef))}</span><span class="dd">${[esc(r.offeringName||'—'),line].filter(Boolean).join(' — ')}</span></span></div>`;
+    const dd=[esc(r.offeringName||'—'),line].filter(Boolean).join(' — ');
+    // each roaster's row taps into its atlas page — every other green that hand has touched, one tap off the green
+    return r.roasterRef
+      ?`<button class="wc-item" onclick="closeSheet();openRoasterPage(${jsq(r.roasterRef)})"><span class="tx"><span class="tt">${esc(roasterName(r.roasterRef))}</span><span class="dd">${dd}</span></span><span class="go">→</span></button>`
+      :`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(roasterName(r.roasterRef))}</span><span class="dd">${dd}</span></span></div>`;
   }).join('');
   const venues=[...new Set((D.pours||[]).filter(p=>p.lotRef===lotId&&p.shop).map(p=>p.shop))];
   // The identity confidence, on its face (RESOLVER §6) — the strongest standing rung, its evidence one
@@ -2330,6 +2392,10 @@ function openLotPage(lotId){
   // §6 — the resolution grain, first-class beside the name, in its honest words; monochrome, a lens not a rank.
   const gr=grainRead(lot.grain);
   const grainLine=gr?`<div class="muted small" style="margin:0 2px 12px"><strong>${esc(gr[0])}</strong> — ${esc(gr[1])}.</div>`:'';
+  // The grower(s) behind this green, each a tap into its page — the station is the finest provable node for
+  // much of coffee (LOT_IDENTITY), so naming it here makes it walkable, not inert text in the label.
+  const growers=(lot.producerRefs||[]).map(id=>catNode('producers',id)).filter(Boolean);
+  const growerLine=growers.length?`<div class="muted small" style="margin:0 2px 12px">${growers.length>1?'Growers':'Grower'} — ${growers.map(g=>`<button class="text-action" onclick="closeSheet();openProducerPage(${jsq(g.id)})">${esc(g.name)}</button>`).join(', ')}. Drill to the greens traced to ${growers.length>1?'them':'it'}.</div>`:'';
   // A graded child names its processing batch and its siblings (Kenya AA/AB/PB — RESOLVER §5).
   const bat=lot.processingBatchRef&&catNode('lots',lot.processingBatchRef);
   const sibs=bat?CAT.lots.entries.filter(l=>lotLive(l)&&l.processingBatchRef===bat.id&&l.id!==lotId):[];
@@ -2346,11 +2412,12 @@ function openLotPage(lotId){
   <div class="sub">${hands>=2?`The same green, in ${hands} hands.`:'One green on the atlas.'}${meta?` · ${meta}`:''}</div>
   <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${roasts.length} roast${roasts.length===1?'':'s'} reference this green${hands>=2?' — the view nothing else shows: one washing station, more than one reading of it.':'.'}</div>
   ${grainLine}
+  ${growerLine}
   ${batchLine}
   ${idLine}
   ${roasts.length?rows:'<div class="empty">No roast references this green yet.</div>'}
   ${bindRows?`<h2>Bound here</h2><div class="muted small" style="margin-bottom:8px">Each record read onto this green, and how. Keep one apart to fork it back onto its own.</div>${bindRows}`:''}
-  ${venues.length?`<h2>Poured</h2><div class="muted small" style="margin-bottom:12px">${venues.map(esc).join(' · ')}</div>`:''}
+  ${venues.length?`<h2>Poured</h2><div class="muted small" style="margin-bottom:12px">${venues.map(s=>`<button class="text-action" onclick="closeSheet();openPlace(${jsq(s)})">${esc(s)}</button>`).join(' · ')}</div>`:''}
   ${corrections}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
@@ -2876,48 +2943,58 @@ function queueApart(recId){
  * review queue's quiet entry point. The Act II gate made visible; reuses openLotPage, adds no new map (that
  * is step 4's two surfaces). A full-screen overlay, like the discover surface. ---- */
 let curateOn=false;
-function openCurate(){if(guard())return;curateOn=true;placeView=null;discOn=false;render()}
+function openCurate(){curateOn=true;placeView=null;discOn=false;render()} // read-only-safe browse: the authoring actions inside vCurate are each guard()ed, so a stranger walks the node reads without the pen
 function closeCurate(){curateOn=false;render()}
 function vCurate(){
   const recs=chartRecs(),q=reviewQueue();
-  const handsOf=id=>new Set(CAT.roasts.entries.filter(r=>r.lotRef===id&&r.roasterRef).map(r=>r.roasterRef)).size;
   const lotRows=[...new Set(recs.map(r=>r.lotRef?lotFwd(r.lotRef):null).filter(Boolean))]
-    .filter(id=>lotLive(catNode('lots',id))).map(id=>({id,lot:catNode('lots',id),hands:handsOf(id)}))
+    .filter(id=>lotLive(catNode('lots',id))).map(id=>({id,lot:catNode('lots',id),hands:lotHands(id)}))
     .sort((a,b)=>b.hands-a.hands||String(a.lot.firstAt||'').localeCompare(String(b.lot.firstAt||'')));
   const sameGreen=lotRows.filter(x=>x.hands>=2);
-  const authoredExtra=[...new Set(recs.map(r=>r.roasterRef).filter(Boolean).map(roasterName))]
-    .filter(nm=>!CHART1.roster.some(n=>normName(n)===normName(nm)));
+  const authoredExtra=[...new Set(recs.map(r=>r.roasterRef).filter(Boolean))]
+    .filter(ref=>{const nm=roasterName(ref);return !CHART1.roster.some(n=>normName(n)===normName(nm))});
   const lotRow=x=>`<button class="wc-item" onclick="closeCurate();openLotPage(${jsq(x.id)})"><span class="tx"><span class="tt">${esc(lotLabel(x.lot))}</span><span class="dd">${x.hands} hand${x.hands===1?'':'s'}${x.hands>=2?' · the same green':''}</span></span><span class="go">→</span></button>`;
+  const ro=readOnly();
   return `
   <button class="text-action" onclick="closeCurate()" style="margin:0 0 12px">← the record</button>
   <div class="eyebrow">Act II · Chart No. 1</div>
   <div style="font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-0.02em;color:var(--ink);line-height:1.05">${esc(CHART1.name)}</div>
   <div class="sub">${esc(CHART1.origin)} · ${esc(CHART1.season)}</div>
-  <div class="muted small serif" style="font-style:italic;margin:8px 2px 16px">One city, one origin-season, charted by hand — its roasters and the greens behind them entered as facts about coffee, not cups you had. Every green you author runs the same resolver a bag does: the sure ones fold, the look-alikes wait to be settled.</div>
-  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+  <div class="muted small serif" style="font-style:italic;margin:8px 2px 16px">${ro
+    ?'One city, one origin-season, charted by hand. Walk it read-only — its roasters, the season’s greens, and the page nothing else shows: one washing station in more than one hand. Every page drills into the next; nothing is a dead end.'
+    :'One city, one origin-season, charted by hand — its roasters and the greens behind them entered as facts about coffee, not cups you had. Every green you author runs the same resolver a bag does: the sure ones fold, the look-alikes wait to be settled.'}</div>
+  ${ro?'':`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
     <button class="btn btn-primary" style="width:auto" onclick="openAuthorRoast()">Author a roast</button>
     <button class="btn btn-quiet" style="width:auto" onclick="openAuthorRoaster()">Add a roaster</button>
   </div>
   ${q.length
     ?`<button class="wc-item" onclick="openReviewQueue()"><span class="tx"><span class="tt">Review queue</span><span class="dd">${q.length} green${q.length===1?'':'s'} the resolver couldn’t call alone — settle each with one tap</span></span><span class="go">${q.length}</span></button>`
-    :`<div class="muted small" style="margin:2px 2px 4px">Review queue — clear. Nothing ambiguous is waiting.</div>`}
+    :`<div class="muted small" style="margin:2px 2px 4px">Review queue — clear. Nothing ambiguous is waiting.</div>`}`}
   ${sameGreen.length?`<h2>The same green, in more than one hand</h2>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The page nothing else shows — one washing station, more than one roaster’s reading of it. The Act II gate, standing on real authored data.</div>
   ${sameGreen.map(lotRow).join('')}`:''}
   <h2>The season’s greens</h2>
-  ${lotRows.length?`<div class="muted small serif" style="font-style:italic;margin:0 2px 8px">Every green authored under this chart. Drill into one for its roasters, its grain, how sure its identity is.</div>
-  ${lotRows.map(lotRow).join('')}`:'<div class="empty">No green authored yet. Author a roast to put the first one on the atlas.</div>'}
+  ${lotRows.length?`<div class="muted small serif" style="font-style:italic;margin:0 2px 8px">Every green ${ro?'on':'authored under'} this chart. Drill into one for its roasters, its grower, its grain, how sure its identity is.</div>
+  ${lotRows.map(lotRow).join('')}`:`<div class="empty">${ro?'No green charted yet.':'No green authored yet. Author a roast to put the first one on the atlas.'}</div>`}
   <h2>The roster</h2>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">LA’s specialty roasters — a guide, not a claim. Confirm the live roster and each roaster’s current offerings against their own pages as you author.</div>
-  ${CHART1.roster.map(n=>`<button class="wc-item" onclick="openAuthorRoast(${jsq(n)})"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">${rosterAuthored(n)?'on the atlas':'not charted yet'}</span></span><span class="go">→</span></button>`).join('')}
-  ${authoredExtra.length?`<div class="muted small" style="margin:8px 2px 2px">Also authored: ${authoredExtra.map(esc).join(' · ')}.</div>`:''}
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">${ro?'LA’s specialty roasters. Walk a charted one for every green it has touched.':'LA’s specialty roasters — a guide, not a claim. Confirm the live roster and each roaster’s current offerings against their own pages as you author.'}</div>
+  ${CHART1.roster.map(n=>{const rn=catByKey('roasters',catNorm(n));
+    return ro
+      ?(rn?`<button class="wc-item" onclick="openRoasterPage(${jsq(rn.id)})"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">on the atlas — walk its greens</span></span><span class="go">→</span></button>`
+          :`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">not charted yet</span></span></div>`)
+      :`<button class="wc-item" onclick="openAuthorRoast(${jsq(n)})"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">${rn?'on the atlas':'not charted yet'}</span></span><span class="go">→</span></button>`}).join('')}
+  ${authoredExtra.length?`<div class="muted small" style="margin:10px 2px 6px">Also on the atlas — roasters charted outside the roster:</div>
+  ${authoredExtra.map(ref=>`<button class="wc-item" onclick="openRoasterPage(${jsq(ref)})"><span class="tx"><span class="tt">${esc(roasterName(ref))}</span><span class="dd">walk its greens</span></span><span class="go">→</span></button>`).join('')}`:''}
   <div class="muted small serif" style="font-style:italic;text-align:center;margin:20px 2px 2px">Curated, not crowded — the catalog is correct before it is large.</div>`;
 }
-// The chart demo — curator ingestion end to end (VISION step 3), the complement to #seed-merge/#seed-batch.
-// A clearly-marked demo slice of Chart No. 1: two roasters of one Ethiopian green a transliteration apart
-// (the fingerprint folds them — the same green, two hands), two Guji greens a curator keeps distinct, a thin
-// Guji record that ties both and is settled through the queue (a second same-green case falls out of it), and
-// one look-alike left waiting for you to settle. No real roaster is claimed to have bought a specific lot —
+// The chart demo — curator ingestion end to end (VISION step 3), the complement to #seed-merge/#seed-batch,
+// and the step-4 encyclopedia's drill-through on real authored data. A clearly-marked demo slice of Chart
+// No. 1: two roasters of one Ethiopian green a transliteration apart (the fingerprint folds them — the same
+// green, two hands), two Guji greens a curator keeps distinct, a thin Guji record that ties both and is
+// settled through the queue (a second same-green case falls out of it), one look-alike left waiting for you
+// to settle, a SECOND green off the same washing station kept apart (so a grower opens onto more than one
+// green and a roaster onto more than one), and that green poured at the roaster's own bar (so a green opens
+// onto a venue, and the venue onto what it pours). No real roaster is claimed to have bought a specific lot —
 // the demo roasters are fictional; the real chart is authored in-app against actual offering pages. Reached by
 // #seed-chart or window.devSeedChart. Idempotent.
 function devSeedChart(){
@@ -2925,8 +3002,8 @@ function devSeedChart(){
   const marker='Konga washed — Ridgeline';
   if((D.authored||[]).some(r=>r&&r.name===marker))return openCurate();
   // (1) the same green, two roasters — a transliteration apart (Yirgacheffe / Yirgachefe), folded by the fingerprint
-  authorRoast({roaster:'Ridgeline (demo)',offering:marker,originCountry:'Ethiopia',originRegion:'Yirgacheffe',producer:'Konga washing station',variety:'Heirloom',process:'Washed',roastLevel:1});
-  authorRoast({roaster:'Seabright (demo)',offering:'Ethiopia Konga',originCountry:'Ethiopia',originRegion:'Yirgachefe',producer:'Konga washing station',variety:'Heirloom',process:'Washed',roastLevel:1});
+  const kw=authorRoast({roaster:'Ridgeline (demo)',offering:marker,originCountry:'Ethiopia',originRegion:'Yirgacheffe',producer:'Konga washing station',variety:'Heirloom',process:'Washed',roastLevel:1});
+  const ks=authorRoast({roaster:'Seabright (demo)',offering:'Ethiopia Konga',originCountry:'Ethiopia',originRegion:'Yirgachefe',producer:'Konga washing station',variety:'Heirloom',process:'Washed',roastLevel:1});
   // (2) two Guji greens a curator keeps distinct — the second reads close, so it proposes; kept apart by hand
   const ga=authorRoast({roaster:'Almanac (demo)',offering:'Guji natural — Hambela',originCountry:'Ethiopia',originRegion:'Guji',producer:'Hambela',variety:'Heirloom',process:'Natural',roastLevel:1});
   const gb=authorRoast({roaster:'Fernwood (demo)',offering:'Guji natural — Shakiso',originCountry:'Ethiopia',originRegion:'Guji',producer:'Shakiso',variety:'Heirloom',process:'Natural',roastLevel:1});
@@ -2935,8 +3012,26 @@ function devSeedChart(){
   const gc=authorRoast({roaster:'Cobble (demo)',offering:'Guji',originCountry:'Ethiopia',originRegion:'Guji',variety:'Heirloom',process:'Natural',roastLevel:1});
   const aLot=ga.rec.lotRef;
   if(aLot&&queueCandidates(gc.rec).some(c=>c.lot.id===aLot))queueConfirm(gc.rec.id,aLot); // settle: the same green as Almanac's Guji — a second same-green case falls out
+  // (4) the same washing station, a SECOND green — Ridgeline's Konga NATURAL, a distinct lot off one station. It
+  // reads close to the washed (same station · region · variety) so it proposes; the curator keeps them apart both
+  // ways, so two greens stand and neither nags the other. Now the grower "Konga washing station" opens onto both
+  // greens, and the roaster "Ridgeline (demo)" onto both: lot → grower → its other greens, lot → roaster → its other greens.
+  const kn=authorRoast({roaster:'Ridgeline (demo)',offering:'Konga natural — Ridgeline',originCountry:'Ethiopia',originRegion:'Yirgacheffe',producer:'Konga washing station',variety:'Heirloom',process:'Natural',roastLevel:1});
+  const wg=kw.rec.lotRef,ng=kn.rec.lotRef; // the washed green (Ridgeline + Seabright both stand on it) and the natural green
+  if(wg&&ng&&wg!==ng){bindApart(kn.rec.id,wg,'');bindApart(kw.rec.id,ng,'');bindApart(ks.rec.id,ng,'')} // both washed hands and the natural kept apart, so two greens of one station stand with no queue churn
+  // (5) a green poured at a venue — a café cup at Ridgeline's own bar on the Konga WASHED green. Its origin hits the
+  // washed lot's floor key, so it lands on that green and mints a pour (pour:cupId). Now the green opens onto its
+  // venue ("Poured") and the venue onto "greens poured here": lot → venue, both directions. The near-twin natural
+  // reads close, so the cup proposes against it — kept apart; the cup is the washed green it landed on.
+  regUpsert('Ridgeline Bar (demo)',{city:'Los Angeles'},activeName());
+  const cCup={id:uid(),createdAt:new Date().toISOString(),kind:'cafe',shop:'Ridgeline Bar (demo)',city:'Los Angeles',drink:'pour over',hedonic:7,again:true,
+    roaster:'Ridgeline (demo)',originCountry:'Ethiopia',originRegion:'Yirgacheffe',producer:'Konga washing station',variety:'Heirloom',process:'Washed',descriptors:[],notes:''};
+  D.cups=D.cups||[];D.cups.push(cCup);
+  catStampRoaster(cCup);const cres=catStampLot(cCup);catStampPour(cCup,activeName());
+  if(cres&&cres.action==='propose'&&cres.propose)bindApart(cCup.id,cres.propose.lot.id,''); // the near-twin natural — kept apart; the cup is the washed green it landed on
+  save();
   closeSheet();
-  toast('Seeded — a chart: one green in two hands, a tie settled, a look-alike waiting');
+  toast('Seeded — a chart to walk: one green in two hands, a station with two greens, a roaster’s other greens, a green poured at a bar');
   openCurate();
 }
 function openCupDetail(id){
@@ -3090,9 +3185,9 @@ function vMore(){
   </div>`:''}
   ${roasterHTML}
   ${lotHTML}
-  ${readOnly()?'':(()=>{const qn=reviewQueue().length;return `
-  <h2>Curate the atlas</h2>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Author the spine directly — a city's roasters and the season's greens behind them — as facts about coffee, no cup logged. Every green runs the resolver a bag does.</div>
+  ${(()=>{const ro=readOnly(),qn=ro?0:reviewQueue().length;return `
+  <h2>${ro?'The atlas':'Curate the atlas'}</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">${ro?'Walk the chart read-only — its roasters, the season’s greens, and the page nothing else shows: one washing station in more than one hand.':'Author the spine directly — a city\'s roasters and the season\'s greens behind them — as facts about coffee, no cup logged. Every green runs the resolver a bag does.'}</div>
   <button class="wc-item" onclick="openCurate()"><span class="tx"><span class="tt">Chart No. 1 · ${esc(CHART1.name)}</span><span class="dd">${esc(CHART1.origin)} · ${esc(CHART1.season)}${qn?' · '+qn+' to settle':''}</span></span><span class="go">→</span></button>`})()}
   ${readOnly()?'':`
   <h2>How deep you go</h2>
@@ -3921,6 +4016,19 @@ function placeMapHTML(shop,p,pal){
   }});
   return `<div class="cafe-map" id="${id}" data-smap="${id}"><div class="pin spot" style="left:42%;top:44%;${st}"><span class="lbl">${esc(shop)}</span></div></div>`;
 }
+// The greens poured at a venue — the availability edge (VISION branch 1), folded from the pours across every
+// readable ledger and deduped by green (forwarded through any merge). A pure spine read: each green taps into
+// its lot page. Empty where nothing traceable has poured here — a recipe or a green is never invented.
+function poursHere(shop,e){
+  const seen=new Set(),out=[];
+  const scan=list=>(list||[]).forEach(p=>{if(!p||!p.lotRef)return;
+    const match=(e&&p.venueRef&&p.venueRef===e.id)||(p.shop&&normName(p.shop)===normName(shop));
+    if(!match)return;const id=lotFwd(p.lotRef),l=catNode('lots',id);
+    if(!l||!lotLive(l)||seen.has(id))return;seen.add(id);out.push({id,lot:l})});
+  scan(D.pours);
+  circleSources().forEach(s=>{const d=circleLedger(s);if(d)scan(d.pours)});
+  return out.sort((a,b)=>lotHands(b.id)-lotHands(a.id)||String(a.lot.firstAt||'').localeCompare(String(b.lot.firstAt||'')));
+}
 function vPlace(){
   const shop=placeView;
   const e=regByName(shop);
@@ -3995,6 +4103,9 @@ function vPlace(){
   ${x&&x.home.n&&x.cafe.n?`<div class="cafeback">Same beans, two rooms: you average <strong>${x.home.avg}</strong> at home vs <strong>${x.cafe.avg}</strong> here${roaster?` on ${esc(roaster)}`:''}. The shape of a preference, not a verdict.</div>`:''}
   ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
   ${p&&p.tags&&p.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 10px">${p.tags.map(t=>`<span class="badge ghost">${esc(t)}</span>`).join('')}</div>`:''}
+  ${(()=>{const gp=poursHere(shop,e);return gp.length?`<div class="section-head"><h2>Greens poured here</h2></div>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The greens seen in a cup at this counter — the availability edge, each drilling to the same green in other hands.</div>
+  ${gp.map(x=>{const h=lotHands(x.id);return `<button class="wc-item" onclick="openLotPage(${jsq(x.id)})"><span class="tx"><span class="tt">${esc(lotLabel(x.lot))}</span><span class="dd">${h>=2?`${h} hands · the same green`:'a green on the atlas'}</span></span><span class="go">→</span></button>`}).join('')}`:''})()}
   ${readOnly()?'':`
   ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}
   ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
