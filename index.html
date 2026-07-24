@@ -351,6 +351,17 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .cafe-map .maplibregl-canvas{outline:none!important}
 .cafe-map .maplibregl-cooperative-gesture-screen{font-family:var(--sans)!important;font-size:13px}
 .cafe-map .pin.spot{width:13px;height:13px;background:var(--accent);box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent)}
+/* the atlas map — three monochrome marks, a lens never a fill: a coarse origin (hollow), a roaster's
+   hand (filled dot), a bar (filled square). Ember stays reserved for the current action. */
+.cafe-map .pin.origin{width:10px;height:10px;background:var(--paper);border:1.5px solid var(--ink-2);border-radius:50%}
+.cafe-map .pin.roaster{width:9px;height:9px;background:var(--ink);border-radius:50%}
+.cafe-map .pin.venue{width:9px;height:9px;background:var(--ink);border-radius:2px}
+.cafe-map .atlas-edges{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.cafe-map .atlas-edges line{stroke:var(--ink-3);stroke-width:1;opacity:.5;stroke-dasharray:2 2;vector-effect:non-scaling-stroke}
+.atlas-key{display:inline-block;width:9px;height:9px;vertical-align:middle;margin-right:3px}
+.atlas-key.origin{background:var(--paper);border:1.5px solid var(--ink-2);border-radius:50%}
+.atlas-key.roaster{background:var(--ink);border-radius:50%}
+.atlas-key.venue{background:var(--ink);border-radius:2px}
 .cafe-map .smap-note{position:absolute;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;gap:9px;padding:8px 11px;background:color-mix(in srgb,var(--paper-card) 92%,transparent);border-top:1px solid var(--line);font-family:var(--sans);font-size:12px;color:var(--ink-2)}
 .cafe-map .smap-note .dot{flex:none;width:5px;height:5px;border-radius:50%;background:var(--ink-3)}
 .cafe-map .smap-note .text-action{margin-left:auto;flex:none}
@@ -1163,9 +1174,12 @@ function catRetire(){
 // Additive and reversible — the flat roaster stays authoritative; this only lifts the
 // derivation earlier. A blank roaster clears the ref. The precondition for the flat
 // field ever going legacy: the node no longer waits on a reboot to exist.
+// `city` rides only where a record carries one (a curator's authored roast — rec.roasterCity) — blanks-only,
+// so a bag/café cup, which names no roaster city, never strikes it. Displayed on the roaster's node page; the
+// atlas geocodes it to a city point (never finer). lat/lon are stamped by atlasGeoFill, not here.
 function catStampRoaster(rec){
   if(!rec)return;
-  const n=regSubstance(rec.roaster)?catUpsert('roasters',catNorm(rec.roaster),{name:rec.roaster,site:rec.site,palette:rec.palette},activeName(),{at:rec.createdAt||null}):null;
+  const n=regSubstance(rec.roaster)?catUpsert('roasters',catNorm(rec.roaster),{name:rec.roaster,site:rec.site,palette:rec.palette,city:rec.roasterCity},activeName(),{at:rec.createdAt||null}):null;
   setRef(rec,'roasterRef',n);
 }
 // The lot's write-path half, the mirror of catStampRoaster: author a record's lot
@@ -1866,7 +1880,19 @@ function smapDestroy(){
     try{s.map.remove()}catch(e){}});
   _smaps={};_smapCfg={};
 }
-function smapRestyle(){Object.keys(_smaps).forEach(k=>{try{_smaps[k].map.setStyle(smapStyle())}catch(e){}})}
+function smapRestyle(){Object.keys(_smaps).forEach(k=>{const s=_smaps[k];try{s.map.setStyle(smapStyle());if(s.cfg&&s.cfg.edges&&s.cfg.edges.length)s.map.once('styledata',()=>smapEdges(s.map,s.cfg))}catch(e){}})}
+// The atlas edges — lot → roast → bar, drawn as a GeoJSON line layer over the tiles: monochrome, a
+// thin dashed lens under the HTML pins, never a fill, never the ember. The drawn-plot SVG is the floor;
+// this is the enhancement that tracks the live pan/zoom. Re-added on a theme restyle (setStyle drops it).
+function smapEdges(map,cfg){
+  if(!cfg||!cfg.edges||!cfg.edges.length)return;
+  try{
+    if(map.getLayer('atlas-edges'))map.removeLayer('atlas-edges');
+    if(map.getSource('atlas-edges'))map.removeSource('atlas-edges');
+    map.addSource('atlas-edges',{type:'geojson',data:{type:'FeatureCollection',features:cfg.edges.map(e=>({type:'Feature',geometry:{type:'LineString',coordinates:e}}))}});
+    map.addLayer({id:'atlas-edges',type:'line',source:'atlas-edges',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':smapInk().faint,'line-width':1.1,'line-opacity':.75,'line-dasharray':[2,2]}});
+  }catch(e){}
+}
 function smapBoot(el,cfg){
   el._smap=true;
   const id=el.dataset.smap;
@@ -1890,7 +1916,8 @@ function smapBoot(el,cfg){
     map.on('load',()=>{
       clearTimeout(to);_mlDown=false;smapNote(el,cfg,false);
       try{map.getCanvas().setAttribute('tabindex','-1')}catch(e){}
-      el.querySelectorAll(':scope>.pin').forEach(p=>p.remove()); // the drawn pins hand over to live markers
+      el.querySelectorAll(':scope>.pin,:scope>svg').forEach(p=>p.remove()); // the drawn pins + edges hand over to live markers + the line layer
+      smapEdges(map,cfg); // the lot → roast → bar lines, if this surface carries any
       (cfg.marks?cfg.marks():[]).forEach(mk=>{
         new maplibregl.Marker({element:mk.el,anchor:'center'}).setLngLat([mk.lon,mk.lat]).addTo(map);
         if(mk.id!=null)rec.pins[mk.id]=mk.el;
@@ -1921,10 +1948,15 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='4.25.0';
+const APP_VERSION='4.26.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'4.26.0',date:'Jul 24, 2026',title:'The atlas, drawn on the map',items:[
+    'Chart No. 1 now draws as a map, folded into the same atlas surface you already walk: the season’s origins at a coarse-but-honest position, the roasters in their city, the bars on their streets, and a thin line tracing a green from origin to roaster to bar. A stranger opens it read-only and reads the whole scene at a glance; every mark taps into its page — a grower, a roaster, a venue — so the map and the pages are one walk. Map or List, whichever you like.',
+    'Coordinates stay honest. A venue sits at its real point, a roaster at its city, a green at its region — coarse where the record is coarse, and never a farm-precise pin invented. A node with no coordinate lists rather than lies. The street layer is an enhancement: the drawn plot renders first from saved positions and stands alone offline, and the whole scene keeps working — pins, taps, lines — with no streets at all.',
+    'Author a roast online and its city and origin place themselves on the map, from the same keyless lookup the café address uses — filling only what’s blank, never a coordinate the record doesn’t have.',
+  ]},
   {v:'4.25.0',date:'Jul 24, 2026',title:'The encyclopedia — every node a page',items:[
     'A green’s page is no longer a dead end past its roasts. Its grower, each of its roasters, and every venue that pours it are now taps — walk from a green to the washing station behind it, to a roaster and every other green that hand has touched, to a café and what else it pours. Nothing is a dead end; the pleasure is the drilling-in.',
     'A grower opens onto the greens traced to it — a washing station gathers cherry from many hands, so its greens stand apart, each its own lot, never one blurred farm. A roaster opens onto every green it has touched, with the offering and level it gave each. A venue opens onto the greens poured at its counter.',
@@ -2811,7 +2843,7 @@ const recOriginLine=r=>{const o=recOrigin(r);return [o.originCountry,o.originReg
 function authorRoast(f,who){
   who=who||activeName();
   const rec={id:uid(),createdAt:new Date().toISOString(),chart:f.chart||CHART1.id,curator:who,
-    roaster:(f.roaster||'').trim(),site:(f.site||'').trim(),name:(f.offering||'').trim(),
+    roaster:(f.roaster||'').trim(),roasterCity:(f.roasterCity||'').trim(),site:(f.site||'').trim(),name:(f.offering||'').trim(),
     originCountry:(f.originCountry||'').trim(),originRegion:(f.originRegion||'').trim(),producer:(f.producer||'').trim(),
     variety:(f.variety||'').trim(),process:(f.process||'').trim(),lot:(f.lot||'').trim(),
     hardIds:(f.hardIds||[]).slice(),roastLevel:f.roastLevel||0,roastDate:f.roastDate||''};
@@ -2834,6 +2866,8 @@ function openAuthorRoast(prefRoaster){
     <label class="f"><span class="l">Offering</span><input type="text" id="a_offering" placeholder="Konga washed"></label>
   </div>
   <datalist id="a_roasterlist">${roasters.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+  <label class="f"><span class="l">Roaster city <span class="opt">optional</span></span><input type="text" id="a_city" value="${esc(CHART1.name)}" placeholder="Los Angeles"></label>
+  <div class="muted small" style="margin:6px 2px 0">Places the roaster on the map — a city point, no finer. Online only; offline it lists.</div>
   <label class="f"><span class="l">Roast level</span>${seg('a_roast',ROAST_LEVELS.slice(1),'Light')}</label>
   <div class="grid2">
     <label class="f"><span class="l">Country</span><input type="text" id="a_country" value="Ethiopia" placeholder="Ethiopia"></label>
@@ -2852,12 +2886,13 @@ function saveAuthorRoast(){
   if(guard())return;
   const hids=readHardIds('a_hid'); if(hids===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
   const lvl=ROAST_LEVELS.indexOf(segState.a_roast||'');
-  const f={roaster:val('a_roaster'),offering:val('a_offering'),originCountry:val('a_country'),originRegion:val('a_region'),
+  const f={roaster:val('a_roaster'),roasterCity:val('a_city'),offering:val('a_offering'),originCountry:val('a_country'),originRegion:val('a_region'),
     producer:val('a_producer'),variety:val('a_variety'),process:val('a_process'),lot:val('a_lot'),
     roastLevel:lvl<0?0:lvl,roastDate:val('a_roastDate'),hardIds:hids};
   if(!f.roaster){toast('Name the roaster — a roast is one roaster’s reading of a green');return}
   if(!lotWorthy({...f,origin:''})){toast('Give the green an origin — a country at least, or a printed code');return}
   const {rec,res}=authorRoast(f);
+  atlasGeoFill(rec); // the optional, keyless fill — locates the roaster's city and the origin's region on the map
   closeSheet();
   if(res&&res.action==='propose'&&res.propose){openLotPropose(rec.id,res.propose.lot.id,res.propose.fields);toast('Authored — one green reads close; settle it')}
   else{toast(res&&res.action==='auto'?'Authored — folded onto a green already charted':'Authored — on the atlas');if(curateOn)render()}
@@ -2869,6 +2904,7 @@ function openAuthorRoaster(name){
   <h3>Add a roaster</h3>
   <div class="sub">A roaster on the chart. Its offerings come next, authored as roasts.</div>
   <label class="f"><span class="l">Roaster</span><input type="text" id="ar_name" value="${esc(name||'')}" placeholder="Cognoscenti Coffee"></label>
+  <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="ar_city" value="${esc(CHART1.name)}" placeholder="Los Angeles"></label>
   <label class="f"><span class="l">Website <span class="opt">optional</span></span><input type="text" id="ar_site" placeholder="cognoscenticoffee.com" inputmode="url" autocapitalize="off" autocorrect="off"></label>
   <button class="btn btn-primary" onclick="saveAuthorRoaster()">Add to the chart</button>
   <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
@@ -2876,7 +2912,9 @@ function openAuthorRoaster(name){
 function saveAuthorRoaster(){
   if(guard())return;
   const name=val('ar_name'); if(!name){toast('Name the roaster');return}
-  catUpsert('roasters',catNorm(name),{name,site:val('ar_site')||undefined},activeName());
+  const city=val('ar_city');
+  catUpsert('roasters',catNorm(name),{name,city:city||undefined,site:val('ar_site')||undefined},activeName());
+  atlasGeoFill({roaster:name,roasterCity:city}); // the optional, keyless fill — a city point, no finer
   closeSheet();toast('Roaster added — author a roast next');if(curateOn)render();
 }
 /* ---- The review queue (RESOLVER §4, folded in). DERIVED, never stored: own records (bags, café cups,
@@ -2942,6 +2980,81 @@ function queueApart(recId){
  * and the season's greens authored under it, the same-green cases standing on real authored data, and the
  * review queue's quiet entry point. The Act II gate made visible; reuses openLotPage, adds no new map (that
  * is step 4's two surfaces). A full-screen overlay, like the discover surface. ---- */
+/* ---- The atlas map (VISION step 4, "the map"): the lot-keyed graph drawn geographically — producers at a
+ * coarse origin, roasters in their cities, venues on their streets, lines running lot → roast → bar. Built
+ * from the SAME spine the encyclopedia walks (chartRecs → the chart's greens), and every pin taps into its
+ * 4a node page (openProducerPage/openRoasterPage/openPlace) — the map and the pages are one walk. Coordinates
+ * are honest (LOT_IDENTITY): a venue's real point, a roaster's city point, a producer's region/country
+ * centroid — coarse where the record is coarse, and a node with no coordinate LISTS rather than lies; no
+ * farm-precise pin is ever invented. The drawn plot is the floor (offline, from stored coords); the street
+ * tiles are the enhancement. Reads the shared catalog + pours + Register, so it renders read-only for a
+ * stranger too. ---- */
+function atlasGraph(){
+  const recs=chartRecs();
+  const lotIds=[...new Set(recs.map(r=>r.lotRef?lotFwd(r.lotRef):null).filter(Boolean))].filter(id=>lotLive(catNode('lots',id)));
+  const lotSet=new Set(lotIds);
+  const nodes=new Map(),edges=new Map(),missP=new Set(),missR=new Set(),missV=new Set();
+  const coord=n=>n&&n.lat!=null&&n.lon!=null;
+  const putP=p=>{const k='producer:'+p.id;if(!nodes.has(k))nodes.set(k,{key:k,kind:'producer',id:p.id,name:[p.region,p.country].filter(regSubstance).join(', ')||p.name,lat:p.lat,lon:p.lon,grain:p.geoGrain||'region'});return k};
+  const putR=r=>{const k='roaster:'+r.id;if(!nodes.has(k))nodes.set(k,{key:k,kind:'roaster',id:r.id,name:r.name,lat:r.lat,lon:r.lon,grain:r.geoGrain||'city'});return k};
+  const putV=(e,shop)=>{const k='venue:'+e.id;if(!nodes.has(k))nodes.set(k,{key:k,kind:'venue',id:e.id,shop,name:shop,lat:e.lat,lon:e.lon,grain:'street'});return k};
+  const link=(a,b)=>{if(!a||!b||a===b)return;const kk=a<b?a+'|'+b:b+'|'+a;if(!edges.has(kk))edges.set(kk,[a,b])};
+  lotIds.forEach(lotId=>{
+    const lot=catNode('lots',lotId);
+    const prods=(lot.producerRefs||[]).map(id=>catNode('producers',id)).filter(Boolean);
+    const pKeys=prods.filter(coord).map(putP); prods.filter(p=>!coord(p)).forEach(p=>missP.add(p.id));
+    const rrefs=[...new Set(CAT.roasts.entries.filter(r=>r&&r.lotRef===lotId&&r.roasterRef).map(r=>r.roasterRef))];
+    const roas=rrefs.map(ref=>catNode('roasters',ref)).filter(Boolean);
+    const rKeys=roas.filter(coord).map(putR); roas.filter(r=>!coord(r)).forEach(r=>missR.add(r.id));
+    pKeys.forEach(pk=>rKeys.forEach(rk=>link(pk,rk))); // origin → roast: each grower to each hand
+  });
+  const scan=list=>(list||[]).forEach(p=>{if(!p||!p.lotRef||!regSubstance(p.shop))return;const lid=lotFwd(p.lotRef);if(!lotSet.has(lid))return;
+    const e=regByName(p.shop); if(!coord(e)){if(e||p.shop)missV.add(normName(p.shop));return}
+    const vk=putV(e,p.shop),rn=p.roasterRef&&catNode('roasters',p.roasterRef);
+    if(rn&&coord(rn))link('roaster:'+rn.id,vk)}); // roast → bar: the pour's roaster to its venue
+  scan(D.pours); circleSources().forEach(s=>{const d=circleLedger(s);if(d)scan(d.pours)});
+  const arr=[...nodes.values()];
+  return {nodes:arr,edges:[...edges.values()],counts:{
+    origins:arr.filter(n=>n.kind==='producer').length,roasters:arr.filter(n=>n.kind==='roaster').length,venues:arr.filter(n=>n.kind==='venue').length,
+    off:missP.size+missR.size+missV.size}};
+}
+const atlasCls={producer:'origin',roaster:'roaster',venue:'venue'};
+function atlasTap(n){if(n.kind==='venue'){closeCurate();openPlace(n.shop)}else if(n.kind==='roaster')openRoasterPage(n.id);else openProducerPage(n.id)}
+// The live markers behind the atlas map — the same .pin classes the drawn plot wears, so both layers speak
+// one language. Recomputes the graph (a cheap pure read) so a marker never drifts from the drawn plot.
+function atlasMarks(){
+  return atlasGraph().nodes.map(n=>{
+    const el=smapPinEl(atlasCls[n.kind]||'',{label:n.name,aria:n.name+(n.kind==='producer'?' · origin':n.kind==='roaster'?' · roaster':' · venue')});
+    el.onclick=e=>{e.stopPropagation();atlasTap(n)};
+    return {lat:n.lat,lon:n.lon,el,id:n.key};
+  });
+}
+// The drawn plot + the live layer's config, for the atlas surface in vCurate. Empty when nothing is placed
+// yet — the surface then lists honestly rather than drawing a blank box.
+function atlasMapHTML(){
+  const g=atlasGraph();
+  if(!g.nodes.length)return {html:'',empty:true,counts:g.counts};
+  const proj=mapProject(g.nodes),pm={};proj.forEach(p=>{pm[p.key]=p});
+  const nm={};g.nodes.forEach(n=>{nm[n.key]=n});
+  const lines=g.edges.map(([a,b])=>{const A=pm[a],B=pm[b];return A&&B?`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"></line>`:''}).join('');
+  const pins=proj.map(p=>`<div class="pin ${atlasCls[p.kind]||''}" style="left:${p.x}%;top:${p.y}%" onclick="${p.kind==='venue'?`closeCurate();openPlace(${jsq(p.shop)})`:p.kind==='roaster'?`openRoasterPage(${jsq(p.id)})`:`openProducerPage(${jsq(p.id)})`}"><span class="lbl">${esc(p.name)}</span></div>`).join('');
+  const svg=lines?`<svg class="atlas-edges" viewBox="0 0 100 100" preserveAspectRatio="none">${lines}</svg>`:'';
+  const geoEdges=g.edges.map(([a,b])=>nm[a]&&nm[b]?[[nm[a].lon,nm[a].lat],[nm[b].lon,nm[b].lat]]:null).filter(Boolean);
+  const lats=g.nodes.map(n=>n.lat),lons=g.nodes.map(n=>n.lon);
+  _smapCfg.atlasmap=smapView({interactive:true,note:true,camKey:smapCamKey('atlas',g.nodes),edges:geoEdges,
+    maxBounds:g.nodes.length>1?[[Math.min(...lons)-3,Math.min(...lats)-3],[Math.max(...lons)+3,Math.max(...lats)+3]]:undefined,
+    marks:atlasMarks},g.nodes);
+  return {html:`<div class="cafe-map tall" id="atlasmap" data-smap="atlasmap">${svg}${pins}</div>`,empty:false,counts:g.counts};
+}
+function atlasLegend(c){
+  const on=[c.origins&&`${c.origins} origin${c.origins===1?'':'s'}`,c.roasters&&`${c.roasters} roaster${c.roasters===1?'':'s'}`,c.venues&&`${c.venues} venue${c.venues===1?'':'s'}`].filter(Boolean).join(' · ');
+  return `<div class="muted small" style="display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin:0 2px 6px">
+    <span><span class="atlas-key origin"></span>origin</span><span><span class="atlas-key roaster"></span>roaster</span><span><span class="atlas-key venue"></span>venue</span>
+    <span class="serif" style="font-style:italic;color:var(--ink-3)">— a green from origin to roaster to bar.</span></div>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 12px">${on||'nothing placed'} on the map${c.off?` · ${c.off} listed for want of a coordinate — coarse where the record is coarse, never a farm pin invented`:''}.</div>`;
+}
+let atlasView=null; // null → default to Map when there's a scene to see, else List
+function atlasSetView(v){atlasView=v;render()}
 let curateOn=false;
 function openCurate(){curateOn=true;placeView=null;discOn=false;render()} // read-only-safe browse: the authoring actions inside vCurate are each guard()ed, so a stranger walks the node reads without the pen
 function closeCurate(){curateOn=false;render()}
@@ -2955,6 +3068,31 @@ function vCurate(){
     .filter(ref=>{const nm=roasterName(ref);return !CHART1.roster.some(n=>normName(n)===normName(nm))});
   const lotRow=x=>`<button class="wc-item" onclick="closeCurate();openLotPage(${jsq(x.id)})"><span class="tx"><span class="tt">${esc(lotLabel(x.lot))}</span><span class="dd">${x.hands} hand${x.hands===1?'':'s'}${x.hands>=2?' · the same green':''}</span></span><span class="go">→</span></button>`;
   const ro=readOnly();
+  // the map, folded into the atlas surface — the drawn plot is the floor, the street tiles the enhancement.
+  const atlas=atlasMapHTML(),located=!atlas.empty,view=located?(atlasView||'map'):'list';
+  const sameGreenHTML=sameGreen.length?`<h2>The same green, in more than one hand</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The page nothing else shows — one washing station, more than one roaster’s reading of it. The Act II gate, standing on real authored data.</div>
+  ${sameGreen.map(lotRow).join('')}`:'';
+  const toggle=located?`<div class="seg" style="max-width:220px;margin:0 0 12px">
+    <button class="${view==='map'?'on':''}" onclick="atlasSetView('map')">Map</button>
+    <button class="${view==='list'?'on':''}" onclick="atlasSetView('list')">List</button></div>`:'';
+  const mapBlock=view==='map'?`${atlas.html}
+  ${atlasLegend(atlas.counts)}
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 12px">The season’s scene — a green from origin to the roasters who bought it to the bars that pour it. Tap any mark for its page; pinch to the streets, or read the whole index in List.</div>
+  ${sameGreenHTML}`:'';
+  const listBlock=view==='list'?`${sameGreenHTML}
+  <h2>The season’s greens</h2>
+  ${lotRows.length?`<div class="muted small serif" style="font-style:italic;margin:0 2px 8px">Every green ${ro?'on':'authored under'} this chart. Drill into one for its roasters, its grower, its grain, how sure its identity is.</div>
+  ${lotRows.map(lotRow).join('')}`:`<div class="empty">${ro?'No green charted yet.':'No green authored yet. Author a roast to put the first one on the atlas.'}</div>`}
+  <h2>The roster</h2>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">${ro?'LA’s specialty roasters. Walk a charted one for every green it has touched.':'LA’s specialty roasters — a guide, not a claim. Confirm the live roster and each roaster’s current offerings against their own pages as you author.'}</div>
+  ${CHART1.roster.map(n=>{const rn=catByKey('roasters',catNorm(n));
+    return ro
+      ?(rn?`<button class="wc-item" onclick="openRoasterPage(${jsq(rn.id)})"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">on the atlas — walk its greens</span></span><span class="go">→</span></button>`
+          :`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">not charted yet</span></span></div>`)
+      :`<button class="wc-item" onclick="openAuthorRoast(${jsq(n)})"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">${rn?'on the atlas':'not charted yet'}</span></span><span class="go">→</span></button>`}).join('')}
+  ${authoredExtra.length?`<div class="muted small" style="margin:10px 2px 6px">Also on the atlas — roasters charted outside the roster:</div>
+  ${authoredExtra.map(ref=>`<button class="wc-item" onclick="openRoasterPage(${jsq(ref)})"><span class="tx"><span class="tt">${esc(roasterName(ref))}</span><span class="dd">walk its greens</span></span><span class="go">→</span></button>`).join('')}`:''}`:'';
   return `
   <button class="text-action" onclick="closeCurate()" style="margin:0 0 12px">← the record</button>
   <div class="eyebrow">Act II · Chart No. 1</div>
@@ -2970,21 +3108,10 @@ function vCurate(){
   ${q.length
     ?`<button class="wc-item" onclick="openReviewQueue()"><span class="tx"><span class="tt">Review queue</span><span class="dd">${q.length} green${q.length===1?'':'s'} the resolver couldn’t call alone — settle each with one tap</span></span><span class="go">${q.length}</span></button>`
     :`<div class="muted small" style="margin:2px 2px 4px">Review queue — clear. Nothing ambiguous is waiting.</div>`}`}
-  ${sameGreen.length?`<h2>The same green, in more than one hand</h2>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The page nothing else shows — one washing station, more than one roaster’s reading of it. The Act II gate, standing on real authored data.</div>
-  ${sameGreen.map(lotRow).join('')}`:''}
-  <h2>The season’s greens</h2>
-  ${lotRows.length?`<div class="muted small serif" style="font-style:italic;margin:0 2px 8px">Every green ${ro?'on':'authored under'} this chart. Drill into one for its roasters, its grower, its grain, how sure its identity is.</div>
-  ${lotRows.map(lotRow).join('')}`:`<div class="empty">${ro?'No green charted yet.':'No green authored yet. Author a roast to put the first one on the atlas.'}</div>`}
-  <h2>The roster</h2>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">${ro?'LA’s specialty roasters. Walk a charted one for every green it has touched.':'LA’s specialty roasters — a guide, not a claim. Confirm the live roster and each roaster’s current offerings against their own pages as you author.'}</div>
-  ${CHART1.roster.map(n=>{const rn=catByKey('roasters',catNorm(n));
-    return ro
-      ?(rn?`<button class="wc-item" onclick="openRoasterPage(${jsq(rn.id)})"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">on the atlas — walk its greens</span></span><span class="go">→</span></button>`
-          :`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">not charted yet</span></span></div>`)
-      :`<button class="wc-item" onclick="openAuthorRoast(${jsq(n)})"><span class="tx"><span class="tt">${esc(n)}</span><span class="dd">${rn?'on the atlas':'not charted yet'}</span></span><span class="go">→</span></button>`}).join('')}
-  ${authoredExtra.length?`<div class="muted small" style="margin:10px 2px 6px">Also on the atlas — roasters charted outside the roster:</div>
-  ${authoredExtra.map(ref=>`<button class="wc-item" onclick="openRoasterPage(${jsq(ref)})"><span class="tx"><span class="tt">${esc(roasterName(ref))}</span><span class="dd">walk its greens</span></span><span class="go">→</span></button>`).join('')}`:''}
+  ${!located&&!ro?'<div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">The map fills as roasters and origins are located — author a roast online and its city and origin place themselves.</div>':''}
+  ${toggle}
+  ${mapBlock}
+  ${listBlock}
   <div class="muted small serif" style="font-style:italic;text-align:center;margin:20px 2px 2px">Curated, not crowded — the catalog is correct before it is large.</div>`;
 }
 // The chart demo — curator ingestion end to end (VISION step 3), the complement to #seed-merge/#seed-batch,
@@ -3023,15 +3150,24 @@ function devSeedChart(){
   // washed lot's floor key, so it lands on that green and mints a pour (pour:cupId). Now the green opens onto its
   // venue ("Poured") and the venue onto "greens poured here": lot → venue, both directions. The near-twin natural
   // reads close, so the cup proposes against it — kept apart; the cup is the washed green it landed on.
-  regUpsert('Ridgeline Bar (demo)',{city:'Los Angeles'},activeName());
+  regUpsert('Ridgeline Bar (demo)',{city:'Los Angeles',lat:34.0430,lon:-118.2500},activeName());
   const cCup={id:uid(),createdAt:new Date().toISOString(),kind:'cafe',shop:'Ridgeline Bar (demo)',city:'Los Angeles',drink:'pour over',hedonic:7,again:true,
     roaster:'Ridgeline (demo)',originCountry:'Ethiopia',originRegion:'Yirgacheffe',producer:'Konga washing station',variety:'Heirloom',process:'Washed',descriptors:[],notes:''};
   D.cups=D.cups||[];D.cups.push(cCup);
   catStampRoaster(cCup);const cres=catStampLot(cCup);catStampPour(cCup,activeName());
   if(cres&&cres.action==='propose'&&cres.propose)bindApart(cCup.id,cres.propose.lot.id,''); // the near-twin natural — kept apart; the cup is the washed green it landed on
+  // (6) demo coordinates, so the LA scene draws end to end (VISION step 4). Clearly-demo roasters in LA
+  // neighborhoods (a city point), the demo bar on its own point, the Ethiopian origins at COARSE region
+  // centroids — no fabricated farm precision, all unmistakably the demo's. Stamped straight onto the spine
+  // (never the network — the demo is keyless and offline), blanks-only via catUpsert.
+  const demoWho=activeName();
+  [['Ridgeline (demo)',34.0407,-118.2468],['Seabright (demo)',34.0709,-118.2790],['Almanac (demo)',34.0900,-118.2760],['Fernwood (demo)',34.1016,-118.3270],['Cobble (demo)',34.0522,-118.2437]]
+    .forEach(([n,lat,lon])=>catUpsert('roasters',catNorm(n),{lat,lon,geoGrain:'city',city:'Los Angeles'},demoWho));
+  [['Konga washing station',6.1600,38.2050],['Hambela',5.9800,38.9000],['Shakiso',5.6800,38.9100]] // Yirgacheffe · Guji · Guji — region centroids, coarse by design
+    .forEach(([p,lat,lon])=>catUpsert('producers',catNorm(p)+'|'+catNorm('Ethiopia'),{lat,lon,geoGrain:'region'},demoWho));
   save();
   closeSheet();
-  toast('Seeded — a chart to walk: one green in two hands, a station with two greens, a roaster’s other greens, a green poured at a bar');
+  toast('Seeded — a chart to walk and a map to read: one green in two hands, a station with two greens, a roaster’s other greens, a green poured at a bar');
   openCurate();
 }
 function openCupDetail(id){
@@ -4179,14 +4315,44 @@ function nbhoodOf(addr){
   addr=addr||{};
   return addr.neighbourhood||addr.suburb||addr.quarter||addr.city_district||addr.hamlet||addr.borough||'';
 }
+// One keyless Nominatim read, shared by the café geocode and the atlas fill. Returns [] offline or on a
+// silent endpoint; every caller degrades to typed text or a list, never a blank pretending to be a pin.
+async function geoSearch(q){
+  if(!q)return[];
+  const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+  return await r.json()||[];
+}
+// The first hit's point, for a programmatic fill (the atlas locating a roaster's city or an origin's region).
+async function geoOne(q){
+  try{const list=await geoSearch(q);if(list&&list.length)return{lat:Number(list[0].lat),lon:Number(list[0].lon),neighborhood:nbhoodOf(list[0].address)}}catch(e){}
+  return null;
+}
+// The atlas coordinate fill — the OPTIONAL, keyless lookup writing honest, coarse, provenance-carried lat/lon
+// onto the spine (blanks-only via catUpsert), so a stranger's map draws the scene without any typing. Run at
+// author time on the interactive path only (never on the boot sweep or the demo — those never touch the
+// network): a roaster to its CITY point, an origin to its REGION/COUNTRY centroid — never the farm or station
+// name, so no farm-precise pin is ever invented (LOT_IDENTITY). Offline (or a silent endpoint) it does
+// nothing and the node lists; a located node is never re-looked-up or overwritten.
+async function atlasGeoFill(rec){
+  if(readOnly()||!rec||!navigator.onLine)return;
+  let hit=false;
+  const rk=regSubstance(rec.roaster)&&catNorm(rec.roaster),rn=rk&&catByKey('roasters',rk),city=(rec.roasterCity||'').trim();
+  if(rn&&city&&rn.lat==null){const pt=await geoOne(city);if(pt){catUpsert('roasters',rk,{lat:pt.lat,lon:pt.lon,geoGrain:'city'},activeName());hit=true}}
+  const o=recOrigin(rec);
+  if(regSubstance(o.producer)&&(regSubstance(o.originRegion)||regSubstance(o.originCountry))){
+    const pk=catNorm(o.producer)+'|'+catNorm(o.originCountry),pn=catByKey('producers',pk);
+    if(pn&&pn.lat==null){const pt=await geoOne([o.originRegion,o.originCountry].filter(regSubstance).join(', ')); // region/country only — coarse, never the station name
+      if(pt){catUpsert('producers',pk,{lat:pt.lat,lon:pt.lon,geoGrain:regSubstance(o.originRegion)?'region':'country'},activeName());hit=true}}
+  }
+  if(hit&&curateOn)render();
+}
 async function geoLookup(shop){
   const q=val('p_address')||[shop,val('p_city')].filter(Boolean).join(', ');
   const box=document.getElementById('georesults');
   if(!q){if(box)box.innerHTML='';return}
   if(box)box.innerHTML='<div class="muted small" style="padding:6px 2px">Searching the map…</div>';
   try{
-    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
-    const list=await r.json();
+    const list=await geoSearch(q);
     if(!box)return;
     if(!list||!list.length){box.innerHTML='<div class="muted small" style="padding:6px 2px">Nothing found for that. Type the address by hand — it still saves.</div>';return}
     box.innerHTML=`<div class="muted small" style="padding:6px 2px 2px">Tap the right one:</div>`+list.map(o=>`<div class="card tap georow" onclick="geoChoose(${jsq(o.display_name)},${jsq(String(o.lat))},${jsq(String(o.lon))},${jsq(nbhoodOf(o.address))})"><div class="small">${esc(o.display_name)}</div></div>`).join('');
