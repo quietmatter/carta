@@ -61,8 +61,9 @@ let srv2 = null, DATA2 = null;
   // register
   r = await req('POST', '/api/register', { body: { name: 'Alice', passcode: 'coffee' } });
   assert.equal(r.status, 201); assert.ok(r.body.token && r.body.userId);
+  assert.equal(r.body.founder, true);
   const alice = r.body;
-  ok('register returns 201 with token + userId');
+  ok('register returns 201 with token + userId; the first account holds the pen');
 
   r = await req('POST', '/api/register', { body: { name: 'alice', passcode: 'other' } });
   assert.equal(r.status, 409);
@@ -73,14 +74,15 @@ let srv2 = null, DATA2 = null;
   ok('short passcode rejected with 400');
 
   r = await req('POST', '/api/register', { body: { name: 'Bob', passcode: 'beans' } });
-  assert.equal(r.status, 201);
+  assert.equal(r.status, 201); assert.equal(r.body.founder, false);
   const bob = r.body;
-  ok('second user registers');
+  ok('second user registers, without the pen');
 
   // login
   r = await req('POST', '/api/login', { body: { name: 'ALICE', passcode: 'coffee' } });
   assert.equal(r.status, 200); assert.equal(r.body.userId, alice.userId);
-  ok('login works, name case-insensitive, same userId');
+  assert.equal(r.body.founder, true);
+  ok('login works, name case-insensitive, same userId, founder flag carried');
 
   r = await req('POST', '/api/login', { body: { name: 'Alice', passcode: 'wrong' } });
   assert.equal(r.status, 401);
@@ -135,7 +137,9 @@ let srv2 = null, DATA2 = null;
   assert.equal(r.status, 200);
   const dirA = r.body.users.find(u => u.id === alice.userId);
   assert.equal(dirA.rev, 2); assert.equal(dirA.counts.bags, 1); assert.equal(dirA.name, 'Alice');
-  ok('directory lists users with rev and counts');
+  assert.equal(dirA.founder, true);
+  assert.equal(r.body.users.find(u => u.id === bob.userId).founder, false);
+  ok('directory lists users with rev, counts and who holds the pen');
 
   // validation + limits
   r = await req('PUT', `/api/ledgers/${alice.userId}`, { token: alice.token, body: { baseRev: 2, ledger: { nope: true } } });
@@ -152,7 +156,8 @@ let srv2 = null, DATA2 = null;
   assert.equal(r.status, 404);
   ok('unknown user id is 404');
 
-  // ---- the café Register: one shared document, writable by every keeper ----
+  // ---- the café Register: one shared document, read by every keeper,
+  //      written — for now — only by the founder's pen ----
   const REGDOC = who => ({
     version: 1, deleted: [],
     entries: [{ id: 'cafe-1', name: 'Kumquat', city: who, firstBy: who, updatedAt: '2026-01-01T00:00:00Z' }],
@@ -171,8 +176,17 @@ let srv2 = null, DATA2 = null;
   ok('first Register push accepted, rev 1');
 
   r = await req('PUT', '/api/cafes', { token: bob.token, body: { baseRev: 1, register: REGDOC('bob') } });
+  assert.equal(r.status, 403); assert.equal(r.body.error, 'pen-held');
+  ok('a non-founder CANNOT write the Register (403 pen-held)');
+
+  r = await req('GET', '/api/cafes', { token: bob.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 1);
+  assert.equal(r.body.register.entries[0].city, 'alice');
+  ok('a non-founder still READS the Register, unchanged by the refused push');
+
+  r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 1, register: REGDOC('alice2') } });
   assert.equal(r.status, 200); assert.equal(r.body.rev, 2);
-  ok('another keeper CAN write the Register (shared, unlike ledgers)');
+  ok("the founder's second push advances to rev 2");
 
   r = await req('GET', '/api/cafes?meta=1', { token: alice.token });
   assert.equal(r.status, 200); assert.equal(r.body.rev, 2); assert.equal(r.body.register, undefined);
@@ -180,14 +194,15 @@ let srv2 = null, DATA2 = null;
 
   r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 0, register: REGDOC('stale') } });
   assert.equal(r.status, 409); assert.equal(r.body.error, 'conflict'); assert.equal(r.body.rev, 2);
-  assert.equal(r.body.register.entries[0].city, 'bob');
+  assert.equal(r.body.register.entries[0].city, 'alice2');
   ok('stale Register baseRev rejected with 409 carrying the server copy');
 
   r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 2, register: { nope: true } } });
   assert.equal(r.status, 400);
   ok('malformed Register rejected with 400');
 
-  // ---- the catalog: one shared, group-writable document per spine kind ----
+  // ---- the catalog: one shared document per spine kind, read by every
+  //      keeper, written — for now — only by the founder's pen ----
   const CATDOC = who => ({
     version: 1, deleted: [],
     entries: [{ id: 'lot-1', _key: 'fp:ethiopia|guji', kind: 'lot', country: 'Ethiopia', firstBy: who, updatedAt: '2026-01-01T00:00:00Z' }],
@@ -206,8 +221,17 @@ let srv2 = null, DATA2 = null;
   ok('first catalog push accepted, rev 1');
 
   r = await req('PUT', '/api/catalog/lots', { token: bob.token, body: { baseRev: 1, catalog: CATDOC('bob') } });
+  assert.equal(r.status, 403); assert.equal(r.body.error, 'pen-held');
+  ok('a non-founder CANNOT write the catalog (403 pen-held, like the Register)');
+
+  r = await req('GET', '/api/catalog/lots', { token: bob.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 1);
+  assert.equal(r.body.catalog.entries[0].firstBy, 'alice');
+  ok('a non-founder still READS the catalog, unchanged by the refused push');
+
+  r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 1, catalog: CATDOC('alice2') } });
   assert.equal(r.status, 200); assert.equal(r.body.rev, 2);
-  ok('another keeper CAN write the catalog (shared, like the Register)');
+  ok("the founder's second catalog push advances to rev 2");
 
   r = await req('GET', '/api/catalog/lots?meta=1', { token: alice.token });
   assert.equal(r.status, 200); assert.equal(r.body.rev, 2); assert.equal(r.body.catalog, undefined);
@@ -215,7 +239,7 @@ let srv2 = null, DATA2 = null;
 
   r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 0, catalog: CATDOC('stale') } });
   assert.equal(r.status, 409); assert.equal(r.body.error, 'conflict'); assert.equal(r.body.rev, 2);
-  assert.equal(r.body.catalog.entries[0].firstBy, 'bob');
+  assert.equal(r.body.catalog.entries[0].firstBy, 'alice2');
   ok('stale catalog baseRev rejected with 409 carrying the server copy');
 
   r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 2, catalog: { nope: true } } });
@@ -230,8 +254,18 @@ let srv2 = null, DATA2 = null;
   assert.equal(r.status, 404);
   ok('an unknown catalog kind is 404 (whitelisted — old clients degrade cleanly)');
 
-  // ---- registration code gate (separate server instance) ----
+  // ---- registration code gate + founder migration (separate server instance) ----
   DATA2 = fs.mkdtempSync(path.join(os.tmpdir(), 'carta-sync-test2-'));
+  // A users.json from before the founder role: two accounts, no flags. The
+  // server must promote the earliest on boot, so an existing group keeps a pen.
+  const oldSalt = '00'.repeat(16);
+  const oldUser = (id, name, createdAt) => ({
+    id, name, nameLower: name.toLowerCase(), salt: oldSalt,
+    hash: require('node:crypto').scryptSync('beans', oldSalt, 64).toString('hex'), createdAt,
+  });
+  fs.writeFileSync(path.join(DATA2, 'users.json'), JSON.stringify({
+    version: 1, users: [oldUser('b'.repeat(16), 'Late', '2026-02-01T00:00:00Z'), oldUser('a'.repeat(16), 'Early', '2026-01-01T00:00:00Z')], tokens: {},
+  }));
   const BASE2 = `http://127.0.0.1:${PORT + 1}`;
   srv2 = spawn(process.execPath, [path.join(__dirname, 'server.js')], {
     env: { ...process.env, PORT: String(PORT + 1), CARTA_DATA: DATA2, CARTA_REGISTER_CODE: 'letmein' },
@@ -256,8 +290,14 @@ let srv2 = null, DATA2 = null;
   ok('registration with the correct code succeeds (201)');
 
   r2 = await req2('POST', '/api/login', { name: 'Gated', passcode: 'beans' });
-  assert.equal(r2.status, 200);
+  assert.equal(r2.status, 200); assert.equal(r2.body.founder, false);
   ok('login is not gated by the registration code');
+
+  r2 = await req2('POST', '/api/login', { name: 'Early', passcode: 'beans' });
+  assert.equal(r2.status, 200); assert.equal(r2.body.founder, true);
+  const late = await req2('POST', '/api/login', { name: 'Late', passcode: 'beans' });
+  assert.equal(late.status, 200); assert.equal(late.body.founder, false);
+  ok('a pre-founder users.json promotes its earliest account to the pen on boot');
 
   srv2.kill(); srv2 = null;
   fs.rmSync(DATA2, { recursive: true, force: true }); DATA2 = null;

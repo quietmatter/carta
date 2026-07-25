@@ -628,6 +628,24 @@ const userById=id=>USERS.users.find(u=>u.id===id);
 const viewingUser=()=>userById(viewingUserId)||remoteUserById(viewingUserId);
 const readOnly=()=>viewingUserId!==USERS.activeId;
 function guard(){if(readOnly()){toast(`Read only — this is ${viewingUser().name}'s ledger`);return true}return false}
+/* ---- the pen: who may write the SHARED record (the Register + the catalog).
+ * Everyone keeps their own ledger, always. The shared documents are — for
+ * now, while the atlas settles — kept by the founder alone: on a synced
+ * device the server's founder flag is the authority (the first account
+ * registered; the server refuses any other pen with 403), and on an unsynced
+ * device the pen is claimed once from More → Administration. Temporary: the
+ * group-writable curation returns with the proposed→stood moderation ceremony. */
+const PEN_KEY='carta.pen.v1';
+let PEN=readJSONLS(PEN_KEY);            // {userId,at} | null — the device-local claim
+function savePen(){if(PEN)localStorage.setItem(PEN_KEY,JSON.stringify(PEN));else localStorage.removeItem(PEN_KEY)}
+function isAdmin(){
+  if(readOnly())return false;
+  if(typeof SYNC!=='undefined'&&SYNC&&syncedHere()&&SYNC.founder!==undefined)return !!SYNC.founder;
+  return !!(PEN&&PEN.userId===USERS.activeId);
+}
+function penGuard(){if(guard())return true;if(!isAdmin()){toast('The shared record is read-only for now — the founder holds the pen');return true}return false}
+function takePen(){if(guard())return;PEN={userId:USERS.activeId,at:new Date().toISOString()};savePen();closeSheet();render();toast('The pen is yours on this device')}
+function setDownPen(){PEN=null;savePen();closeSheet();render();toast('The pen is set down')}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>new Date().toISOString().slice(0,10);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1542,7 +1560,7 @@ function regSight(name,facts,who,opts){
 // if none does. No confirm — the strike is visible, signed, and reversible by
 // simply sighting again. Nothing is lost.
 function reachWithdraw(shop,sid){
-  if(guard())return;
+  if(penGuard())return;
   const e=regByName(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
   if(!s||s.by!==activeName()||!sightStanding(s))return;
   s.withdrawnAt=new Date().toISOString();
@@ -1615,7 +1633,7 @@ function sightReadHTML(){
 /* --- amend the reach — the deliberate door, from the café's page. Reading
  * first and reading again are the same act; only the header knows. --- */
 function openReachAmend(shop,fromId){
-  if(guard())return;
+  if(penGuard())return;
   const e=regByName(shop);
   const r=e?reachCompile(e):{depth:0,carry:{},standing:[]};
   const h=e?reachHistory(e):{};
@@ -1670,7 +1688,7 @@ function openReachRecord(shop){
       :s.supersededAt?`<span class="badge dashed">superseded · ${fmtMY(s.supersededAt)}</span>`
       :carries?'<span class="badge">carries</span>'
       :`<span class="badge dashed">read again${rr?` · ${fmtMY(rr)}`:''}</span>`;
-    const own=!readOnly()&&s.by===me&&!struck;
+    const own=isAdmin()&&s.by===me&&!struck;
     return `<div style="padding:11px 0;border-top:1px solid var(--line)">
       <div class="row"><span class="sans" style="font-size:13px;font-weight:500${carries?'':';color:var(--ink-3)'}${struck?';text-decoration:line-through':''}">${s.by===me?'You':esc(s.by||'a keeper')} <span class="num" style="color:var(--ink-3);font-weight:400">· ${fmtMDY(s.at)}</span></span><span style="flex:none">${chip}</span></div>
       <div style="font-size:14px;margin-top:4px;line-height:1.5;color:${carries?'var(--ink-2)':'var(--ink-3)'}${struck?';text-decoration:line-through':''}">${esc(sightLine(s))}</div>
@@ -1686,7 +1704,7 @@ function openReachRecord(shop){
     <span style="text-align:right">${r.depth?`<span class="badge" style="cursor:pointer" onclick="openReachPrimer(${jsq(shop)})">${reachMarkOf(r.depth)}</span>`:'<span class="badge dashed">unread</span>'}${flag?' '+flag:''}</span></div>
   ${rows||'<div class="empty">No one has read it yet. Yours would be the first line.</div>'}
   ${contested?'<div class="empty" style="padding:18px 20px;font-size:14px">The bag has turned twice this season. The newest carries, both readings stay in ink — perhaps the counter itself changes by the week.</div>':''}
-  ${readOnly()?'':`<button class="btn btn-primary" onclick="openReachAmend(${jsq(shop)})">Say what you saw</button>`}
+  ${isAdmin()?`<button class="btn btn-primary" onclick="openReachAmend(${jsq(shop)})">Say what you saw</button>`:''}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
 }
 // your sightings, filed beside your cups in the Record — ghost weight, never a
@@ -2063,10 +2081,16 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='5.0.0';
+const APP_VERSION='5.1.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'5.1.0',date:'July 2026',title:'The founder’s pen — the shared record, kept by one hand for now.',items:[
+    'While the atlas settles, the shared record — the atlas and the Register — is written by one pen: the founder’s. Everyone reads everything; everyone writes their own ledger, always. On a sync server the first account registered holds the pen and the server itself refuses any other; on a single device the pen is taken up once, under More → Administration.',
+    'The founder’s desk — one door for entering the shared record cleanly: add a roaster, author a roast, enter a café’s canonical entry, propose a sighting, settle the review queue, walk Chart No. 1. Each row opens the form that already knows its law.',
+    'Every page stays yours to read — the chart, the pages, the Register, the reach. What waits is only the writing of the shared page, and it returns with the moderation ceremony; nothing here is taken away for good.',
+    'The surfaces the redesign did not carry — the matching’s cold-start and discover map, the circle stream, taste affinity, beans worth chasing — step behind a shutter rather than being torn out. The Record’s own bookkeeping stays visible, as it always must.',
+  ]},
   {v:'5.0.0',date:'July 2026',title:'The redesign — the lot moved to the centre.',items:[
     'Four rooms, always on the bar — Today · Atlas · Record · More. Home and Café became channels, not rooms: the instrument rides off Today, the cup out rides off a place’s page. Find retired into the Atlas — search, the chart, the drawn plot.',
     'Every green and every roaster is a page now, not a sheet — the road from grower to bar, the identity columns, the standing, where it pours, every hand’s roast, your own brew corpus, and your overlay at the end of it. The spine stands without you; the wash is yours.',
@@ -2333,6 +2357,15 @@ function doorHTML(title,body,cta,call){
   </div>`;
 }
 const seal=(name,em)=>`<div class="qm-seal">${esc(name)}<span class="em">${em}</span></div>`;
+/* The shutter — temporary, deliberate. Rooms from before the redesign that the
+ * prototype (the reference file) does not carry wait behind this flag rather
+ * than being torn out: the matching's cold-start and discover map on the Atlas,
+ * the circle stream, taste affinity, beans worth chasing, the cross-context
+ * read, the journal's by-roaster/by-lot folds, the quick-start guide. Flip to
+ * true and every one of them answers again; nothing was deleted. The Record's
+ * bookkeeping (wants, skips, leans) stays visible — nothing the matching
+ * writes is hidden from the Record. */
+const LEGACY_ON=false;
 let tab='today';
 let placeView=null;   // a café name — the page currently open over the tab, or null
 let pageView=null;    // {kind:'lot'|'roaster',id} — an atlas page open over the tab, or null
@@ -2510,7 +2543,7 @@ function openProducerPage(producerId){
 // defaults to nothing: an unnamed source saves the score as a claim, never the read — the firewall
 // (caliberResolveTier) enforces this at save regardless of what a keeper types elsewhere.
 function openLotStanding(lotId){
-  if(guard())return;
+  if(penGuard())return;
   const lot=catNode('lots',lotId); if(!lot){toast('That green isn’t on the atlas yet');return}
   openSheet(`
   <h3>Record the standing</h3>
@@ -2542,7 +2575,7 @@ function openLotStanding(lotId){
   <button class="btn btn-quiet" onclick="closeSheet();openLotPage(${jsq(lotId)})">Cancel</button>`);
 }
 function saveLotStanding(lotId){
-  if(guard())return;
+  if(penGuard())return;
   const lot=catNode('lots',lotId); if(!lot){closeSheet();return}
   const tierMap={'Competition':'1a','Auction':'1b','Named cupper':'2','My own':'3'};
   const score=val('cal_score');
@@ -2556,6 +2589,7 @@ const findRec=id=>(D.bags||[]).find(b=>b&&b.id===id)||(D.cups||[]).find(c=>c&&c.
 /* ---- §5 the merge/split affordances, on the lot page. Own+writable only; each shows its reason. A join
  * keeps the earliest-named green (stable identity) and absorbs the other; an undo restores the boundary. ---- */
 function lotJoin(aId,bId){
+  if(penGuard())return;
   const a=catNode('lots',aId),b=catNode('lots',bId);if(!a||!b){toast('Gone.');return}
   const keepFirst=String(a.firstAt||a.createdAt||'')<=String(b.firstAt||b.createdAt||'');
   const keep=keepFirst?a:b,absorb=keepFirst?b:a;
@@ -2808,7 +2842,7 @@ function resolveOutturn(rec,who,at){
 // token gains the grade (OUTTURN → OUTTURN/GRADE), it re-points from the batch to the sibling, its
 // preparation follows. Reversible like any bind: the bare token restores the record to the batch.
 function outturnSplit(recId,grade){
-  if(guard())return;
+  if(penGuard())return;
   const rec=findRec(recId);if(!rec)return;
   const who=activeName(),at=new Date().toISOString();
   const ko=recHardIds(rec).find(h=>h.scheme==='kenya-outturn');if(!ko){toast('No outturn to grade here.');return}
@@ -2955,7 +2989,7 @@ function authorRoast(f,who){
 }
 // The roast authoring form — the curator's fast, repeatable path. Optional roaster prefill (from the roster).
 function openAuthorRoast(prefRoaster){
-  if(guard())return;
+  if(penGuard())return;
   const roasters=CAT.roasters.entries.filter(r=>r&&regSubstance(r.name)).map(r=>r.name).sort((a,b)=>a.localeCompare(b));
   openSheet(`
   <h3>Author a roast</h3>
@@ -2982,7 +3016,7 @@ function openAuthorRoast(prefRoaster){
   <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
 }
 function saveAuthorRoast(){
-  if(guard())return;
+  if(penGuard())return;
   const hids=readHardIds('a_hid'); if(hids===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
   const lvl=ROAST_LEVELS.indexOf(segState.a_roast||'');
   const f={roaster:val('a_roaster'),roasterCity:val('a_city'),offering:val('a_offering'),originCountry:val('a_country'),originRegion:val('a_region'),
@@ -2998,7 +3032,7 @@ function saveAuthorRoast(){
 }
 // A bare roaster, to seed the roster before its offerings are known.
 function openAuthorRoaster(name){
-  if(guard())return;
+  if(penGuard())return;
   openSheet(`
   <h3>Add a roaster</h3>
   <div class="sub">A roaster on the chart. Its offerings come next, authored as roasts.</div>
@@ -3009,7 +3043,7 @@ function openAuthorRoaster(name){
   <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
 }
 function saveAuthorRoaster(){
-  if(guard())return;
+  if(penGuard())return;
   const name=val('ar_name'); if(!name){toast('Name the roaster');return}
   const city=val('ar_city');
   catUpsert('roasters',catNorm(name),{name,city:city||undefined,site:val('ar_site')||undefined},activeName());
@@ -3180,7 +3214,7 @@ function atlasLegend(c){
 let atlasView=null; // null → default to Map when there's a scene to see, else List
 function atlasSetView(v){atlasView=v;render()}
 let curateOn=false;
-function openCurate(){curateOn=true;placeView=null;discOn=false;render()} // read-only-safe browse: the authoring actions inside vCurate are each guard()ed, so a stranger walks the node reads without the pen
+function openCurate(){curateOn=true;placeView=null;discOn=false;render()} // read-only-safe browse: the authoring actions inside vCurate are each penGuard()ed, so anyone without the pen walks the node reads
 function closeCurate(){curateOn=false;render()}
 function vCurate(){
   const recs=chartRecs(),q=reviewQueue();
@@ -3191,7 +3225,7 @@ function vCurate(){
   const authoredExtra=[...new Set(recs.map(r=>r.roasterRef).filter(Boolean))]
     .filter(ref=>{const nm=roasterName(ref);return !CHART1.roster.some(n=>normName(n)===normName(nm))});
   const lotRow=x=>`<button class="wc-item" onclick="closeCurate();openLotPage(${jsq(x.id)})"><span class="tx"><span class="tt">${esc(lotLabel(x.lot))}</span><span class="dd">${x.hands} hand${x.hands===1?'':'s'}${x.hands>=2?' · the same green':''}</span></span><span class="go">→</span></button>`;
-  const ro=readOnly();
+  const ro=!isAdmin(); // the pen decides who authors here — everyone else walks the chart read-only
   // the map, folded into the atlas surface — the drawn plot is the floor, the street tiles the enhancement.
   const atlas=atlasMapHTML(),located=!atlas.empty,view=located?(atlasView||'map'):'list';
   const sameGreenHTML=sameGreen.length?`<h2>The same green, in more than one hand</h2>
@@ -3314,7 +3348,7 @@ function openCupDetail(id){
   const setup=brew?setupById(brew.setupId):null;
   const o=lotRead(c);
   const trace=cafe?[o.country,o.region,o.variety,o.producer,o.process,o.lot&&('lot '+o.lot)].filter(Boolean).map(esc).join(' · '):'';
-  const x=cafe&&(cupRoaster(c)||o.origin||o.country||o.variety)?crossContext({roaster:cupRoaster(c),origin:o.origin||o.country,variety:o.variety}):null;
+  const x=LEGACY_ON&&cafe&&(cupRoaster(c)||o.origin||o.country||o.variety)?crossContext({roaster:cupRoaster(c),origin:o.origin||o.country,variety:o.variety}):null;
   openSheet(`
   <h3>${what}</h3>
   <div class="sub">${new Date(c.createdAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${cafe&&c.city?` · ${esc(c.city)}`:''}</div>
@@ -3465,6 +3499,80 @@ function ladderTap(n){
   if(d>=n){go(LADDER[n-1].tab);return}
   const[t,m]=UNLOCK[n];unlockDepth(n,t,m);
 }
+/* ---- Administration — the founder's pen, and the desk it opens. The desk is
+ * the one door for entering the shared record cleanly: a roaster, a green in a
+ * hand, a café's canonical entry, a sighting — each through the form that
+ * already knows its law. Everyone else reads a quiet statement of who keeps
+ * the record, and their own ledger stays entirely theirs. ---- */
+function vAdminSection(){
+  if(readOnly())return '';
+  const synced=typeof SYNC!=='undefined'&&SYNC&&syncedHere();
+  if(isAdmin())return `
+  <h2>Administration</h2>
+  <div class="card">
+    <div class="row"><strong>The founder's desk</strong>${exBtn('founderpen','the pen','badge')}</div>
+    <div class="muted" style="margin-top:5px">The shared record — the atlas and the Register — is kept from here. Enter a fact once, cleanly; every keeper reads it.</div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="openDesk()">Open the desk</button>
+    ${!synced&&PEN?`<button class="text-action" style="margin-top:8px" onclick="setDownPen()">Set the pen down on this device</button>`:''}
+  </div>`;
+  const holder=PEN&&userById(PEN.userId);
+  const line=synced?'The shared record is kept by the founder on your sync server. Every page is yours to read; your own ledger is entirely yours.'
+    :holder?`The pen on this device is held by <strong>${esc(holder.name)}</strong>. Every page is yours to read; your own ledger is entirely yours.`
+    :'The shared record — the atlas and the Register — is read-only until the founder takes up the pen on this device. Your own ledger is entirely yours.';
+  return `
+  <h2>Administration</h2>
+  <div class="card">
+    <div class="row"><strong>The pen</strong>${exBtn('founderpen','what this means','badge')}</div>
+    <div class="muted" style="margin-top:5px">${line}</div>
+    ${!synced&&!holder?`<button class="btn btn-quiet" style="margin-top:12px" onclick="openTakePen()">This is the founder's device — take up the pen</button>`:''}
+  </div>`;
+}
+function openTakePen(){
+  if(guard())return;
+  openSheet(`
+  <h3>Take up the pen</h3>
+  <div class="sub">The shared record answers to one hand while the atlas settles.</div>
+  <p class="primer-b" style="max-width:40ch">Taking the pen makes <strong>${esc(activeName()||'this keeper')}</strong> the keeper of the shared record on this device — the atlas, the Register, the standing. On a sync server, the server's own founder account decides; a device pen never overrules it.</p>
+  <button class="btn btn-primary" onclick="takePen()">Take up the pen</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
+}
+function openDesk(){
+  if(penGuard())return;
+  const qn=reviewQueue().length;
+  const nRoasters=CAT.roasters.entries.filter(e=>e&&regSubstance(e.name)).length;
+  const nLots=CAT.lots.entries.filter(lotLive).length;
+  const nRoasts=CAT.roasts.entries.length;
+  const synced=typeof SYNC!=='undefined'&&SYNC&&syncedHere();
+  const row=(call,tt,dd,go)=>`<button class="wc-item" onclick="${call}"><span class="tx"><span class="tt">${tt}</span><span class="dd">${dd}</span></span><span class="go">${go||'→'}</span></button>`;
+  openSheet(`
+  <h3>The founder's desk</h3>
+  <div class="sub">The shared record, entered once and cleanly — a fact lands closest to where it was born.</div>
+  ${row('openAuthorRoaster()','Add a roaster','a hand on the chart — its city, its site')}
+  ${row('openAuthorRoast()','Author a roast','a roaster’s reading of one green — runs the resolver a bag does')}
+  ${row('openDeskCafe()','Enter a café','the Register’s canonical entry — name, pin, palette, notes')}
+  ${row('openProposeSighting()','Propose a sighting','a bag on a shelf, a roast on a bar — asks before it binds')}
+  ${qn?row('openReviewQueue()','Review queue',`${qn} green${qn===1?'':'s'} the resolver couldn’t call alone`,String(qn)):''}
+  ${row('closeSheet();openCurate()','Chart No. 1','the whole authored chart — map and list')}
+  <div class="card" style="margin-top:14px">
+    <div class="kv"><span class="k">On the Register</span><span class="v num">${REG.entries.length} café${REG.entries.length===1?'':'s'}</span></div>
+    <div class="kv"><span class="k">On the atlas</span><span class="v num">${nRoasters} roaster${nRoasters===1?'':'s'} · ${nLots} green${nLots===1?'':'s'} · ${nRoasts} roast${nRoasts===1?'':'s'}</span></div>
+    <div class="kv"><span class="k">The pen</span><span class="v">${synced?'the founder’s account, server-held':'this device, until set down'}</span></div>
+  </div>
+  <div class="muted small serif" style="font-style:italic;margin:2px 2px 0">${synced?'What you enter here pushes to every keeper on the server.':'Unsynced — what you enter here lives on this device until a server carries it.'}</div>`);
+}
+function openDeskCafe(){
+  if(penGuard())return;
+  const known=REG.entries.map(e=>e.name).sort((a,b)=>a.localeCompare(b));
+  openSheet(`
+  <h3>Enter a café</h3>
+  <div class="sub">One canonical entry per café — a sighting fills blanks, the editor holds the pen.</div>
+  <label class="f"><span class="l">The café</span><input type="text" id="dc_name" list="dclist" placeholder="Halfpence" autocapitalize="words">
+    <datalist id="dclist">${known.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
+  <div class="muted small" style="margin-bottom:10px">A name already on the Register opens its entry to amend; a new one starts it.</div>
+  <button class="btn btn-primary" onclick="deskCafeGo()">Open the entry</button>
+  <button class="btn btn-quiet" onclick="openDesk()">← the desk</button>`);
+}
+function deskCafeGo(){const n=(val('dc_name')||'').trim();if(!n){toast('Name the café');return}openCafeProfile(n)}
 function vMore(){
   const d=depth(),ro=readOnly();
   const th=getPref('theme','paper');
@@ -3472,12 +3580,12 @@ function vMore(){
   const putAway=D.bags.filter(b=>b.archived).length;
   if(putAway)counts.push(['Bags put away',putAway]);
   const rIdx=roasterIndex(),rTot=rIdx.reduce((s,r)=>s+r.bags+r.cups,0);
-  const roasterHTML=rIdx.length&&rTot>=2?`<h2>By roaster</h2>
+  const roasterHTML=LEGACY_ON&&rIdx.length&&rTot>=2?`<h2>By roaster</h2>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Your journal folded onto the roasters behind it — variants of a name gathered, a bag at home beside a cup out.</div>
   ${rIdx.map(r=>`<button class="wc-item" onclick="openRoasterKin(${jsq(r.ref)})">
     <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
   const lIdx=lotIndex().filter(r=>r.bags+r.cups>=2&&lotLive(catNode('lots',r.ref)));
-  const lotHTML=lIdx.length?`<h2>By lot</h2>
+  const lotHTML=LEGACY_ON&&lIdx.length?`<h2>By lot</h2>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">The same green in more than one record — a bag you brewed and a cup you had out that are one lot, tied where the origin words couldn't reach.</div>
   ${lIdx.map(r=>`<button class="wc-item" onclick="openLotKin(${jsq(r.ref)})">
     <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
@@ -3536,12 +3644,13 @@ function vMore(){
     <div class="kv"><span class="k">Act V–VI</span><span class="v" style="text-align:left">the doors, then origin</span></div>
   </div>
   <div class="muted small" style="margin:-4px 2px 20px">Each act gated in writing. Tolls follow traffic; they never summon it.</div>
+  ${vAdminSection()}
   ${ro?'':vPrefsSection()}
   ${ro?'':vUsersSection()}
   ${ro?'':vSyncSection()}
   <h2>The manual</h2>
   <button class="btn btn-quiet" onclick="openCupPrimer()">How to read a cup</button>
-  <button class="btn btn-quiet" onclick="openGuide()">Quick start</button>
+  ${LEGACY_ON?`<button class="btn btn-quiet" onclick="openGuide()">Quick start</button>`:''}
   ${ro?'':`<button class="btn btn-quiet" onclick="openWelcome()">Replay the welcome</button>`}
   <button class="btn btn-quiet" onclick="openWhatsNew(false)">What changed</button>
   <div class="qm-seal">Quiet Matter<span class="em">We do not sell coffee. We keep the record.</span></div>
@@ -3686,12 +3795,12 @@ function vAtlas(){
   const bars=[...barsSeen.values()].sort((a,b)=>b.n-a.n);
   const chartOn=chartRecs().length>0;
   const q=(atlasQ||'').trim();
-  const cups=circleCups().filter(c=>inLens(c.city));
-  const circleOn=circleSources().length>0;
-  const recs=recommendations();
-  const aff=tasteAffinity();
-  const beans=circleBeans();
-  const cold=coldNow();
+  const cups=LEGACY_ON?circleCups().filter(c=>inLens(c.city)):[];
+  const circleOn=LEGACY_ON&&circleSources().length>0;
+  const recs=LEGACY_ON?recommendations():[];
+  const aff=LEGACY_ON?tasteAffinity():[];
+  const beans=LEGACY_ON?circleBeans():[];
+  const cold=LEGACY_ON&&coldNow();
   const qn=readOnly()?0:reviewQueue().length;
   const counts=[lots.length&&`${lots.length} lot${lots.length===1?'':'s'}`,roasters.filter(x=>x.n).length&&`${roasters.filter(x=>x.n).length} roaster${roasters.filter(x=>x.n).length===1?'':'s'}`,bars.length&&`${bars.length} bar${bars.length===1?'':'s'}`,REG.entries.length&&`${REG.entries.length} on the register`].filter(Boolean).join(' · ');
   // the map + the interlude — the drawn plot is the floor; the reading composes on it, only when asked
@@ -3727,7 +3836,7 @@ function vAtlas(){
     <button class="chip${nearOn?' on':''}" onclick="toggleNear()">Near you</button>
     ${cities.slice(0,8).map(c=>`<button class="chip${normName(cityLens)===normName(c)&&!nearOn?' on':''}" onclick="setCityLens(${jsq(c)})">${esc(c)}</button>`).join('')}
   </div>`:'';
-  const coldHTML=justSet?`<div class="continuation">
+  const coldHTML=!LEGACY_ON?'':justSet?`<div class="continuation">
     <div class="eyebrow">The signal, set</div>
     <div style="font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:-.01em;line-height:1.15;margin:4px 0 2px">Three rooms, read into traits.</div>
     ${signalPicks().map(p=>{const tr=candTraits(regByName(p.name));
@@ -3783,7 +3892,7 @@ function vAtlas(){
   ${depthLens}
   ${shown.slice(0,8).map(r=>recCard(r)).join('')||(reachLens?`<div class="empty">Nothing read at ${REACH[reachLens].glyph} ${REACH[reachLens].word} yet. A lens answers what has been read, not what might be.</div>`:'')}
   ${tail}`:''}
-  ${REG.entries.length?`<button style="display:flex;justify-content:space-between;align-items:center;width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 13px;margin:2px 0 12px;font-family:var(--sans);font-size:14px;color:var(--ink-3);text-align:left;min-height:44px;background:transparent" onclick="openDiscover(null,true)">
+  ${LEGACY_ON&&REG.entries.length?`<button style="display:flex;justify-content:space-between;align-items:center;width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 13px;margin:2px 0 12px;font-family:var(--sans);font-size:14px;color:var(--ink-3);text-align:left;min-height:44px;background:transparent" onclick="openDiscover(null,true)">
     <span><span style="color:var(--ink)">⌖</span>&nbsp; ${cityLens?esc(cityLens)+', read for you':'The register, read for you'}</span>
     <span style="font-size:12px;color:var(--ink-2);text-decoration:underline;text-underline-offset:2px;flex:none">the map</span>
   </button>`:''}
@@ -3797,14 +3906,14 @@ function vAtlas(){
   ${cups.slice(0,12).map(feedRow).join('')}`:''}
   ${beans.length?`<div class="section-head"><h2>Beans worth chasing</h2><span class="n-note num">${beans.length}</span></div>
   ${beans.slice(0,6).map(beanRow).join('')}`:''}
-  <div class="section-head" style="margin-top:22px"><h2>Add to the atlas</h2><span class="n-note num">${qn?`${qn} awaiting`:''}</span></div>
-  <div class="card tap" onclick="openProposeSighting()">
+  <div class="section-head" style="margin-top:22px"><h2>${isAdmin()?'Add to the atlas':'The atlas is kept'}</h2><span class="n-note num">${isAdmin()&&qn?`${qn} awaiting`:''}</span></div>
+  ${isAdmin()?`<div class="card tap" onclick="openProposeSighting()">
     <div class="row"><strong>Propose a sighting</strong><span class="muted">→</span></div>
     <div class="muted" style="margin-top:5px">A bag on a shelf, a roast on a bar. CARTA looks for it on the chart and asks before it binds.</div>
   </div>
-  ${qn?`<button class="wc-item" onclick="openReviewQueue()"><span class="tx"><span class="tt">Assisted drafts</span><span class="dd">${qn} awaiting a decision — greens the resolver couldn't call alone</span></span><span class="go">${qn}</span></button>`:''}
-  <button class="wc-item" onclick="openCurate()"><span class="tx"><span class="tt">Chart No. 1 · ${esc(CHART1.name)}</span><span class="dd">${esc(CHART1.origin)} · ${esc(CHART1.season)} — ${readOnly()?'walk the authored chart':'curate the atlas by hand'}</span></span><span class="go">→</span></button>
-  <div class="muted small serif" style="font-style:italic;margin:14px 2px 0">The spine is curated — a proposal stands once a keeper approves it. Nothing here is ranked by anything but your own taste.</div>
+  ${qn?`<button class="wc-item" onclick="openReviewQueue()"><span class="tx"><span class="tt">Assisted drafts</span><span class="dd">${qn} awaiting a decision — greens the resolver couldn't call alone</span></span><span class="go">${qn}</span></button>`:''}`:''}
+  <button class="wc-item" onclick="openCurate()"><span class="tx"><span class="tt">Chart No. 1 · ${esc(CHART1.name)}</span><span class="dd">${esc(CHART1.origin)} · ${esc(CHART1.season)} — ${isAdmin()?'curate the atlas by hand':'walk the authored chart'}</span></span><span class="go">→</span></button>
+  <div class="muted small serif" style="font-style:italic;margin:14px 2px 0">${isAdmin()?'The spine is curated — a proposal stands once a keeper approves it. Nothing here is ranked by anything but your own taste.':'The shared record is kept by the founder for now — every page here is yours to read, and your own ledger is yours to write. Nothing is ranked by anything but your own taste.'}</div>
   ${seal('Atlas','One graph. Every hand. The record is the nexus.')}`;
 }
 
@@ -3990,15 +4099,15 @@ function vLotPage(){
   const sibs=bat?CAT.lots.entries.filter(l=>lotLive(l)&&l.processingBatchRef===bat.id&&l.id!==lotId):[];
   const batchLine=bat?`<div class="muted small" style="margin:0 2px 12px">Part of a processing batch — <button class="text-action" onclick="openBatchPage(${jsq(bat.id)})">the outturn</button>${sibs.length?', beside '+sibs.map(s=>`<button class="text-action" onclick="openLotPage(${jsq(s.id)})">${esc(lotLabel(s))}</button>`).join(', '):''}. Same cherry, a different screen.</div>`:'';
   const growerLine=growers.length?`<div class="muted small" style="margin:0 2px 12px">${growers.length>1?'Growers':'Grower'} — ${growers.map(g=>`<button class="text-action" onclick="openProducerPage(${jsq(g.id)})">${esc(g.name)}</button>`).join(', ')}. Drill to the greens traced to ${growers.length>1?'them':'it'}.</div>`:'';
-  const cands=readOnly()?[]:mergeCandidates(lotId);
-  const undoable=readOnly()||!lot.lineage?[]:(lot.lineage.mergedFrom||[]).map(id=>catNode('lots',id)).filter(t=>t&&lotTomb(t)===lotId);
-  const corrections=(bindRows||batchLine||growerLine||idLine||cands.length||undoable.length||!readOnly())?`
+  const cands=isAdmin()?mergeCandidates(lotId):[];
+  const undoable=!isAdmin()||!lot.lineage?[]:(lot.lineage.mergedFrom||[]).map(id=>catNode('lots',id)).filter(t=>t&&lotTomb(t)===lotId);
+  const corrections=(bindRows||batchLine||growerLine||idLine||cands.length||undoable.length||isAdmin())?`
   <details class="trace-more" style="margin-top:18px"><summary>Corrections & identity</summary>
     ${idLine}
     ${growerLine}
     ${batchLine}
     ${bindRows?`<h2>Bound here</h2><div class="muted small" style="margin-bottom:8px">Each record read onto this green, and how. Keep one apart to fork it back onto its own.</div>${bindRows}`:''}
-    ${readOnly()?'':`<button class="btn btn-quiet" onclick="openLotStanding(${jsq(lotId)})">${(cal.best||cal.claims.length||rar.facts.length)?'Add another reading':'Record the standing'}</button>`}
+    ${isAdmin()?`<button class="btn btn-quiet" onclick="openLotStanding(${jsq(lotId)})">${(cal.best||cal.claims.length||rar.facts.length)?'Add another reading':'Record the standing'}</button>`:''}
     ${cands.length?`<button class="btn btn-quiet" onclick="openLotMerge(${jsq(lotId)})">Join to another green…</button><div class="muted small" style="margin:2px 2px 10px">${cands.length} green${cands.length===1?'':'s'} read${cands.length===1?'s':''} like this one. Join and every record on both follows here — undoable.</div>`:''}
     ${undoable.map(t=>`<button class="btn btn-quiet" onclick="openLotUndoMerge(${jsq(lotId)},${jsq(t.id)})">Split back apart — restore ${esc(lotLabel(t))}</button>`).join('')}
   </details>`:'';
@@ -4125,9 +4234,10 @@ function penCardHTML(entity,key,name){
   </div>
   <div class="muted small" style="margin:-4px 2px 4px">Out of your link, your word is only stated — like anyone’s. <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('scoped')">Scoped authority</button>.</div>`;
 }
-// the block a page renders: the offer of the pen (unclaimed) or Your facts (signed)
+// the block a page renders: the offer of the pen (unclaimed) or Your facts (signed).
+// The offer shows only to the founder while the shared record is single-pen.
 function claimBlock(entity,key,name){
-  if(readOnly()||!claimEnt(entity,key))return '';
+  if(!isAdmin()||!claimEnt(entity,key))return '';
   if(entSigned(entity,key))return penCardHTML(entity,key,name);
   const body=entity==='cafe'
     ?'The record already reads your site for your colour. Prove the channel is yours and hold the pen on your own link — the pour, the counter, the hours. The roast’s road stays compiled.'
@@ -4140,7 +4250,7 @@ function claimBlock(entity,key,name){
 }
 let claimState=null;
 function openClaim(entity,key){
-  if(guard())return;
+  if(penGuard())return;
   claimState={entity,key,step:0,verified:false};
   renderClaim();
 }
@@ -4232,7 +4342,7 @@ function claimSign(){
  * nothing like it files as a new lot whose road begins. The record of the
  * sighting is an authored line (no cup, no bag), swept and merged like any. */
 function openProposeSighting(){
-  if(guard())return;
+  if(penGuard())return;
   openSheet(`
   <h3>What did you see?</h3>
   <div class="sub">A bag on a shelf, a roast on a bar. CARTA looks for it on the chart and asks before it binds.</div>
@@ -4432,7 +4542,8 @@ const PR={
   divergence:{t:'Carried, not resolved',b:'Two standing lines can disagree — a roaster’s altitude against the station’s documented record. CARTA prints the stronger rung and keeps the other one tap deep, attributed. Flattening the trade’s disagreements would be a quiet lie; the record would rather show its seams.'},
   readback:{t:'The record, returned',b:'A record leaves as one file and returns whole — read back on any device, offline, no account required. What returns is the reader’s own overlay: readings, shelf, cups. It is read to you, never merged — never averaged into the shared page, which stood without it and stands after. What can be written out can be read back: the proof the schema is open, and the record truly yours.'},
   interlude:{t:'Reading the season',b:'Ask, and the atlas composes the season in front of you — the pins settle and a line is drawn through them, once, over about a second. It is a reading being composed, not a screen loading, and never a score revealed; the ember stays reserved. What it ranks is only ever your own taste — the coffees you keep reaching for, the places you keep — and it shows its reasons. Ask again and it composes again; it never plays on its own.'},
-  setup:{t:'The Setup',b:'Grinder, brewer, and the scale your grind is read on. A grind number means one thing on your grinder and nothing on another — so grind lives inside a Setup and never travels between them. Name the Setup once and the dial is read against it, and only against it. The bag names the coffee; your own zero names the grind.'}
+  setup:{t:'The Setup',b:'Grinder, brewer, and the scale your grind is read on. A grind number means one thing on your grinder and nothing on another — so grind lives inside a Setup and never travels between them. Name the Setup once and the dial is read against it, and only against it. The bag names the coffee; your own zero names the grind.'},
+  founderpen:{t:'The founder’s pen',b:'While the atlas settles, the shared record — the atlas and the Register — is kept by one pen: the founder’s. Everyone reads everything; everyone writes their own ledger, always. What waits is only the shared page. When the moderation ceremony ships, proposals stand for every keeper again — nothing here is taken away for good.'}
 };
 function openPrimer(key){
   const p=PR[key];if(!p)return;
@@ -4997,7 +5108,7 @@ function saveCup(kind,brewId,bagId,skip,editId){
     fields.variety=val('c_variety');fields.lot=val('c_lot');fields.process=val('c_process');
     const hids=readHardIds('c_hid',ex&&ex.hardIds); if(hids===false)return; fields.hardIds=hids; // a false-friend hard-ID — the reason is toasted, fix or clear it
     if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
-    if(fields.shop&&!ex&&(sightBag||sightSeen.length)){regSight(fields.shop,{bag:sightBag,seen:sightSeen},activeName())} // what the counter showed — one save, no second submit
+    if(fields.shop&&!ex&&(sightBag||sightSeen.length)&&isAdmin()){regSight(fields.shop,{bag:sightBag,seen:sightSeen},activeName())} // what the counter showed — one save, no second submit; the shared line rides only the founder's pen
     sightBag=null;sightSeen=[];
     if(fields.shop&&D.cafeWants){const i=D.cafeWants.findIndex(x=>normName(x)===normName(fields.shop));if(i>=0)D.cafeWants.splice(i,1)} // been now — off the want list
   }
@@ -5057,7 +5168,7 @@ function openCafe(pre,editId){
       <button class="yes ${againState===true?'on':''}" onclick="pickAgain(true,this)">again</button>
       <button class="no ${againState===false?'on':''}" onclick="pickAgain(false,this)">pass</button>
     </div></label>
-  ${editId?'':`<details class="trace-more"><summary>What did the counter show? <span class="opt">optional, always</span></summary>
+  ${editId||!isAdmin()?'':`<details class="trace-more"><summary>What did the counter show? <span class="opt">optional, always</span></summary>
     <div class="muted small serif" style="font-style:italic;margin:2px 0 12px;max-width:40ch;line-height:1.5">Three taps at most. These read the café, not your cup — they join the Register as a sighting, signed as yours.</div>
     <div class="f"><span class="l">The bag</span><div class="desc" id="sightbag">${sc.bag}</div></div>
     <div class="f"><span class="l">Seen at the counter</span><div class="desc" id="sightseen">${sc.seen}</div></div>
@@ -5258,7 +5369,7 @@ function vPlace(){
   const fav=isCafeFav(shop);
   const roaster=modeOf(mine.map(cupRoaster).filter(Boolean));
   const origin=modeOf(mine.map(c=>{const o=lotRead(c);return o.origin||o.country}).filter(Boolean));
-  const x=roaster||origin?crossContext({roaster,origin}):null;
+  const x=LEGACY_ON&&(roaster||origin)?crossContext({roaster,origin}):null;
   const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
   const place=[city,nbhood].filter(Boolean).join(' · ');
   const subline=place?`${esc(place)}${p&&p.lat!=null?' · pinned':''}`:(mine.length||others.length?'city unwritten':'yours alone — no one else has kept it yet');
@@ -5287,7 +5398,7 @@ function vPlace(){
     const reRead=rr.depth&&rh.was>0&&rh.since&&mine.length&&rh.since>mine[0].createdAt;
     kvs.push(['The reach',rr.depth
       ?`<span class="badge" style="cursor:pointer" onclick="openReachPrimer(${jsq(shop)})">${reachMarkOf(rr.depth)}</span>${reRead?` <span class="badge dashed" style="cursor:pointer" onclick="openReachRecord(${jsq(shop)})">re-read · was ${REACH[rh.was].glyph} ${REACH[rh.was].word.toLowerCase()}</span>`:''} <span class="link" onclick="openReachPrimer(${jsq(shop)})">what this means</span>`
-      :`<span class="badge dashed">unread</span>${readOnly()?'':` <span class="link" onclick="openReachAmend(${jsq(shop)})">read it — say what you saw</span>`}`]);
+      :`<span class="badge dashed">unread</span>${isAdmin()?` <span class="link" onclick="openReachAmend(${jsq(shop)})">read it — say what you saw</span>`:''}`]);
   }
   if(e&&e.firstBy)kvs.push(['Register',`<span${e.sightings&&e.sightings.length?` class="link" onclick="openReachRecord(${jsq(shop)})"`:''}>first entered by ${esc(e.firstBy)}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</span>`]);
   // the matching, on the page — a score is never shown without its signals.
@@ -5326,7 +5437,7 @@ function vPlace(){
   ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}
   ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
   ${!mine.length&&!(sk&&sk.active)?`<button class="btn btn-quiet" onclick="discSkip(${jsq(shop)})">Skip — it steps back for two weeks</button>`:''}
-  <button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.site||p.palette||p.accent||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
+  ${isAdmin()?`<button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.site||p.palette||p.accent||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>`:''}
   ${mine.length?`<button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`:''}`}
   ${mine.length?`<div class="section-head"><h2>Your cups here</h2></div>
   ${mine.map(c=>cupRow(c)).join('')}`:''}
@@ -5340,7 +5451,7 @@ function vPlace(){
 // The café's own screen: its identity, read from its website — a whole palette, a line, an address —
 // with as little retyping as the site will allow. City, address and note stay editable by hand.
 function openCafeProfile(shop){
-  if(guard())return;
+  if(penGuard())return;
   const p=cafeProfile(shop)||{};
   const city=p.city||modeOf(cafeCups().filter(c=>(c.shop||'').trim()===shop.trim()).map(c=>c.city).filter(Boolean))||'';
   brandPalette=palOf(p); brandAccent=(brandPalette&&brandPalette.brand)||p.accent||null;
@@ -5379,7 +5490,7 @@ function parseTags(s){
   return out;
 }
 function saveCafeProfileForm(shop){
-  if(guard())return;
+  if(penGuard())return;
   const addr=val('p_address'),pinned=addr&&geoPick.address===addr; // coords only survive if they still match the typed address
   const rec={name:shop.trim(),city:val('p_city'),neighborhood:val('p_neighborhood'),notes:val('p_notes'),accent:brandAccent,palette:brandPalette,
     site:(val('p_site')||'').trim(),address:addr,lat:pinned?geoPick.lat:null,lon:pinned?geoPick.lon:null,tags:parseTags(val('p_tags'))};
@@ -5615,7 +5726,7 @@ function vUsersSection(){
   <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Share records with people you trust. Yours follows you between your devices; theirs you can read, never change.</div>
   ${USERS.users.map(u=>{const active=u.id===USERS.activeId,p=peek(u.id);
     return `<div class="card tap" onclick="openUserSheet('${u.id}')">
-      <div class="row"><strong>${esc(u.name)}</strong>${active?'<span class="badge">you</span>':''}</div>
+      <div class="row"><strong>${esc(u.name)}</strong><span>${PEN&&PEN.userId===u.id?'<span class="badge ghost">the pen</span> ':''}${active?'<span class="badge">you</span>':''}</span></div>
       <div class="muted small num">${p.bags} coffees · ${p.brews} brews · ${p.cups} cups</div>
     </div>`}).join('')}
   ${remoteDirUsers().map(u=>`<div class="card tap" onclick="openRemoteUserSheet('${u.id}')">
@@ -6178,9 +6289,16 @@ function mergeCatalog(loc,rem){
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
 }
 // The Register rides the same heartbeat as the ledger: poll meta, pull + merge
-// when the server moved, push while dirty (409 → merge, retry). Any keeper may
-// push — the document is the group's. Older servers without /api/cafes answer
-// 404 and are skipped; the Register then stays device-local, still useful.
+// when the server moved, push while dirty (409 → merge, retry). The push goes
+// through the founder's pen — a non-founder pulls only (their local additions
+// stay on their device), and a 403 pen-held teaches an older session which
+// side of the pen it is on. Older servers without /api/cafes answer 404 and
+// are skipped; the Register then stays device-local, still useful.
+function penRefused(r){ // a 403 from a shared-doc PUT — learn it, stop pushing
+  if(r.status!==403)return false;
+  if(SYNC&&SYNC.founder!==false){SYNC.founder=false;saveSync()}
+  return true;
+}
 async function syncRegister(){
   const meta=await api('/api/cafes?meta=1');
   if(meta.status!==200)return;
@@ -6193,6 +6311,7 @@ async function syncRegister(){
       saveReg();
     }
   }
+  if(SYNC&&SYNC.founder===false){if(REG.dirty){REG.dirty=false;saveReg()}return} // read-only side of the pen
   let tries=0;
   while(REG.dirty&&tries<3){
     tries++;
@@ -6202,14 +6321,16 @@ async function syncRegister(){
       const merged=mergeRegister({entries:REG.entries,deleted:REG.deleted},r.body.register||{});
       REG.rev=r.body.rev;REG.entries=merged.entries;REG.deleted=merged.deleted;saveReg();
     }
+    else if(penRefused(r)){REG.dirty=false;saveReg();break}
     else break;
   }
 }
 // The catalog rides the same heartbeat as the Register, one document per kind:
 // poll each kind's meta, pull + merge when the server moved, push while dirty
-// (409 → merge, retry). Group-writable like the café Register. An older server
-// 404s /api/catalog and the whole spine stays device-local, exactly as the
-// Register degrades — the atlas is still useful offline.
+// (409 → merge, retry). Writes go through the founder's pen exactly as the
+// Register's do — a non-founder pulls only. An older server 404s /api/catalog
+// and the whole spine stays device-local, exactly as the Register degrades —
+// the atlas is still useful offline.
 async function syncCatalog(){
   for(const kind of CAT_KINDS){
     const doc=CAT[kind];
@@ -6224,6 +6345,7 @@ async function syncCatalog(){
         saveDoc(kind);
       }
     }
+    if(SYNC&&SYNC.founder===false){if(doc.dirty){doc.dirty=false;saveDoc(kind)}continue} // read-only side of the pen
     let tries=0;
     while(doc.dirty&&tries<3){
       tries++;
@@ -6233,6 +6355,7 @@ async function syncCatalog(){
         const merged=mergeCatalog({entries:doc.entries,deleted:doc.deleted},r.body.catalog||{});
         doc.rev=r.body.rev;doc.entries=merged.entries;doc.deleted=merged.deleted;saveDoc(kind);
       }
+      else if(penRefused(r)){doc.dirty=false;saveDoc(kind);break}
       else break;
     }
   }
@@ -6297,7 +6420,11 @@ async function syncNow(manual){
     if(tab==='cafes'&&!document.getElementById('sheet').classList.contains('open'))render();
     try{
       const dir=await api('/api/users');
-      if(dir.status===200)localStorage.setItem(DIR_KEY,JSON.stringify({fetchedAt:new Date().toISOString(),users:dir.body.users}));
+      if(dir.status===200){
+        localStorage.setItem(DIR_KEY,JSON.stringify({fetchedAt:new Date().toISOString(),users:dir.body.users}));
+        const me=dir.body.users.find(x=>x.id===SYNC.userId); // the directory now says who holds the pen — keep the session honest
+        if(me&&me.founder!==undefined&&SYNC.founder!==!!me.founder){SYNC.founder=!!me.founder;saveSync()}
+      }
     }catch(e){}
     SYNC.lastSyncAt=new Date().toISOString();syncState='idle';
   }catch(e){
@@ -6370,7 +6497,7 @@ async function connectSync(mode){
   if(r.status===403&&r.body&&r.body.error==='bad-register-code'){toast('This server needs a valid invite code to sign up');return}
   if(r.status===401){toast('Wrong name or passcode');return}
   if(r.status!==200&&r.status!==201){toast((r.body&&r.body.message)||'Server refused');return}
-  SYNC={url,token:r.body.token,userId:r.body.userId,name:r.body.name,
+  SYNC={url,token:r.body.token,userId:r.body.userId,name:r.body.name,founder:!!r.body.founder,
     localId:USERS.activeId,rev:0,dirty:true,lastSyncAt:null};
   const me=userById(USERS.activeId);if(me){me.remoteId=r.body.userId;saveUsers()}
   saveSync();closeSheet();render();toast('Connected — syncing');

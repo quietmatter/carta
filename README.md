@@ -14,7 +14,7 @@ finding again.
 > label system, token architecture and voice, and overrides its palette, adds an
 > ember signal, an editorial display scale and a per-café colour engine. The full
 > charter — what is inherited, what may be overridden, how the two stay in sync —
-> is in [SUBBRAND.md](SUBBRAND.md).
+> is in [docs/SUBBRAND.md](docs/SUBBRAND.md).
 
 CARTA keeps **four rooms, always on the bar** — **Today · Atlas · Record ·
 More**. Home and Café became channels, not rooms: the instrument rides off
@@ -41,7 +41,7 @@ processed → roasted → poured), its identity columns, its standing, where it
 pours, every hand's roast, your own brew corpus, and your overlay at the end
 of it. Every mark explains itself one tap away — the primers.
 
-See [NORTH_STAR.md](NORTH_STAR.md) for the product thesis and restraint standard.
+See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the product thesis and restraint standard.
 
 ## First run
 
@@ -273,6 +273,28 @@ CARTA supports multiple keepers on one device. Manage them under **More → Your
 
 Existing single-user data migrates automatically on first launch — nothing to do, nothing lost. Everything lives in this browser's local storage; syncing between devices is optional (below).
 
+## The founder's pen (temporary)
+
+While the atlas settles, the **shared** record — the atlas (roasters, greens,
+roasts) and the café Register — is written by one hand: the founder's. What
+this means in practice:
+
+- **Everyone reads everything.** The chart, every page, the Register, the
+  reach — all of it stays open to every keeper.
+- **Everyone writes their own ledger, always.** Bags, brews, cups, setups,
+  cafés you've been to, your preferences — none of that is gated.
+- **Only the founder writes the shared page.** On a sync server, the first
+  account registered holds the pen and the server refuses any other. On a
+  single device, the pen is taken up once under **More → Administration**.
+- **The founder's desk** (More → Administration → Open the desk) is the one
+  door for entering shared facts cleanly: add a roaster, author a roast, enter
+  a café's canonical entry, propose a sighting, settle the review queue.
+
+This is a stage, not a law: when the proposed→stood moderation ceremony ships,
+proposals stand for every keeper again. A few pre-redesign surfaces (the
+matching's discover map and cold-start, the circle stream, taste affinity) are
+shuttered for the same season — hidden, not removed.
+
 ## Server Sync (optional)
 
 CARTA can synchronize ledgers through a tiny self-hosted server, so your record follows you across devices and everyone on the server can **view** (never edit) each other's ledgers — live, from **More → Your circle**.
@@ -290,7 +312,9 @@ CARTA can synchronize ledgers through a tiny self-hosted server, so your record 
 - **manifest.json** — PWA metadata for homescreen installation
 - **icon-192.svg** & **icon-512.svg** — App icons
 - **README.md** — This file
-- **VOICE.md** — The brand voice standard the app's copy is held to
+- **docs/** — The design record: the voice standard (`VOICE.md`), the product
+  thesis (`NORTH_STAR.md`), the atlas vision, the resolver and schema specs,
+  the redesign prototype (`redesign-concept/`) and the design system copy
 
 ## Hosted on GitHub Pages
 

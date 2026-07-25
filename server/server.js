@@ -20,10 +20,12 @@
  * every ledger — seeing each other's records is the point. Only the owner
  * can WRITE their own. The café Register and the catalog (the spine upstream
  * of the café — producers, lots, roasters, roasts and the rest) are the shared
- * documents: any authenticated user may read AND write them, so the group keeps
- * a single record of each café and each node of the road. This is
- * trust-your-friends auth for a small group, not a hardened public service.
- * See server/README.md.
+ * documents: every authenticated user may READ them, but — for now — only the
+ * founder may WRITE them. The founder is the first account registered (existing
+ * servers promote their earliest account on boot), so the shared record is kept
+ * by one pen while the atlas settles; group-writable curation returns when the
+ * moderation ceremony ships. This is trust-your-friends auth for a small group,
+ * not a hardened public service. See server/README.md.
  * ============================================================ */
 
 const http = require('node:http');
@@ -54,6 +56,12 @@ function readJSON(file) {
 /* ---------- users + tokens (in memory, persisted on change) ---------- */
 const db = readJSON(USERS_FILE) || { version: 1, users: [], tokens: {} };
 function saveDB() { writeJSON(USERS_FILE, db); }
+// The founder holds the pen on the shared documents. Servers from before the
+// role promote their earliest account once, so an existing group keeps working.
+if (db.users.length && !db.users.some(u => u.founder)) {
+  db.users.slice().sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))[0].founder = true;
+  saveDB();
+}
 const userById = id => db.users.find(u => u.id === id);
 const userByName = name => db.users.find(u => u.nameLower === String(name).trim().toLowerCase());
 
@@ -179,9 +187,10 @@ function handleRegister(req, res, ip) {
       salt, hash: hashPass(passcode, salt),
       createdAt: new Date().toISOString(),
     };
+    if (!db.users.length) user.founder = true; // the first account keeps the pen
     db.users.push(user);
     const token = makeToken(user.id); // saveDB() inside
-    send(res, 201, { token, userId: user.id, name: user.name });
+    send(res, 201, { token, userId: user.id, name: user.name, founder: !!user.founder });
   });
 }
 
@@ -194,7 +203,7 @@ function handleLogin(req, res, ip) {
     const candidate = hashPass(body.passcode || '', salt);
     const ok = u && crypto.timingSafeEqual(Buffer.from(candidate, 'hex'), Buffer.from(u.hash, 'hex'));
     if (!ok) return err(res, 401, 'bad-credentials', 'Wrong name or passcode');
-    send(res, 200, { token: makeToken(u.id), userId: u.id, name: u.name });
+    send(res, 200, { token: makeToken(u.id), userId: u.id, name: u.name, founder: !!u.founder });
   });
 }
 
@@ -202,7 +211,7 @@ function handleUsers(res) {
   send(res, 200, {
     users: db.users.map(u => {
       const l = readLedger(u.id);
-      return { id: u.id, name: u.name, rev: l.rev, updatedAt: l.updatedAt, counts: counts(l.ledger) };
+      return { id: u.id, name: u.name, founder: !!u.founder, rev: l.rev, updatedAt: l.updatedAt, counts: counts(l.ledger) };
     }),
   });
 }
@@ -218,10 +227,20 @@ function handleGetRegister(res, metaOnly) {
   send(res, 200, metaOnly ? { rev: r.rev, updatedAt: r.updatedAt } : r);
 }
 
-// Unlike ledgers, the Register is writable by every authenticated user — the
-// group maintains it together. Same optimistic concurrency: a stale baseRev
-// gets a 409 carrying the server copy to merge against.
+// The shared documents are read by everyone but written — for now — only by
+// the founder's pen. A non-founder PUT gets a plain 403 the client treats as
+// read-only; the document it holds stays device-local, nothing is lost.
+function penHeld(res, auth) {
+  if (auth.founder) return false;
+  err(res, 403, 'pen-held', 'The shared record is kept by the founder for now — your copy stays on your device');
+  return true;
+}
+
+// The Register carries one entry per café for the whole group. Writes go
+// through the founder's pen (penHeld). Same optimistic concurrency: a stale
+// baseRev gets a 409 carrying the server copy to merge against.
 function handlePutRegister(req, res, auth) {
+  if (penHeld(res, auth)) return;
   readBody(req, res, body => {
     if (typeof body.baseRev !== 'number' || !body.register || typeof body.register !== 'object' ||
         !Array.isArray(body.register.entries))
@@ -240,10 +259,11 @@ function handleGetCatalog(res, kind, metaOnly) {
   send(res, 200, metaOnly ? { rev: c.rev, updatedAt: c.updatedAt } : c);
 }
 
-// A catalog kind, like the café Register, is group-writable — the whole party
-// keeps the shared spine together. Same optimistic concurrency: a stale baseRev
-// gets a 409 carrying the server copy to merge against.
+// A catalog kind, like the café Register, is a shared document — read by the
+// whole party, written through the founder's pen (penHeld). Same optimistic
+// concurrency: a stale baseRev gets a 409 carrying the server copy.
 function handlePutCatalog(req, res, auth, kind) {
+  if (penHeld(res, auth)) return;
   readBody(req, res, body => {
     if (typeof body.baseRev !== 'number' || !body.catalog || typeof body.catalog !== 'object' ||
         !Array.isArray(body.catalog.entries))

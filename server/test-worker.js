@@ -66,8 +66,9 @@ const LEDGER = who => ({
   // register
   r = await req('POST', '/api/register', { body: { name: 'Alice', passcode: 'coffee' } });
   assert.equal(r.status, 201); assert.ok(r.body.token && r.body.userId);
+  assert.equal(r.body.founder, true);
   const alice = r.body;
-  ok('register returns 201 with token + userId');
+  ok('register returns 201 with token + userId; the first account holds the pen');
 
   r = await req('POST', '/api/register', { body: { name: 'alice', passcode: 'other' } });
   assert.equal(r.status, 409);
@@ -78,14 +79,15 @@ const LEDGER = who => ({
   ok('short passcode rejected with 400');
 
   r = await req('POST', '/api/register', { body: { name: 'Bob', passcode: 'beans' } });
-  assert.equal(r.status, 201);
+  assert.equal(r.status, 201); assert.equal(r.body.founder, false);
   const bob = r.body;
-  ok('second user registers');
+  ok('second user registers, without the pen');
 
   // login
   r = await req('POST', '/api/login', { body: { name: 'ALICE', passcode: 'coffee' } });
   assert.equal(r.status, 200); assert.equal(r.body.userId, alice.userId);
-  ok('login works, name case-insensitive, same userId');
+  assert.equal(r.body.founder, true);
+  ok('login works, name case-insensitive, same userId, founder flag carried');
 
   r = await req('POST', '/api/login', { body: { name: 'Alice', passcode: 'wrong' } });
   assert.equal(r.status, 401);
@@ -140,9 +142,10 @@ const LEDGER = who => ({
   assert.equal(r.status, 200);
   const dirA = r.body.users.find(u => u.id === alice.userId);
   assert.equal(dirA.rev, 2); assert.equal(dirA.counts.bags, 1); assert.equal(dirA.name, 'Alice');
+  assert.equal(dirA.founder, true);
   const dirB = r.body.users.find(u => u.id === bob.userId);
-  assert.equal(dirB.rev, 0); assert.equal(dirB.counts.bags, 0);
-  ok('directory lists users with rev and counts (zeros before first push)');
+  assert.equal(dirB.rev, 0); assert.equal(dirB.counts.bags, 0); assert.equal(dirB.founder, false);
+  ok('directory lists users with rev, counts and who holds the pen');
 
   // validation + limits
   r = await req('PUT', `/api/ledgers/${alice.userId}`, { token: alice.token, body: { baseRev: 2, ledger: { nope: true } } });
@@ -158,7 +161,8 @@ const LEDGER = who => ({
   assert.equal(r.status, 404);
   ok('unknown user id is 404');
 
-  // ---- the café Register: one shared document, writable by every keeper ----
+  // ---- the café Register: one shared document, read by every keeper,
+  //      written — for now — only by the founder's pen ----
   const REGDOC = who => ({
     version: 1, deleted: [],
     entries: [{ id: 'cafe-1', name: 'Kumquat', city: who, firstBy: who, updatedAt: '2026-01-01T00:00:00Z' }],
@@ -177,11 +181,20 @@ const LEDGER = who => ({
   ok('first Register push accepted, rev 1');
 
   r = await req('PUT', '/api/cafes', { token: bob.token, body: { baseRev: 1, register: REGDOC('bob') } });
+  assert.equal(r.status, 403); assert.equal(r.body.error, 'pen-held');
+  ok('a non-founder CANNOT write the Register (403 pen-held)');
+
+  r = await req('GET', '/api/cafes', { token: bob.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 1);
+  assert.equal(r.body.register.entries[0].city, 'alice');
+  ok('a non-founder still READS the Register, unchanged by the refused push');
+
+  r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 1, register: REGDOC('alice2') } });
   assert.equal(r.status, 200); assert.equal(r.body.rev, 2);
-  ok('another keeper CAN write the Register (shared, unlike ledgers)');
+  ok("the founder's second push advances to rev 2");
 
   r = await req('GET', '/api/cafes', { token: alice.token });
-  assert.equal(r.status, 200); assert.equal(r.body.updatedBy, 'Bob');
+  assert.equal(r.status, 200); assert.equal(r.body.updatedBy, 'Alice');
   ok('Register read carries updatedBy');
 
   r = await req('GET', '/api/cafes?meta=1', { token: alice.token });
@@ -190,14 +203,15 @@ const LEDGER = who => ({
 
   r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 0, register: REGDOC('stale') } });
   assert.equal(r.status, 409); assert.equal(r.body.error, 'conflict'); assert.equal(r.body.rev, 2);
-  assert.equal(r.body.register.entries[0].city, 'bob');
+  assert.equal(r.body.register.entries[0].city, 'alice2');
   ok('stale Register baseRev rejected with 409 carrying the server copy');
 
   r = await req('PUT', '/api/cafes', { token: alice.token, body: { baseRev: 2, register: { nope: true } } });
   assert.equal(r.status, 400);
   ok('malformed Register rejected with 400');
 
-  // ---- the catalog: one shared, group-writable document per spine kind ----
+  // ---- the catalog: one shared document per spine kind, read by every
+  //      keeper, written — for now — only by the founder's pen ----
   const CATDOC = who => ({
     version: 1, deleted: [],
     entries: [{ id: 'lot-1', _key: 'fp:ethiopia|guji', kind: 'lot', country: 'Ethiopia', firstBy: who, updatedAt: '2026-01-01T00:00:00Z' }],
@@ -216,11 +230,20 @@ const LEDGER = who => ({
   ok('first catalog push accepted, rev 1');
 
   r = await req('PUT', '/api/catalog/lots', { token: bob.token, body: { baseRev: 1, catalog: CATDOC('bob') } });
+  assert.equal(r.status, 403); assert.equal(r.body.error, 'pen-held');
+  ok('a non-founder CANNOT write the catalog (403 pen-held, like the Register)');
+
+  r = await req('GET', '/api/catalog/lots', { token: bob.token });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 1);
+  assert.equal(r.body.catalog.entries[0].firstBy, 'alice');
+  ok('a non-founder still READS the catalog, unchanged by the refused push');
+
+  r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 1, catalog: CATDOC('alice2') } });
   assert.equal(r.status, 200); assert.equal(r.body.rev, 2);
-  ok('another keeper CAN write the catalog (shared, like the Register)');
+  ok("the founder's second catalog push advances to rev 2");
 
   r = await req('GET', '/api/catalog/lots', { token: alice.token });
-  assert.equal(r.status, 200); assert.equal(r.body.updatedBy, 'Bob');
+  assert.equal(r.status, 200); assert.equal(r.body.updatedBy, 'Alice');
   ok('catalog read carries updatedBy');
 
   r = await req('GET', '/api/catalog/lots?meta=1', { token: alice.token });
@@ -229,7 +252,7 @@ const LEDGER = who => ({
 
   r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 0, catalog: CATDOC('stale') } });
   assert.equal(r.status, 409); assert.equal(r.body.error, 'conflict'); assert.equal(r.body.rev, 2);
-  assert.equal(r.body.catalog.entries[0].firstBy, 'bob');
+  assert.equal(r.body.catalog.entries[0].firstBy, 'alice2');
   ok('stale catalog baseRev rejected with 409 carrying the server copy');
 
   r = await req('PUT', '/api/catalog/lots', { token: alice.token, body: { baseRev: 2, catalog: { nope: true } } });
@@ -287,6 +310,18 @@ const LEDGER = who => ({
   r = await gated.req('POST', '/api/login', { body: { name: 'Gated', passcode: 'beans' } });
   assert.equal(r.status, 200);
   ok('login is not gated by the registration code');
+
+  // ---- founder migration: a store from before the role promotes its earliest account ----
+  const legacy = makeApp();
+  const oldSalt = '00'.repeat(16);
+  const oldHash = require('node:crypto').scryptSync('beans', oldSalt, 64).toString('hex');
+  const oldUser = (id, name, createdAt) => ({ id, name, nameLower: name.toLowerCase(), salt: oldSalt, hash: oldHash, createdAt });
+  await legacy.storage.put('users', [oldUser('b'.repeat(16), 'Late', '2026-02-01T00:00:00Z'), oldUser('a'.repeat(16), 'Early', '2026-01-01T00:00:00Z')]);
+  r = await legacy.req('POST', '/api/login', { body: { name: 'Early', passcode: 'beans' } });
+  assert.equal(r.status, 200); assert.equal(r.body.founder, true);
+  r = await legacy.req('POST', '/api/login', { body: { name: 'Late', passcode: 'beans' } });
+  assert.equal(r.status, 200); assert.equal(r.body.founder, false);
+  ok('a pre-founder users store promotes its earliest account to the pen on first read');
 
   // every stored value fits the Durable Object 2 MB key+value cap
   for (const [k, v] of storage.map) if (typeof v === 'string') assert.ok(k.length + v.length <= 2 * 1024 * 1024);
