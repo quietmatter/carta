@@ -95,26 +95,66 @@ server/
 - **version tracker** — `APP_VERSION`, `CHANGELOG`, and the "What's New" sheet
   shown to returning users on a version bump. **Bump `APP_VERSION` and prepend a
   `CHANGELOG` entry when you ship a user-visible change.**
-- **router** — `TABS`, current `tab`, `go()`, `render()`. Each tab has a
-  `vXxx()` view function returning an HTML string. `discOn` overlays the
-  discover surface (`vDiscover`) the way `placeView` overlays a café's page.
-- **today + the matching** — the Today tab (`vToday`, the first tab and the
-  landing surface) and the matching engine behind it. `matchOf(shop)` scores an
-  unkept place per spec v1 (trait 60 · proximity 20 · circle 20) and always
-  returns its `signals` — a score is never shown without reasons. The signal
+- **router** — four rooms, always on the bar: **Today · Atlas · Record · More**
+  (`tabsFor`, tab ids `today`/`atlas`/`trace`/`ledger`). Home and Café became
+  channels, not rooms — `TAB_ALIAS` keeps the old ids (`field`/`cafes`/`circle`)
+  answering. `go()`, `render()`; each tab has a `vXxx()` view returning an HTML
+  string. Overlays over the tab: `placeView` (a café's page), `pageView`
+  (`{kind:'lot'|'roaster',id}` → `vLotPage`/`vRoasterPage`), `discOn`
+  (`vDiscover`), `curateOn` (`vCurate`). The screen-settle animation
+  (`.ca-screen`) plays only when the screen key changes, never on a repaint.
+- **today + the matching** — the Today tab (`vToday`, the landing surface: the
+  coffee in hand again, the continuation, *Pick up the brew* / *or start from
+  the shelf*, "On the atlas, near your taste" with its reasons, the last cup
+  out) and the matching engine. `matchOf(shop)` scores an unkept place per
+  spec v1 (trait 60 · proximity 20 · circle 20) and always returns its
+  `signals` — a score is never shown without reasons. The signal
   (`signalTraits`) is argued by kept places' tags/reach facts plus the three
-  cafés a new keeper names (`prefs.signal`, the cold-start on Today);
-  `discCands()` ranks candidates; `vDiscover` is the map/list surface (ranked
-  pins over `mapProject`, card drawer, tune, a once-per-visit matching
-  interlude honoring reduced motion). Until three café cups are kept the read
-  speaks in bands (`lowConf`), not numbers. Saves stamp `prefs.wantAt` and age
-  into a gentle ask on the Record (`recordKeepingHTML`); skips
+  cafés a new keeper names (`prefs.signal` — the cold-start now lives on the
+  Atlas); `discCands()` ranks candidates; `vDiscover` remains the full
+  map/list reading, reached from the Atlas. Until three café cups are kept the
+  read speaks in bands (`lowConf`), not numbers. Saves stamp `prefs.wantAt`
+  and age into a gentle ask on the Record (`recordKeepingHTML`); skips
   (`prefs.placeSkips`) step a place back 14 days and fade by 21; "fewer like
   it" leans (`prefs.traitLeans`) tip a kind down on the same curve, capped in
-  effect at three. A week-old map session (`prefs.findSess`) steps back from a
-  resume card to a plain suggestion.
-- **views** — `vField` (log/home), `vBags`, `vSetups`, `vTrace`, `vCafes`,
-  `vLedger`, plus detail sheets.
+  effect at three.
+- **the Atlas tab** — the reading room (`vAtlas`): search over lots, roasters,
+  growers and the Register (`atlasSearchIndex`); the chart hero; the drawn
+  plot over the whole anchored scene (`atlasLotIds` → `atlasMapHTML`); the
+  **interlude** (`readSeason`/`seasonState` — "Read the season for me"
+  composes once on a tap, the season line drawn through taste-ranked pins,
+  reasons via `seasonReasons()`, instant under reduced motion, never
+  auto-played); the season's lots with standing chips (`atlasLotCard`); the
+  hands; the matching's worth-the-walk; the stream; *Propose a sighting*; the
+  Chart No. 1 curator door.
+- **the pages** — `openLotPage`/`openRoasterPage` set `pageView` and render
+  full screens (`vLotPage`/`vRoasterPage`), not sheets. The lot page: the
+  road (grown → processed → milled → roasted → poured, only stages the record
+  holds), identity columns with primer taps, the standing (three axes, unread
+  until their own evidence stands), availability (pours), the roasts by hand,
+  the corpus (own brews — grind shown only within one Setup), your overlay,
+  and a Corrections & identity fold (binds, merge/split, the standing entry).
+  `openBatchPage` keeps its sheet.
+- **the primers** — the `PR` map (term → `{t,b}`) and `openPrimer(key)`, a
+  second sheet layer (`#primer`, stacks above any open sheet). Every new
+  badge/chip/term ships its primer in voice the same pass; `exBtn()` renders
+  the dotted tap.
+- **Act III · the signed page** — the claim ceremony (`openClaim` →
+  `renderClaim`, three steps: the record as it stands → proof of control →
+  scoped signing) writes `signed{by,at,site}` onto the Register entry (café)
+  or the roaster's catalog node; corrections (`penFacts`) are first-party
+  lines shown in the *Your facts* card (`penCardHTML`), scoped and
+  supersedable. `claimBlock()` renders the offer or the pen on café and
+  roaster pages. Signing never touches the reader's overlay.
+- **propose a sighting** — `openProposeSighting` → `proposeLook`: a shared
+  printed code binds outright, the fingerprint scorer (`scoreLot`) asks, a
+  same-name-different-process guard refuses to merge on the string, and
+  nothing-like-it forks a new lot. The sighting lands as an authored line
+  (`proposeRec`) bound via `bindRecordTo` or forked onto its own green.
+- **views** — `vToday`, `vAtlas`, `vBags` (the shelf — the Coffee step of the
+  home-cup arc, with put-away/restore), `vSetups`, `vTrace` (Record),
+  `vMore`, plus the page overlays and detail sheets. `vField`/`vCafes`/
+  `vCircle` are retired; their work lives on Today, the Atlas and the pages.
 - **sheet plumbing** — bottom-sheet modal (`openSheet`/`closeSheet`) with
   drag-to-dismiss.
 - **dial component** — the tap / hold-to-accelerate / tap-to-type numeric dials
@@ -192,11 +232,25 @@ server/
   sourced reading and an unnamed claim, clearly demo-labeled.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
-- **export / import** — JSON export (stamped with the user's name); import as a
-  new user or replace.
+- **export / import** — two copies. The **ledger export** (`ledgerData` →
+  `renderLedgerHtml` → `downloadLedger`): one self-contained HTML page on
+  CARTA paper stock, the reader's overlay only, real token hexes inlined (the
+  one sanctioned place tokens resolve to literals), the machine-readable
+  record embedded as `carta.ledger/v1` JSON; a persistent save panel
+  (`exportedFile`) guarantees delivery, and `readLedgerFile`/`parseLedger`/
+  `openReadback` read a ledger back — validated, read aloud, never merged
+  (any string-built HTML must guard its `</`+`script>`). The **working copy**
+  (`exportJSON`) stays the full-fidelity JSON backup; import as a new user or
+  replace.
 - **sync** — optional server sync (see below).
-- **quick start / what's new / boot** — onboarding guide, changelog sheet, and
-  the boot sequence at the bottom of the script.
+- **quick start / what's new / welcome / boot** — onboarding guide, changelog
+  sheet, the one-screen welcome (three doors — *I read, mostly* → Atlas ·
+  *Someone else makes it* → Atlas · *I make my own* → Today; sets depth, never
+  closes an open room), and the boot sequence at the bottom of the script.
+- **the motion charter** — `--mo-fast/base/considered/ease` tokens in the
+  `<style>` block; `ca-settle`/`ca-pins-in`/`ca-draw` keyframes; *used more,
+  moves less*; `prefers-reduced-motion` stills everything to its end frame
+  and `reducedMotion()` short-circuits the interlude in JS.
 
 ### Data model
 

@@ -16,36 +16,45 @@ finding again.
 > charter — what is inherited, what may be overridden, how the two stay in sync —
 > is in [SUBBRAND.md](SUBBRAND.md).
 
-CARTA opens **a room at a time**. The ladder is Reading → Remembering → Making →
-Keeping; each room's foot holds a door to the next, the ladder in **More** opens
-any of them on request, and nothing is ever taken away. The rooms, fully open:
+CARTA keeps **four rooms, always on the bar** — **Today · Atlas · Record ·
+More**. Home and Café became channels, not rooms: the instrument rides off
+Today (the shelf → the dials → the reading), and the cup out rides off a
+place's page. Find retired into the **Atlas** — search, the chart, the drawn
+plot, the stream, the places worth the walk. The ladder (Reading →
+Remembering → Making → Keeping) survives as the record of how deep you've
+stepped, read under **More → How deep you go**; nothing is ever taken away.
 
-- **Find** (Reading) — other people's cups: the stream, the places worth the walk,
-  whose taste matches yours; read only, always.
-- **Café** (Remembering) — remember the last cup out and the places worth
-  returning to.
-- **Home** (Making) — resume the coffee in hand from the last cup.
-- **Record** (Keeping) — see one preference across both contexts.
+- **Today** — the day's surface: the coffee in hand, again; pick up the brew
+  or start from the shelf; what the atlas holds near your taste; the last
+  cup out.
+- **Atlas** — the reading room: one green traced through every hand. Search
+  it, read the season for your taste, walk a lot's page from grower to bar,
+  propose a sighting.
+- **Record** — the through-line: every reading newest first, home and out
+  side by side, the dial-in trace, what waits.
+- **More** — the rooms, your counts, the export that leaves with you, your
+  circle, sync, the changelog.
 
-Every café is a **page**, not a popup — your cups, the circle's cups, the pin and
-the provenance, one place per place, reached from anywhere its name appears.
+Every café, every green, every roaster is a **page**, not a popup — reached
+from anywhere its name appears. A lot's page carries the road (grown →
+processed → roasted → poured), its identity columns, its standing, where it
+pours, every hand's roast, your own brew corpus, and your overlay at the end
+of it. Every mark explains itself one tap away — the primers.
 
 See [NORTH_STAR.md](NORTH_STAR.md) for the product thesis and restraint standard.
 
 ## First run
 
-The first time you open CARTA it says what it is before it asks anything of you —
-one cup, two contexts, the record yours. Then it asks one question — *how do you
-take your coffee?*
+The first time you open CARTA it says what it is — the record of specialty
+coffee, every lot traced, your taste a wash laid over the trace — and offers
+three doors:
 
-- **Someone else makes it** — you start in Find, reading; keeping nothing.
-- **I want to remember mine** — Café opens too; a shop and one tap is a record.
-- **I make my own** — Home opens as well; put a coffee on the shelf and brew.
+- **I read, mostly** — the Atlas opens; keep nothing, ever.
+- **Someone else makes it** — a bar and one tap is a whole record.
+- **I make my own** — the instrument opens; begin from the last cup.
 
-The answer only sets how much of CARTA you see first — the rest opens whenever
-you ask, from the doors at the foot of each room or the ladder under
-**More → How deep you go**. Replay the welcome any time from
-**More → The manual → Replay the welcome**.
+The answer only sets where you land first — every room stays on the bar.
+Replay the welcome any time from **More → The manual → Replay the welcome**.
 
 ## Logging a brew
 
@@ -72,31 +81,39 @@ what's still blank; offline, or a silent site, you type it in by hand and it all
 still saves. No photograph is captured or stored — a brand is its colours and its
 words, kept small and offline.
 
-When a bag is finished, **put it away** from Home — it waits under *Put away*
-with your best cup, and restores with everything you learned when you buy it
-again.
+When a bag is finished, **put it away** from the shelf (Today → *or start from
+the shelf*) — it waits under *Put away* with your best cup, and restores with
+everything you learned when you buy it again.
 
 ## Appearance
 
 CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, and one ember-red signal for the current action and the cup’s score. Two themes — **Paper** and **Dusk** — switch under **More → Preferences**, remembered per user. A third choice, **Auto**, follows the device's own light/dark setting (iOS Settings → Display & Brightness, etc.) and moves with it live, no reload needed. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
 
-## Today, and the matching
+## Today, the Atlas, and the matching
 
-**Today** is the first tab — the day's surface. It holds the thread you left and
-the next thing worth reading:
+**Today** is the first tab — the day's surface: the coffee in hand ("The
+Worka Sakaro, again."), the last reading and recipe, **Pick up the brew** or
+*start from the shelf*, what the atlas holds near your taste (each card
+carrying its reasons), and the last cup out.
 
-- **Pick up where you left off.** Leave the map mid-read and Today offers the
-  same map, the same card, for a week. Left longer, the session lets go and the
-  place steps back to a plain suggestion — the reading keeps, the ceremony
-  doesn't.
-- **Something new for you.** Three teasers, matched against your record, each
-  carrying its reasons. "The full map" opens the whole reading.
-- **The map, read for you.** Every place on the register you haven't kept,
-  ranked by match — pins on the map, a card per pin, or the same reading as a
-  list. Reached from Today or Find. Online, real streets draw themselves behind
-  the pins — OpenStreetMap, repainted in CARTA's own paper and ink, keyless and
-  untracked — and the map pans freely; offline the same pins stand on the drawn
-  plot, exact as ever.
+**The Atlas** is the reading room, and the matching lives there now:
+
+- **Read the season for me.** Ask, and the atlas composes the season once, in
+  front of you — the pins settle and a line draws through them, ranked only by
+  your own taste, shown with its reasons. Ask again and it composes again; it
+  never plays on its own, and under the OS reduced-motion setting it lands
+  composed instantly.
+- **Worth the walk, for you.** Every place on the register you haven't kept,
+  ranked by match, each with its reasons — plus the full map reading. Online,
+  real streets draw themselves behind the pins — OpenStreetMap, repainted in
+  CARTA's own paper and ink, keyless and untracked; offline the same pins
+  stand on the drawn plot, exact as ever.
+- **The season's lots, the hands, the stream.** Every anchored green with its
+  standing worn as chips, the roasters and bars behind them, and the circle's
+  cups.
+- **Propose a sighting.** A bag on a shelf, a roast on a bar — the chart looks
+  for it before it binds. A shared printed code binds outright; a fingerprint
+  match asks; a same-name-different-process refuses to merge on the string.
 
 **The matching** reads three things, and says so: the *traits* of the places you
 keep (their tags and reach facts, weighed heavier where you scored well); the
@@ -107,9 +124,9 @@ page — "Why this" — and no score is ever shown without them.
 
 - **The early read.** Until you've kept three café cups the matching speaks in
   bands — *worth a look · promising · a strong read* — not numbers. New to the
-  record entirely? Today asks for **three cafés you already love**; their traits
-  become your signal, and a place the register doesn't know yet enters on its
-  name alone. At your third kept cup, the numbers arrive.
+  record entirely? The Atlas asks for **three cafés you already love**; their
+  traits become your signal, and a place the register doesn't know yet enters
+  on its name alone. At your third kept cup, the numbers arrive.
 - **Save** waits under **Want to go** — one list, a save from anywhere lands
   there. The Record orders it by match and, when a save sits unvisited a couple
   of weeks, asks once whether to let it go. Letting go is not a skip — no mark
@@ -122,7 +139,7 @@ page — "Why this" — and no score is ever shown without them.
 
 ## Café cups
 
-The **Café** tab is a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, the order-again verdict, traceability — waits behind one line, to add now or later.
+Your cafés live as pages off the Atlas — a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, the order-again verdict, traceability — waits behind one line, to add now or later.
 
 - **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put).
 - **Each café wears its own colours.** Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — and builds a whole surface from that one signature colour: the café's page and every cup logged there take on the palette. A small design system, held in light and dusk alike. Only the palette is kept, never a hotlinked image, so the record stays offline and yours.
@@ -296,7 +313,12 @@ The app now appears as an icon on your home screen. Tap it to open in fullscreen
 
 ## Export Your Data (IMPORTANT)
 
-Everything is stored locally in your browser. **Export monthly** using **More → Save a copy**. Keep backups safe. Each keeper exports their own ledger (exports are stamped with the keeper's name). A copy is self-contained: it carries the catalog alongside the ledger, so it reads every roaster, origin and roast in full even on a device that never synced. Bringing a copy back in folds that catalog into the device's own.
+Everything is stored locally in your browser. **Export monthly** from **More →
+The record leaves with you**. Two copies live there: **Export the ledger** — a
+self-contained page on CARTA paper stock, your overlay only, with the
+machine-readable record (`carta.ledger/v1`) embedded, which also **reads back
+in** ("Bring a ledger back" — read to you, never merged); and **the working
+copy** — JSON, everything, the one to keep as a backup. Keep backups safe. Each keeper exports their own ledger (exports are stamped with the keeper's name). A copy is self-contained: it carries the catalog alongside the ledger, so it reads every roaster, origin and roast in full even on a device that never synced. Bringing a copy back in folds that catalog into the device's own.
 
 If you clear browser data or Safari storage fills up, your ledger is gone — there is no server.
 
