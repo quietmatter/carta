@@ -29,6 +29,14 @@ manifest.json         PWA metadata (homescreen install); scope is /carta/
 icon-192.svg          App icons (manifest references .png variants at those sizes)
 icon-512.svg
 README.md             User-facing app docs
+CNAME                 GitHub Pages custom domain
+docs/                 The design record — reference, never runtime (see docs/README.md)
+  VOICE.md            The voice standard every user-facing string screens against
+  NORTH_STAR.md, VISION.md, RESOLVER.md, SCHEMA.md, …   the thesis + specs
+  DESIGN_BRIEF.md     The redesign commission
+  redesign-concept/   The Claude Design prototype (CARTA Redesign.dc.html) — THE
+                      reference file for the app's surfaces — plus its handoff
+  design-system/      The Carta design system: tokens, components, foundations
 server/
   server.js           The sync server — one file, zero deps, JSON-on-disk storage
   worker.mjs          The same server as a Cloudflare Worker — one Durable Object, chunked storage
@@ -71,6 +79,28 @@ server/
   ledger object; `load()` / `save()` read/write it. `blank` is the empty ledger
   shape. `readOnly()` / `guard()` block writes when viewing another user's
   ledger.
+- **the pen** — who may write the *shared* record (the Register + the catalog),
+  temporarily one hand: the founder's. `isAdmin()` answers it (the server's
+  `SYNC.founder` flag when synced; else the device-local claim in
+  `carta.pen.v1`, taken up under More → Administration); `penGuard()` fronts
+  every deliberate shared-record write — reach amend/withdraw, the café entry
+  editor, the claim ceremony, the standing, merge/split, propose-a-sighting,
+  curator ingestion. Both servers enforce it too: `PUT /api/cafes` and
+  `PUT /api/catalog/:kind` are founder-only (403 `pen-held`; the first account
+  registered is the founder) and the client pulls shared docs for everyone but
+  pushes only as the founder. **The founder's desk** (`openDesk`, More →
+  Administration) is the one door for entering the shared record cleanly.
+  Everyone always writes their own ledger; implicit write-path stamps
+  (`catStamp*`, `regUpsert` blank-fills) still run locally and simply never
+  leave a non-founder device. Temporary — group curation returns with the
+  proposed→stood moderation ceremony.
+- **the shutter** — `LEGACY_ON=false` (router section) temporarily hides
+  pre-redesign surfaces the prototype (`docs/redesign-concept/`) does not
+  carry: the matching's cold-start, worth-the-walk and discover-map door on
+  the Atlas, the circle stream, taste affinity, beans worth chasing, the
+  cross-context read, More's by-roaster/by-lot folds and quick start. Nothing
+  is deleted — flip the flag and every one answers again. The Record's
+  bookkeeping (wants, skips, leans) stays visible regardless.
 - **the Register** — the shared café ledger ("Jane's Fighting Ships, for
   cafés"): one canonical entry per café, stored *outside* the per-user keys
   under `carta.register.v1` (`REG`), shared by every user of the device and —
@@ -330,7 +360,8 @@ Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
 (the reach: `{id, by, at, bag?, seen?[], withdrawnAt?, supersededAt?}` — signed
 lines that only ever accumulate; strikes add a date, nothing is removed, and
 `mergeRegister` unions them by id so sync never loses a line). It is shared by
-all users on the device and synced as one group-writable document.
+all users on the device and synced as one shared document (founder-writable
+for now — see *the pen* above).
 
 Beside the Register the device keeps **the catalog** (`carta.catalog.<kind>.v1`) —
 the spine upstream of the café, the Register's envelope generalised to eight kinds
@@ -338,8 +369,8 @@ the spine upstream of the café, the Register's envelope generalised to eight ki
 `gear`). `loadReg`/`saveReg`/`mergeRegister` became `loadDoc(kind)`/`saveDoc`/
 `mergeCatalog`; `regUpsert` became `catUpsert(kind, key, …)` (same sparse-fill,
 blanks-only law); `reachCompile` became `compile(entry)` (fold sightings into a
-reading). Each doc is one group-writable rev/409 document at `/api/catalog/:kind`
-(both servers). The **lot** carries its identity columns — `grain`, `scope`,
+reading). Each doc is one shared rev/409 document at `/api/catalog/:kind`
+(both servers; founder-writable for now — see *the pen*). The **lot** carries its identity columns — `grain`, `scope`,
 `hardIds[]`, `fingerprint{}`, `lineage{}`, `processingBatchRef` — beside its flat
 origin (the read/retirement surface), never over it. It also carries **the
 standing** (VISION step 5) — `caliber[]` (append-only records, each
@@ -352,7 +383,7 @@ from every readable ledger (`catSeed`/`catSeedGear`), re-points the ledger onto 
 then retires the flat text once a node stands (`catRetire`, the one irreversible
 step). Write-path stamps (`catStamp*`) author nodes at save, not next boot.
 
-A record binds to its lot through the resolver's ladder (`RESOLVER.md`, the step-2
+A record binds to its lot through the resolver's ladder (`docs/RESOLVER.md`, the step-2
 spec), strongest rung first. The **hard-ID rung** is built: a namespaced
 `{scheme,value}` printed lot code (kenya-outturn · coe · best-of-panama ·
 gesha-village · ninety-plus · esmeralda · ico), entered on a bag/café-cup origin
@@ -365,7 +396,7 @@ accumulate on the lot append-only (`lotAddHardIds` — signed, dated, struck-not
 deleted, a *documented* rung), unioned across devices by `mergeHardIds` in
 `mergeCatalog` exactly as sightings are. Wired through `catStampLot`/`catSeed`/
 `catRefsFor`, reversible and offline-first. The fuzzy scorer, propose-and-confirm and
-merge/split are designed in `RESOLVER.md` and built next; `compile(entry)` waits for
+merge/split are designed in `docs/RESOLVER.md` and built next; `compile(entry)` waits for
 those passes. The **lot page** (`openLotPage`, drilled into from a bag or the by-lot
 fold) lists the roasts referencing one green, each named by its roaster — the "same
 green, many hands" surface — and names the documented rung when a lot is
@@ -393,6 +424,14 @@ the brew corpus (step 6) and discovery (step 7) follow.
 
 ### Invariants to preserve
 
+- **The shared record is single-pen for now.** Every deliberate write to the
+  Register or the catalog goes through `penGuard()`, its affordance hidden
+  behind `isAdmin()`, and both servers refuse a non-founder PUT. A keeper's own
+  ledger is never gated — reading everything and writing your own record are
+  untouchable. When restoring group curation, lift the gate deliberately
+  (server + client + UI together), never piecemeal.
+- **The shutter hides, never deletes.** `LEGACY_ON` gates pre-redesign surfaces;
+  restoring one is a flag flip, not a rewrite. Don't build new work behind it.
 - **Temperature is stored canonically in °C** (`tempC`); the °C/°F switch is a
   display preference (`tempUnit`) remembered per user. Don't store °F.
 - **A brew requires a Setup** — `saveBrew` refuses without one.
@@ -440,8 +479,10 @@ the brew corpus (step 6) and discovery (step 7) follow.
   returns **409** carrying the server's copy — the client merges and retries.
   Revisions only increment.
 - **The café Register** — one shared document at `GET/PUT /api/cafes` (the
-  `/api/register` path was taken by sign-up), same rev/409 protocol, but
-  **writable by any authenticated user** — the group maintains it together.
+  `/api/register` path was taken by sign-up), same rev/409 protocol, readable
+  by every authenticated user but **written only by the founder for now** (the
+  first account registered; a non-founder PUT gets `403 pen-held` and the
+  client quietly stops pushing).
   The client merge (`mergeRegister`) unions by entry id (newer `updatedAt`
   wins; ties break by substance, then bytes, so both sides converge) and
   collapses same-name entries born on different devices, keeping the earliest
@@ -501,7 +542,7 @@ is the one exception browsers allow, so local dev needs no TLS.
   first from stored lat/lon, stands alone offline, and every map surface must
   keep working — pins, taps, ranking — with zero tiles. Never let a surface
   *require* the street layer.
-- **Match the brand voice.** `VOICE.md` is the standard for every user-facing
+- **Match the brand voice.** `docs/VOICE.md` is the standard for every user-facing
   string — sentence case, terse, honest, no emoji, the record-keeper persona.
   Screen new copy against its gate before shipping.
 - **Bump `APP_VERSION` + add a `CHANGELOG` entry** in `index.html` for

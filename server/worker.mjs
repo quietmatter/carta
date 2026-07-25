@@ -26,9 +26,11 @@
  *   CARTA_REGISTER_CODE   shared sign-up secret — set with `wrangler secret put`
  *
  * Auth model is unchanged from server.js: trust-your-friends, scrypt-hashed
- * passcodes, every keeper reads every ledger, only the owner writes theirs,
- * the café Register and the catalog (the spine) are group-writable. Not a
- * hardened public service.
+ * passcodes, every keeper reads every ledger, only the owner writes theirs.
+ * The café Register and the catalog (the spine) are read by everyone but — for
+ * now — written only by the founder (the first account registered; existing
+ * stores promote their earliest account on first use), while the atlas settles.
+ * Not a hardened public service.
  * ============================================================ */
 
 import { scrypt, randomBytes, timingSafeEqual, createHash } from 'node:crypto';
@@ -72,7 +74,16 @@ export class CartaStore {
   }
 
   /* ---------- storage helpers ---------- */
-  async users() { return (await this.s.get('users')) || []; }
+  // The founder holds the pen on the shared documents. Stores from before the
+  // role promote their earliest account once, so an existing group keeps working.
+  async users() {
+    const users = (await this.s.get('users')) || [];
+    if (users.length && !users.some(u => u.founder)) {
+      users.slice().sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))[0].founder = true;
+      await this.s.put('users', users);
+    }
+    return users;
+  }
   async tokens() { return (await this.s.get('tokens')) || {}; }
   async getMany(keys) {
     const out = new Map();
@@ -150,12 +161,13 @@ export class CartaStore {
       salt, hash: await kdf(passcode, salt),
       createdAt: iso(),
     };
+    if (!users.length) user.founder = true; // the first account keeps the pen
     users.push(user);
     const token = randHex(32);
     const tokens = await this.tokens();
     tokens[token] = { userId: user.id, createdAt: iso() };
     await this.s.put({ users, tokens });
-    return json(201, { token, userId: user.id, name: user.name });
+    return json(201, { token, userId: user.id, name: user.name, founder: !!user.founder });
   }
 
   async handleLogin(request, ip) {
@@ -172,7 +184,7 @@ export class CartaStore {
     const tokens = await this.tokens();
     tokens[token] = { userId: u.id, createdAt: iso() };
     await this.s.put('tokens', tokens);
-    return json(200, { token, userId: u.id, name: u.name });
+    return json(200, { token, userId: u.id, name: u.name, founder: !!u.founder });
   }
 
   async handleUsers() {
@@ -183,7 +195,7 @@ export class CartaStore {
     return json(200, {
       users: users.map(u => {
         const m = metas.get(`L:${u.id}:meta`) || { rev: 0, updatedAt: null };
-        return { id: u.id, name: u.name, rev: m.rev, updatedAt: m.updatedAt, counts: m.counts || counts(null) };
+        return { id: u.id, name: u.name, founder: !!u.founder, rev: m.rev, updatedAt: m.updatedAt, counts: m.counts || counts(null) };
       }),
     });
   }
@@ -218,10 +230,20 @@ export class CartaStore {
     return jsonWith(200, m, 'register', await this.readRaw('R', meta));
   }
 
-  // Unlike ledgers, the Register is writable by every authenticated user — the
-  // group maintains it together. Same optimistic concurrency: a stale baseRev
-  // gets a 409 carrying the server copy to merge against.
+  // The shared documents are read by everyone but written — for now — only by
+  // the founder's pen. A non-founder PUT gets a plain 403 the client treats as
+  // read-only; the document it holds stays device-local, nothing is lost.
+  penHeld(auth) {
+    return auth.founder ? null
+      : err(403, 'pen-held', 'The shared record is kept by the founder for now — your copy stays on your device');
+  }
+
+  // The Register carries one entry per café for the whole group. Writes go
+  // through the founder's pen (penHeld). Same optimistic concurrency: a stale
+  // baseRev gets a 409 carrying the server copy to merge against.
   async handlePutRegister(request, auth) {
+    const held = this.penHeld(auth);
+    if (held) return held;
     const body = await this.body(request);
     if (body instanceof Response) return body;
     if (typeof body.baseRev !== 'number' || !body.register || typeof body.register !== 'object' ||
@@ -243,10 +265,12 @@ export class CartaStore {
     return jsonWith(200, m, 'catalog', await this.readRaw('C:' + kind, meta));
   }
 
-  // A catalog kind, like the café Register, is group-writable — the whole party
-  // keeps the shared spine together. Same optimistic concurrency: a stale baseRev
-  // gets a 409 carrying the server copy to merge against.
+  // A catalog kind, like the café Register, is a shared document — read by the
+  // whole party, written through the founder's pen (penHeld). Same optimistic
+  // concurrency: a stale baseRev gets a 409 carrying the server copy.
   async handlePutCatalog(request, auth, kind) {
+    const held = this.penHeld(auth);
+    if (held) return held;
     const body = await this.body(request);
     if (body instanceof Response) return body;
     if (typeof body.baseRev !== 'number' || !body.catalog || typeof body.catalog !== 'object' ||
