@@ -133,6 +133,10 @@ server/
   (`{kind:'lot'|'roaster',id}` → `vLotPage`/`vRoasterPage`), `discOn`
   (`vDiscover`), `curateOn` (`vCurate`). The screen-settle animation
   (`.ca-screen`) plays only when the screen key changes, never on a repaint.
+  Overlays walk into each other, so back is a shallow stack: `pageStack` +
+  `pagePush()` (called by `openLotPage`/`openRoasterPage`/`openPlate`/
+  `openPlace`) and `pageBack()`, which restores a page, a place or the chart.
+  `go()` clears it — a room chosen from the bar is a fresh walk.
 - **today + the matching** — the Today tab (`vToday`, the landing surface: the
   coffee in hand again, the continuation, *Pick up the brew* / *or start from
   the shelf*, "On the atlas, near your taste" with its reasons, the last cup
@@ -164,7 +168,10 @@ server/
   until their own evidence stands), availability (pours), the roasts by hand,
   the corpus (own brews — grind shown only within one Setup), your overlay,
   and a Corrections & identity fold (binds, merge/split, the standing entry).
-  `openBatchPage` keeps its sheet.
+  Its `pageHero` title names the green and its variety only — the origin line
+  under it already carries the place. The roaster page carries the same
+  reading at its own scope (the aggregate road across its greens, the origin
+  plot). `openBatchPage` keeps its sheet.
 - **the primers** — the `PR` map (term → `{t,b}`) and `openPrimer(key)`, a
   second sheet layer (`#primer`, stacks above any open sheet). Every new
   badge/chip/term ships its primer in voice the same pass; `exBtn()` renders
@@ -203,16 +210,26 @@ server/
   walks, pour hands off to `openCafe` prefilled, noting lands a chart-less
   `authored` record and opens the lot page. `doorStampActors` is the origin-actor
   split: tags the producer node's `producerKind` and gives **processors** their
-  first write path (`lot.processorRefs`, blanks-only). The typed forms stay as
-  the fallback and the edit surface.
+  first write path (`lot.processorRefs`, blanks-only). The bind step also takes
+  the **roast date** (`doorRoasted`) — the one fact a paste can never carry and
+  the rest window can't read without; asked once, optional, never invented. The
+  typed forms stay as the fallback and the edit surface.
 - **the road + the plate** (`SURFACES.md` §2) — one reading, aggregated:
   `lotRoadStations`/`road6HTML` draw the six honest stations (grown → processed →
   milled → roasted → poured → read; hollow marks, dashed connectors — the gap is
   the product) on the lot page and Today's coffee-in-hand; `aggRoadHTML` counts
-  them across a facet. A plate is `pageView={kind:'plate',fk,fv}` → `vPlatePage`
-  (`openPlate`, facets from `plateFacets` under Atlas → "Cut the atlas") — a
-  query over lots, never a stored collection, and one law: unread on a facet is
-  counted, never silently hidden.
+  them across a set of greens. A plate is `pageView={kind:'plate',fk,fv}` →
+  `vPlatePage` (`openPlate`, facets from `plateFacets` under Atlas → "Cut the
+  atlas") — a query over lots, never a stored collection, and one law: unread on
+  a facet is counted, never silently hidden. **One reading, five scopes**: the
+  road counts at lot, facet (`vPlatePage`), roaster (`vRoasterPage`), grower
+  (`openProducerPage`) and venue (`vPlace`, over `poursHere`) scope, and the plot
+  is `originFrameHTML(atlasGraph(ids),{heading,minMarks})` — the origin frame
+  factored out of `atlasFrames` and pointed at any slice. `minMarks:2` keeps a
+  one-dot box off the narrow scopes; the hand-off sentence says it better. Each
+  station's label is terse by design (the region, not "region, country"; the
+  process family sentence-cased via `sentence()`) and clamps to two lines with
+  the whole text on the mark — the page states it in full a line below.
 - **brew flow** — `openBrew` → `saveBrew` → `openImpression` → `saveCup`.
 - **café** — logging café cups (`openCafe`/`saveCafeCup`, with optional
   structured traceability), the café passport (`shopAgg`, `vCafes`, favorites),
@@ -265,7 +282,11 @@ server/
   the hand-off to the chart stated in words, never a line across the sea).
   Lenses (`atlasLens`/`atlasLensSet` — scenes, kinds, the road, kept) narrow,
   never sort, and say what they hid. `mapProject` takes an explicit bbox;
-  `mapMerge` folds pins the plot can't separate into one counted mark;
+  `mapMerge` folds pins the plot can't separate into one counted mark — and,
+  given a `sameKey`, marks that *read* the same too (two region centroids
+  labelled alike are one coarse mark; drawing them apart claims a precision the
+  grain never had). An actor already drawn as a located producer is not also
+  listed for want of a coordinate;
   `smapView` derives a `minZoom` camera floor; the camera keys on the chart
   (`atlas|<chart>|<scene>`), not the pins. Every mark taps its 4a page
   (`openProducerPage`/`openRoasterPage`/`openPlace`), so map and pages are one
