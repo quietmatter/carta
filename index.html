@@ -426,17 +426,19 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
    lens never a rank. */
 .cafe-map .pin.coarse{background:var(--paper);border-style:dashed}
 .cafe-map .pin.roaster.coarse,.cafe-map .pin.venue.coarse{border:1.5px dashed var(--ink-2)}
-/* a scene mark — one cluster at region altitude, honestly an area: it carries its count, never
-   pretends to be a point. A merged mark is the same shape at any altitude — pins closer than the
-   plot can separate fold into one mark carrying a count rather than stacking labels. */
-.cafe-map .pin.scene,.cafe-map .pin.merged{width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--paper);font-family:var(--sans);font-size:10px;font-weight:600;border-radius:50%}
-.cafe-map .pin.merged{width:19px;height:19px}
+/* a scene mark — an area, drawn as one mark that says so: hollow and dashed like every coarse
+   fact, never a filled cluster badge pretending to be a location. Its counts ride the label and
+   the chips. A merged mark is different — real pins the plot cannot separate, folded into one
+   mark carrying a count rather than stacking labels. */
+.cafe-map .pin.scene{width:14px;height:14px;background:var(--paper);border:1.5px dashed var(--ink-2);border-radius:3px}
+.cafe-map .pin.merged{width:19px;height:19px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--paper);font-family:var(--sans);font-size:10px;font-weight:600;border-radius:50%}
 .cafe-map .atlas-edges{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 .cafe-map .atlas-edges line{stroke:var(--ink-3);stroke-width:1;opacity:.5;stroke-dasharray:2 2;vector-effect:non-scaling-stroke}
 .atlas-key{display:inline-block;width:9px;height:9px;vertical-align:middle;margin-right:3px}
 .atlas-key.origin{background:var(--paper);border:1.5px solid var(--ink-2);border-radius:50%}
 .atlas-key.roaster{background:var(--ink);border-radius:50%}
 .atlas-key.venue{background:var(--ink);border-radius:2px}
+.atlas-key.scene{background:var(--paper);border:1.5px dashed var(--ink-2);border-radius:2px}
 .cafe-map .smap-note{position:absolute;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;gap:9px;padding:8px 11px;background:color-mix(in srgb,var(--paper-card) 92%,transparent);border-top:1px solid var(--line);font-family:var(--sans);font-size:12px;color:var(--ink-2)}
 .cafe-map .smap-note .dot{flex:none;width:5px;height:5px;border-radius:50%;background:var(--ink-3)}
 .cafe-map .smap-note .text-action{margin-left:auto;flex:none}
@@ -3388,7 +3390,7 @@ function atlasMarks(lotIdsArg){
     return {lat:n.lat,lon:n.lon,el,id:n.key};
   });
   return (st.chart?st.chart.scenes:[]).map(s=>{
-    const el=smapPinEl('scene',{text:String(s.members.length),label:`${s.name} · ${s.roasters} roaster${s.roasters===1?'':'s'} · ${s.venues} bar${s.venues===1?'':'s'}`,aria:s.name+' · a scene'});
+    const el=smapPinEl('scene',{label:`${s.name} · ${s.members.length}`,aria:`${s.name} — ${s.roasters} roaster${s.roasters===1?'':'s'}, ${s.venues} bar${s.venues===1?'':'s'} — a scene`});
     el.onclick=e=>{e.stopPropagation();atlasSceneSet(s.key)};
     return {lat:s.lat,lon:s.lon,el,id:s.key};
   });
@@ -3416,7 +3418,7 @@ function atlasFrames(lotIdsArg,opts){
     const road=atlasLens.road?g.edges.filter(([a,b])=>shownKeys.has(a)&&shownKeys.has(b)):[]; // a producer end never sits in this frame, so only roaster → bar survives
     const lines=road.map(([a,b])=>{const A=pm[a],B=pm[b];return A&&B?`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"></line>`:''}).join('');
     const pins=marks.map(p=>p.n>1
-      ?`<div class="pin merged" style="left:${p.x}%;top:${p.y}%">${p.n}<span class="lbl">${p.n} marks — the streets part them</span></div>`
+      ?`<div class="pin merged" style="left:${p.x}%;top:${p.y}%">${p.n}<span class="lbl">${p.n} marks</span></div>`
       :`<div class="pin ${atlasCls[p.kind]}${grainCoarse(p.grain)?' coarse':''}" style="left:${p.x}%;top:${p.y}%" onclick="${p.kind==='venue'?`closeCurate();openPlace(${jsq(p.shop)})`:`openRoasterPage(${jsq(p.id)})`}"><span class="lbl">${esc(p.name)}</span></div>`).join('');
     const svg=lines?`<svg class="atlas-edges" viewBox="0 0 100 100" preserveAspectRatio="none">${lines}</svg>`:'';
     // the season line — drawn through the pins in taste-rank order, only when the keeper asked for the reading
@@ -3437,7 +3439,7 @@ function atlasFrames(lotIdsArg,opts){
   }else if(st.chart){ // region altitude — every mark is a scene: honestly an area, carrying its counts
     const sc=st.chart.scenes,bb=bboxOf(sc);
     const proj=mapProject(sc,{bbox:bb});
-    const pins=proj.map(s=>`<div class="pin scene" style="left:${s.x}%;top:${s.y}%" onclick="atlasSceneSet(${jsq(s.key)})">${s.members.length}<span class="lbl">${esc(s.name)} · ${s.roasters} roaster${s.roasters===1?'':'s'} · ${s.venues} bar${s.venues===1?'':'s'}</span></div>`).join('');
+    const pins=proj.map(s=>`<div class="pin scene" style="left:${s.x}%;top:${s.y}%" onclick="atlasSceneSet(${jsq(s.key)})"><span class="lbl">${esc(s.name)} · ${s.members.length}</span></div>`).join('');
     _smapCfg.atlasmap=smapView({interactive:true,note:true,camKey:'atlas|'+chartKey+'|region',
       maxBounds:[[bb.lonMin,bb.latMin],[bb.lonMax,bb.latMax]],
       marks:()=>atlasMarks(lotIdsArg)},sc);
@@ -3450,7 +3452,7 @@ function atlasFrames(lotIdsArg,opts){
   if(st.chart){
     const chip=(on,call,label)=>`<button class="chip${on?' on':''}" onclick="${call}">${label}</button>`;
     const chartChips=st.charts.length>1?st.charts.map(c=>chip(c===st.chart,`atlasChartSet(${jsq(c.name)})`,esc(c.name))).join(''):'';
-    const sceneChips=st.chart.scenes.length>1?st.chart.scenes.map(s=>chip(!!st.scene&&st.scene.key===s.key,`atlasSceneSet(${jsq(s.key)})`,esc(s.name))).join(''):'';
+    const sceneChips=st.chart.scenes.length>1?st.chart.scenes.map(s=>chip(!!st.scene&&st.scene.key===s.key,`atlasSceneSet(${jsq(s.key)})`,`${esc(s.name)} <span class="num">${s.members.length}</span>`)).join(''):'';
     const kindChips=st.scene?[chip(atlasLens.roaster,`atlasLensSet('roaster')`,'Roasters'),chip(atlasLens.venue,`atlasLensSet('venue')`,'Bars'),chip(atlasLens.road,`atlasLensSet('road')`,'The road'),chip(atlasLens.kept,`atlasLensSet('kept')`,'Kept')].join(''):'';
     lensHTML=(chartChips||sceneChips||kindChips)?`<div class="lens" style="margin:0 0 8px">${chartChips}${sceneChips}${kindChips}</div>`:'';
     const said=[];
@@ -3463,7 +3465,7 @@ function atlasFrames(lotIdsArg,opts){
   const on=[c.roasters&&`${c.roasters} roaster${c.roasters===1?'':'s'}`,c.venues&&`${c.venues} venue${c.venues===1?'':'s'}`].filter(Boolean).join(' · ');
   const legendHTML=st.chart?`<div class="muted small" style="display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin:0 2px 6px">
     <span><span class="atlas-key roaster"></span>roaster</span><span><span class="atlas-key venue"></span>venue</span>
-    ${st.scene?'':`<button class="text-action ex" onclick="openPrimer('scene')">a numbered mark is a scene — tap it to walk in</button>`}</div>
+    ${st.scene?'':`<span><span class="atlas-key scene"></span><button class="text-action ex" onclick="openPrimer('scene')" style="padding:0">a scene — an area, drawn as one mark; tap to walk in</button></span>`}</div>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 12px">${on||'nothing placed'} on the chart${g.listed.roasters.length||g.listed.venues.length?` · listed for want of a coordinate: ${[...g.listed.roasters,...g.listed.venues].slice(0,3).map(esc).join(' · ')}${g.listed.roasters.length+g.listed.venues.length>3?' and more':''}`:''}.</div>`:'';
   // ── the origin frame — coarse, drawn only, connected in words ──
   let originHTML='';
@@ -3474,11 +3476,12 @@ function atlasFrames(lotIdsArg,opts){
       ?`<div class="pin merged" style="left:${p.x}%;top:${p.y}%">${p.n}<span class="lbl">${p.n} origins</span></div>`
       :`<div class="pin origin${grainCoarse(p.grain)?' coarse':''}" style="left:${p.x}%;top:${p.y}%" onclick="openProducerPage(${jsq(p.id)})"><span class="lbl">${esc(p.name)}</span></div>`).join('');
     const memberKeys=new Set(st.chart?st.chart.scenes.flatMap(s=>s.members.map(m=>m.key)):[]);
-    const hand=new Map();
+    const hand=new Map(); // folded by the origin's NAME — two stations sharing a region read as one line, their hands unioned, never a duplicate reading
     g.edges.forEach(([a,b])=>{const p=a.indexOf('producer:')===0?a:b.indexOf('producer:')===0?b:null;if(!p)return;
       const r=p===a?b:a;if(r.indexOf('roaster:')!==0)return;if(memberKeys.size&&!memberKeys.has(r))return;
-      if(!hand.has(p))hand.set(p,new Set());hand.get(p).add(r)});
-    const handLines=[...hand.entries()].map(([k,rs])=>({name:(nm[k]||{}).name||'an origin',n:rs.size})).sort((a,b)=>b.n-a.n);
+      const name=(nm[p]||{}).name||'an origin';
+      if(!hand.has(name))hand.set(name,new Set());hand.get(name).add(r)});
+    const handLines=[...hand.entries()].map(([name,rs])=>({name,n:rs.size})).sort((a,b)=>b.n-a.n);
     const chartName=st.chart?st.chart.name:'';
     const handoff=handLines.length?`<div class="muted small serif" style="font-style:italic;margin:8px 2px 0">${
       handLines.slice(0,3).map(h=>`${esc(h.name)} — ${h.n} hand${h.n===1?'':'s'}${chartName?` in ${esc(chartName)}`:''}.`).join(' ')}${
