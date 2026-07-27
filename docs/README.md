@@ -14,6 +14,10 @@ alone. Cite the document, not a memory of it.
 
 - **RESOLVER.md** — how a record binds to its lot (the ladder, merge/split)
 - **SCHEMA.md** — the catalog envelope and the shared documents
+- **CHARTS.md** — the atlas at more than one altitude: scenes, charts, the two
+  frames, the lenses and facets
+- **SURFACES.md** — the surfaces and the graph under them: one door in, one
+  reading out, and what to cut so the graph can fill
 - **LOT_IDENTITY.md** — what a lot is, and what it honestly is not
 - **MODEL_QA.md** — questions the model answered, kept for the record
 
@@ -30,4 +34,6 @@ alone. Cite the document, not a memory of it.
 - **redesign-concept/** — the Claude Design prototype (`CARTA Redesign.dc.html`),
   its handoff, its voice pass, and the local design-system copies. **The
   prototype is the reference file for the app's surfaces.**
+  `STREAMLINED.html` is `SURFACES.md` built — the door, the road, the plate,
+  in both themes, with a live parser and the data model on a toggle.
 - **design-system/** — the Carta design system: tokens, components, foundations
