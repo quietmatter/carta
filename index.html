@@ -238,7 +238,11 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 .road6 .stn.you .mk{background:var(--line-strong);box-shadow:0 0 0 2px var(--paper-card),0 0 0 3px var(--line-strong)}
 .road6 .stn .lb{font-family:var(--sans);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);text-align:center;line-height:1.25}
 .road6 .stn.held .lb{color:var(--ink-2)}
-.road6 .stn .who{font-family:var(--serif);font-size:11px;text-align:center;line-height:1.3;color:var(--ink);word-break:break-word}
+/* six cells across a phone: a long name reads to two lines and stops, its whole
+   text on the mark; the page states it in full a line below. A third ragged line
+   costs more legibility than the ellipsis does. */
+.road6 .stn .who{font-family:var(--serif);font-size:11px;text-align:center;line-height:1.3;color:var(--ink);
+  overflow-wrap:break-word;hyphens:auto;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .road6 .stn:not(.held) .who{color:var(--ink-d);font-style:italic}
 @media (prefers-reduced-motion:no-preference){
   .road6.draw .stn{animation:stnIn .5s var(--mo-ease) both}
@@ -1909,6 +1913,8 @@ const cafeCups=()=>D.cups.filter(c=>c.kind==='cafe');
 const modeOf=arr=>{if(!arr.length)return null;const m={};let best=null,bn=0;arr.forEach(v=>{m[v]=(m[v]||0)+1;if(m[v]>bn){bn=m[v];best=v}});return best};
 const avgHedonic=cups=>{const h=cups.map(c=>c.hedonic).filter(v=>v!=null);return h.length?(h.reduce((a,b)=>a+b,0)/h.length).toFixed(1):null};
 const money=n=>n==null?null:'$'+(n%1===0?String(n):n.toFixed(2));
+// a lowercase compiled term (a process family, a grain) read at the head of a line
+const sentence=s=>{const t=String(s??'');return t?t.charAt(0).toUpperCase()+t.slice(1):''};
 const roasterList=()=>[...new Set([...D.bags.map(bagRoaster),...cafeCups().map(cupRoaster)].filter(Boolean))];
 // escape a string for use inside a single-quoted JS call within a double-quoted HTML attribute
 const jsq=s=>`'${String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;')}'`;
@@ -1993,11 +1999,14 @@ function mapProject(points,opts){
 }
 // Pins the plot cannot separate fold into one mark carrying a count — never six labels on one
 // pixel (CHARTS.md, the projection law). The live layer keeps every pin; zoom separates them there.
-function mapMerge(proj,minSep){
+// sameKey folds by READING as well as by distance: two region centroids that draw the same words
+// are one coarse mark, never two — drawing them apart claims a precision the grain does not have.
+function mapMerge(proj,minSep,sameKey){
   minSep=minSep||7;
   const out=[];
-  proj.forEach(p=>{const hit=out.find(m=>Math.hypot(m.x-p.x,m.y-p.y)<minSep);
-    if(hit){hit.n++;hit.members.push(p)}else out.push({...p,n:1,members:[p]})});
+  proj.forEach(p=>{const k=sameKey?sameKey(p):null;
+    const hit=out.find(m=>(k!=null&&m._k===k)||Math.hypot(m.x-p.x,m.y-p.y)<minSep);
+    if(hit){hit.n++;hit.members.push(p)}else out.push({...p,_k:k,n:1,members:[p]})});
   return out;
 }
 function mapHTML(points){
@@ -2195,10 +2204,18 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='5.3.0';
+const APP_VERSION='5.3.1';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'5.3.1',date:'July 2026',title:'The reading, at every scope — and the way back.',items:[
+    'A roaster’s page, a grower’s, a bar’s now carry the same reading a green does: the road counted across every green in hand, and where those greens grew. One component, five scopes — the lot, the plate, the roaster, the grower, the bar.',
+    'A plate draws its origins. Cut the atlas by country, process or variety and the greens are plotted where they grew, not only listed.',
+    'Back means the page you came from. A green opened from a plate returns to that plate; a bar opened from a green returns to the green.',
+    'Two origin marks that read the same fold into one — a region centroid drawn twice claimed a precision the grain never had. And an actor the plot already draws is no longer also listed for want of a coordinate.',
+    'The road reads on a phone: a name runs to two lines and stops rather than breaking into three, and a station says its region rather than its whole address.',
+    'The door takes the roast date — the one fact a paste can never carry. Without it the rest window stays unread, so it is asked for once, at the binding, and never invented.',
+  ]},
   {v:'5.3.0',date:'July 2026',title:'Two frames, and a chart that corrects itself.',items:[
     'The map stopped pretending one projection could hold a front door and a country. The chart frame is the ground you can walk — roasters and bars, streets behind, the road drawn. Where the green came from keeps its own frame, coarse marks stated as coarse, joined in words rather than a line across the sea.',
     'Scenes and charts, derived — a scene is a cluster of roasters and bars close enough for one outing, read from the pins; a chart is one or more scenes under a name you give it. Fix a pin and the chart corrects itself; nothing is stored that could rot. A lens narrows the chart, never sorts it, and says out loud what it hid.',
@@ -2497,12 +2514,13 @@ const LEGACY_ON=false;
 let tab='today';
 let placeView=null;   // a café name — the page currently open over the tab, or null
 let pageView=null;    // {kind:'lot'|'roaster',id} — an atlas page open over the tab, or null
-function openPlace(shop){placeView=shop;pageView=null;render()}
-function closePlace(){placeView=null;render();if(discOn)discScrollTo(discSel,true)}
+let pageStack=[];     // the pages walked through to reach it — back returns to the last one, not the room
+function openPlace(shop){pagePush();placeView=shop;pageView=null;curateOn=false;render()}
+function closePlace(){if(pageStack.length)return pageBack();placeView=null;render();if(discOn)discScrollTo(discSel,true)}
 // Rooms that became channels keep their old names answering — a saved flow
 // that says go('cafes') lands where that work now lives.
 const TAB_ALIAS={field:'today',cafes:'atlas',circle:'atlas'};
-function go(t){t=TAB_ALIAS[t]||t;tab=t;placeView=null;pageView=null;discOn=false;curateOn=false;discMatch=null;clearTimeout(_mt);if(t!=='atlas'){reachLens=0;reachTail={}}render()}
+function go(t){t=TAB_ALIAS[t]||t;tab=t;placeView=null;pageView=null;pageStack=[];discOn=false;curateOn=false;discMatch=null;clearTimeout(_mt);if(t!=='atlas'){reachLens=0;reachTail={}}render()}
 // which room a sub-view lights on the bar
 const TAB_FAMILY={bags:'today',shelf:'today',setups:'ledger'};
 let _lastScreenKey=null; // the settle plays on a screen change, never on a repaint
@@ -2659,6 +2677,8 @@ function openProducerPage(producerId){
   <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${lots.length
     ?`${lots.length} green${lots.length===1?'':'s'} traced to this grower, each its own lot. A washing station gathers cherry from many hands — its greens stand apart, never one blurred farm.`
     :'No green traces to this grower yet.'}</div>
+  ${lots.length>=2?`<h2>How far the road runs</h2>${aggRoadHTML(lots.map(l=>l.id))}
+  <div class="muted small" style="margin:8px 2px 14px">Counted across every green traced here — the record's reach, not this grower's.</div>`:''}
   ${lots.length?lots.map(row).join(''):'<div class="empty">No green on the atlas names this grower.</div>'}
   ${isAdmin()?`<button class="btn btn-quiet" style="margin-top:10px" onclick="openGeoFix('producers',${jsq(p.id)})">Correct the pin${p.lat!=null?'':' — unplaced'}</button>`:''}
   <button class="btn btn-quiet" style="margin-top:${isAdmin()?'6':'10'}px" onclick="closeSheet()">Close</button>`);
@@ -3281,7 +3301,11 @@ function atlasGraph(lotIdsArg){
     const lot=catNode('lots',lotId);
     const prods=(lot.producerRefs||[]).map(id=>catNode('producers',id)).filter(Boolean);
     const pKeys=prods.filter(coord).map(putP); prods.filter(p=>!coord(p)).forEach(p=>missP.set(p.id,p.name));
-    (lot.processorRefs||[]).map(id=>catNode('processors',id)).filter(Boolean).forEach(p=>{if(!coord(p))missPr.set(p.id,p.name)}); // a station is never geocoded by name — it lists (LOT_IDENTITY)
+    // a station is never geocoded by name — it lists (LOT_IDENTITY). But an actor the plot already
+    // draws (the same name standing as a located producer, at its region's grain) is on the map,
+    // so listing it "for want of a coordinate" would contradict the mark beside it.
+    const drawn=new Set(prods.filter(coord).map(p=>normPlace(p.name)));
+    (lot.processorRefs||[]).map(id=>catNode('processors',id)).filter(Boolean).forEach(p=>{if(!coord(p)&&!drawn.has(normPlace(p.name)))missPr.set(p.id,p.name)});
     const rrefs=[...new Set(CAT.roasts.entries.filter(r=>r&&r.lotRef===lotId&&r.roasterRef).map(r=>r.roasterRef))];
     const roas=rrefs.map(ref=>catNode('roasters',ref)).filter(Boolean);
     const rKeys=roas.filter(coord).map(putR); roas.filter(r=>!coord(r)).forEach(r=>missR.set(r.id,r.name));
@@ -3301,7 +3325,7 @@ function atlasGraph(lotIdsArg){
 }
 const atlasCls={producer:'origin',roaster:'roaster',venue:'venue'};
 const grainCoarse=g=>g==='region'||g==='country'; // a centroid, honestly an area — drawn dashed, never a point that lied to get there
-function atlasTap(n){if(n.kind==='venue'){closeCurate();openPlace(n.shop)}else if(n.kind==='roaster')openRoasterPage(n.id);else openProducerPage(n.id)}
+function atlasTap(n){if(n.kind==='venue'){openPlace(n.shop)}else if(n.kind==='roaster')openRoasterPage(n.id);else openProducerPage(n.id)}
 /* ---- the scenes (CHARTS.md) — geography as a resolution, never a key. A scene is a single-link
  * cluster of located roasters and bars, close enough to move through in one outing — derived,
  * never authored. A chart is one or more scenes under one name the keeper gives it (prefs.charts,
@@ -3419,7 +3443,7 @@ function atlasFrames(lotIdsArg,opts){
     const lines=road.map(([a,b])=>{const A=pm[a],B=pm[b];return A&&B?`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"></line>`:''}).join('');
     const pins=marks.map(p=>p.n>1
       ?`<div class="pin merged" style="left:${p.x}%;top:${p.y}%">${p.n}<span class="lbl">${p.n} marks</span></div>`
-      :`<div class="pin ${atlasCls[p.kind]}${grainCoarse(p.grain)?' coarse':''}" style="left:${p.x}%;top:${p.y}%" onclick="${p.kind==='venue'?`closeCurate();openPlace(${jsq(p.shop)})`:`openRoasterPage(${jsq(p.id)})`}"><span class="lbl">${esc(p.name)}</span></div>`).join('');
+      :`<div class="pin ${atlasCls[p.kind]}${grainCoarse(p.grain)?' coarse':''}" style="left:${p.x}%;top:${p.y}%" onclick="${p.kind==='venue'?`openPlace(${jsq(p.shop)})`:`openRoasterPage(${jsq(p.id)})`}"><span class="lbl">${esc(p.name)}</span></div>`).join('');
     const svg=lines?`<svg class="atlas-edges" viewBox="0 0 100 100" preserveAspectRatio="none">${lines}</svg>`:'';
     // the season line — drawn through the pins in taste-rank order, only when the keeper asked for the reading
     let seasonSvg='';
@@ -3468,36 +3492,50 @@ function atlasFrames(lotIdsArg,opts){
     ${st.scene?'':`<span><span class="atlas-key scene"></span><button class="text-action ex" onclick="openPrimer('scene')" style="padding:0">a scene — an area, drawn as one mark; tap to walk in</button></span>`}</div>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 12px">${on||'nothing placed'} on the chart${g.listed.roasters.length||g.listed.venues.length?` · listed for want of a coordinate: ${[...g.listed.roasters,...g.listed.venues].slice(0,3).map(esc).join(' · ')}${g.listed.roasters.length+g.listed.venues.length>3?' and more':''}`:''}.</div>`:'';
   // ── the origin frame — coarse, drawn only, connected in words ──
-  let originHTML='';
-  const listedO=[...g.listed.origins,...g.listed.processors];
-  if(origins.length||listedO.length){
-    const oproj=origins.length?mapMerge(mapProject(origins),8):[];
-    const opins=oproj.map(p=>p.n>1
-      ?`<div class="pin merged" style="left:${p.x}%;top:${p.y}%">${p.n}<span class="lbl">${p.n} origins</span></div>`
-      :`<div class="pin origin${grainCoarse(p.grain)?' coarse':''}" style="left:${p.x}%;top:${p.y}%" onclick="openProducerPage(${jsq(p.id)})"><span class="lbl">${esc(p.name)}</span></div>`).join('');
-    const memberKeys=new Set(st.chart?st.chart.scenes.flatMap(s=>s.members.map(m=>m.key)):[]);
-    const hand=new Map(); // folded by the origin's NAME — two stations sharing a region read as one line, their hands unioned, never a duplicate reading
-    g.edges.forEach(([a,b])=>{const p=a.indexOf('producer:')===0?a:b.indexOf('producer:')===0?b:null;if(!p)return;
-      const r=p===a?b:a;if(r.indexOf('roaster:')!==0)return;if(memberKeys.size&&!memberKeys.has(r))return;
-      const name=(nm[p]||{}).name||'an origin';
-      if(!hand.has(name))hand.set(name,new Set());hand.get(name).add(r)});
-    const handLines=[...hand.entries()].map(([name,rs])=>({name,n:rs.size})).sort((a,b)=>b.n-a.n);
-    const chartName=st.chart?st.chart.name:'';
-    const handoff=handLines.length?`<div class="muted small serif" style="font-style:italic;margin:8px 2px 0">${
-      handLines.slice(0,3).map(h=>`${esc(h.name)} — ${h.n} hand${h.n===1?'':'s'}${chartName?` in ${esc(chartName)}`:''}.`).join(' ')}${
-      handLines.length>3?` And ${handLines.length-3} more.`:''} The green travelled by sea — that road is not a line on a map.</div>`:'';
-    const listedLine=listedO.length?`<div class="muted small serif" style="font-style:italic;margin:6px 2px 0">Listed, for want of a coordinate: ${listedO.slice(0,4).map(esc).join(' · ')}${listedO.length>4?` — and ${listedO.length-4} more`:''}.</div>`:'';
-    originHTML=`<div class="section-head" style="margin-top:16px"><h2>Where the green came from</h2><button class="text-action ex" onclick="openPrimer('grain')">drawn to its grain</button></div>
-    ${origins.length?`<div class="cafe-map">${opins}</div>
-    <div class="muted small" style="display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin:6px 2px 0"><span><span class="atlas-key origin"></span>origin — a region or country centroid, dashed where coarse; never a farm pin invented</span></div>`:''}
-    ${handoff}${listedLine}`;
-  }
+  const originHTML=originFrameHTML(g,{chartName:st.chart?st.chart.name:'',
+    memberKeys:new Set(st.chart?st.chart.scenes.flatMap(s=>s.members.map(m=>m.key)):[])});
   return {empty:false,counts:g.counts,charts:st.charts,chart:st.chart,scene:st.scene,scenes:st.scenes,chartHTML,lensHTML,legendHTML,originHTML};
+}
+/* ---- The origin frame, as one component — the plot half of SURFACES §2's reading, pointed at any
+ * scope: the whole atlas, a plate's facet, one roaster's greens. Producers at region or country
+ * grain, drawn plot only (no street layer to pretend precision), the hand-off to the chart stated
+ * in words rather than as a line across the sea. Two marks that read the same fold into one: a
+ * region centroid drawn twice claims a precision the grain never had. ---- */
+function originFrameHTML(g,opts){
+  opts=opts||{};
+  const origins=g.nodes.filter(n=>n.kind==='producer');
+  const listedO=[...g.listed.origins,...g.listed.processors];
+  if(!origins.length&&!listedO.length)return '';
+  const nm={};g.nodes.forEach(n=>{nm[n.key]=n});
+  // one mark alone is a box with a dot in it — at a narrow scope the hand-off sentence below says
+  // the same thing better, so the plot draws only where there is a spread to read
+  const oproj=origins.length?mapMerge(mapProject(origins),8,p=>normPlace(p.name)):[];
+  const draw=oproj.length>=(opts.minMarks||1);
+  const opins=oproj.map(p=>p.n>1
+    ?`<div class="pin merged" style="left:${p.x}%;top:${p.y}%">${p.n}<span class="lbl">${p.members.every(m=>normPlace(m.name)===normPlace(p.name))?esc(p.name):p.n+' origins'}</span></div>`
+    :`<div class="pin origin${grainCoarse(p.grain)?' coarse':''}" style="left:${p.x}%;top:${p.y}%" onclick="openProducerPage(${jsq(p.id)})"><span class="lbl">${esc(p.name)}</span></div>`).join('');
+  const memberKeys=opts.memberKeys||new Set();
+  const hand=new Map(); // folded by the origin's NAME — two stations sharing a region read as one line, their hands unioned, never a duplicate reading
+  g.edges.forEach(([a,b])=>{const p=a.indexOf('producer:')===0?a:b.indexOf('producer:')===0?b:null;if(!p)return;
+    const r=p===a?b:a;if(r.indexOf('roaster:')!==0)return;if(memberKeys.size&&!memberKeys.has(r))return;
+    const name=(nm[p]||{}).name||'an origin';
+    if(!hand.has(name))hand.set(name,new Set());hand.get(name).add(r)});
+  const handLines=[...hand.entries()].map(([name,rs])=>({name,n:rs.size})).sort((a,b)=>b.n-a.n);
+  const chartName=opts.chartName||'';
+  const handoff=handLines.length?`<div class="muted small serif" style="font-style:italic;margin:8px 2px 0">${
+    handLines.slice(0,3).map(h=>`${esc(h.name)} — ${h.n} hand${h.n===1?'':'s'}${chartName?` in ${esc(chartName)}`:''}.`).join(' ')}${
+    handLines.length>3?` And ${handLines.length-3} more.`:''} The green travelled by sea — that road is not a line on a map.</div>`:'';
+  const listedLine=listedO.length?`<div class="muted small serif" style="font-style:italic;margin:6px 2px 0">Listed, for want of a coordinate: ${listedO.slice(0,4).map(esc).join(' · ')}${listedO.length>4?` — and ${listedO.length-4} more`:''}.</div>`:'';
+  if(!draw&&!handoff&&!listedLine)return '';
+  return `<div class="section-head" style="margin-top:16px"><h2>${esc(opts.heading||'Where the green came from')}</h2><button class="text-action ex" onclick="openPrimer('grain')">drawn to its grain</button></div>
+  ${draw?`<div class="cafe-map">${opins}</div>
+  <div class="muted small" style="display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin:6px 2px 0"><span><span class="atlas-key origin"></span>origin — a region or country centroid, dashed where coarse; never a farm pin invented</span></div>`:''}
+  ${handoff}${listedLine}`;
 }
 let atlasView=null; // null → default to Map when there's a scene to see, else List
 function atlasSetView(v){atlasView=v;render()}
 let curateOn=false;
-function openCurate(){curateOn=true;placeView=null;discOn=false;render()} // read-only-safe browse: the authoring actions inside vCurate are each penGuard()ed, so anyone without the pen walks the node reads
+function openCurate(){curateOn=true;placeView=null;pageView=null;pageStack=[];discOn=false;render()} // read-only-safe browse: the authoring actions inside vCurate are each penGuard()ed, so anyone without the pen walks the node reads
 function closeCurate(){curateOn=false;render()}
 function vCurate(){
   const recs=chartRecs(),q=reviewQueue();
@@ -4168,9 +4206,10 @@ function vAtlas(){
   ${lots.length?lots.slice(0,12).map(atlasLotCard).join('')
     :`<div class="empty">No green on the atlas yet. A bag on the shelf, a cup out with its beans named, a proposed sighting — any of them starts the chart.</div>`}
   ${(()=>{const fs=plateFacets();return fs.length?`<div class="section-head"><h2>Cut the atlas</h2><button class="text-action ex" onclick="openPrimer('plate')">the plate</button></div>
-  ${fs.map(f=>{const lbl=f.fk==='process'?f.v.charAt(0).toUpperCase()+f.v.slice(1):f.v;
-    return `<button class="wc-item" onclick="openPlate(${jsq(f.fk)},${jsq(f.v)})"><span class="tx"><span class="tt">${esc(lbl)}</span><span class="dd">${FACET_LBL[f.fk]||'a facet'} · ${f.n} green${f.n===1?'':'s'} — the aggregate road</span></span><span class="go">→</span></button>`}).join('')}
-  <div class="muted small serif" style="font-style:italic;margin:6px 2px 0">A facet is a query over the greens, never a collection — and one that leaves a field unread is counted, not hidden.</div>`:''})()}
+  ${fs.map(f=>{const lbl=f.fk==='process'?sentence(f.v):f.v;
+    const sub=[`${f.n} green${f.n===1?'':'s'}`,f.hands&&`${f.hands} hand${f.hands===1?'':'s'}`].filter(Boolean).join(' · ');
+    return `<button class="wc-item" onclick="openPlate(${jsq(f.fk)},${jsq(f.v)})"><span class="tx"><span class="tt">${esc(lbl)}</span><span class="dd">${FACET_LBL[f.fk]||'a facet'} · ${esc(sub)}</span></span><span class="go">→</span></button>`}).join('')}
+  <div class="muted small serif" style="font-style:italic;margin:6px 2px 0">A plate is the road counted across one cut of the atlas — a query over the greens, never a collection. One that leaves a field unread is counted, not hidden.</div>`:''})()}
   ${(roasters.some(x=>x.n)||bars.length)?`<div class="section-head"><h2>The hands</h2></div>
   ${roasters.filter(x=>x.n).slice(0,6).map(x=>`<div class="card tap" onclick="openRoasterPage(${jsq(x.r.id)})">
     <div class="row"><strong>${esc(x.r.name)}</strong><span class="muted">roaster · ${x.n} roast${x.n===1?'':'s'} on the record</span></div>
@@ -4219,19 +4258,39 @@ function vAtlas(){
  * same standing — a screen, not a sheet, reached from anywhere their name
  * appears. openLotPage/openRoasterPage keep their names so every existing door
  * still opens; they now set the page and render. */
+/* The pages walk into each other — a plate opens a green, a green opens its roaster — so back
+ * means the page you came from, not the top of the room. One shallow stack, cleared whenever a
+ * room is chosen from the bar; a page never pushes itself twice. */
+function pagePush(){
+  const cur=curateOn?{kind:'curate',id:''}:placeView?{kind:'place',id:placeView}:pageView;
+  if(!cur)return;
+  const top=pageStack[pageStack.length-1];
+  if(top&&top.kind===cur.kind&&top.id===cur.id)return;
+  pageStack.push(cur);if(pageStack.length>8)pageStack.shift();
+}
+const PAGE_BACK={lot:'The green',roaster:'The roaster',plate:'The plate',curate:'The chart',place:'The bar'};
+function pageBack(){
+  const prev=pageStack.pop();
+  if(!prev)return go('atlas');
+  placeView=null;pageView=null;curateOn=false;
+  if(prev.kind==='curate')curateOn=true;
+  else if(prev.kind==='place')placeView=prev.id;
+  else pageView=prev.fk?prev:{kind:prev.kind,id:prev.id};
+  render();
+}
 function openLotPage(lotId){
   let lot=catNode('lots',lotId); if(!lot){toast('That green isn’t on the atlas yet');return}
   if(lotTomb(lot)){lotId=lotFwd(lotId);lot=catNode('lots',lotId)} // a link onto an absorbed green reads through
   if(lot&&lot.role==='batch')return openBatchPage(lotId); // the processing-batch parent keeps its own sheet
-  closeSheet();pageView={kind:'lot',id:lotId};placeView=null;curateOn=false;discOn=false;render();
+  pagePush();closeSheet();pageView={kind:'lot',id:lotId};placeView=null;curateOn=false;discOn=false;render();
 }
 function openRoasterPage(roasterRef){
   const r=catNode('roasters',roasterRef); if(!r){toast('That roaster isn’t on the atlas yet');return}
-  closeSheet();pageView={kind:'roaster',id:roasterRef};placeView=null;curateOn=false;discOn=false;render();
+  pagePush();closeSheet();pageView={kind:'roaster',id:roasterRef};placeView=null;curateOn=false;discOn=false;render();
 }
-function closePage(){pageView=null;render()}
+function closePage(){pageView=null;pageStack=[];render()}
 const pageHero=(eyebrow,title,origin)=>`
-  <button class="text-action" onclick="go('atlas')" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← The chart</button>
+  <button class="text-action" onclick="pageBack()" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← ${esc(pageStack.length?PAGE_BACK[pageStack[pageStack.length-1].kind]||'Back':'The atlas')}</button>
   <div class="hero" style="padding:4px 2px 16px">
     <div class="eyebrow" style="color:var(--ink-3)">${eyebrow}</div>
     <h2 style="font-size:31px;line-height:1.05;max-width:14ch">${title}</h2>
@@ -4258,7 +4317,9 @@ function lotRoadStations(lotId){
   const bat=lot.processingBatchRef&&catNode('lots',lot.processingBatchRef);
   const ko=(lot.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt)||(bat&&(bat.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt));
   const cups=lotOwnCups(lotId).length;
-  const originWhere=[fp.region,fp.country].filter(regSubstance).join(', ');
+  // the road is a glance, six cells wide on a phone — it says the finest thing it holds and no
+  // more. The page states the rest in full a line below; a name broken over three lines says less.
+  const originWhere=[fp.region,fp.country].filter(regSubstance)[0]||'';
   // a station is a processor, never a grower — a producer entry the door tagged as one (or that
   // matches a standing processor node) reads at Processed, and Grown falls back to the region
   const stnKeys=new Set(procs.map(p=>normPlace(p.name)));
@@ -4266,7 +4327,7 @@ function lotRoadStations(lotId){
   const flatGrower=regSubstance(fp.producer)&&!stnKeys.has(normPlace(fp.producer))?fp.producer:'';
   return [
     {lb:'Grown',who:trueGrowers.length?(trueGrowers.length>1?trueGrowers.length+' growers':trueGrowers[0].name):(flatGrower||originWhere)},
-    {lb:'Processed',who:procs.length?procs[0].name:(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:'')},
+    {lb:'Processed',who:procs.length?procs[0].name:(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):'')},
     {lb:'Milled',who:bat?('dry mill'+(ko?' · '+ko.value:'')):''},
     {lb:'Roasted',who:hands.length?(hands.length>1?hands.length+' hands':roasterName(hands[0])):''},
     {lb:'Poured',who:shops.length?(shops.length>1?shops.length+' bars':shops[0]):''},
@@ -4279,7 +4340,7 @@ function road6HTML(stations,draw){
   const cells=stations.map(s=>{const held=regSubstance(s.who);
     const cls='stn'+(held?' held':'')+(s.you&&held?' you':'')+((!held||!prev)?' gap':'');
     prev=held;
-    return `<div class="${cls}"><span class="bar"></span><span class="mk"></span><span class="lb">${esc(s.lb)}</span><span class="who">${held?esc(s.who):'unread'}</span></div>`}).join('');
+    return `<div class="${cls}"><span class="bar"></span><span class="mk"></span><span class="lb">${esc(s.lb)}</span><span class="who"${held?` title="${esc(s.who)}"`:''}>${held?esc(s.who):'unread'}</span></div>`}).join('');
   return `<div class="road6${draw&&!reducedMotion()?' draw':''}">${cells}</div>`;
 }
 // the aggregate road — count(lots where the station edge exists) / count(lots), per station.
@@ -4431,7 +4492,11 @@ function vLotPage(){
     ${undoable.map(t=>`<button class="btn btn-quiet" onclick="openLotUndoMerge(${jsq(lotId)},${jsq(t.id)})">Split back apart — restore ${esc(lotLabel(t))}</button>`).join('')}
   </details>`:'';
   const sub=[fp.region,fp.country].filter(regSubstance).join(', ');
-  return pageHero('A green on the atlas'+(ko?' · outturn '+esc(ko.value):''),esc(lotLabel(lot))+'.',esc(sub||'origin unwritten'))+`
+  // the title names the green and the seed it grew from; the origin line under it already carries
+  // the place, so the head does not say it twice (the identity card below states all of it in full)
+  const head=[lot.producer,lot.lotName].filter(regSubstance)[0]||sub||'A green';
+  const tail=regSubstance(lot.variety)&&normPlace(lot.variety)!==normPlace(head)?lot.variety:'';
+  return pageHero('A green on the atlas'+(ko?' · outturn '+esc(ko.value):''),esc(head)+(tail?` <em>${esc(tail)}</em>`:'')+'.',esc(sub||'origin unwritten'))+`
   ${road}
   <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif);margin:8px 2px 20px">${roadTail} <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('road')">The road</button>.</div>
   ${idCard}
@@ -4475,9 +4540,16 @@ function vRoasterPage(){
   const note=signed
     ?esc(r.name)+' holds the pen. In-scope facts are theirs to correct; everything else stays compiled. The reader’s overlay is untouched — the record is still the reader’s.'
     :'This page is compiled from sightings. When '+esc(r.name)+' signs it, they hold the pen on their own link — the record stays the reader’s.';
-  return pageHero('Roaster'+(place?' · '+esc(place):''),esc(r.name)+'.',esc([r.site,place].filter(Boolean).join(' · '))||'a roaster on the atlas')+badges+`
+  // the same reading, at roaster scope (SURFACES §2) — the road counted across every green this
+  // hand has touched, and where those greens grew. One component, another scope.
+  const ids=greens.map(e=>e.id);
+  const roadHTML=ids.length>=2?`<div class="section-head" style="margin-top:2px"><h2>How far the road runs</h2><button class="text-action ex" onclick="openPrimer('road')">the road</button></div>
+  ${aggRoadHTML(ids)}
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px 18px">Across ${ids.length} greens this hand has roasted. Where a bar runs short, the record has not been told — it is not a mark against the roaster.</div>`:'';
+  return pageHero('Roaster'+(place?' · '+esc(place):''),esc(r.name)+'.',esc([r.site,place].filter(Boolean).join(' · '))||'a roaster on the atlas')+badges+roadHTML+`
   <h2>On offer, this season</h2>
   ${offers||'<div class="empty">No green on the atlas names this roaster yet.</div>'}
+  ${ids.length?originFrameHTML(atlasGraph(ids),{heading:'Where their greens grew',minMarks:2}):''}
   <div class="muted small serif" style="font-style:italic;margin:12px 2px 0">${note}</div>
   ${isAdmin()?`<button class="text-action" style="margin-top:8px" onclick="openGeoFix('roasters',${jsq(r.id)})">Correct the pin${r.lat!=null?'':' — unplaced'}</button>`:''}
   ${claimBlock('roaster',r.id,r.name)}
@@ -4493,13 +4565,17 @@ function vRoasterPage(){
 const FACET_LBL={country:'a country',process:'a process',variety:'a variety'};
 function facetVal(lot,fk){const fp=lot.fingerprint||{};
   return fk==='country'?fp.country:fk==='process'?((fp.process&&fp.process.family&&fp.process.family!=='unspecified')?fp.process.family:''):lot.variety}
-function openPlate(fk,fv){closeSheet();pageView={kind:'plate',id:fk+'|'+fv,fk,fv};placeView=null;curateOn=false;discOn=false;render()}
+function openPlate(fk,fv){pagePush();closeSheet();pageView={kind:'plate',id:fk+'|'+fv,fk,fv};placeView=null;curateOn=false;discOn=false;render()}
 function plateFacets(){
   const lots=atlasLots();
   const tally=fk=>{const m=new Map();lots.forEach(x=>{const v=facetVal(x.lot,fk);if(!regSubstance(v))return;
-    const k=normPlace(v);const e=m.get(k)||{fk,v,n:0};e.n++;m.set(k,e)});
+    const k=normPlace(v);const e=m.get(k)||{fk,v,n:0,ids:[]};e.n++;e.ids.push(x.id);m.set(k,e)});
     return [...m.values()].sort((a,b)=>b.n-a.n)};
-  return [...tally('country').slice(0,4),...tally('process').slice(0,3),...tally('variety').slice(0,3)];
+  // each facet reads its own counts — greens, and the hands that carry them. The row says what is
+  // behind the door before the tap, rather than repeating what every row on the list is.
+  return [...tally('country').slice(0,4),...tally('process').slice(0,3),...tally('variety').slice(0,3)]
+    .map(f=>{const h=new Set();f.ids.forEach(id=>CAT.roasts.entries.forEach(r=>{if(r&&r.lotRef===id&&r.roasterRef)h.add(r.roasterRef)}));
+      return {...f,hands:h.size}});
 }
 function vPlatePage(){
   const {fk,fv}=pageView;
@@ -4515,7 +4591,7 @@ function vPlatePage(){
     <div class="row"><strong>${esc(roasterName(h.ref))}</strong><span class="n-note" style="flex:none">${h.lots.size} green${h.lots.size===1?'':'s'}</span></div>
   </div>`).join('');
   const bars=new Set();(D.pours||[]).forEach(p=>{if(p&&p.lotRef&&ids.includes(lotFwd(p.lotRef))&&regSubstance(p.shop))bars.add(normName(p.shop))});
-  const label=fk==='process'?fv.charAt(0).toUpperCase()+fv.slice(1):fv;
+  const label=fk==='process'?sentence(fv):fv;
   const counts=[`${hit.length} green${hit.length===1?'':'s'}`,handSet.size&&`${handSet.size} hand${handSet.size===1?'':'s'}`,bars.size&&`${bars.size} bar${bars.size===1?'':'s'}`].filter(Boolean).join(' · ');
   return pageHero('A plate · '+esc(FACET_LBL[fk]||'a facet'),esc(label)+`, <em>in ${['','one','two','three','four','five','six','seven','eight','nine'][hit.length]||hit.length} green${hit.length===1?'':'s'}</em>.`,esc(counts))+`
   <div class="serif" style="font-size:15px;line-height:1.55;color:var(--ink-2);margin:-6px 2px 16px;max-width:44ch">The ${esc(label)} greens you have met, and how far down the road the record actually follows each one.</div>
@@ -4523,6 +4599,7 @@ function vPlatePage(){
   ${aggRoadHTML(ids)}
   <div class="muted small serif" style="font-style:italic;margin:10px 2px 8px">Where a bar runs short, the record is telling you what it has not been told — not a chart of anyone's failure.</div>
   ${unread?`<div class="muted small" style="margin:0 2px 16px">${all.length} green${all.length===1?'':'s'} on the atlas · ${unread} unread on this facet — counted, never quietly dropped.</div>`:''}
+  ${originFrameHTML(atlasGraph(ids),{heading:'Where they grew',minMarks:2})}
   <div class="section-head"><h2>The greens</h2><span class="n-note num">n=${hit.length}</span></div>
   ${hit.map(atlasLotCard).join('')}
   ${handRows?`<div class="section-head"><h2>The hands</h2></div>${handRows}`:''}
@@ -5390,10 +5467,10 @@ function doorResolve(){
 const DOOR_GRAIN={'green-lot':['Green lot','The finest grain the trade can prove — one parcel, one harvest.'],
   'station-season':['Station · season','A legitimate terminal record, not a half-filled lot.'],
   'region-grade':['Region · grade','The honest floor. Named as such, never rounded up.']};
-let doorStep=0,doorText='',doorParsed=null,doorStruck={};
+let doorStep=0,doorText='',doorParsed=null,doorStruck={},doorRoasted='';
 function openDoor(){
   if(guard())return;
-  doorStep=0;doorText='';doorParsed=null;doorStruck={};
+  doorStep=0;doorText='';doorParsed=null;doorStruck={};doorRoasted='';
   renderDoor();
 }
 function doorRead(){
@@ -5401,7 +5478,7 @@ function doorRead(){
   if(!t){toast('Paste something first — or type it instead');return}
   doorText=t;doorParsed=doorParse(t);doorStruck={};doorStep=1;renderDoor();
 }
-function doorBack(n){doorStep=n;renderDoor()}
+function doorBack(n){if(doorStep===2)doorRoasted=val('d_roasted')||'';doorStep=n;renderDoor()} // a typed date survives a step back — nothing the keeper entered is thrown away
 function doorStrike(k){doorStruck[k]=!doorStruck[k];renderDoor()}
 function doorStepDots(label){
   return `<div class="stepdots">${[0,1,2].map(i=>`<i class="${i<=doorStep?'on':''}"></i>`).join('')}<span>${esc(label)}</span></div>`;
@@ -5459,11 +5536,13 @@ function renderDoor(){
     <label class="f"><span class="l">Roaster <span class="opt">optional</span></span><input type="text" id="d_roaster" list="d_roasterlist" value="${esc(f2.roaster||'')}" placeholder="Sey"></label>
     <label class="f"><span class="l">The coffee <span class="opt">optional</span></span><input type="text" id="d_name" value="${esc(f2.nameGuess||'')}" placeholder="as the bag names it"></label>
   </div>
+  <label class="f"><span class="l">Roasted <span class="opt">optional</span></span><input type="date" id="d_roasted" value="${esc(doorRoasted)}" max="${today()}"></label>
+  <div class="muted small" style="margin:-6px 2px 14px">The one fact a bag carries and a roaster’s page never states. Without it the rest window stays unread.</div>
   <datalist id="d_roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
-  ${[['On my shelf','bag','bag'],
-     ['Poured at a bar','pour','pour'],
-     ['Brewed it just now','brew','brew'],
-     ['Just noting it','note','note']].map(b=>
+  ${[['On my shelf','it waits on the shelf','bag'],
+     ['Poured at a bar','a cup out, at that bar','pour'],
+     ['Brewed it just now','the dials open next','brew'],
+     ['Just noting it','on the atlas, nothing kept','note']].map(b=>
     `<button class="doorrow" onclick="doorBind(${jsq(b[2])})"><span class="t">${esc(b[0])}</span><span class="m">${esc(b[1])}</span></button>`).join('')}
   <div class="muted small serif" style="font-style:italic;margin-top:14px">${r2.shared
     ?'One paste mints a green, a roaster and a roast. The tap adds exactly one edge.'
@@ -5488,6 +5567,7 @@ function doorStampActors(rec,o){
 function doorBind(kind){
   if(guard())return;
   const o=doorFields(),roaster=val('d_roaster'),name=val('d_name');
+  doorRoasted=val('d_roasted')||''; // the rest window's one input — the paste can never carry it
   const worthy=[o.originCountry,o.originRegion,o.producer,o.variety,o.process].some(regSubstance);
   if(!roaster&&!name&&!worthy){toast('Nothing to bind — a name or one fact, at least');return}
   if(kind==='note'&&!roaster&&!worthy){toast('A note needs a hand or a fact — a roaster, or one origin token');return} // a bare name reaches no atlas
@@ -5499,7 +5579,7 @@ function doorBind(kind){
   const lvl=ROAST_LEVELS.indexOf(o.roastLevel);
   const extras=[o.altitude&&('grown at '+o.altitude),o.harvest&&(o.harvest+' harvest')].filter(Boolean).join(' · '); // facts with no field yet — kept in the record's own words, never dropped
   const base={roaster,name,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,
-    variety:o.variety,process:o.process,lot:'',roastDate:'',roastLevel:lvl<0?0:lvl,hardIds:[],notes:extras};
+    variety:o.variety,process:o.process,lot:'',roastDate:doorRoasted,roastLevel:lvl<0?0:lvl,hardIds:[],notes:extras};
   if(kind==='note'){ // bag-shaped, no shelf, no cup — swept exactly as a bag (it carries a roast)
     const rec={id:uid(),createdAt:new Date().toISOString(),curator:activeName(),...base};
     D.authored=D.authored||[];D.authored.push(rec);
@@ -6028,6 +6108,8 @@ function vPlace(){
   ${p&&p.tags&&p.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 10px">${p.tags.map(t=>`<span class="badge ghost">${esc(t)}</span>`).join('')}</div>`:''}
   ${(()=>{const gp=poursHere(shop,e);return gp.length?`<div class="section-head"><h2>Greens poured here</h2></div>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The greens seen in a cup at this counter — the availability edge, each drilling to the same green in other hands.</div>
+  ${gp.length>=2?`${aggRoadHTML(gp.map(x=>x.id))}
+  <div class="muted small" style="margin:8px 2px 12px">The road, counted across what this counter has poured into the record.</div>`:''}
   ${gp.map(x=>{const h=lotHands(x.id);return `<button class="wc-item" onclick="openLotPage(${jsq(x.id)})"><span class="tx"><span class="tt">${esc(lotLabel(x.lot))}</span><span class="dd">${h>=2?`${h} hands · the same green`:'a green on the atlas'}</span></span><span class="go">→</span></button>`}).join('')}`:''})()}
   ${readOnly()?'':`
   ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}

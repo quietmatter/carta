@@ -48,12 +48,21 @@ page or the back of the bag; CARTA reads it on the device — no key, no
 account, no network — shows what it found as facts you can strike, says how
 finely the green resolves and whether two records could ever meet on it, and
 binds it with one tap: on my shelf, poured at a bar, brewed just now, or just
-noting it. The typed form stays one tap away.
+noting it. It asks once for the roast date — the one fact a page never states
+and the rest window can't do without — and never invents one. The typed form
+stays one tap away.
 
 **A plate** is the atlas, cut — a country, a process, a variety, read as one
 page with the aggregate road: how many of the facet's greens reach each
-station. Greens that leave the field unread are counted, never quietly
-dropped. Find plates under **Atlas → Cut the atlas**.
+station, and where those greens grew. Greens that leave the field unread are
+counted, never quietly dropped. Find plates under **Atlas → Cut the atlas**.
+
+**One reading, five scopes.** The road, the plot and the hands are one
+component pointed at a different slice of one graph — a green, a plate, a
+roaster, a grower, a bar. A roaster's page counts the road across every green
+that hand has roasted; a bar's counts it across what it pours. Back always
+means the page you came from: a green opened from a plate returns to that
+plate.
 
 See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the product thesis and restraint standard.
 
