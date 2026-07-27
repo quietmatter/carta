@@ -36,10 +36,24 @@ stepped, read under **More → How deep you go**; nothing is ever taken away.
   circle, sync, the changelog.
 
 Every café, every green, every roaster is a **page**, not a popup — reached
-from anywhere its name appears. A lot's page carries the road (grown →
-processed → roasted → poured), its identity columns, its standing, where it
-pours, every hand's roast, your own brew corpus, and your overlay at the end
-of it. Every mark explains itself one tap away — the primers.
+from anywhere its name appears. A lot's page carries **the road** — six
+stations, grown → processed → milled → roasted → poured → read, filled where
+the record holds a station and hollow where it does not — its identity
+columns, its standing, where it pours, every hand's roast, your own brew
+corpus, and your overlay at the end of it. Every mark explains itself one tap
+away — the primers.
+
+**The door** is how a coffee comes in: one paste field. Paste the roaster's
+page or the back of the bag; CARTA reads it on the device — no key, no
+account, no network — shows what it found as facts you can strike, says how
+finely the green resolves and whether two records could ever meet on it, and
+binds it with one tap: on my shelf, poured at a bar, brewed just now, or just
+noting it. The typed form stays one tap away.
+
+**A plate** is the atlas, cut — a country, a process, a variety, read as one
+page with the aggregate road: how many of the facet's greens reach each
+station. Greens that leave the field unread are counted, never quietly
+dropped. Find plates under **Atlas → Cut the atlas**.
 
 See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the product thesis and restraint standard.
 

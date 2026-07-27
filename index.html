@@ -220,8 +220,57 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 .chip.resting{color:var(--ink-3)}
 .chip.past{color:var(--ink-3);border-style:dashed}
 .chip.on{background:var(--ink);color:var(--accent-ink);border-color:var(--ink)}
+.chip.struck{color:var(--ink-3);text-decoration:line-through;opacity:.5}
 .lens{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
 .lens .chip{cursor:pointer;padding:5px 11px}
+
+/* ===== the road — six stations, honesty drawn (SURFACES.md) =====
+   A filled mark is a station the record holds; a hollow one is a station it
+   does not. The connector is solid between two held stations and dashed
+   across a gap. The gap is the product — never a blank to fill. */
+.road6{display:grid;grid-template-columns:repeat(6,1fr);align-items:start;margin:6px 0 4px;padding-top:6px}
+.road6 .stn{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative;min-width:0}
+.road6 .stn .bar{position:absolute;top:5px;left:-50%;width:100%;height:1px;background:var(--line-strong);opacity:.5}
+.road6 .stn:first-child .bar{display:none}
+.road6 .stn.gap .bar{background:none;height:0;border-top:1px dashed var(--ink-d);opacity:1}
+.road6 .stn .mk{width:11px;height:11px;border:1px solid var(--line-strong);background:var(--paper-card);position:relative;z-index:1;flex:none}
+.road6 .stn.held .mk{background:var(--line-strong)}
+.road6 .stn.you .mk{background:var(--line-strong);box-shadow:0 0 0 2px var(--paper-card),0 0 0 3px var(--line-strong)}
+.road6 .stn .lb{font-family:var(--sans);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);text-align:center;line-height:1.25}
+.road6 .stn.held .lb{color:var(--ink-2)}
+.road6 .stn .who{font-family:var(--serif);font-size:11px;text-align:center;line-height:1.3;color:var(--ink);word-break:break-word}
+.road6 .stn:not(.held) .who{color:var(--ink-d);font-style:italic}
+@media (prefers-reduced-motion:no-preference){
+  .road6.draw .stn{animation:stnIn .5s var(--mo-ease) both}
+  .road6.draw .stn:nth-child(2){animation-delay:.07s}
+  .road6.draw .stn:nth-child(3){animation-delay:.14s}
+  .road6.draw .stn:nth-child(4){animation-delay:.21s}
+  .road6.draw .stn:nth-child(5){animation-delay:.28s}
+  .road6.draw .stn:nth-child(6){animation-delay:.35s}
+  @keyframes stnIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+/* the aggregate road — the same six stations, counted across a plate's greens */
+.aggrow{display:grid;grid-template-columns:84px 1fr 48px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.aggrow:last-child{border-bottom:0}
+.aggrow .lb{font-family:var(--sans);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.aggrow .track{height:9px;background:var(--paper-2);position:relative;overflow:hidden}
+.aggrow .fill{position:absolute;inset:0 auto 0 0;background:var(--line-strong);opacity:.72}
+.aggrow.thin .fill{opacity:.3}
+.aggrow .ct{font-family:var(--sans);font-size:13px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+@media (prefers-reduced-motion:no-preference){.aggrow .fill{transition:width .82s var(--mo-ease)}}
+/* the door — the resolution readout and its two-of-six meter */
+.doorres{border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 14px;background:var(--paper-card);margin:4px 0 2px}
+.doorres.thin{border-color:var(--line)}
+.doorres .grain{font-family:var(--serif);font-size:18px;font-weight:600;margin:0 0 3px}
+.doorres.thin .grain{color:var(--ink-3);font-style:italic;font-weight:400}
+.doorres .why{font-family:var(--sans);font-size:13px;color:var(--ink-2);margin:0;line-height:1.5}
+.doormeter{display:flex;gap:3px;margin-top:10px}
+.doormeter i{height:3px;flex:1;background:var(--paper-2);display:block}
+.doormeter i.on{background:var(--line-strong)}
+.stepdots{display:flex;gap:5px;align-items:center;margin:0 0 12px}
+.stepdots i{width:5px;height:5px;border:1px solid var(--ink-d);display:block}
+.stepdots i.on{background:var(--line-strong);border-color:var(--line-strong)}
+.stepdots span{font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-left:5px}
 
 /* ===== buttons ===== */
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
@@ -2081,10 +2130,17 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='5.1.0';
+const APP_VERSION='5.2.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'5.2.0',date:'July 2026',title:'The door, the road, the plate — one way in, one reading out.',items:[
+    'The door — every way of adding a coffee is now one paste field. Paste the roaster’s page, the back of the bag, an auction line; CARTA reads it on the device — no key, no account, no network — and shows what it found as facts you can strike. The reading says out loud how finely the green resolves and whether it holds enough to meet another keeper’s record: two facts of six, and it can. One last tap binds it — on my shelf, poured at a bar, brewed just now, or just noting it. The old forms stay one tap away, for typing it by hand.',
+    'The road, drawn honestly — a green’s page now shows all six stations, grown to read, hollow where the record is silent, the connector dashed across a gap. The gap is the product: the record stating what it has not been told, never a blank to fill. The coffee in your hand carries its road on Today.',
+    'The plate — cut the atlas by country, process or variety and read the whole facet as a page: the aggregate road counts how many of its greens reach each station, so you can see exactly where the road goes dark. Greens that leave the facet unread are counted, never quietly dropped.',
+    'The farm and the station, kept apart — the door tells a finca from a washing station by vocabulary, tags the grower’s kind, and gives the processor its own node on the spine. An unmatched name stays unclassified rather than being guessed into a tier.',
+    'Three prefilled fields in the curator sheets — a city and a country typed in before you said anything — are gone. A blank field is honest; a prefilled wrong one becomes a permanent wrong pin.',
+  ]},
   {v:'5.1.0',date:'July 2026',title:'The founder’s pen — the shared record, kept by one hand for now.',items:[
     'While the atlas settles, the shared record — the atlas and the Register — is written by one pen: the founder’s. Everyone reads everything; everyone writes their own ledger, always. On a sync server the first account registered holds the pen and the server itself refuses any other; on a single device the pen is taken up once, under More → Administration.',
     'The founder’s desk — one door for entering the shared record cleanly: add a roaster, author a roast, enter a café’s canonical entry, propose a sighting, settle the review queue, walk Chart No. 1. Each row opens the form that already knows its law.',
@@ -2385,14 +2441,14 @@ function render(){
   const subs={today:'the day’s surface',atlas:'the atlas',trace:'the keeper’s ledger',ledger:'the rooms',bags:'the shelf',setups:'the tools'};
   document.getElementById('who').textContent=
     readOnly()?`viewing ${viewingUser().name}`:(USERS.users.length>1?viewingUser().name:
-      (pageView?(pageView.kind==='lot'?'the lot':'the roaster'):placeView?'the bar':(subs[tab]||'the record')));
+      (pageView?(pageView.kind==='lot'?'the lot':pageView.kind==='plate'?'a plate':'the roaster'):placeView?'the bar':(subs[tab]||'the record')));
   const lit=TAB_FAMILY[tab]||((placeView||pageView)?'atlas':tab);
   document.getElementById('tabs').innerHTML=tabsFor(depth()).map(t=>
     `<button class="${lit===t.id?'on':''}" onclick="go('${t.id}')">${t.label}</button>`).join('');
   const m=document.getElementById('main');
   const screenKey=[tab,placeView||'',pageView?pageView.kind+':'+pageView.id:'',discOn?1:0,curateOn?1:0].join('|');
   const settle=screenKey!==_lastScreenKey&&!reducedMotion();_lastScreenKey=screenKey;
-  const body=(readOnly()?viewBanner():'')+(curateOn?vCurate():pageView?(pageView.kind==='lot'?vLotPage():vRoasterPage()):placeView?vPlace():discOn?vDiscover():({today:vToday,atlas:vAtlas,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
+  const body=(readOnly()?viewBanner():'')+(curateOn?vCurate():pageView?(pageView.kind==='lot'?vLotPage():pageView.kind==='plate'?vPlatePage():vRoasterPage()):placeView?vPlace():discOn?vDiscover():({today:vToday,atlas:vAtlas,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=0;window.scrollTo(0,0);
   smapMount();
@@ -2999,11 +3055,11 @@ function openAuthorRoast(prefRoaster){
     <label class="f"><span class="l">Offering</span><input type="text" id="a_offering" placeholder="Konga washed"></label>
   </div>
   <datalist id="a_roasterlist">${roasters.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
-  <label class="f"><span class="l">Roaster city <span class="opt">optional</span></span><input type="text" id="a_city" value="${esc(CHART1.name)}" placeholder="Los Angeles"></label>
+  <label class="f"><span class="l">Roaster city <span class="opt">optional</span></span><input type="text" id="a_city" placeholder="Los Angeles"></label>
   <div class="muted small" style="margin:6px 2px 0">Places the roaster on the map — a city point, no finer. Online only; offline it lists.</div>
   <label class="f"><span class="l">Roast level</span>${seg('a_roast',ROAST_LEVELS.slice(1),'Light')}</label>
   <div class="grid2">
-    <label class="f"><span class="l">Country</span><input type="text" id="a_country" value="Ethiopia" placeholder="Ethiopia"></label>
+    <label class="f"><span class="l">Country</span><input type="text" id="a_country" placeholder="Ethiopia"></label>
     <label class="f"><span class="l">Region / zone</span><input type="text" id="a_region" placeholder="Yirgacheffe"></label>
     <label class="f"><span class="l">Producer / station</span><input type="text" id="a_producer" placeholder="Konga washing station"></label>
     <label class="f"><span class="l">Variety</span><input type="text" id="a_variety" placeholder="mixed heirloom"></label>
@@ -3037,7 +3093,7 @@ function openAuthorRoaster(name){
   <h3>Add a roaster</h3>
   <div class="sub">A roaster on the chart. Its offerings come next, authored as roasts.</div>
   <label class="f"><span class="l">Roaster</span><input type="text" id="ar_name" value="${esc(name||'')}" placeholder="Cognoscenti Coffee"></label>
-  <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="ar_city" value="${esc(CHART1.name)}" placeholder="Los Angeles"></label>
+  <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="ar_city" placeholder="Los Angeles"></label>
   <label class="f"><span class="l">Website <span class="opt">optional</span></span><input type="text" id="ar_site" placeholder="cognoscenticoffee.com" inputmode="url" autocapitalize="off" autocorrect="off"></label>
   <button class="btn btn-primary" onclick="saveAuthorRoaster()">Add to the chart</button>
   <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
@@ -3304,6 +3360,9 @@ function devSeedChart(){
   const kn=authorRoast({roaster:'Ridgeline (demo)',offering:'Konga natural — Ridgeline',originCountry:'Ethiopia',originRegion:'Yirgacheffe',producer:'Konga washing station',variety:'Heirloom',process:'Natural',roastLevel:1});
   const wg=kw.rec.lotRef,ng=kn.rec.lotRef; // the washed green (Ridgeline + Seabright both stand on it) and the natural green
   if(wg&&ng&&wg!==ng){bindApart(kn.rec.id,wg,'');bindApart(kw.rec.id,ng,'');bindApart(ks.rec.id,ng,'')} // both washed hands and the natural kept apart, so two greens of one station stand with no queue churn
+  // the origin-actor split, demonstrated: Konga is a processor, never a grower (SURFACES.md, "where the farm went") —
+  // the producers node is tagged a station and both Konga greens gain the processors edge, so the road reads honestly
+  [kw.rec,kn.rec].forEach(r=>doorStampActors(r,{producer:'Konga washing station',producerKind:'station',station:'Konga washing station',originCountry:'Ethiopia',originRegion:'Yirgacheffe'}));
   // (5) a green poured at a venue — a café cup at Ridgeline's own bar on the Konga WASHED green. Its origin hits the
   // washed lot's floor key, so it lands on that green and mints a pour (pour:cupId). Now the green opens onto its
   // venue ("Poured") and the venue onto "greens poured here": lot → venue, both directions. The near-twin natural
@@ -3440,7 +3499,7 @@ function vBags(){
   ${fast}
   <div class="section-head"><h2>On your shelf</h2><span class="n-note">${bags.length?'the deliberate door':''}</span></div>
   ${rows||`<div class="empty">Name the bag in your hand — every brew after remembers it.</div>`}
-  ${readOnly()?'':`<button class="text-action" style="margin:2px 0 4px" onclick="openBagForm()">+ Put another coffee on the shelf</button>`}
+  ${readOnly()?'':`<button class="text-action" style="margin:2px 0 4px" onclick="openDoor()">+ Put another coffee on the shelf</button>`}
   <div class="muted small serif" style="font-style:italic;margin:8px 2px 0">The bag names the coffee; your own zero names the grind. Grind is read against your Setup, never across grinders. <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('setup')">The Setup</button>.</div>
   ${archiveSection}`;
 }
@@ -3878,6 +3937,10 @@ function vAtlas(){
   <div class="section-head"><h2>The season's lots</h2><span class="n-note num">${lots.length?`n=${lots.length} · any mark opens its meaning`:''}</span></div>
   ${lots.length?lots.slice(0,12).map(atlasLotCard).join('')
     :`<div class="empty">No green on the atlas yet. A bag on the shelf, a cup out with its beans named, a proposed sighting — any of them starts the chart.</div>`}
+  ${(()=>{const fs=plateFacets();return fs.length?`<div class="section-head"><h2>Cut the atlas</h2><button class="text-action ex" onclick="openPrimer('plate')">the plate</button></div>
+  ${fs.map(f=>{const lbl=f.fk==='process'?f.v.charAt(0).toUpperCase()+f.v.slice(1):f.v;
+    return `<button class="wc-item" onclick="openPlate(${jsq(f.fk)},${jsq(f.v)})"><span class="tx"><span class="tt">${esc(lbl)}</span><span class="dd">${FACET_LBL[f.fk]||'a facet'} · ${f.n} green${f.n===1?'':'s'} — the aggregate road</span></span><span class="go">→</span></button>`}).join('')}
+  <div class="muted small serif" style="font-style:italic;margin:6px 2px 0">A facet is a query over the greens, never a collection — and one that leaves a field unread is counted, not hidden.</div>`:''})()}
   ${(roasters.some(x=>x.n)||bars.length)?`<div class="section-head"><h2>The hands</h2></div>
   ${roasters.filter(x=>x.n).slice(0,6).map(x=>`<div class="card tap" onclick="openRoasterPage(${jsq(x.r.id)})">
     <div class="row"><strong>${esc(x.r.name)}</strong><span class="muted">roaster · ${x.n} roast${x.n===1?'':'s'} on the record</span></div>
@@ -3906,7 +3969,11 @@ function vAtlas(){
   ${cups.slice(0,12).map(feedRow).join('')}`:''}
   ${beans.length?`<div class="section-head"><h2>Beans worth chasing</h2><span class="n-note num">${beans.length}</span></div>
   ${beans.slice(0,6).map(beanRow).join('')}`:''}
-  <div class="section-head" style="margin-top:22px"><h2>${isAdmin()?'Add to the atlas':'The atlas is kept'}</h2><span class="n-note num">${isAdmin()&&qn?`${qn} awaiting`:''}</span></div>
+  <div class="section-head" style="margin-top:22px"><h2>Add to the atlas</h2><span class="n-note num">${isAdmin()&&qn?`${qn} awaiting`:''}</span></div>
+  ${readOnly()?'':`<div class="card tap" onclick="openDoor()">
+    <div class="row"><strong>The door — paste a coffee</strong><span class="muted">→</span></div>
+    <div class="muted" style="margin-top:5px">The roaster’s page or the back of the bag. Read on the device, resolved by the same ladder a bag runs, bound with one tap.</div>
+  </div>`}
   ${isAdmin()?`<div class="card tap" onclick="openProposeSighting()">
     <div class="row"><strong>Propose a sighting</strong><span class="muted">→</span></div>
     <div class="muted" style="margin-top:5px">A bag on a shelf, a roast on a bar. CARTA looks for it on the chart and asks before it binds.</div>
@@ -3946,6 +4013,53 @@ function lotOwnCups(lotId,roasterRef){
   return D.cups.filter(c=>c&&((c.kind==='home'&&bagIds.has(c.bagId))
     ||(c.kind==='cafe'&&c.lotRef&&lotFwd(c.lotRef)===lotId&&(!roasterRef||c.roasterRef===roasterRef))));
 }
+/* ---- the road, as one component (SURFACES.md §2): six stations — grown → processed →
+ * milled → roasted → poured → read — derived from the graph, never stored. A filled mark
+ * is a station the record holds; a hollow one is the record stating what it has not been
+ * told. The gap is the product. One component, every scope: the lot page, the plate's
+ * aggregate, Today's coffee-in-hand. ---- */
+function lotRoadStations(lotId){
+  const lot=catNode('lots',lotId);if(!lot)return null;
+  const fp=lot.fingerprint||{};
+  const growers=(lot.producerRefs||[]).map(id=>catNode('producers',id)).filter(Boolean);
+  const procs=(lot.processorRefs||[]).map(id=>catNode('processors',id)).filter(Boolean);
+  const hands=[...new Set(CAT.roasts.entries.filter(r=>r&&r.lotRef===lotId&&r.roasterRef).map(r=>r.roasterRef))];
+  const shops=[...new Set((D.pours||[]).filter(p=>p&&p.lotRef&&lotFwd(p.lotRef)===lotId&&regSubstance(p.shop)).map(p=>p.shop))];
+  const bat=lot.processingBatchRef&&catNode('lots',lot.processingBatchRef);
+  const ko=(lot.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt)||(bat&&(bat.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt));
+  const cups=lotOwnCups(lotId).length;
+  const originWhere=[fp.region,fp.country].filter(regSubstance).join(', ');
+  // a station is a processor, never a grower — a producer entry the door tagged as one (or that
+  // matches a standing processor node) reads at Processed, and Grown falls back to the region
+  const stnKeys=new Set(procs.map(p=>normPlace(p.name)));
+  const trueGrowers=growers.filter(g=>g.producerKind!=='station'&&!stnKeys.has(normPlace(g.name)));
+  const flatGrower=regSubstance(fp.producer)&&!stnKeys.has(normPlace(fp.producer))?fp.producer:'';
+  return [
+    {lb:'Grown',who:trueGrowers.length?(trueGrowers.length>1?trueGrowers.length+' growers':trueGrowers[0].name):(flatGrower||originWhere)},
+    {lb:'Processed',who:procs.length?procs[0].name:(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:'')},
+    {lb:'Milled',who:bat?('dry mill'+(ko?' · '+ko.value:'')):''},
+    {lb:'Roasted',who:hands.length?(hands.length>1?hands.length+' hands':roasterName(hands[0])):''},
+    {lb:'Poured',who:shops.length?(shops.length>1?shops.length+' bars':shops[0]):''},
+    {lb:'Read',who:cups?(cups+(cups===1?' cup':' cups')):'',you:true}
+  ];
+}
+function road6HTML(stations,draw){
+  if(!stations)return'';
+  let prev=true;
+  const cells=stations.map(s=>{const held=regSubstance(s.who);
+    const cls='stn'+(held?' held':'')+(s.you&&held?' you':'')+((!held||!prev)?' gap':'');
+    prev=held;
+    return `<div class="${cls}"><span class="bar"></span><span class="mk"></span><span class="lb">${esc(s.lb)}</span><span class="who">${held?esc(s.who):'unread'}</span></div>`}).join('');
+  return `<div class="road6${draw&&!reducedMotion()?' draw':''}">${cells}</div>`;
+}
+// the aggregate road — count(lots where the station edge exists) / count(lots), per station.
+// The reading a single green can't give: where a whole facet's road goes dark.
+function aggRoadHTML(lotIds){
+  const alls=lotIds.map(lotRoadStations).filter(Boolean);
+  const n=alls.length;if(!n)return'';
+  return alls[0].map((s0,i)=>{const c=alls.filter(s=>regSubstance(s[i].who)).length;
+    return `<div class="aggrow${c/n<.5?' thin':''}"><span class="lb">${esc(s0.lb)}</span><span class="track"><span class="fill" style="width:${Math.round(c/n*100)}%"></span></span><span class="ct">${c}/${n}</span></div>`}).join('');
+}
 function vLotPage(){
   const lotId=pageView.id;
   const lot=catNode('lots',lotId);
@@ -3959,45 +4073,19 @@ function vLotPage(){
   const gr=grainRead(lot.grain);
   const bat=lot.processingBatchRef&&catNode('lots',lot.processingBatchRef);
   const ko=(lot.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt)||(bat&&(bat.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt));
-  // ── the road — every stage the record actually holds; silence stays silent ──
-  const stages=[];
-  const originWhere=[fp.region,fp.country].filter(regSubstance).join(', ');
-  if(growers.length||originWhere)stages.push({mark:'○',stage:'Grown',when:'',
-    who:growers.length?growers.map(g=>g.name).join(' · '):(originWhere||'grower unwritten'),
-    detail:[originWhere,lot.variety].filter(regSubstance).join(' · ')});
-  if(fp.process&&fp.process.family&&fp.process.family!=='unspecified')stages.push({mark:'◎',stage:'Processed',when:'',
-    who:growers.length?growers[0].name:'as the bag states it',detail:fp.process.family});
-  if(bat)stages.push({mark:'◑',stage:'Milled & graded',when:'',who:'dry mill'+(ko?' · outturn '+ko.value:''),detail:'screen-sorted into sibling lots'});
-  if(roasts.length){const from=roasts.map(r=>r.roastDate).filter(Boolean).sort()[0];
-    stages.push({mark:'◉',stage:'Roasted',when:from?'from '+fmtMDY(from):'',
-      who:[...new Set(roasts.map(r=>roasterName(r.roasterRef)).filter(Boolean))].join(' · ')||'a roaster',
-      detail:hands>=2?`${hands} hands on one green — below`:'one hand — below'})}
-  const pourShops=[...new Set(pours.map(p=>p.shop))];
-  const pourLast=pours.map(p=>p.at).filter(Boolean).sort().slice(-1)[0];
-  stages.push(pourShops.length
-    ?{mark:'●',stage:'Poured',when:pourLast?'seen '+fmtMDY(pourLast):'',who:pourShops.join(' · '),detail:'dated, signed sightings'}
-    :{mark:'○',stage:'Poured',when:'unread',who:'no pour on a bar yet',detail:'the branch opens with the first sighting'});
-  const roadRows=stages.map((n,i)=>`<div style="display:flex;gap:13px">
-    <div style="display:flex;flex-direction:column;align-items:center;width:12px;flex:none">
-      <span style="font-family:var(--sans);font-size:12px;line-height:1;color:var(--ink);margin-top:2px">${n.mark}</span>
-      <span style="flex:1;width:1px;background:${i===stages.length-1?'transparent':'var(--line)'}"></span>
-    </div>
-    <div style="flex:1;padding-bottom:15px;min-width:0">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
-        <span style="font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500">${n.stage}</span>
-        <span class="n-note" style="flex:none">${esc(n.when)}</span>
-      </div>
-      <div style="font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink);margin-top:2px">${esc(n.who)}</div>
-      ${n.detail?`<div class="muted" style="font-size:12px;margin-top:1px">${esc(n.detail)}</div>`:''}
-    </div>
-  </div>`).join('');
+  // ── the road — six stations, hollow where the record is silent; the gap is the product ──
+  const road=road6HTML(lotRoadStations(lotId),true);
   const mine=lotOwnCups(lotId).filter(c=>c.hedonic!=null).sort((a,b)=>b.hedonic-a.hedonic||String(b.createdAt).localeCompare(String(a.createdAt)));
   const ov=mine[0]||null;
   const roadTail=ov?'Your reading rests at the end of it — below.':'The road stops where the record does. Unread is a state, not a gap invented shut.';
   // ── identity — the columns, each mark opening its meaning ──
   const idRows=[];
-  if(growers.length)idRows.push({k:growers.length>1?'Growers':'Grower',v:growers.map(g=>g.name).join(' · ')});
-  else if(regSubstance(fp.producer))idRows.push({k:'Producer',v:fp.producer});
+  const stns=(lot.processorRefs||[]).map(id=>catNode('processors',id)).filter(Boolean);
+  const stnKeys=new Set(stns.map(p=>normPlace(p.name)));
+  const trueGrowers=growers.filter(g=>g.producerKind!=='station'&&!stnKeys.has(normPlace(g.name))); // a station is a processor, never a grower
+  if(trueGrowers.length)idRows.push({k:trueGrowers.length>1?'Growers':'Grower',v:trueGrowers.map(g=>g.name).join(' · ')});
+  else if(regSubstance(fp.producer)&&!stnKeys.has(normPlace(fp.producer)))idRows.push({k:'Producer',v:fp.producer});
+  if(stns.length)idRows.push({k:'Station',v:stns.map(p=>p.name).join(' · ')}); // the processor, kept apart from the grower — two actors, two nodes
   if(regSubstance(lot.variety))idRows.push({k:'Variety',v:lot.variety});
   if(fp.process&&fp.process.family&&fp.process.family!=='unspecified')idRows.push({k:'Process',v:fp.process.family});
   if(ko)idRows.push({k:'Outturn',v:ko.value,ex:'outturn'});
@@ -4113,10 +4201,10 @@ function vLotPage(){
   </details>`:'';
   const sub=[fp.region,fp.country].filter(regSubstance).join(', ');
   return pageHero('A green on the atlas'+(ko?' · outturn '+esc(ko.value):''),esc(lotLabel(lot))+'.',esc(sub||'origin unwritten'))+`
-  <div style="border:1px solid var(--line);background:var(--paper-2);padding:14px 16px 2px;margin:0 0 10px">
-    <h2 style="margin:0 0 14px">The road</h2>
-    ${roadRows}
-    <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif);padding:0 0 12px 25px;margin-top:-6px">${roadTail}</div>
+  <div style="border:1px solid var(--line);background:var(--paper-2);padding:14px 16px 12px;margin:0 0 10px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 style="margin:0 0 10px">The road</h2><button class="text-action ex" style="padding:0;font-size:12px;flex:none" onclick="openPrimer('road')">how to read it</button></div>
+    ${road}
+    <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif);margin-top:10px">${roadTail}</div>
   </div>
   ${idCard}
   ${idNote}
@@ -4165,6 +4253,50 @@ function vRoasterPage(){
   <div class="muted small serif" style="font-style:italic;margin:12px 2px 0">${note}</div>
   ${claimBlock('roaster',r.id,r.name)}
   ${seal(r.name,'The roaster owns the roast, never the farm.')}`;
+}
+/* ============ the plate — one facet of the atlas, read as a page (SURFACES.md §2) ============ */
+/* A facet is a QUERY over lots, never a stored collection — country, process family,
+ * variety, over the fields the lot already carries and the resolver already normalised.
+ * The page is the same three-part reading a single green gets, aggregated: the road
+ * counted across every green in the facet, the greens, the hands. One law (CHARTS.md):
+ * a facet must never silently hide unread — a green that doesn't state the field is
+ * counted out loud, never quietly dropped. */
+const FACET_LBL={country:'a country',process:'a process',variety:'a variety'};
+function facetVal(lot,fk){const fp=lot.fingerprint||{};
+  return fk==='country'?fp.country:fk==='process'?((fp.process&&fp.process.family&&fp.process.family!=='unspecified')?fp.process.family:''):lot.variety}
+function openPlate(fk,fv){closeSheet();pageView={kind:'plate',id:fk+'|'+fv,fk,fv};placeView=null;curateOn=false;discOn=false;render()}
+function plateFacets(){
+  const lots=atlasLots();
+  const tally=fk=>{const m=new Map();lots.forEach(x=>{const v=facetVal(x.lot,fk);if(!regSubstance(v))return;
+    const k=normPlace(v);const e=m.get(k)||{fk,v,n:0};e.n++;m.set(k,e)});
+    return [...m.values()].sort((a,b)=>b.n-a.n)};
+  return [...tally('country').slice(0,4),...tally('process').slice(0,3),...tally('variety').slice(0,3)];
+}
+function vPlatePage(){
+  const {fk,fv}=pageView;
+  const all=atlasLots();
+  const hit=all.filter(x=>normPlace(facetVal(x.lot,fk)||'')===normPlace(fv));
+  const unread=all.filter(x=>!regSubstance(facetVal(x.lot,fk))).length;
+  if(!hit.length)return `<div class="empty">No green on the atlas answers this facet any more.</div>`;
+  const ids=hit.map(x=>x.id);
+  const handSet=new Map();
+  ids.forEach(id=>CAT.roasts.entries.forEach(r=>{if(!r||r.lotRef!==id||!r.roasterRef)return;
+    const e=handSet.get(r.roasterRef)||{ref:r.roasterRef,lots:new Set()};e.lots.add(id);handSet.set(r.roasterRef,e)}));
+  const handRows=[...handSet.values()].sort((a,b)=>b.lots.size-a.lots.size).map(h=>`<div class="card tap" onclick="openRoasterPage(${jsq(h.ref)})">
+    <div class="row"><strong>${esc(roasterName(h.ref))}</strong><span class="n-note" style="flex:none">${h.lots.size} green${h.lots.size===1?'':'s'}</span></div>
+  </div>`).join('');
+  const bars=new Set();(D.pours||[]).forEach(p=>{if(p&&p.lotRef&&ids.includes(lotFwd(p.lotRef))&&regSubstance(p.shop))bars.add(normName(p.shop))});
+  const label=fk==='process'?fv.charAt(0).toUpperCase()+fv.slice(1):fv;
+  const counts=[`${hit.length} green${hit.length===1?'':'s'}`,handSet.size&&`${handSet.size} hand${handSet.size===1?'':'s'}`,bars.size&&`${bars.size} bar${bars.size===1?'':'s'}`].filter(Boolean).join(' · ');
+  return pageHero('A plate · '+esc(FACET_LBL[fk]||'a facet'),esc(label)+`, in ${['','one','two','three','four','five','six','seven','eight','nine'][hit.length]||hit.length} green${hit.length===1?'':'s'}.`,esc(counts))+`
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 style="margin:4px 0 8px">How far the road runs</h2><button class="text-action ex" style="padding:0;font-size:12px;flex:none" onclick="openPrimer('plate')">the plate</button></div>
+  <div class="card" style="padding:10px 16px">${aggRoadHTML(ids)}</div>
+  <div class="muted small serif" style="font-style:italic;margin:-4px 2px 8px">Where a bar runs short, the record is telling you what it has not been told — not a chart of anyone's failure.</div>
+  ${unread?`<div class="muted small" style="margin:0 2px 16px">${all.length} green${all.length===1?'':'s'} on the atlas · ${unread} unread on this facet — counted, never quietly dropped.</div>`:''}
+  <div class="section-head"><h2>The greens</h2><span class="n-note num">n=${hit.length}</span></div>
+  ${hit.map(atlasLotCard).join('')}
+  ${handRows?`<div class="section-head"><h2>The hands</h2></div>${handRows}`:''}
+  ${seal(label,'One reading, five scopes. A plate is the atlas, cut.')}`;
 }
 
 /* ============ Act III — the signed page: the claim ceremony + the pen ============ */
@@ -4543,6 +4675,9 @@ const PR={
   readback:{t:'The record, returned',b:'A record leaves as one file and returns whole — read back on any device, offline, no account required. What returns is the reader’s own overlay: readings, shelf, cups. It is read to you, never merged — never averaged into the shared page, which stood without it and stands after. What can be written out can be read back: the proof the schema is open, and the record truly yours.'},
   interlude:{t:'Reading the season',b:'Ask, and the atlas composes the season in front of you — the pins settle and a line is drawn through them, once, over about a second. It is a reading being composed, not a screen loading, and never a score revealed; the ember stays reserved. What it ranks is only ever your own taste — the coffees you keep reaching for, the places you keep — and it shows its reasons. Ask again and it composes again; it never plays on its own.'},
   setup:{t:'The Setup',b:'Grinder, brewer, and the scale your grind is read on. A grind number means one thing on your grinder and nothing on another — so grind lives inside a Setup and never travels between them. Name the Setup once and the dial is read against it, and only against it. The bag names the coffee; your own zero names the grind.'},
+  door:{t:'The door',b:'One paste field, where six forms stood. Paste the roaster’s page or the back of the bag and CARTA reads it here, on the device — no key, no account, no network — against the same vocabularies the resolver already uses. You strike anything wrong, then bind it with one tap. Nothing is written before the bind, and a struck fact keeps its ink.'},
+  road:{t:'The road',b:'Six stations — grown, processed, milled, roasted, poured, read. A filled mark is a station the record holds; a hollow one is a station it has not been told about, and the connector across a gap is dashed. The gap is the product: it is the record stating what it does not know, never a blank to fill.'},
+  plate:{t:'A plate',b:'One facet of the atlas — a country, a process, a variety — read as a page. Its road is the aggregate: how many of the facet’s greens reach each station, so you can see exactly where the record goes dark. A facet is a query, never a collection, and a green that leaves the field unread is counted out loud, never quietly dropped.'},
   founderpen:{t:'The founder’s pen',b:'While the atlas settles, the shared record — the atlas and the Register — is kept by one pen: the founder’s. Everyone reads everything; everyone writes their own ledger, always. What waits is only the shared page. When the moderation ceremony ships, proposals stand for every keeper again — nothing here is taken away for good.'}
 };
 function openPrimer(key){
@@ -4929,6 +5064,235 @@ function openBagDetail(id){
   <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`}`);
 }
 
+/* ============ the door — paste, confirm, bind (SURFACES.md §1) ============ */
+/* You never hold a lot. You hold a roast of one — a bag, a line on a menu. So the
+ * door authors a coffee and the lot resolves behind it: paste → confirm → bind.
+ * The parse runs HERE, on the device — no key, no account, no network — against
+ * vocabularies the build already carries (PLACE_ALIASES, procFamily, the resolver's
+ * thresholds) plus a country list and two regular expressions. The confirm step says
+ * lotIdentity's grain rule and lotKeyOf's two-of-six threshold out loud, at the only
+ * moment a keeper can act on them. The bind is the only branch: shelf · bar · brew ·
+ * noting. Nothing is written until the bind; a struck fact keeps its ink. */
+const DOOR_COUNTRIES=['Colombia','Ethiopia','Kenya','Guatemala','Costa Rica','Panama','Brazil',
+  'Peru','Bolivia','Ecuador','Honduras','El Salvador','Nicaragua','Mexico','Rwanda','Burundi',
+  'Tanzania','Uganda','Malawi','Zambia','Zimbabwe','DR Congo','Yemen','India','Indonesia','Sumatra',
+  'Sulawesi','Papua New Guinea','Timor-Leste','Thailand','Vietnam','Myanmar','China','Taiwan',
+  'Philippines','Hawaii','Jamaica','Dominican Republic','Haiti','Cuba','Venezuela'];
+const DOOR_REGIONS=[...new Set(['Huila','Nariño','Tolima','Cauca','Antioquia','Cundinamarca','Santander','Quindío',
+  'Guji','Sidama','Sidamo','Gedeb','Bench Maji','Kaffa','Nyeri','Kirinyaga','Kiambu','Embu',
+  'Huehuetenango','Acatenango','Antigua','Atitlán','Boquete','Chiriquí','Volcán','Tarrazú','West Valley','Central Valley',
+  'Cajamarca','Amazonas','Minas Gerais','Cerrado','Sul de Minas','Mogiana','Kayanza','Ngozi','Kigoma','Mbeya',
+  'Aceh','Kintamani','Chiapas','Veracruz','Oaxaca',
+  ...PLACE_ALIASES.filter(a=>a[2]==='region').flatMap(a=>a[1]).map(s=>s.replace(/(^|\s)[a-z]/g,c=>c.toUpperCase()))])];
+const DOOR_VARIETIES=[...new Set(['Pink Bourbon','Yellow Bourbon','Red Bourbon','Sudan Rume','Wush Wush','Mundo Novo',
+  'Gesha','Geisha','Bourbon','Caturra','Catuai','Catuaí','Castillo','Typica','Pacamara','Maragogype',
+  'SL28','SL34','SL 28','SL 34','Ruiru 11','Batian','Heirloom','Mixed heirloom','Sidra','Java','Laurina',
+  'Tabi','Pache','Villa Sarchi','Chiroso','Papayo','74110','74158','Colombia','Kent','S795',
+  ...PLACE_ALIASES.filter(a=>a[2]==='variety').flatMap(a=>a[1]).map(s=>s.replace(/(^|\s)[a-z]/g,c=>c.toUpperCase()))])];
+const DOOR_PROC_WORDS=['double anaerobic','anaerobic natural','anaerobic washed','carbonic maceration',
+  'thermal shock','extended fermentation','lactic','koji','anaerobic','fully washed','washed','wet process',
+  'natural','dry process','yellow honey','red honey','black honey','white honey','honey','wet hulled',
+  'giling basah','experimental'];
+// the producer / processor split — the distinction SCHEMA insists on and one flat field collapses.
+// Vocabulary-driven; an unmatched name stays unclassified rather than being guessed into a tier.
+const DOOR_FARM_RE=/\b(finca|hacienda|granja|fazenda|sitio|estate|farm)\b/i;
+const DOOR_STATION_RE=/\b(washing station|wet mill|dry mill|beneficio|station|cooperative|co-?op|union)\b/i;
+// whole-token vocabulary scan; a hit fully contained in a longer one drops ("Bourbon" inside "Pink Bourbon")
+function doorFindAll(text,list){
+  const low=text.toLowerCase(),hits=[];
+  list.forEach(term=>{const t=term.toLowerCase(),i=low.indexOf(t);if(i<0)return;
+    const before=i===0?' ':low[i-1],after=low[i+t.length]||' ';
+    if(/[a-zà-ÿ0-9]/.test(before)||/[a-zà-ÿ0-9]/.test(after))return;
+    hits.push(term)});
+  return hits.filter(h=>!hits.some(o=>o!==h&&o.toLowerCase().indexOf(h.toLowerCase())>=0));
+}
+function doorFindNamed(text,re){
+  const out=[];
+  text.split(/[\n,;•·—]|\.\s/).forEach(frag=>{
+    let f=frag.trim();
+    if(f.length<3||f.length>46||!re.test(f))return;
+    f=f.replace(/^(grown at|produced (at|by)|processed (at|by)|from|at|by|the)\s+/i,'').replace(/[.,;:]$/,'').trim();
+    if(f&&out.indexOf(f)<0)out.push(f)});
+  return out.slice(0,1);
+}
+function doorParse(text){
+  const f={};
+  const c=doorFindAll(text,DOOR_COUNTRIES);   if(c.length)f.country=c[0];
+  const r=doorFindAll(text,DOOR_REGIONS);     if(r.length)f.region=r[0];
+  const v=doorFindAll(text,DOOR_VARIETIES).filter(x=>!f.country||normPlace(x)!==normPlace(f.country)); // a country is not a variety here
+  if(v.length)f.varieties=v;
+  const p=doorFindAll(text,DOOR_PROC_WORDS);
+  if(p.length){const w=p.sort((a,b)=>b.length-a.length)[0];f.process=w.charAt(0).toUpperCase()+w.slice(1)}
+  const farm=doorFindNamed(text,DOOR_FARM_RE),stn=doorFindNamed(text,DOOR_STATION_RE);
+  if(farm.length)f.producer=farm[0];
+  if(stn.length&&(!farm.length||normPlace(stn[0])!==normPlace(farm[0])))f.processor=stn[0];
+  const alt=text.match(/(\d{3,4})\s*[–—-]\s*(\d{3,4})\s*m(?:asl)?\b/i)||text.match(/\b(\d{3,4})\s*m(?:asl)?\b/i);
+  const comma=n=>String(n).replace(/\B(?=(\d{3})+$)/g,',');
+  if(alt)f.altitude=alt[2]?comma(alt[1])+'–'+comma(alt[2])+' masl':comma(alt[1])+' masl';
+  const yr=text.match(/\b(20[12]\d)\b/);      if(yr)f.harvest=yr[1];
+  const rst=text.match(/\b(light-medium|medium-dark|light|medium|dark)\s+roast\b/i);
+  if(rst)f.roastLevel=rst[1].charAt(0).toUpperCase()+rst[1].slice(1).toLowerCase();
+  const rhit=doorFindAll(text,CAT.roasters.entries.filter(x=>x&&regSubstance(x.name)).map(x=>x.name)); // a hand the atlas already knows
+  if(rhit.length)f.roaster=rhit[0];
+  const first=(text.split(/\n/).map(s=>s.trim()).filter(Boolean)[0]||'').replace(/\s*[–—-]\s*$/,'');
+  if(first.length>=2&&first.length<=60)f.nameGuess=first; // a suggestion for the offering's name — yours to overwrite
+  return f;
+}
+// the unstruck facts, shaped as a record's origin. The record's one producer field carries
+// farm-or-station (the six-token floor stays honest); the catalog splits the actors below.
+function doorFields(){
+  const f=doorParsed||{},s=doorStruck;
+  const farm=(!s.producer&&f.producer)||'',stn=(!s.processor&&f.processor)||'';
+  return {originCountry:(!s.country&&f.country)||'',originRegion:(!s.region&&f.region)||'',
+    producer:farm||stn,producerKind:farm?'farm':stn?'station':'',station:stn,
+    variety:(!s.variety&&(f.varieties||[])[0])||'',process:(!s.process&&f.process)||'',lot:'',
+    altitude:(!s.altitude&&f.altitude)||'',harvest:(!s.harvest&&f.harvest)||'',
+    roastLevel:(!s.roastLevel&&f.roastLevel)||''};
+}
+// lotIdentity's grain rule and lotKeyOf's ≥2-of-6 threshold, computed exactly as the save will
+function doorResolve(){
+  const o=doorFields();
+  const n=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].filter(regSubstance).length;
+  return {n,grain:lotIdentity(o).grain,shared:n>=2};
+}
+const DOOR_GRAIN={'green-lot':['Green lot','The finest grain the trade can prove — one parcel, one harvest.'],
+  'station-season':['Station · season','A legitimate terminal record, not a half-filled lot.'],
+  'region-grade':['Region · grade','The honest floor. Named as such, never rounded up.']};
+let doorStep=0,doorText='',doorParsed=null,doorStruck={};
+function openDoor(){
+  if(guard())return;
+  doorStep=0;doorText='';doorParsed=null;doorStruck={};
+  renderDoor();
+}
+function doorRead(){
+  const t=val('d_text');
+  if(!t){toast('Paste something first — or type it instead');return}
+  doorText=t;doorParsed=doorParse(t);doorStruck={};doorStep=1;renderDoor();
+}
+function doorBack(n){doorStep=n;renderDoor()}
+function doorStrike(k){doorStruck[k]=!doorStruck[k];renderDoor()}
+function doorStepDots(label){
+  return `<div class="stepdots">${[0,1,2].map(i=>`<i class="${i<=doorStep?'on':''}"></i>`).join('')}<span>${esc(label)}</span></div>`;
+}
+function renderDoor(){
+  if(doorStep===0){
+    openSheet(`
+    ${doorStepDots('What does it say?')}
+    <h3>Paste the coffee</h3>
+    <div class="sub">The roaster’s page, the back of the bag, an auction line — whatever you have. CARTA reads it and asks about the rest.</div>
+    <label class="f"><span class="l">The words</span><textarea id="d_text" placeholder="Paste anything about this coffee…" style="min-height:130px">${esc(doorText)}</textarea></label>
+    <button class="btn btn-primary" onclick="doorRead()">Read it</button>
+    <button class="btn btn-quiet" onclick="closeSheet();openBagForm()">Type it instead</button>
+    <div class="muted small serif" style="font-style:italic;text-align:center;margin-top:10px">Read here, on the device — no key, no account, no network. The same vocabularies the resolver already uses.</div>`);
+    const ta=document.getElementById('d_text');if(ta)ta.focus();
+    return;
+  }
+  if(doorStep===1){
+    const f=doorParsed||{},r=doorResolve();
+    const known=[['Country','country',f.country],['Region','region',f.region],['Farm','producer',f.producer],
+      ['Station','processor',f.processor],['Variety','variety',(f.varieties||[]).join(', ')],['Process','process',f.process],
+      ['Harvest','harvest',f.harvest],['Altitude','altitude',f.altitude],['Roast','roastLevel',f.roastLevel]].filter(k=>regSubstance(k[2]));
+    const g=r.grain?DOOR_GRAIN[r.grain]:null;
+    const meter=`<div class="doormeter">${[0,1,2,3,4,5].map(i=>`<i class="${i<r.n?'on':''}"></i>`).join('')}</div>`;
+    const why=!r.grain?'Nothing here names a coffee. It would reach the atlas as nothing at all — strike a fact back in, or type it instead.'
+      :r.shared?esc(g[1])+' <strong>Two facts stand — this green can meet another keeper’s record.</strong>'
+      :'One fact stands. It needs <strong>two</strong> to collide with another record; at one, it forks to a green only you can ever see.';
+    openSheet(`
+    ${doorStepDots('Is this right?')}
+    <h3>${known.length?`Read ${known.length} fact${known.length===1?'':'s'}`:'Nothing read'}</h3>
+    <div class="sub">Strike anything wrong. Nothing is written until you bind it.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 14px">
+      ${known.map(k=>{const off=!!doorStruck[k[1]];
+        return `<button class="chip${off?' struck':' window'}" onclick="doorStrike(${jsq(k[1])})">${esc(k[0])} · ${esc(k[2])} ×</button>`}).join('')
+        ||'<span class="chip past">nothing recognised — the words may still name it; type it instead</span>'}
+    </div>
+    <div class="doorres${r.shared?'':' thin'}">
+      <div class="grain">${g?esc(g[0]):'No green yet'}</div>
+      <div class="why">${why}</div>
+      ${meter}
+    </div>
+    <div class="muted small" style="margin:6px 2px 14px">The meter is the collision threshold, said out loud — two of six facts and two records can meet.</div>
+    <button class="btn btn-primary" onclick="doorStep=2;renderDoor()">Continue</button>
+    <button class="btn btn-quiet" onclick="doorBack(0)">← Paste again</button>
+    <div class="muted small serif" style="font-style:italic;text-align:center;margin-top:10px">A struck fact is not deleted. It is struck — the line keeps its ink.</div>`);
+    return;
+  }
+  const f2=doorParsed||{},r2=doorResolve();
+  openSheet(`
+  ${doorStepDots('And this coffee is —')}
+  <h3>One binding</h3>
+  <div class="sub">The green exists once you bind it. This last tap says what it is <em>to you</em>.</div>
+  <div class="grid2">
+    <label class="f"><span class="l">Roaster <span class="opt">optional</span></span><input type="text" id="d_roaster" list="d_roasterlist" value="${esc(f2.roaster||'')}" placeholder="Sey"></label>
+    <label class="f"><span class="l">The coffee <span class="opt">optional</span></span><input type="text" id="d_name" value="${esc(f2.nameGuess||'')}" placeholder="as the bag names it"></label>
+  </div>
+  <datalist id="d_roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+  ${[['On my shelf','a bag — brews start from it','bag'],
+     ['Poured at a bar','a cup out — name the bar next','pour'],
+     ['Brewed it just now','a bag, straight into the dials','brew'],
+     ['Just noting it','onto your atlas, no cup logged','note']].map(b=>
+    `<button class="wc-item" onclick="doorBind(${jsq(b[2])})"><span class="tx"><span class="tt">${esc(b[0])}</span><span class="dd">${esc(b[1])}</span></span><span class="go">→</span></button>`).join('')}
+  <button class="btn btn-quiet" style="margin-top:10px" onclick="doorBack(1)">← The facts</button>
+  <div class="muted small serif" style="font-style:italic;text-align:center;margin-top:10px">${r2.shared
+    ?'One paste mints a green, a roaster and a roast. The tap adds exactly one edge.'
+    :'Thin, and the record will say so on every surface it appears.'}</div>`);
+}
+// The origin-actor split (SURFACES.md, "where the farm went"): the parser told farm from
+// station by vocabulary, so the catalog keeps them apart — the producers node tagged with
+// its kind, a processors node on the lot's processorRefs (that kind's first write path).
+// Additive and blanks-only; an unmatched name stays unclassified, never guessed into a tier.
+function doorStampActors(rec,o){
+  if(!rec.lotRef)return;
+  if(regSubstance(o.producer)&&o.producerKind){
+    const p=catByKey('producers',catNorm(o.producer)+'|'+catNorm(o.originCountry));
+    if(p&&!p.producerKind){p.producerKind=o.producerKind;CAT.producers.dirty=true;saveDoc('producers')}
+  }
+  if(regSubstance(o.station)){
+    const pn=catUpsert('processors',catNorm(o.station)+'|'+catNorm(o.originCountry),{name:o.station,country:o.originCountry,region:o.originRegion},activeName());
+    const lot=catNode('lots',rec.lotRef);
+    if(pn&&lot&&!(lot.processorRefs||[]).length){lot.processorRefs=[pn.id];lot.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots')}
+  }
+}
+function doorBind(kind){
+  if(guard())return;
+  const o=doorFields(),roaster=val('d_roaster'),name=val('d_name');
+  const worthy=[o.originCountry,o.originRegion,o.producer,o.variety,o.process].some(regSubstance);
+  if(!roaster&&!name&&!worthy){toast('Nothing to bind — a name or one fact, at least');return}
+  if(kind==='note'&&!roaster&&!worthy){toast('A note needs a hand or a fact — a roaster, or one origin token');return} // a bare name reaches no atlas
+  if(kind==='pour'){ // the cup-out flow already knows this law — hand it the facts
+    closeSheet();
+    openCafe({roaster,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,variety:o.variety,process:o.process});
+    return;
+  }
+  const lvl=ROAST_LEVELS.indexOf(o.roastLevel);
+  const extras=[o.altitude&&('grown at '+o.altitude),o.harvest&&(o.harvest+' harvest')].filter(Boolean).join(' · '); // facts with no field yet — kept in the record's own words, never dropped
+  const base={roaster,name,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,
+    variety:o.variety,process:o.process,lot:'',roastDate:'',roastLevel:lvl<0?0:lvl,hardIds:[],notes:extras};
+  if(kind==='note'){ // bag-shaped, no shelf, no cup — swept exactly as a bag (it carries a roast)
+    const rec={id:uid(),createdAt:new Date().toISOString(),curator:activeName(),...base};
+    D.authored=D.authored||[];D.authored.push(rec);
+    catStampRoaster(rec);const res=catStampLot(rec);catStampRoast(rec);
+    doorStampActors(rec,o);save();atlasGeoFill(rec);
+    closeSheet();
+    if(res&&res.action==='propose'&&res.propose)openLotPropose(rec.id,res.propose.lot.id,res.propose.fields);
+    else if(rec.lotRef){openLotPage(rec.lotRef);toast(res&&res.action==='auto'?'Noted — folded onto a green already charted':'Noted — the green is on your atlas')}
+    else{go('atlas');toast('Noted — on the record')}
+    return;
+  }
+  // a bag on the shelf — the same save the bag form makes, retirement and all
+  const nb={id:uid(),createdAt:new Date().toISOString(),archived:false,boughtAt:'',price:null,site:'',palette:null,...base};
+  D.bags.push(nb);curBagId=nb.id;
+  catStampRoaster(nb);const lotRes=catStampLot(nb);catStampRoast(nb);
+  doorStampActors(nb,o);
+  if(nb.roasterRef)nb.roaster=''; // flat fields retire under a standing node, exactly as saveBag
+  if(nb.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>nb[k]='');
+  if(nb.roastRef){nb.roastLevel=0;nb.roastDate=''}
+  save();setAccent(lvl<0?0:lvl);atlasGeoFill(nb);closeSheet();
+  if(kind==='brew'){go('today');openBrew(nb.id)}
+  else{go(depth()>=3?'field':'bags');toast('On the shelf. The first brew starts whenever you do.')}
+  if(lotRes&&lotRes.action==='propose')openLotPropose(nb.id,lotRes.propose.lot.id,lotRes.propose.fields); // one uncertain candidate — ask inline while the context is warm (§4)
+}
+
 /* ============ setup form ============ */
 function openSetupForm(id){
   if(guard())return;
@@ -4997,7 +5361,7 @@ function lastBrewFor(bagId,setupId){
 function openBrew(bagId,editId){
   if(guard())return;
   const bags=D.bags.filter(b=>!b.archived).sort(byNew);
-  if(!bags.length){toast('Put a coffee on the shelf first');openBagForm();return}
+  if(!bags.length){toast('Put a coffee on the shelf first');openDoor();return}
   const noSetup=!D.setups.length;   // the first brew names the tools; the Setup writes itself
   const editing=editId?D.brews.find(x=>x.id===editId):null;
   const lastAny=D.brews.slice().sort(byNew)[0];
@@ -7286,10 +7650,15 @@ function vToday(){
   const bestDay=best&&bag&&bag.roastDate?Math.max(1,Math.round((new Date(best.cup.createdAt)-new Date(bag.roastDate))/864e5)):null;
   const notes=lastCup&&(lastCup.notes||((lastCup.descriptors||[]).join(' · ')));
   const originLine=bag?[bagRoaster(bag),o.process,[o.region,o.country].filter(Boolean).join(', ')].filter(regSubstance).map(esc).join(' · ')||'origin unwritten':'';
+  // the road under the coffee in hand — the same six stations its green's page draws
+  const heroLot=bag&&bag.lotRef?lotFwd(bag.lotRef):null;
+  const heroRoad=heroLot&&catNode('lots',heroLot)?`<div style="margin-top:14px">${road6HTML(lotRoadStations(heroLot))}
+    <button class="text-action" style="padding:6px 0 0;font-size:12px" onclick="openLotPage(${jsq(heroLot)})">Open the green →</button></div>`:'';
   const hero=bag?`<div class="hero" style="padding:12px 2px 18px">
     <div class="eyebrow">${dateLine}</div>
     <h2 style="font-size:34px;max-width:12ch;line-height:1.04">${last?`The ${esc(bag.name||bagName(bag))}, again.`:`${esc(bag.name||bagName(bag))}.`}</h2>
     <div class="origin">${originLine} ${restChip(bag)}</div>
+    ${heroRoad}
   </div>`
   :`<div class="hero" style="padding:12px 2px 18px">
     <div class="eyebrow">${dateLine}</div>
@@ -7319,7 +7688,7 @@ function vToday(){
     <div class="finding">${D.bags.length
       ?'The bags are finished; the record is not. The dials remember where you left them — the next bag starts there, not from zero.'
       :'Name the bag in your hand — every brew after remembers it. Or read the atlas first; keeping nothing is a whole way to use CARTA.'}</div>
-    ${readOnly()?'':`<button class="btn btn-graphite" style="margin-top:14px" onclick="openBagForm()">Put a coffee on the shelf</button>
+    ${readOnly()?'':`<button class="btn btn-graphite" style="margin-top:14px" onclick="openDoor()">Put a coffee on the shelf</button>
     ${D.bags.length?`<button class="text-action" style="display:block;margin:12px auto 0;text-align:center" onclick="go('bags')">the shelf — put away, not lost</button>`:''}`}
   </div>`;
   // on the atlas, near your taste — lots argued by the keeper's own record, never a bare number
@@ -7428,7 +7797,7 @@ function openGuide(){
     <li>
       <div class="t">Put a coffee on the shelf</div>
       <div class="b">Name it, or give its website and CARTA reads the roaster, a line, and the bag’s own colours. Free text is fine everywhere — resolution comes later, never at 7am. Only one field does real work: <strong>roast date</strong> drives the rest window. The rest can wait or stay blank.</div>
-      <button class="go" onclick="closeSheet();openBagForm()">Put one on now →</button>
+      <button class="go" onclick="closeSheet();openDoor()">Put one on now →</button>
     </li>
     <li>
       <div class="t">Brew — and name your tools, once</div>

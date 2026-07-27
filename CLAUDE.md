@@ -192,6 +192,27 @@ server/
   are per-Setup scaled; temp dial has a °C/°F corner toggle.
 - **segmented / hedonic / descriptors** — selection-control state.
 - **forms** — `openBagForm`/`saveBag`, `openSetupForm`/`saveSetup`.
+- **the door** (`SURFACES.md` §1) — the paste-first way in: `openDoor` → paste →
+  confirm → bind, one sheet. `doorParse` reads the text on the device against
+  vocabularies the build already carries (`DOOR_COUNTRIES`/`DOOR_REGIONS`/
+  `DOOR_VARIETIES` fold in `PLACE_ALIASES`; farm vs station split by
+  `DOOR_FARM_RE`/`DOOR_STATION_RE`, never guessed); `doorResolve` says
+  `lotIdentity`'s grain and `lotKeyOf`'s ≥2-of-6 threshold out loud; facts are
+  strikeable chips (struck, never deleted). `doorBind` is the only branch —
+  shelf/brew mint a bag through the same `catStamp*` + retirement path `saveBag`
+  walks, pour hands off to `openCafe` prefilled, noting lands a chart-less
+  `authored` record and opens the lot page. `doorStampActors` is the origin-actor
+  split: tags the producer node's `producerKind` and gives **processors** their
+  first write path (`lot.processorRefs`, blanks-only). The typed forms stay as
+  the fallback and the edit surface.
+- **the road + the plate** (`SURFACES.md` §2) — one reading, aggregated:
+  `lotRoadStations`/`road6HTML` draw the six honest stations (grown → processed →
+  milled → roasted → poured → read; hollow marks, dashed connectors — the gap is
+  the product) on the lot page and Today's coffee-in-hand; `aggRoadHTML` counts
+  them across a facet. A plate is `pageView={kind:'plate',fk,fv}` → `vPlatePage`
+  (`openPlate`, facets from `plateFacets` under Atlas → "Cut the atlas") — a
+  query over lots, never a stored collection, and one law: unread on a facet is
+  counted, never silently hidden.
 - **brew flow** — `openBrew` → `saveBrew` → `openImpression` → `saveCup`.
 - **café** — logging café cups (`openCafe`/`saveCafeCup`, with optional
   structured traceability), the café passport (`shopAgg`, `vCafes`, favorites),
