@@ -149,8 +149,8 @@ server/
   it" leans (`prefs.traitLeans`) tip a kind down on the same curve, capped in
   effect at three.
 - **the Atlas tab** — the reading room (`vAtlas`): search over lots, roasters,
-  growers and the Register (`atlasSearchIndex`); the chart hero; the drawn
-  plot over the whole anchored scene (`atlasLotIds` → `atlasMapHTML`); the
+  growers and the Register (`atlasSearchIndex`); the chart hero; the two-frame
+  map over the whole anchored scene (`atlasLotIds` → `atlasFrames`); the
   **interlude** (`readSeason`/`seasonState` — "Read the season for me"
   composes once on a tap, the season line drawn through taste-ranked pins,
   reasons via `seasonReasons()`, instant under reduced motion, never
@@ -247,21 +247,39 @@ server/
   layer over the tiles (`smapEdges`, monochrome, re-added on restyle) with the
   drawn-plot SVG (`svg.atlas-edges`) as the offline floor.
 - **the atlas map** — the lot-keyed graph drawn geographically (VISION step 4),
-  folded into `vCurate` as a **Map / List** toggle (`atlasView`/`atlasSetView`,
-  Map by default when a scene exists). `atlasGraph` walks the chart's greens
-  (`chartRecs` → `lotRows`) into nodes — producers at a coarse origin, roasters
-  in their cities, venues on their streets — and edges (each grower→roaster,
-  each pour's roaster→venue). `atlasMapHTML` renders the drawn plot + registers
-  the live config (`_smapCfg.atlasmap`, `atlasMarks`); every pin taps its 4a
-  page (`openProducerPage`/`openRoasterPage`/`openPlace`), so map and pages are
-  one walk. Coordinates are honest and additive: a venue's real Register point,
-  a roaster's `city` point, a producer's `region`/`country` centroid, each with
-  a `geoGrain` — **never a farm-precise pin**; a node with no coordinate lists
-  rather than lies. Filled from the optional keyless `geoLookup` (via `geoOne`)
-  at author time through `atlasGeoFill` (blanks-only, online-only,
-  offline-degrading — the demo `devSeedChart` stamps demo coordinates directly,
-  never the network). Renders read-only for a stranger; the drawn plot is the
-  floor, the street tiles the enhancement.
+  in **two frames** (`CHARTS.md`: one projection cannot hold a front door and a
+  country). `atlasGraph` walks the greens into nodes — producers at a coarse
+  origin, roasters in their cities, venues on their streets — and edges (each
+  grower→roaster, each pour's roaster→venue), carrying `city`, `grain`, and
+  `listed` (the coordinate-less, **by name**). **Scenes and charts are derived,
+  never stored**: `scenesOf` single-link-clusters located roasters+venues under
+  `SCENE_KM` (~40 km); `chartsOf` groups scenes under keeper-given names
+  (`prefs.charts`, `openChartName` — every ungrouped scene is its own chart);
+  the old `chart:'la'` stamp is retired unread, `CHART1` surviving only as the
+  LA roster guide. `atlasState` is the one resolution both layers read;
+  `atlasFrames` renders: the **chart frame** (`atlasCls` pins, street tiles,
+  roaster→venue edges only, the altitude ladder — region altitude draws scene
+  marks carrying counts, tap to drill; scene altitude draws pins at their own
+  grain) and the **origin frame** (producers at region/country grain, drawn
+  plot only — no street layer — coarse marks hollow+dashed via `grainCoarse`,
+  the hand-off to the chart stated in words, never a line across the sea).
+  Lenses (`atlasLens`/`atlasLensSet` — scenes, kinds, the road, kept) narrow,
+  never sort, and say what they hid. `mapProject` takes an explicit bbox;
+  `mapMerge` folds pins the plot can't separate into one counted mark;
+  `smapView` derives a `minZoom` camera floor; the camera keys on the chart
+  (`atlas|<chart>|<scene>`), not the pins. Every mark taps its 4a page
+  (`openProducerPage`/`openRoasterPage`/`openPlace`), so map and pages are one
+  walk. Coordinates are honest and additive: a venue's real Register point, a
+  roaster's `city` point, a producer's `region`/`country` centroid, each with a
+  `geoGrain` — **never a farm-precise pin**; a node with no coordinate lists
+  rather than lies. Filled from the optional keyless lookup (`geoOne` — which
+  refuses an ambiguous name rather than taking `list[0]` blindly) at author
+  time through `atlasGeoFill` (blanks-only, online-only, offline-degrading —
+  the demo `devSeedChart` stamps demo coordinates directly, never the network);
+  corrected through `openGeoFix` (pen-gated, on roaster/producer pages —
+  candidates offered, unpin allowed, `{full:true}` overwrite). Renders
+  read-only for a stranger; the drawn plot is the floor, the street tiles the
+  enhancement. `vCurate` keeps its **Map / List** toggle (`atlasView`).
 - **the standing** — a coffee's rarity and caliber, compiled from sourced facts
   (VISION step 5), reborn from the old café reach onto the coffee it always
   belonged on. Three independent axes, never merged into one verdict:
@@ -325,7 +343,9 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   no picture is captured or stored).
 - **brews** — one brew: `bagId`, `setupId`, `technique`, `grind`, `doseG`,
   `waterG`, `tempC` (stored canonically in °C), `timeSec`, `instrumentation`.
-  Also carries `roastRef` — the spine edge brew → **Roast**, read through its bag.
+  Also carries `roastRef` and `lotRef` — the spine edges brew → **Roast** and
+  brew → **Lot**, stamped through its bag (`brewStampRoast`/`brewRepoint`), so
+  a green's corpus stands even after the bag is gone.
 - **cups** — a tasting. `kind` is `home` (linked to a `brewId`/`bagId`) or
   `cafe` (with `shop`, `city`, `style`, `drink`, `roaster`, `origin`, `price`,
   `again`, plus optional structured traceability aligned to bags —
@@ -341,6 +361,8 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   signed, its recipe unknown and never invented. `{id, roastRef, roasterRef,
   lotRef, venueRef, shop, at, by, cupRef}`, id keyed deterministically
   (`pour:<cupId>`) so every device and every re-derivation lands the same record.
+  `roastRef` resolves (`pourRoast`) to the one standing roast of that roaster on
+  that green — two candidates and it stays null, resolved never guessed.
   A local projection of café cups (`cupPrepRepoint`/`catStampPour`), merged by id
   in sync; a removed café cup tombstones its pour.
 - **cafes** — per-café profiles keyed by shop name (`saveCafeProfile` writes
@@ -371,7 +393,9 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 - **prefs** — per-user preferences (`tempUnit`, `hideTimer`, …) via
   `getPref`/`setPref`. The matching's bookkeeping lives here too: `signal`
   (the three named cafés), `wantAt`/`wantAsk` (save dates and aging asks),
-  `placeSkips`, `traitLeans`, `findSess` (the map session), `gradSeen`. Sync
+  `placeSkips`, `traitLeans`, `findSess` (the map session), `gradSeen`, and
+  `charts` (the keeper's scene groupings — `[{name, sceneKeys}]`, a reading
+  convenience over derived scenes, never a synced fact about coffee). Sync
   merges prefs shallowly, local key wins — never wipe them in a merge.
 
 Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
