@@ -14,6 +14,10 @@ alone. Cite the document, not a memory of it.
 
 - **RESOLVER.md** — how a record binds to its lot (the ladder, merge/split)
 - **SCHEMA.md** — the catalog envelope and the shared documents
+- **CHARTS.md** — the atlas at more than one altitude: scenes, charts, the two
+  frames, the lenses and facets
+- **INTAKE.md** — the way in: what the record asks for and when, and how a
+  screen earns its text
 - **LOT_IDENTITY.md** — what a lot is, and what it honestly is not
 - **MODEL_QA.md** — questions the model answered, kept for the record
 
