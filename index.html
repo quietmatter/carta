@@ -174,34 +174,75 @@ html[data-theme="dusk"]{
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
+/* The leaf (STREAMLINED.html) — the app is one 480px column framed like a page
+   from a bound register: the column is the CARD, the ground behind it the PAGE.
+   That figure/ground is what makes a .card read as sunk rather than as a box
+   floating on nothing. On a phone the frame lands off-screen; on a desk it is
+   the whole point. */
+html{background:var(--surface-page)}
 body{
-  background:var(--paper);color:var(--ink);
+  background:var(--surface-card);color:var(--ink);
   font-family:var(--serif);
   font-size:16px;line-height:1.5;
   max-width:480px;margin:0 auto;
+  border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);
   height:100vh;height:100dvh;
   display:flex;flex-direction:column;overflow:hidden;
 }
 .num{font-family:var(--sans);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 .sans{font-family:var(--sans)}
 
-/* ===== header ===== */
+/* ===== header — the masthead of the leaf: the wordmark, the room, the door ===== */
 header.app{
-  background:var(--paper);color:var(--ink);
-  padding:calc(18px + env(safe-area-inset-top)) 20px 14px;
-  display:flex;justify-content:space-between;align-items:baseline;
+  background:var(--surface-card);color:var(--ink);
+  padding:calc(16px + env(safe-area-inset-top)) 20px 12px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
   flex:none;z-index:20;border-bottom:1px solid var(--line);
 }
-header.app h1{font-family:var(--sans);font-size:13px;letter-spacing:.42em;font-weight:600;color:var(--ink)}
-header.app .sub{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3)}
-main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 18px 24px}
+header.app h1{font-family:var(--serif);font-size:var(--s16);letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--ink);line-height:1}
+header.app .sub{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;color:var(--ink-3);margin-top:3px;display:block}
+/* the door, always on the masthead — one way in, from anywhere */
+.doorbtn{flex:none;display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:6px 11px;
+  border:1px solid var(--line-strong);border-radius:var(--radius);background:none;color:var(--ink);
+  font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em}
+.doorbtn:active{background:var(--paper-2)}
+main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 26px}
 
 /* ===== section label ===== */
-h2{font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500;margin:26px 0 10px}
-h2:first-child{margin-top:4px}
+/* the section rule — a label under a hairline, the prototype's h3.sect. Every
+   section on every screen wears the same one, so the page reads as a register. */
+h2{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h2:first-child{margin-top:2px}
 
-/* ===== card ===== */
-.card{background:var(--paper-card);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;margin-bottom:10px}
+/* ═══ the display voice — the prototype's three type roles ═══
+   .display  the screen's one big line, serif, its em set in italic
+   .lede     the sentence under it, serif, at reading size
+   .note     the aside after a block: a hairline, then the keeper's own voice */
+.display{font-family:var(--serif);font-weight:600;font-size:1.625rem;line-height:1.12;letter-spacing:-.02em;
+  color:var(--ink);margin:0 0 6px;text-wrap:balance;text-transform:none;border:0;padding:0}
+.display em{font-style:italic;font-weight:400}
+.lede{font-family:var(--serif);font-size:var(--s16);line-height:1.55;color:var(--ink-2);margin:0 0 14px}
+.note{border-top:1px solid var(--line);padding-top:12px;margin:10px 0 4px;
+  font-family:var(--serif);font-style:italic;font-size:var(--s13);color:var(--ink-3)}
+.rowlink+.note,.agg+.note{border-top:0;padding-top:8px}
+.back{display:inline-block;background:none;border:0;padding:0 0 12px;cursor:pointer;color:var(--ink-3);
+  font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase}
+.back:active{color:var(--ink)}
+/* the row-link — the one navigation primitive: a title, its meta, and a rule */
+.rowlink{width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);
+  padding:12px 0;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.rowlink:active{background:var(--paper-2)}
+.rowlink .t{font-family:var(--serif);font-size:var(--s16);color:var(--ink)}
+.rowlink .m{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);letter-spacing:.02em;line-height:1.5}
+.rowlink .go{flex:none;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11)}
+.unread{font-style:italic;color:var(--ink-3)}
+/* two actions side by side — the stacked-button margin has no business in a row */
+.btnrow{display:flex;gap:8px;align-items:stretch}
+.btnrow .btn,.btnrow .btn+.btn{margin-top:0;flex:1}
+
+/* ===== card — sunk on the leaf, never lifted off it ===== */
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:10px}
 .card.tap{cursor:pointer;transition:background .15s ease}
 .card.tap:active{background:var(--paper-2)}
 .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -213,13 +254,16 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 /* ===== chips (square, monochrome — weight/label carry meaning) ===== */
 .chip{
   display:inline-block;font-family:var(--sans);font-size:11px;letter-spacing:.02em;
-  padding:2px 8px;border-radius:var(--chipr);
+  padding:2px 8px;border-radius:var(--chipr);background:var(--paper);
   border:1px solid var(--line);color:var(--ink-3);font-variant-numeric:tabular-nums;
 }
+.chip b{font-weight:500;color:var(--ink)}
 .chip.window{border-color:var(--line-strong);color:var(--ink);font-weight:500}
 .chip.resting{color:var(--ink-3)}
 .chip.past{color:var(--ink-3);border-style:dashed}
-.chip.on{background:var(--ink);color:var(--accent-ink);border-color:var(--ink)}
+/* selected is a firmer line and darker ink — never a fill. A filled chip reads
+   as a badge of rank; a lens narrows, it does not rank (CHARTS.md). */
+.chip.on{border-color:var(--line-strong);color:var(--ink)}
 .chip.struck{color:var(--ink-3);text-decoration:line-through;opacity:.5}
 .lens{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
 .lens .chip{cursor:pointer;padding:5px 11px}
@@ -230,7 +274,7 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
    across a gap. The gap is the product — never a blank to fill. */
 .road6{display:grid;grid-template-columns:repeat(6,1fr);align-items:start;margin:6px 0 4px;padding-top:6px}
 .road6 .stn{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative;min-width:0}
-.road6 .stn .bar{position:absolute;top:5px;left:-50%;width:100%;height:1px;background:var(--line-strong);opacity:.5}
+.road6 .stn .bar{position:absolute;top:5px;left:calc(-50% + 7px);width:calc(100% - 14px);height:1px;background:var(--line-strong);opacity:.5}
 .road6 .stn:first-child .bar{display:none}
 .road6 .stn.gap .bar{background:none;height:0;border-top:1px dashed var(--ink-d);opacity:1}
 .road6 .stn .mk{width:11px;height:11px;border:1px solid var(--line-strong);background:var(--paper-card);position:relative;z-index:1;flex:none}
@@ -274,18 +318,17 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 .doorchip.on{border-color:var(--line-strong)}
 .doorchip.struck{opacity:.42}
 .doorchip.struck b{text-decoration:line-through}
-.doorrow{width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:13px 0;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline}
-.doorrow:active{background:var(--paper-2)}
-.doorrow .t{font-family:var(--serif);font-size:17px;color:var(--ink)}
-.doorrow .m{font-family:var(--sans);font-size:11px;color:var(--ink-3);letter-spacing:.02em;flex:none}
-.doorres{border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 14px;background:var(--paper);margin:4px 0 2px}
-.doorres.thin{border-color:var(--line)}
-.doorres .grain{font-family:var(--serif);font-size:18px;font-weight:400;margin:0 0 3px}
-.doorres.thin .grain{color:var(--ink-3);font-style:italic}
-.doorres .why{font-family:var(--sans);font-size:13px;color:var(--ink-2);margin:0;line-height:1.5}
-.doormeter{display:flex;gap:3px;margin-top:10px}
-.doormeter i{height:3px;flex:1;background:var(--paper-2);display:block}
-.doormeter i.on{background:var(--line-strong)}
+/* the resolution readout — the one line that teaches the whole model. The door
+   states it before a bind; a green's page states the same thing about itself,
+   so both wear the same component (.res is the name the prototype gives it). */
+.doorres,.res{border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 14px;background:var(--paper);margin:4px 0 2px}
+.doorres.thin,.res.thin{border-color:var(--line)}
+.doorres .grain,.res .grain{font-family:var(--serif);font-size:var(--s18);font-weight:400;margin:0 0 3px}
+.doorres.thin .grain,.res.thin .grain{color:var(--ink-3);font-style:italic}
+.doorres .why,.res .why{font-family:var(--sans);font-size:var(--s13);color:var(--ink-2);margin:0;line-height:1.5}
+.doormeter,.meter{display:flex;gap:3px;margin-top:10px}
+.doormeter i,.meter i{height:3px;flex:1;background:var(--paper-2);display:block}
+.doormeter i.on,.meter i.on{background:var(--line-strong)}
 .stepdots{display:flex;gap:5px;align-items:center;margin:0 0 12px}
 .stepdots i{width:5px;height:5px;border:1px solid var(--ink-d);display:block}
 .stepdots i.on{background:var(--line-strong);border-color:var(--line-strong)}
@@ -293,11 +336,14 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 
 /* ===== buttons ===== */
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+/* Sentence case, not shouted. The prototype's buttons speak in the keeper's
+   voice — "Open the green", not "OPEN THE GREEN" (VOICE.md). */
 .btn{
-  display:block;width:100%;text-align:center;min-height:44px;padding:13px 16px;border-radius:var(--radius);
-  font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;
+  display:block;width:100%;text-align:center;min-height:44px;padding:11px 16px;border-radius:var(--radius);
+  font-family:var(--sans);font-size:var(--s13);font-weight:400;letter-spacing:.02em;text-transform:none;
   transition:background .2s ease,color .2s ease,border-color .2s ease;
 }
+.btn.mini{min-height:32px;padding:5px 10px;font-size:var(--s11)}
 .btn-primary{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent)}
 .btn-primary:active{filter:brightness(.88)}
 .btn-quiet{background:none;border:1px solid var(--line-strong);color:var(--ink)}
@@ -368,18 +414,24 @@ textarea{min-height:60px;resize:vertical;border:1px solid var(--line);padding:9p
 .timer .ctl button.go{background:var(--ink);border-color:var(--ink);color:var(--accent-ink)}
 
 /* ===== tab bar — typographic, no icons ===== */
+/* three rooms, ruled apart like columns in a register */
 nav.tabs{
-  flex:none;background:var(--paper);display:flex;z-index:30;
+  flex:none;background:var(--surface-card);display:grid;grid-template-columns:repeat(3,1fr);z-index:30;
   padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line);
 }
-nav.tabs button{flex:1;padding:12px 0 10px;color:var(--ink-3);font-family:var(--sans);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;border-top:2px solid transparent;margin-top:-1px}
+nav.tabs button{padding:13px 4px 15px;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11);
+  letter-spacing:var(--track-label);text-transform:uppercase;font-weight:400;min-height:44px;
+  border-right:1px solid var(--line)}
+nav.tabs button:last-child{border-right:0}
 nav.tabs button .ic{display:none}
-nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
+nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 
 /* ===== the daily loop ===== */
-.hero{padding:12px 2px 20px}
-.eyebrow{font-family:var(--sans);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:650;margin-bottom:8px}
-.hero h2{font-family:var(--serif);font-size:36px;line-height:1.02;letter-spacing:-.035em;text-transform:none;color:var(--ink);font-weight:600;margin:0;max-width:11ch}
+.hero{padding:2px 0 16px}
+/* the eyebrow is quiet — the ember stays reserved for the current action and
+   the score (SUBBRAND.md); a label is neither. */
+.eyebrow{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;color:var(--ink-3);font-weight:500;margin:0 0 8px}
+.hero h2{font-family:var(--serif);font-size:1.625rem;line-height:1.12;letter-spacing:-.02em;text-transform:none;color:var(--ink);font-weight:600;margin:0;max-width:none;text-wrap:balance;border:0;padding:0}
 .hero h2 em{font-style:italic;font-weight:400}
 .hero .origin{font-family:var(--serif);font-style:italic;color:var(--ink-3);font-size:15px;margin-top:8px}
 /* the café's own page — a gradient drawn from its derived hue (or a neutral roast
@@ -395,7 +447,13 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
    keep, a dashed one is not. The drawn plot is the floor: real streets (the
    street map section) fade in behind the pins when tiles can be fetched, and
    this plot simply stands when they can't. */
-.cafe-map{position:relative;height:110px;background:var(--paper-2);border:1px solid var(--line);margin-bottom:8px;overflow:hidden}
+/* the plot's ruled ground — a chart's grid, not a picture of a map. It says
+   "this is a drawing at a stated grain" before a single tile ever lands. */
+.cafe-map{position:relative;height:110px;background:var(--paper);border:1px solid var(--line);margin-bottom:8px;overflow:hidden;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:34px 34px}
+/* the plot's key — what a filled mark means, and what a dashed one admits */
+.plotkey{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 2px 10px;font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);align-items:center}
 .cafe-map .pin{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--ink);cursor:pointer;transform:translate(-50%,-50%)}
 .cafe-map .pin.unread{width:7px;height:7px;border:1px dashed var(--ink-3);background:none}
 .cafe-map .pin .lbl{position:absolute;left:100%;top:50%;transform:translate(6px,-50%);font-family:var(--sans);font-size:11px;color:var(--ink);font-weight:500;white-space:nowrap}
@@ -458,13 +516,17 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .finding{font-family:var(--serif);font-style:italic;font-size:15px;margin-top:9px;color:var(--ink)}
 .bestline{display:flex;justify-content:space-between;gap:12px;margin:12px 1px 0;font-size:12px;color:var(--ink-3)}
 .bestline strong{color:var(--ink);font-family:var(--sans);font-weight:550}
-.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:26px 0 10px}
-.section-head h2{margin:0}
+/* a section head with an action on its right — the rule runs under both, so it
+   reads as the same rule every other section wears */
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.section-head h2{margin:0;padding:0;border:0}
+.section-head:first-child{margin-top:2px}
 .text-action{font-family:var(--sans);font-size:11px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
 .coffee-card{position:relative;padding-right:70px}
 .coffee-card .count{position:absolute;right:16px;top:16px;font-family:var(--sans);font-size:11px;color:var(--ink-3)}
 .empty-hero{padding:34px 4px 24px}
-.empty-hero h2{font-family:var(--serif);font-size:34px;line-height:1.05;letter-spacing:-.03em;text-transform:none;color:var(--ink);margin:0 0 10px}
+.empty-hero h2{font-family:var(--serif);font-size:1.625rem;line-height:1.12;letter-spacing:-.02em;text-transform:none;color:var(--ink);margin:0 0 10px;padding:0;border:0}
 .empty-hero p{color:var(--ink-3);font-style:italic;margin-bottom:22px;max-width:30ch}
 
 /* ===== welcome (first-run home flow — the way in) ===== */
@@ -487,14 +549,21 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 .wc-foot{margin-top:auto;padding-top:22px}
 .wc-seal{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3);text-align:center;margin-top:18px}
 .wc-list{margin-top:28px}
-.wc-item{width:100%;text-align:left;display:flex;align-items:baseline;gap:16px;
-  padding:19px 2px;border-top:1px solid var(--line);transition:background .15s}
-.wc-item:last-of-type{border-bottom:1px solid var(--line)}
+/* the welcome's doors are row-links at the same metrics as every other one —
+   one navigation primitive across the whole app */
+.wc-item{width:100%;text-align:left;display:flex;align-items:baseline;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--line);transition:background .15s}
 .wc-item:active{background:var(--paper-2)}
 .wc-item .tx{flex:1;min-width:0}
-.wc-item .tt{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.01em;color:var(--ink);display:block}
-.wc-item .dd{font-family:var(--sans);font-size:13px;color:var(--ink-3);margin-top:5px;line-height:1.5;display:block}
-.wc-item .go{align-self:center;color:var(--ink-3);font-size:15px;flex:none}
+.wc-item .tt{font-family:var(--serif);font-size:var(--s16);font-weight:400;letter-spacing:0;color:var(--ink);display:block}
+.wc-item .dd{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);margin-top:4px;line-height:1.5;display:block;letter-spacing:.02em}
+.wc-item .go{align-self:center;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11);flex:none}
+/* inside the welcome the same row is a door, and a door gets its full height */
+.wc .wc-item{padding:19px 2px;border-top:1px solid var(--line);border-bottom:0}
+.wc .wc-item:last-of-type{border-bottom:1px solid var(--line)}
+.wc .wc-item .tt{font-size:21px;font-weight:600;letter-spacing:-.01em}
+.wc .wc-item .dd{font-size:var(--s13);text-transform:none;letter-spacing:0;margin-top:5px}
+.wc .wc-item .go{font-size:15px}
 .wc-skip{font-family:var(--sans);font-size:12px;color:var(--ink-3);text-decoration:underline;text-underline-offset:3px;text-align:center;width:100%;margin-top:14px;min-height:26px}
 @keyframes wc-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .wc-rise{opacity:0;animation:wc-rise var(--mo-considered,.55s) var(--mo-ease,cubic-bezier(.22,.61,.36,1)) forwards}
@@ -659,9 +728,9 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 </style>
 </head>
 <body>
-<header class="app"><h1>CARTA</h1>
-<div style="display:flex;align-items:baseline"><div class="sub" id="who">one cup · two contexts</div>
-<button class="helpbtn" onclick="go('ledger')" aria-label="Open More">more</button></div></header>
+<header class="app">
+<div><h1>Carta</h1><div class="sub" id="who">The atlas</div></div>
+<button class="doorbtn" id="doorbtn" onclick="openDoor()" aria-label="Add a coffee">＋ A coffee</button></header>
 <main id="main"></main>
 <nav class="tabs" id="tabs"></nav>
 <div class="sheet-bg" id="sheetbg" onclick="closeSheet()"></div>
@@ -714,7 +783,7 @@ function guard(){if(readOnly()){toast(`Read only — this is ${viewingUser().nam
  * now, while the atlas settles — kept by the founder alone: on a synced
  * device the server's founder flag is the authority (the first account
  * registered; the server refuses any other pen with 403), and on an unsynced
- * device the pen is claimed once from More → Administration. Temporary: the
+ * device the pen is claimed once from the Desk → The pen. Temporary: the
  * group-writable curation returns with the proposed→stood moderation ceremony. */
 const PEN_KEY='carta.pen.v1';
 let PEN=readJSONLS(PEN_KEY);            // {userId,at} | null — the device-local claim
@@ -2204,10 +2273,19 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='5.3.1';
+const APP_VERSION='6.0.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.0.0',date:'July 2026',title:'The road, streamlined — three rooms, one door.',items:[
+    'Three rooms, not four — Atlas · Record · Desk. Today is not a room any more; the coffee in your hands is the head of the Atlas, with its road and the two things anyone ever does with it: open the green, or brew it. More became the Desk: everything that is not a cup, nine rows and one open at a time.',
+    'The door is on the masthead. ＋ A coffee sits beside the wordmark on every screen, and opens as a screen of its own rather than a sheet — paste, strike what is wrong, bind. It was the one way a coffee enters the record; now it is the one thing always within reach.',
+    'The Atlas is a reading room again — the coffee in hand, the chart at its altitude, the atlas cut into plates, the greens. The lists of hands, the stream and the curator’s bench moved to the Desk, where administration belongs.',
+    'The Record is your overlay and says so — your plates, the greens your own record argues for with their reasons, lately, and the bookkeeping the matching writes. The full list of readings is still there, one fold down.',
+    'One grammar on every surface. The display line, the sentence under it, the section rule, the row-link, the aside — the prototype’s components, used everywhere. Buttons speak in sentence case instead of shouting; a selected chip is a firmer line, never a fill; the eyebrow gave up the ember, which is reserved for the current action and the score.',
+    'The leaf — the app is one column framed like a page from a bound register, so a card reads as sunk into it rather than floating on nothing. The plot gained its ruled ground: a chart at a stated grain, before a single street tile lands.',
+    'A green’s page states its resolution out loud, in the same readout the door shows before a bind, and reads in the prototype’s order: the road, the resolution, identity, the standing, the other hands, where it pours, your overlay.',
+  ]},
   {v:'5.3.1',date:'July 2026',title:'The reading, at every scope — and the way back.',items:[
     'A roaster’s page, a grower’s, a bar’s now carry the same reading a green does: the road counted across every green in hand, and where those greens grew. One component, five scopes — the lot, the plate, the roaster, the grower, the bar.',
     'A plate draws its origins. Cut the atlas by country, process or variety and the greens are plotted where they grew, not only listed.',
@@ -2482,17 +2560,19 @@ function depth(){
   // ledgers from before the ladder — anyone with a record, or already welcomed — start fully open
   return (getPref('onboarded',false)||D.cups.length||D.bags.length||D.setups.length)?4:1;
 }
-/* The redesign: four rooms, always on the bar — Today · Atlas · Record · More.
- * Home and Café became channels, not rooms (the instrument rides off Today;
- * the cup out rides off a place's page); Find retired into the Atlas. The
- * ladder survives as the record of how deep you've stepped — read in More,
+/* STREAMLINED.html: three rooms, always on the bar — Atlas · Record · Desk.
+ * The atlas is the shared road, the record is your wash over it, and the desk
+ * holds everything that is not a cup. Today folded into the head of the Atlas
+ * (the coffee in your hands, its road, and the two things you do with it);
+ * Home and Café are channels, not rooms; Find retired into the Atlas. The
+ * ladder survives as the record of how deep you've stepped — read on the Desk,
  * never a gate on the bar. Nothing is ever taken away. */
 function tabsFor(d){
-  return [{id:'today',label:'Today'},{id:'atlas',label:'Atlas'},{id:'trace',label:'Record'},{id:'ledger',label:'More'}];
+  return [{id:'atlas',label:'Atlas'},{id:'trace',label:'Record'},{id:'ledger',label:'Desk'}];
 }
-const defaultTab=d=>'today';
+const defaultTab=d=>'atlas';
 function unlockDepth(n,t,msg){setPref('depth',Math.max(depth(),n));placeView=null;go(t);toast(msg)}
-const UNLOCK={2:['atlas','Remembering is open — a bar and one tap is a whole record.'],3:['today','Making is open — the instrument rides off Today.'],4:['trace','Keeping is open — the whole through-line.']};
+const UNLOCK={2:['atlas','Remembering is open — a bar and one tap is a whole record.'],3:['atlas','Making is open — the instrument rides off the coffee in your hands.'],4:['trace','Keeping is open — the whole through-line.']};
 function doorHTML(title,body,cta,call){
   return `<div style="border-top:1px solid var(--ink);margin-top:28px;padding:16px 2px 6px">
     <div class="eyebrow">When you're ready</div>
@@ -2515,33 +2595,47 @@ let tab='today';
 let placeView=null;   // a café name — the page currently open over the tab, or null
 let pageView=null;    // {kind:'lot'|'roaster',id} — an atlas page open over the tab, or null
 let pageStack=[];     // the pages walked through to reach it — back returns to the last one, not the room
-function openPlace(shop){pagePush();placeView=shop;pageView=null;curateOn=false;render()}
+let doorOn=false;     // the door — a screen of its own, over any room (SURFACES.md §1)
+function openPlace(shop){pagePush();placeView=shop;pageView=null;curateOn=false;doorOn=false;render()}
 function closePlace(){if(pageStack.length)return pageBack();placeView=null;render();if(discOn)discScrollTo(discSel,true)}
 // Rooms that became channels keep their old names answering — a saved flow
-// that says go('cafes') lands where that work now lives.
-const TAB_ALIAS={field:'today',cafes:'atlas',circle:'atlas'};
-function go(t){t=TAB_ALIAS[t]||t;tab=t;placeView=null;pageView=null;pageStack=[];discOn=false;curateOn=false;discMatch=null;clearTimeout(_mt);if(t!=='atlas'){reachLens=0;reachTail={}}render()}
+// that says go('cafes') or go('today') lands where that work now lives.
+const TAB_ALIAS={field:'atlas',cafes:'atlas',circle:'atlas',today:'atlas'};
+function go(t){t=TAB_ALIAS[t]||t;tab=t;placeView=null;pageView=null;pageStack=[];discOn=false;curateOn=false;doorOn=false;deskOpen=null;discMatch=null;clearTimeout(_mt);if(t!=='atlas'){reachLens=0;reachTail={}}render()}
 // which room a sub-view lights on the bar
-const TAB_FAMILY={bags:'today',shelf:'today',setups:'ledger'};
+const TAB_FAMILY={bags:'atlas',shelf:'atlas',setups:'ledger'};
+/* The header's second line names the screen, not the app — the prototype's SUBS.
+ * It is the only place the app says where you are, so it says it plainly. */
+const SUBS={atlas:'The atlas',trace:'The record',ledger:'The desk',bags:'The shelf',setups:'The tools',
+  lot:'A green',roaster:'The roaster',plate:'A plate',place:'The bar',door:'A coffee',curate:'The chart',disc:'The map'};
 let _lastScreenKey=null; // the settle plays on a screen change, never on a repaint
+function screenSub(){
+  if(readOnly())return `Viewing ${viewingUser().name}`;
+  if(doorOn)return SUBS.door;
+  if(curateOn)return SUBS.curate;
+  if(pageView)return SUBS[pageView.kind]||SUBS.atlas;
+  if(placeView)return SUBS.place;
+  if(discOn)return SUBS.disc;
+  return SUBS[tab]||SUBS.atlas;
+}
 function render(){
   _affCache=null; // affinity is recomputed once per paint, from the current record
   _mCache=null;   // so is the matching — signal, circle, candidates
   smapDestroy();  // live maps die with the DOM they sit in — give the contexts back first
-  const subs={today:'the day’s surface',atlas:'the atlas',trace:'the keeper’s ledger',ledger:'the rooms',bags:'the shelf',setups:'the tools'};
-  document.getElementById('who').textContent=
-    readOnly()?`viewing ${viewingUser().name}`:(USERS.users.length>1?viewingUser().name:
-      (pageView?(pageView.kind==='lot'?'the lot':pageView.kind==='plate'?'a plate':'the roaster'):placeView?'the bar':(subs[tab]||'the record')));
-  const lit=TAB_FAMILY[tab]||((placeView||pageView)?'atlas':tab);
+  document.getElementById('who').textContent=screenSub();
+  const db=document.getElementById('doorbtn');
+  if(db)db.style.display=(readOnly()||doorOn)?'none':''; // the door never offers itself inside itself, or over someone else's record
+  const lit=TAB_FAMILY[tab]||((placeView||pageView||doorOn)?'atlas':tab);
   document.getElementById('tabs').innerHTML=tabsFor(depth()).map(t=>
     `<button class="${lit===t.id?'on':''}" onclick="go('${t.id}')">${t.label}</button>`).join('');
   const m=document.getElementById('main');
-  const screenKey=[tab,placeView||'',pageView?pageView.kind+':'+pageView.id:'',discOn?1:0,curateOn?1:0].join('|');
+  const screenKey=[tab,placeView||'',pageView?pageView.kind+':'+pageView.id:'',discOn?1:0,curateOn?1:0,doorOn?'door'+doorStep:0].join('|');
   const settle=screenKey!==_lastScreenKey&&!reducedMotion();_lastScreenKey=screenKey;
-  const body=(readOnly()?viewBanner():'')+(curateOn?vCurate():pageView?(pageView.kind==='lot'?vLotPage():pageView.kind==='plate'?vPlatePage():vRoasterPage()):placeView?vPlace():discOn?vDiscover():({today:vToday,atlas:vAtlas,bags:vBags,setups:vSetups,trace:vTrace,ledger:vMore})[tab]());
+  const body=(readOnly()?viewBanner():'')+(doorOn?vDoor():curateOn?vCurate():pageView?(pageView.kind==='lot'?vLotPage():pageView.kind==='plate'?vPlatePage():vRoasterPage()):placeView?vPlace():discOn?vDiscover():(({atlas:vAtlas,bags:vBags,setups:vSetups,trace:vTrace,ledger:vDesk})[tab]||vAtlas)());
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=0;window.scrollTo(0,0);
   smapMount();
+  if(doorOn&&doorStep===0){const ta=document.getElementById('d_text');if(ta)ta.focus()}
 }
 function viewBanner(){return `<div class="viewbar"><span>Viewing <strong>${esc(viewingUser().name)}</strong>'s ledger — read only${remoteStale?` · cached ${fmtAgo(remoteStale===true?null:remoteStale)}`:''}</span><button onclick="exitView()">Back to mine</button></div>`}
 
@@ -3487,7 +3581,7 @@ function atlasFrames(lotIdsArg,opts){
   // ── the legend, and the chart frame's counts ──
   const c=g.counts;
   const on=[c.roasters&&`${c.roasters} roaster${c.roasters===1?'':'s'}`,c.venues&&`${c.venues} venue${c.venues===1?'':'s'}`].filter(Boolean).join(' · ');
-  const legendHTML=st.chart?`<div class="muted small" style="display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin:0 2px 6px">
+  const legendHTML=st.chart?`<div class="plotkey">
     <span><span class="atlas-key roaster"></span>roaster</span><span><span class="atlas-key venue"></span>venue</span>
     ${st.scene?'':`<span><span class="atlas-key scene"></span><button class="text-action ex" onclick="openPrimer('scene')" style="padding:0">a scene — an area, drawn as one mark; tap to walk in</button></span>`}</div>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 12px">${on||'nothing placed'} on the chart${g.listed.roasters.length||g.listed.venues.length?` · listed for want of a coordinate: ${[...g.listed.roasters,...g.listed.venues].slice(0,3).map(esc).join(' · ')}${g.listed.roasters.length+g.listed.venues.length>3?' and more':''}`:''}.</div>`:'';
@@ -3535,7 +3629,7 @@ function originFrameHTML(g,opts){
 let atlasView=null; // null → default to Map when there's a scene to see, else List
 function atlasSetView(v){atlasView=v;render()}
 let curateOn=false;
-function openCurate(){curateOn=true;placeView=null;pageView=null;pageStack=[];discOn=false;render()} // read-only-safe browse: the authoring actions inside vCurate are each penGuard()ed, so anyone without the pen walks the node reads
+function openCurate(){curateOn=true;placeView=null;pageView=null;pageStack=[];discOn=false;doorOn=false;render()} // read-only-safe browse: the authoring actions inside vCurate are each penGuard()ed, so anyone without the pen walks the node reads
 function closeCurate(){curateOn=false;render()}
 function vCurate(){
   const recs=chartRecs(),q=reviewQueue();
@@ -3574,7 +3668,7 @@ function vCurate(){
   ${authoredExtra.length?`<div class="muted small" style="margin:10px 2px 6px">Also on the atlas — roasters charted outside the roster:</div>
   ${authoredExtra.map(ref=>`<button class="wc-item" onclick="openRoasterPage(${jsq(ref)})"><span class="tx"><span class="tt">${esc(roasterName(ref))}</span><span class="dd">walk its greens</span></span><span class="go">→</span></button>`).join('')}`:''}`:'';
   return `
-  <button class="text-action" onclick="closeCurate()" style="margin:0 0 12px">← the record</button>
+  <button class="back" onclick="closeCurate()">← The atlas</button>
   <div class="eyebrow">Act II · the chart</div>
   <div style="font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-0.02em;color:var(--ink);line-height:1.05">${esc(atlas.chart?atlas.chart.name:CHART1.name)}</div>
   <div class="sub">${atlas.chart
@@ -3758,7 +3852,7 @@ function vBags(){
       ${readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="restoreBag('${b.id}')">Back on the shelf</button>`}
     </div>`}).join('')}
     <div class="muted small serif" style="font-style:italic;margin:6px 2px">Nothing is lost. Buy a bag again and it comes back with everything you learned.</div>`:'';
-  return `<button class="text-action" style="margin:2px 0 6px;display:inline-block;padding:10px 0;font-size:12px" onclick="go('today')">← Today</button>
+  return `<button class="back" onclick="go('atlas')">← The atlas</button>
   <div class="hero" style="padding:4px 2px 14px">
     <div class="eyebrow" style="color:var(--ink-3)">Make a cup · the shelf</div>
     <h2 style="font-size:30px;line-height:1.05;max-width:13ch">Which bag is in your hand?</h2>
@@ -3773,7 +3867,7 @@ function vBags(){
 }
 
 function vSetups(){
-  return `<button class="text-action" style="margin:2px 0 10px" onclick="go('ledger')">← Back</button>
+  return `<button class="back" onclick="go('ledger')">← The desk</button>
   ${readOnly()?'':`<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>`}
   <div class="muted small serif" style="font-style:italic;margin:10px 2px">A grind setting without a Setup is not a number, it's a rumour. Grind settings are only comparable within a Setup.</div>
   <h2>Setups <span class="n-note">n=${D.setups.length}</span></h2>
@@ -3826,11 +3920,12 @@ function ladderTap(n){
   if(d>=n){go(LADDER[n-1].tab);return}
   const[t,m]=UNLOCK[n];unlockDepth(n,t,m);
 }
-/* ---- Administration — the founder's pen, and the desk it opens. The desk is
- * the one door for entering the shared record cleanly: a roaster, a green in a
- * hand, a café's canonical entry, a sighting — each through the form that
- * already knows its law. Everyone else reads a quiet statement of who keeps
- * the record, and their own ledger stays entirely theirs. ---- */
+/* ---- Administration — the founder's pen, and the FOUNDER'S DESK it opens
+ * (not the Desk room on the tab bar; that one is every keeper's). The founder's
+ * desk is the one door for entering the shared record cleanly: a roaster, a
+ * green in a hand, a café's canonical entry, a sighting — each through the form
+ * that already knows its law. Everyone else reads a quiet statement of who
+ * keeps the record, and their own ledger stays entirely theirs. ---- */
 function vAdminSection(){
   if(readOnly())return '';
   const synced=typeof SYNC!=='undefined'&&SYNC&&syncedHere();
@@ -3839,7 +3934,7 @@ function vAdminSection(){
   <div class="card">
     <div class="row"><strong>The founder's desk</strong>${exBtn('founderpen','the pen','badge')}</div>
     <div class="muted" style="margin-top:5px">The shared record — the atlas and the Register — is kept from here. Enter a fact once, cleanly; every keeper reads it.</div>
-    <button class="btn btn-primary" style="margin-top:12px" onclick="openDesk()">Open the desk</button>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="openDesk()">Open the founder's desk</button>
     ${!synced&&PEN?`<button class="text-action" style="margin-top:8px" onclick="setDownPen()">Set the pen down on this device</button>`:''}
   </div>`;
   const holder=PEN&&userById(PEN.userId);
@@ -3897,91 +3992,145 @@ function openDeskCafe(){
     <datalist id="dclist">${known.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
   <div class="muted small" style="margin-bottom:10px">A name already on the Register opens its entry to amend; a new one starts it.</div>
   <button class="btn btn-primary" onclick="deskCafeGo()">Open the entry</button>
-  <button class="btn btn-quiet" onclick="openDesk()">← the desk</button>`);
+  <button class="btn btn-quiet" onclick="openDesk()">← The founder's desk</button>`);
 }
 function deskCafeGo(){const n=(val('dc_name')||'').trim();if(!n){toast('Name the café');return}openCafeProfile(n)}
-function vMore(){
-  const d=depth(),ro=readOnly();
-  const th=getPref('theme','paper');
+/* ── the Desk — everything that is not a cup (STREAMLINED.html).
+ * Four rows, not four screens: the desk indexes its sections and opens exactly
+ * one at a time, so no other surface has to carry administration. ── */
+let deskOpen=null;
+// the shelf and the tools are screens of their own — the desk points at them
+// rather than re-rendering itself inside a render
+function deskGo(k){if(k==='shelf')return go('bags');if(k==='setups')return go('setups');deskOpen=k;render()}
+function deskBack(){deskOpen=null;render()}
+const DESK_ROWS=[
+  {k:'shelf',  t:'The shelf',              d:'every bag — on it, and put away'},
+  {k:'setups', t:'Setups',                 d:'your grinder and brewer; grind is only comparable within one'},
+  {k:'atlas',  t:'Add to the atlas',       d:'the door, a proposed sighting, the chart'},
+  {k:'record', t:'The record leaves with you', d:'export the ledger, bring one back, the working copy'},
+  {k:'pen',    t:'The pen',                d:'the shared record — who may write it'},
+  {k:'sync',   t:'Sync',                   d:'optional, and never required'},
+  {k:'keepers',t:'Keepers on this device', d:'add, switch, read another ledger'},
+  {k:'prefs',  t:'Preferences',            d:'appearance, units, marks, how deep you go'},
+  {k:'manual', t:'The manual',             d:'how to read a cup, what changed, the doors ahead'},
+];
+function vDesk(){
+  const ro=readOnly();
+  if(deskOpen)return `<button class="back" onclick="deskBack()">← The desk</button>${deskSection(deskOpen,ro)}`;
+  const rows=DESK_ROWS.filter(r=>!(ro&&['atlas','record','pen','sync','keepers','prefs'].includes(r.k)));
+  const qn=ro?0:reviewQueue().length;
+  return `
+  <p class="eyebrow">The desk</p>
+  <h2 class="display">Everything that <em>is not a cup</em></h2>
+  <p class="lede">Nine rows, not nine screens. The desk is where administration lives so no other surface has to carry it.</p>
+  ${rows.map(r=>`<button class="rowlink" onclick="deskGo(${jsq(r.k)})"><span><span class="t">${esc(r.t)}</span><br><span class="m">${esc(r.d)}</span></span><span class="go">${r.k==='atlas'&&qn?qn:'→'}</span></button>`).join('')}
+  <p class="note">Your ledger is yours to write, always. The shared record is kept by one hand for now — every page of it is still yours to read.</p>
+  <div class="qm-seal">Quiet Matter<span class="em">We do not sell coffee. We keep the record.</span></div>
+  <div class="muted small serif" style="font-style:italic;text-align:center;margin:8px 2px 2px">CARTA v${APP_VERSION}</div>`;
+}
+function deskSection(k,ro){
+  if(k==='atlas')return deskAtlasHTML();
+  if(k==='record')return deskRecordHTML(ro);
+  if(k==='pen')return vAdminSection()||`<h2>The pen</h2><div class="empty">The shared record is kept by the founder for now. Nothing here to take up on this device.</div>`;
+  if(k==='sync')return ro?'':vSyncSection();
+  if(k==='keepers')return ro?'':vUsersSection();
+  if(k==='prefs')return deskPrefsHTML(ro);
+  return deskManualHTML(ro);
+}
+function deskAtlasHTML(){
+  const qn=readOnly()?0:reviewQueue().length;
+  const atlas=atlasFrames(atlasLotIds(),{});
+  return `
+  <p class="eyebrow">The desk · the atlas</p>
+  <h2 class="display">Add to <em>the atlas</em></h2>
+  <p class="lede">One paste is the way in. The rest of this row is the curator's bench — it asks before it binds, always.</p>
+  ${readOnly()?'':`<button class="rowlink" onclick="openDoor()"><span><span class="t">The door — paste a coffee</span><br><span class="m">read on the device, resolved by the same ladder a bag runs</span></span><span class="go">→</span></button>`}
+  ${isAdmin()?`<button class="rowlink" onclick="openProposeSighting()"><span><span class="t">Propose a sighting</span><br><span class="m">a bag on a shelf, a roast on a bar — CARTA looks for it first</span></span><span class="go">→</span></button>
+  ${qn?`<button class="rowlink" onclick="openReviewQueue()"><span><span class="t">Assisted drafts</span><br><span class="m">greens the resolver couldn’t call alone</span></span><span class="go">${qn}</span></button>`:''}`:''}
+  <button class="rowlink" onclick="openCurate()"><span><span class="t">The chart${atlas.chart?` · ${esc(atlas.chart.name)}`:''}</span><br><span class="m">${atlas.chart?`${atlas.chart.scenes.length} scene${atlas.chart.scenes.length===1?'':'s'}, derived from the pins`:'derived from the pins as they land'} — ${isAdmin()?'curate by hand':'walk the authored chart'}</span></span><span class="go">→</span></button>
+  <p class="note">${isAdmin()?'The spine is curated — a proposal stands once a keeper approves it.':'The shared record is kept by the founder for now. Your own ledger is never gated.'}</p>`;
+}
+function deskRecordHTML(ro){
   const counts=[['Readings',D.cups.filter(c=>c.hedonic!=null).length],['Cups out',cafeCups().length],['Cups at home',D.cups.filter(c=>c.kind==='home').length],['Coffees',D.bags.length],['Setups',D.setups.length],['Places saved',(D.cafeWants||[]).length]];
   const putAway=D.bags.filter(b=>b.archived).length;
   if(putAway)counts.push(['Bags put away',putAway]);
-  const rIdx=roasterIndex(),rTot=rIdx.reduce((s,r)=>s+r.bags+r.cups,0);
-  const roasterHTML=LEGACY_ON&&rIdx.length&&rTot>=2?`<h2>By roaster</h2>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">Your journal folded onto the roasters behind it — variants of a name gathered, a bag at home beside a cup out.</div>
-  ${rIdx.map(r=>`<button class="wc-item" onclick="openRoasterKin(${jsq(r.ref)})">
-    <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
-  const lIdx=lotIndex().filter(r=>r.bags+r.cups>=2&&lotLive(catNode('lots',r.ref)));
-  const lotHTML=LEGACY_ON&&lIdx.length?`<h2>By lot</h2>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 6px">The same green in more than one record — a bag you brewed and a cup you had out that are one lot, tied where the origin words couldn't reach.</div>
-  ${lIdx.map(r=>`<button class="wc-item" onclick="openLotKin(${jsq(r.ref)})">
-    <span class="tx"><span class="tt">${esc(r.name)}</span><span class="dd">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
   const exported=exportedFile?`<div style="margin-top:12px;padding:12px 13px;border:1px solid var(--line-strong);background:var(--paper-2)">
-    <div style="font-family:var(--sans);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Your ledger is ready</div>
-    <div style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;color:var(--ink-2);word-break:break-all">${esc(exportedFile.filename)}</div>
+    <div class="eyebrow" style="margin-bottom:6px">Your ledger is ready</div>
+    <div style="font-family:var(--mono);font-size:12px;color:var(--ink-2);word-break:break-all">${esc(exportedFile.filename)}</div>
     <div style="display:flex;gap:16px;align-items:center;margin-top:11px;flex-wrap:wrap">
-      <a href="${exportedFile.url}" download="${esc(exportedFile.filename)}" style="font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);text-decoration:none;border:1px solid var(--line-strong);padding:9px 15px;line-height:1">Save the file</a>
+      <a href="${exportedFile.url}" download="${esc(exportedFile.filename)}" style="font-family:var(--sans);font-size:11px;letter-spacing:.02em;color:var(--ink);text-decoration:none;border:1px solid var(--line-strong);padding:9px 15px;line-height:1">Save the file</a>
       <a href="${exportedFile.url}" target="_blank" rel="noopener" style="font-family:var(--sans);font-size:11px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px">Read it now</a>
     </div>
     <div class="muted small serif" style="font-size:11.5px;margin-top:10px;font-style:italic">The file is yours the moment you save it — offline, no account, open schema.</div>
   </div>`:'';
   return `
-  <h2 style="margin-top:8px">Appearance</h2>
-  <div class="seg" style="margin-bottom:18px">
-    <button class="${th==='paper'?'on':''}" onclick="themeSet('paper')">Paper</button>
-    <button class="${th==='dusk'?'on':''}" onclick="themeSet('dusk')">Dusk</button>
-    <button class="${th==='auto'?'on':''}" onclick="themeSet('auto')">Auto</button>
-  </div>
-  ${ro?'':`<h2>How deep you go</h2>
-  <div class="card">
-    ${LADDER.map(l=>`<div class="kv"><span class="k">${l.name}</span>
-      <button class="v" style="font:inherit;color:inherit;background:none;border:none;padding:0;text-align:right;cursor:pointer" onclick="ladderTap(${l.n})">${d>=l.n?`${l.desc.split(' — ')[0]} — open`:'waiting — open it'}</button></div>`).join('')}
-  </div>
-  <div class="muted small" style="margin:-4px 2px 20px">Rooms open when you ask. Nothing is ever taken away.</div>`}
-  <h2>${ro?esc(viewingUser().name)+"'s record":'Your record'}</h2>
+  <p class="eyebrow">The desk · the record</p>
+  <h2 class="display">The record <em>leaves with you</em></h2>
+  <p class="lede">Self-contained — it reads in full on a device that never synced. Export monthly.</p>
+  <h2>${ro?esc(viewingUser().name)+'’s record':'What is on file'}</h2>
   <div class="card">${counts.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>
-  <h2>The record leaves with you</h2>
+  <h2>Take a copy</h2>
   <div class="card">
     <div class="row"><strong>Save a copy</strong>${exBtn('openschema','full export · open schema','badge')}</div>
-    <div class="muted" style="margin-top:5px">Self-contained — it reads in full on a device that never synced. Export monthly.</div>
-    <div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5;color:var(--ink-2);font-family:var(--serif)">What leaves with you — your readings, your shelf and brews, the cups out, the places saved, and any pages you've signed. Your overlay only; never the shared page's numbers.</div>
+    <div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5;color:var(--ink-2);font-family:var(--serif)">What leaves with you — your readings, your shelf and brews, the cups out, the places saved, and any pages you’ve signed. Your overlay only; never the shared page’s numbers.</div>
     <button class="btn btn-quiet" style="margin-top:13px" onclick="downloadLedger()">Export the ledger</button>
     ${exported}
     <div style="margin-top:13px;padding-top:13px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
       <label class="text-action" style="cursor:pointer;font-size:12px">Bring a ledger back<input type="file" accept=".html,.json,text/html,application/json" style="display:none" onchange="readLedgerFile(event)"></label>
       ${exBtn('readback','read back','badge')}
     </div>
-    <div class="muted" style="margin-top:5px">Read a <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11.5px">carta.ledger</span> file back in — your overlay, reconstituted and read to you. Nothing is merged.</div>
+    <div class="muted" style="margin-top:5px">Read a <code>carta.ledger</code> file back in — your overlay, reconstituted and read to you. Nothing is merged.</div>
     <div style="margin-top:13px;padding-top:13px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px 18px">
       <button class="text-action" onclick="exportJSON()">The working copy — JSON, everything</button>
-      ${ro?'':`<button class="text-action" onclick="document.getElementById('importInput').click()">Read a friend's copy</button>`}
+      ${ro?'':`<button class="text-action" onclick="document.getElementById('importInput').click()">Read a friend’s copy</button>`}
     </div>
     <div class="muted" style="margin-top:5px">The JSON copy carries the whole ledger and the atlas spine — the one to keep as a backup, and the one another keeper can be imported from.</div>
+  </div>`;
+}
+function deskPrefsHTML(ro){
+  const d=depth(),th=getPref('theme','paper');
+  const rIdx=roasterIndex(),rTot=rIdx.reduce((s,r)=>s+r.bags+r.cups,0);
+  const roasterHTML=LEGACY_ON&&rIdx.length&&rTot>=2?`<h2>By roaster</h2>
+  ${rIdx.map(r=>`<button class="rowlink" onclick="openRoasterKin(${jsq(r.ref)})"><span><span class="t">${esc(r.name)}</span><br><span class="m">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
+  const lIdx=lotIndex().filter(r=>r.bags+r.cups>=2&&lotLive(catNode('lots',r.ref)));
+  const lotHTML=LEGACY_ON&&lIdx.length?`<h2>By lot</h2>
+  ${lIdx.map(r=>`<button class="rowlink" onclick="openLotKin(${jsq(r.ref)})"><span><span class="t">${esc(r.name)}</span><br><span class="m">${kinTally(r)}</span></span><span class="go">→</span></button>`).join('')}`:'';
+  return `
+  <p class="eyebrow">The desk · preferences</p>
+  <h2 class="display">How it <em>reads to you</em></h2>
+  <p class="lede">Presentation and input, never the record itself. Nothing here changes a single fact on file.</p>
+  <h2>Appearance</h2>
+  <div class="seg" style="margin-bottom:18px">
+    <button class="${th==='paper'?'on':''}" onclick="themeSet('paper')">Paper</button>
+    <button class="${th==='dusk'?'on':''}" onclick="themeSet('dusk')">Dusk</button>
+    <button class="${th==='auto'?'on':''}" onclick="themeSet('auto')">Auto</button>
   </div>
-  ${!ro&&d>=3?`<div style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:8px 2px 0">
-    <button class="text-action" onclick="go('bags')">The shelf — every bag</button>
-    <button class="text-action" onclick="go('setups')">The tools — your Setups</button>
-  </div>`:''}
-  ${roasterHTML}
-  ${lotHTML}
+  ${ro?'':vPrefsSection()}
+  ${ro?'':`<h2>How deep you go</h2>
+  <div class="card">
+    ${LADDER.map(l=>`<div class="kv"><span class="k">${l.name}</span>
+      <button class="v" style="font:inherit;color:inherit;background:none;border:none;padding:0;text-align:right;cursor:pointer" onclick="ladderTap(${l.n})">${d>=l.n?`${l.desc.split(' — ')[0]} — open`:'waiting — open it'}</button></div>`).join('')}
+  </div>
+  <p class="note">Rooms open when you ask. Nothing is ever taken away.</p>`}
+  ${roasterHTML}${lotHTML}`;
+}
+function deskManualHTML(ro){
+  return `
+  <p class="eyebrow">The desk · the manual</p>
+  <h2 class="display">How to <em>read the record</em></h2>
+  <p class="lede">Every mark on every surface explains itself one tap away. These are the long forms.</p>
+  <button class="btn btn-quiet" onclick="openCupPrimer()">How to read a cup</button>
+  ${LEGACY_ON?`<button class="btn btn-quiet" onclick="openGuide()">Quick start</button>`:''}
+  ${ro?'':`<button class="btn btn-quiet" onclick="openWelcome()">Replay the welcome</button>`}
+  <button class="btn btn-quiet" onclick="openWhatsNew(false)">What changed</button>
   <h2>The doors ahead</h2>
   <div class="card">
     <div class="kv"><span class="k">Act III</span><span class="v" style="text-align:left">signed pages — the pen, live on the chart</span></div>
     <div class="kv"><span class="k">Act IV</span><span class="v" style="text-align:left">the desks — closed until earned</span></div>
     <div class="kv"><span class="k">Act V–VI</span><span class="v" style="text-align:left">the doors, then origin</span></div>
   </div>
-  <div class="muted small" style="margin:-4px 2px 20px">Each act gated in writing. Tolls follow traffic; they never summon it.</div>
-  ${vAdminSection()}
-  ${ro?'':vPrefsSection()}
-  ${ro?'':vUsersSection()}
-  ${ro?'':vSyncSection()}
-  <h2>The manual</h2>
-  <button class="btn btn-quiet" onclick="openCupPrimer()">How to read a cup</button>
-  ${LEGACY_ON?`<button class="btn btn-quiet" onclick="openGuide()">Quick start</button>`:''}
-  ${ro?'':`<button class="btn btn-quiet" onclick="openWelcome()">Replay the welcome</button>`}
-  <button class="btn btn-quiet" onclick="openWhatsNew(false)">What changed</button>
-  <div class="qm-seal">Quiet Matter<span class="em">We do not sell coffee. We keep the record.</span></div>
-  <div class="muted small serif" style="font-style:italic;text-align:center;margin:8px 2px 2px">CARTA v${APP_VERSION}</div>`;
+  <p class="note">Each act gated in writing. Tolls follow traffic; they never summon it.</p>
+  <div class="muted small serif" style="font-style:italic;text-align:center;margin:14px 2px 2px">CARTA v${APP_VERSION}</div>`;
 }
 // Preferences — presentation/input, not data. Two controls, phase-0 minimal.
 function vPrefsSection(){
@@ -4084,172 +4233,89 @@ function atlasLots(){
     .sort((a,b)=>b.hands-a.hands||String(a.lot.firstAt||'').localeCompare(String(b.lot.firstAt||'')));
 }
 const grainPrimerKey=g=>({'green-lot':'greenlot','station-season':'resolution','processing-batch':'outturn','region':'region'})[g]||'resolution';
-function lotChipsHTML(lot){
-  const chips=[];
-  const gr=grainRead(lot.grain);
-  if(gr)chips.push(exBtn(grainPrimerKey(lot.grain),gr[0].toLowerCase()));
-  const tier=lotTier(lot),cal=tier.caliber,rar=tier.rarity;
-  if(cal.best)chips.push(exBtn('caliber',`${cal.best.score}${cal.best.protocol?' · '+cal.best.protocol:''}`));
-  else if(cal.claims.length)chips.push(exBtn('caliber',`${cal.claims[0].score} — a claim, unverified`));
-  else chips.push(exBtn('unread','caliber unread','chip past'));
-  if(rar.facts.length)chips.push(exBtn('rarity',rar.facts[0]));
-  const ko=(lot.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt);
-  if(ko)chips.push(exBtn('outturn',ko.value,'badge'));
-  return chips.join('');
+/* The season's lots read as row-links now (STREAMLINED.html): the standing —
+ * caliber, rarity, traceability — is stated in full on the green's own page,
+ * where its evidence sits, rather than compressed into chips on a list. */
+/* ── the coffee in your hands — the head of the Atlas (STREAMLINED.html) ──
+ * Today was a room; it is a paragraph. The bag you are drinking, its road, and
+ * the two things anyone ever does with it: open the green, or brew it. */
+function inHandHTML(){
+  const bag=D.bags.filter(b=>!b.archived).length?curBag():null;
+  if(!bag)return `
+  <p class="eyebrow">In your hands</p>
+  <h2 class="display">${D.bags.length?'Between <em>bags</em>':'Nothing <em>in hand</em>'}</h2>
+  <p class="lede">${D.bags.length
+    ?'The bags are finished; the record is not. The dials remember where you left them — the next bag starts there, not from zero.'
+    :'Paste a coffee and the atlas takes it from there. Keeping nothing is a whole way to use CARTA — the road below reads either way.'}</p>
+  ${readOnly()?'':`<div class="btnrow" style="margin:0 0 22px">
+    <button class="btn btn-primary" onclick="openDoor()">＋ A coffee</button>
+    ${D.bags.length?`<button class="btn btn-quiet" onclick="go('bags')">The shelf</button>`:''}
+  </div>`}`;
+  const o=lotRead(bag);
+  const last=lastBrewFor(bag.id,null);
+  const lastCup=last?D.cups.find(c=>c.brewId===last.id):null;
+  const lotId=bag.lotRef?lotFwd(bag.lotRef):null;
+  const lot=lotId?catNode('lots',lotId):null;
+  // the title names the green and its variety; the line under it carries the place,
+  // the hand and the rest — never the same fact twice
+  const nm=bag.name||(lot?lotLabel(lot).split(' · ')[0]:'')||'This coffee';
+  // the variety sets in italic beside the name — unless the name already says it
+  const em=regSubstance(o.variety)&&!normPlace(nm).includes(normPlace(o.variety))?o.variety:'';
+  const d=daysOff(bag);
+  const where=[o.region,o.country].filter(regSubstance).join(', ');
+  const hand=bagRoaster(bag);
+  const off=d==null?'':d<=0?'roasted today':d===1?'one day off':`${d} days off`;
+  const handClause=[hand&&`roasted by ${hand}`,off].filter(Boolean).join(', ');
+  const lede=[where,handClause].filter(Boolean).join(' — ');
+  const read=lastCup&&lastCup.hedonic!=null?` Your last cup read <span class="num">${lastCup.hedonic}</span>.`:'';
+  return `
+  <p class="eyebrow">In your hands</p>
+  <h2 class="display">${esc(nm)}${em?` <em>${esc(em)}</em>`:''}</h2>
+  <p class="lede">${esc(lede)||'Origin unwritten — the road below says so.'}${read}</p>
+  ${lot?road6HTML(lotRoadStations(lotId),true):''}
+  ${readOnly()?'':`<div class="btnrow" style="margin:16px 0 22px">
+    ${lot?`<button class="btn btn-primary" onclick="openLotPage(${jsq(lotId)})">Open the green</button>`:''}
+    <button class="btn btn-quiet" onclick="openBrew('${bag.id}')">${last?'Brew it again':'Brew it'}</button>
+  </div>
+  <button class="text-action" style="display:block;margin:-14px 0 20px" onclick="go('bags')">or start from the shelf</button>`}`;
 }
-function atlasLotCard(x){
-  const fp=x.lot.fingerprint||{};
-  const sub=[fp.region,fp.country,x.lot.variety,fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:''].filter(regSubstance).join(' · ');
-  const handsChip=x.hands>=2?`<button class="chip window ex" onclick="event.stopPropagation();openPrimer('hands')">${x.hands} roasters · one green</button>`
-    :`<div class="chip">${x.hands===1?'1 roaster':'no roast yet'}</div>`;
-  return `<div class="card tap" onclick="openLotPage(${jsq(x.id)})">
-    <div class="row">
-      <div><strong>${esc(lotLabel(x.lot))}</strong>
-        <div class="muted" style="margin-top:3px">${esc(sub)||'origin unwritten'}</div>
-      </div>
-      <div style="text-align:right;flex:none">${handsChip}</div>
-    </div>
-    <div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">${lotChipsHTML(x.lot)}</div>
-  </div>`;
-}
+/* ── the Atlas — one reading room, three blocks (STREAMLINED.html):
+ * the coffee in your hands · the chart at its altitude · the atlas, cut. ── */
 function vAtlas(){
   const lots=atlasLots();
-  const roasters=CAT.roasters.entries.filter(r=>r&&regSubstance(r.name))
-    .map(r=>({r,n:CAT.roasts.entries.filter(x=>x&&x.roasterRef===r.id).length}))
-    .sort((a,b)=>b.n-a.n);
-  const barsSeen=new Map();
-  (D.pours||[]).forEach(p=>{if(p&&regSubstance(p.shop)){const k=normName(p.shop);const e=barsSeen.get(k)||{shop:p.shop,n:0};e.n++;barsSeen.set(k,e)}});
-  const bars=[...barsSeen.values()].sort((a,b)=>b.n-a.n);
-  const q=(atlasQ||'').trim();
-  const cups=LEGACY_ON?circleCups().filter(c=>inLens(c.city)):[];
-  const circleOn=LEGACY_ON&&circleSources().length>0;
-  const recs=LEGACY_ON?recommendations():[];
-  const aff=LEGACY_ON?tasteAffinity():[];
-  const beans=LEGACY_ON?circleBeans():[];
-  const cold=LEGACY_ON&&coldNow();
-  const qn=readOnly()?0:reviewQueue().length;
-  const counts=[lots.length&&`${lots.length} lot${lots.length===1?'':'s'}`,roasters.filter(x=>x.n).length&&`${roasters.filter(x=>x.n).length} roaster${roasters.filter(x=>x.n).length===1?'':'s'}`,bars.length&&`${bars.length} bar${bars.length===1?'':'s'}`,REG.entries.length&&`${REG.entries.length} on the register`].filter(Boolean).join(' · ');
-  // the map + the interlude — the drawn plot is the floor; the reading composes on it, only when asked
   const atlas=atlasFrames(atlasLotIds(),{season:seasonState});
+  const q=(atlasQ||'').trim();
+  const alt=atlas.scene?'scene':'region';
+  const chartName=atlas.chart?atlas.chart.name:'';
+  // the interlude — one considered moment, only ever on a tap, replayable
   const interlude=atlas.empty||!atlas.scene?'':(!seasonState
-    ?`<div style="margin-bottom:12px">
-      <button class="btn btn-quiet" style="transition:background var(--mo-fast) var(--mo-ease)" onclick="readSeason()">Read the season for me</button>
-      <div class="muted small serif" style="font-style:italic;margin-top:7px">The atlas composes the season around your taste — ranked by what you keep reaching for, shown with its reasons. <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('interlude')">How the reading is composed</button>.</div>
-    </div>`
-    :`<div class="cafeback" style="margin:0 0 12px"><strong>Read for your taste —</strong> ${esc(seasonReasons())} <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('interlude')">how</button> · <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onclick="readSeason()">compose again</button></div>`);
+    ?`<button class="text-action" style="display:block;margin:2px 2px 10px" onclick="readSeason()">Read the season for me →</button>`
+    :`<div class="cafeback" style="margin:2px 0 10px"><strong>Read for your taste —</strong> ${esc(seasonReasons())} <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('interlude')">how</button> · <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onclick="readSeason()">compose again</button></div>`);
+  const sceneChips=atlas.chart&&atlas.chart.scenes.length?`<div class="chips" style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0">
+    ${atlas.chart.scenes.map(s=>`<button class="chip${atlas.scene&&atlas.scene.key===s.key?' on':''}" style="cursor:pointer;padding:5px 9px" onclick="atlasSceneSet(${jsq(s.key)})">${esc(s.name)} <b>${s.members.length}</b></button>`).join('')}
+  </div>`:'';
+  const sceneNote=atlas.chart&&atlas.chart.scenes.length?`<p class="note">${atlas.chart.scenes.length} scene${atlas.chart.scenes.length===1?'':'s'} · ${atlas.scene?'one shown':'all shown'}. One mark cannot hold a front door and a country — so a scene stays a scene until you go down to it.</p>`:'';
   const mapBlock=atlas.empty
     ?`<div class="empty">Nothing placed on the map yet — the chart lists until a pin earns its coordinate. Coarse where the record is coarse; never a farm pin invented.</div>`
-    :`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:10px">
-      <span class="muted" style="font-size:11px">tap a mark to open it</span>
-      <span class="n-note" style="flex:none">the drawn plot · streets join online</span>
-    </div>
-    ${atlas.lensHTML}${atlas.chartHTML}
-    ${atlas.legendHTML}
-    ${atlas.originHTML}`;
-  // the matching's room — worth the walk, with its reasons, exactly as Find kept it
-  const rdOf=s=>{const e=regByName(s);return e?reachCompile(e).depth:0};
-  const shown=reachLens?recs.filter(r=>rdOf(r.shop)===reachLens):recs;
-  const unreadTail=reachLens?recs.filter(r=>!rdOf(r.shop)):[];
-  const depthLens=recs.length?`<div class="lens" style="margin-bottom:10px">
-    <button class="chip${reachLens?'':' on'}" onclick="setReachLens(0)">All</button>
-    ${[1,2,3,4].map(dd=>`<button class="chip${reachLens===dd?' on':''}" onclick="setReachLens(${dd})">${REACH[dd].glyph} ${REACH[dd].word}</button>`).join('')}
-  </div>`:'';
-  const tail=reachLens&&unreadTail.length?`<div class="row" style="padding:6px 2px 10px;align-items:baseline">
-    <span class="serif" style="font-style:italic;font-size:13px;color:var(--ink-3)">${unreadTail.length} more on the record, reach unread</span>
-    ${reachTail[reachLens]?'':`<button class="text-action" onclick="reachTail[${reachLens}]=1;render()">show them</button>`}
-  </div>${reachTail[reachLens]?unreadTail.slice(0,8).map(r=>recCard(r,true)).join(''):''}`:'';
-  const cities=circleCities();
-  const lens=cities.length||nearOn?`<div class="lens">
-    <button class="chip${nearOn?' on':''}" onclick="toggleNear()">Near you</button>
-    ${cities.slice(0,8).map(c=>`<button class="chip${normName(cityLens)===normName(c)&&!nearOn?' on':''}" onclick="setCityLens(${jsq(c)})">${esc(c)}</button>`).join('')}
-  </div>`:'';
-  const coldHTML=!LEGACY_ON?'':justSet?`<div class="continuation">
-    <div class="eyebrow">The signal, set</div>
-    <div style="font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:-.01em;line-height:1.15;margin:4px 0 2px">Three rooms, read into traits.</div>
-    ${signalPicks().map(p=>{const tr=candTraits(regByName(p.name));
-      return`<div style="border-bottom:1px solid var(--line);padding:9px 0 10px">
-        <div style="display:flex;align-items:baseline;gap:8px"><span class="small" style="font-family:var(--sans)"><strong>${esc(p.name)}</strong></span>${p.isNew?'<span class="badge dashed" style="flex:none">provisional</span>':''}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${(tr.length?tr.slice(0,4):[p.isNew?'a name is enough to start':'on the register — nothing said of it yet']).map(t=>`<span class="badge ghost">${esc(t)}</span>`).join('')}</div>
-      </div>`}).join('')}
-    <div class="muted small serif" style="font-style:italic;margin:8px 0 12px;max-width:40ch">These traits are the whole signal until your cups arrive — three kept cups end the early read. A provisional entry needs only its name.</div>
-    <button class="btn btn-graphite" onclick="justSet=false;openDiscover(null,true)">Read the first matches →</button>
-    <button class="text-action" style="margin-top:2px" onclick="justSet=false;render()">Later — keep the chart</button>
-  </div>`
-  :cold&&!readOnly()?`<div class="continuation">
-    <div class="eyebrow">Start the matching</div>
-    <div style="font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:-.01em;line-height:1.15;margin:4px 0 2px">Tell us three cafés you already love.</div>
-    <div class="muted small" style="margin:6px 0 12px;max-width:36ch">Their traits become your signal — every match after carries its reasons.</div>
-    ${[0,1,2].map(i=>{const p=coldPick[i];
-      return p?`<div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line-strong);padding:7px 0 8px;margin-bottom:10px">
-        <span class="eyebrow" style="margin:0;color:var(--ink-3);flex:none;width:44px">${['One','Two','Three'][i]}</span>
-        <span class="small" style="font-family:var(--sans)"><strong>${esc(p.name)}</strong><span class="muted"> · ${esc(p.where||'yours to enter')}</span></span>
-        <button class="text-action" style="margin-left:auto;flex:none" onclick="coldClear(${i})">change</button>
-      </div>`
-      :`<label class="f"><span class="l">${['One','Two','Three'][i]}</span>
-        <input type="text" value="${esc(coldQ[i])}" placeholder="${['a place you love','a place you return to','anywhere, any city'][i]}" oninput="coldType(${i},this.value)" autocapitalize="words"></label>
-      <div id="coldsug${i}" style="margin:-6px 0 10px">${coldSugHTML(i)}</div>`}).join('')}
-    <button class="btn btn-graphite" style="opacity:${coldPick.every(Boolean)?1:.45}" onclick="finishCold()">Set the signal</button>
-    <div class="muted small serif" style="font-style:italic;margin-top:6px">${coldPick.every(Boolean)?'All three against the register — the signal starts honest.':'Type a few letters — the register answers. Pick each from it, or keep it as written.'}</div>
-  </div>`:'';
+    :`${interlude}${atlas.lensHTML}${atlas.chartHTML}${atlas.legendHTML}${sceneChips}${sceneNote}${atlas.originHTML}`;
+  const facets=plateFacets();
   return `
-  <label class="f" style="margin:4px 0 16px"><span class="l">Search the atlas</span>
-    <input type="text" placeholder="a coffee, a station, a roaster, a bar…" value="${esc(atlasQ)}" oninput="atlasType(this.value)" autocapitalize="off"></label>
-  <div id="atlasres" style="margin:-8px 0 16px">${atlasResHTML()}</div>
-  <div class="hero" style="padding:0 2px 14px">
-    <div class="eyebrow" style="color:var(--ink-3)">${atlas.chart?`The chart · ${esc(atlas.chart.name)}`:'The atlas'}</div>
-    <h2 style="max-width:13ch">${lots.length?'One green, many hands.':'The record of the road.'}</h2>
-    <div class="origin">${counts||'the chart grows by sightings — a bag on a shelf, a roast on a bar'}</div>
-  </div>
-  ${interlude}
+  ${q?'':inHandHTML()}
+  <h2>${esc(chartName||'The chart')}, at ${alt} altitude</h2>
+  <label class="f" style="margin:0 0 12px"><input type="text" placeholder="Search the atlas — a coffee, a station, a roaster, a bar…" value="${esc(atlasQ)}" oninput="atlasType(this.value)" autocapitalize="off"></label>
+  <div id="atlasres" style="margin:-8px 0 14px">${atlasResHTML()}</div>
   ${mapBlock}
-  <div class="section-head"><h2>The season's lots</h2><span class="n-note num">${lots.length?`n=${lots.length} · any mark opens its meaning`:''}</span></div>
-  ${lots.length?lots.slice(0,12).map(atlasLotCard).join('')
-    :`<div class="empty">No green on the atlas yet. A bag on the shelf, a cup out with its beans named, a proposed sighting — any of them starts the chart.</div>`}
-  ${(()=>{const fs=plateFacets();return fs.length?`<div class="section-head"><h2>Cut the atlas</h2><button class="text-action ex" onclick="openPrimer('plate')">the plate</button></div>
-  ${fs.map(f=>{const lbl=f.fk==='process'?sentence(f.v):f.v;
+  ${facets.length?`<div class="section-head"><h2>Cut the atlas</h2><button class="text-action ex" onclick="openPrimer('plate')">the plate</button></div>
+  ${facets.map(f=>{const lbl=f.fk==='process'?sentence(f.v):f.v;
     const sub=[`${f.n} green${f.n===1?'':'s'}`,f.hands&&`${f.hands} hand${f.hands===1?'':'s'}`].filter(Boolean).join(' · ');
-    return `<button class="wc-item" onclick="openPlate(${jsq(f.fk)},${jsq(f.v)})"><span class="tx"><span class="tt">${esc(lbl)}</span><span class="dd">${FACET_LBL[f.fk]||'a facet'} · ${esc(sub)}</span></span><span class="go">→</span></button>`}).join('')}
-  <div class="muted small serif" style="font-style:italic;margin:6px 2px 0">A plate is the road counted across one cut of the atlas — a query over the greens, never a collection. One that leaves a field unread is counted, not hidden.</div>`:''})()}
-  ${(roasters.some(x=>x.n)||bars.length)?`<div class="section-head"><h2>The hands</h2></div>
-  ${roasters.filter(x=>x.n).slice(0,6).map(x=>`<div class="card tap" onclick="openRoasterPage(${jsq(x.r.id)})">
-    <div class="row"><strong>${esc(x.r.name)}</strong><span class="muted">roaster · ${x.n} roast${x.n===1?'':'s'} on the record</span></div>
-  </div>`).join('')}
-  ${bars.slice(0,6).map(b=>`<div class="card tap" onclick="openPlace(${jsq(b.shop)})">
-    <div class="row"><strong>${esc(b.shop)}</strong><span class="muted">bar · ${b.n} pour${b.n===1?'':'s'} from the chart</span></div>
-  </div>`).join('')}`:''}
-  ${coldHTML}
-  ${recs.length?`<div class="section-head"><h2>Worth the walk, for you</h2><span class="n-note num">${recs.length}</span></div>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">${nearOn?'Nearest first — places you haven\'t been.':circleOn?'Places you haven\'t been, put first by the people whose taste sits closest to yours.':'Places you haven\'t been, from the register.'}</div>
-  ${lens}
-  ${depthLens}
-  ${shown.slice(0,8).map(r=>recCard(r)).join('')||(reachLens?`<div class="empty">Nothing read at ${REACH[reachLens].glyph} ${REACH[reachLens].word} yet. A lens answers what has been read, not what might be.</div>`:'')}
-  ${tail}`:''}
-  ${LEGACY_ON&&REG.entries.length?`<button style="display:flex;justify-content:space-between;align-items:center;width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 13px;margin:2px 0 12px;font-family:var(--sans);font-size:14px;color:var(--ink-3);text-align:left;min-height:44px;background:transparent" onclick="openDiscover(null,true)">
-    <span><span style="color:var(--ink)">⌖</span>&nbsp; ${cityLens?esc(cityLens)+', read for you':'The register, read for you'}</span>
-    <span style="font-size:12px;color:var(--ink-2);text-decoration:underline;text-underline-offset:2px;flex:none">the map</span>
-  </button>`:''}
-  ${aff.length?`<div class="section-head"><h2>Whose taste matches yours</h2></div>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">On the cafés you've both scored — how close you land.</div>
-  ${aff.slice(0,4).map(a=>`<div class="card tap" onclick="circleView(${jsq(a.src)})">
-    <div class="row"><span class="small"><strong>${esc(a.name)}</strong> <span class="badge${a.close==='close'?'':' ghost'}">${a.close}</span></span><span class="num muted small">±${a.delta.toFixed(1)} · ${a.shared} café${a.shared>1?'s':''}</span></div>
-    <div class="muted small">You land within ${a.delta.toFixed(1)} of each other on the places you share — read their record.</div>
-  </div>`).join('')}`:''}
-  ${cups.length?`<div class="section-head"><h2>${circleOn?'The stream':'The register'}</h2></div>
-  ${cups.slice(0,12).map(feedRow).join('')}`:''}
-  ${beans.length?`<div class="section-head"><h2>Beans worth chasing</h2><span class="n-note num">${beans.length}</span></div>
-  ${beans.slice(0,6).map(beanRow).join('')}`:''}
-  <div class="section-head" style="margin-top:22px"><h2>Add to the atlas</h2><span class="n-note num">${isAdmin()&&qn?`${qn} awaiting`:''}</span></div>
-  ${readOnly()?'':`<div class="card tap" onclick="openDoor()">
-    <div class="row"><strong>The door — paste a coffee</strong><span class="muted">→</span></div>
-    <div class="muted" style="margin-top:5px">The roaster’s page or the back of the bag. Read on the device, resolved by the same ladder a bag runs, bound with one tap.</div>
-  </div>`}
-  ${isAdmin()?`<div class="card tap" onclick="openProposeSighting()">
-    <div class="row"><strong>Propose a sighting</strong><span class="muted">→</span></div>
-    <div class="muted" style="margin-top:5px">A bag on a shelf, a roast on a bar. CARTA looks for it on the chart and asks before it binds.</div>
-  </div>
-  ${qn?`<button class="wc-item" onclick="openReviewQueue()"><span class="tx"><span class="tt">Assisted drafts</span><span class="dd">${qn} awaiting a decision — greens the resolver couldn't call alone</span></span><span class="go">${qn}</span></button>`:''}`:''}
-  <button class="wc-item" onclick="openCurate()"><span class="tx"><span class="tt">The chart${atlas.chart?` · ${esc(atlas.chart.name)}`:''}</span><span class="dd">${atlas.chart?`${atlas.chart.scenes.length} scene${atlas.chart.scenes.length===1?'':'s'}, derived from the pins`:'derived from the pins as they land'} — ${isAdmin()?'curate the atlas by hand':'walk the authored chart'}</span></span><span class="go">→</span></button>
-  <div class="muted small serif" style="font-style:italic;margin:14px 2px 0">${isAdmin()?'The spine is curated — a proposal stands once a keeper approves it. Nothing here is ranked by anything but your own taste.':'The shared record is kept by the founder for now — every page here is yours to read, and your own ledger is yours to write. Nothing is ranked by anything but your own taste.'}</div>
+    return `<button class="rowlink" onclick="openPlate(${jsq(f.fk)},${jsq(f.v)})"><span><span class="t">${esc(lbl)}</span><br><span class="m">${FACET_LBL[f.fk]||'a facet'} · ${esc(sub)}</span></span><span class="go">→</span></button>`}).join('')}
+  <p class="note">A facet is a query over the greens, never a stored collection. One that leaves a field unread is counted, not hidden.</p>`:''}
+  <div class="section-head"><h2>The greens</h2><span class="n-note num">${lots.length?`n=${lots.length}`:''}</span></div>
+  ${lots.length?lots.slice(0,12).map(x=>{const fp=x.lot.fingerprint||{};
+    const sub=[fp.region,fp.country,x.lot.variety,fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:''].filter(regSubstance).join(' · ');
+    return `<button class="rowlink" onclick="openLotPage(${jsq(x.id)})"><span><span class="t">${esc(lotLabel(x.lot))}</span><br><span class="m">${esc(sub)||'origin unwritten'}</span></span><span class="m num">${x.hands?`${x.hands} hand${x.hands===1?'':'s'}`:'unroasted'}</span></button>`}).join('')
+    :`<div class="empty">No green on the atlas yet. A bag on the shelf, a cup out with its beans named, a coffee pasted through the door — any of them starts the chart.</div>`}
+  ${lots.length>12?`<p class="note">${lots.length-12} more on the chart — cut the atlas above to read them by country, process or variety.</p>`:''}
   ${seal('Atlas','One graph. Every hand. The record is the nexus.')}`;
 }
 
@@ -4282,20 +4348,20 @@ function openLotPage(lotId){
   let lot=catNode('lots',lotId); if(!lot){toast('That green isn’t on the atlas yet');return}
   if(lotTomb(lot)){lotId=lotFwd(lotId);lot=catNode('lots',lotId)} // a link onto an absorbed green reads through
   if(lot&&lot.role==='batch')return openBatchPage(lotId); // the processing-batch parent keeps its own sheet
-  pagePush();closeSheet();pageView={kind:'lot',id:lotId};placeView=null;curateOn=false;discOn=false;render();
+  pagePush();closeSheet();pageView={kind:'lot',id:lotId};placeView=null;curateOn=false;discOn=false;doorOn=false;render();
 }
 function openRoasterPage(roasterRef){
   const r=catNode('roasters',roasterRef); if(!r){toast('That roaster isn’t on the atlas yet');return}
-  pagePush();closeSheet();pageView={kind:'roaster',id:roasterRef};placeView=null;curateOn=false;discOn=false;render();
+  pagePush();closeSheet();pageView={kind:'roaster',id:roasterRef};placeView=null;curateOn=false;discOn=false;doorOn=false;render();
 }
 function closePage(){pageView=null;pageStack=[];render()}
+/* every page opens the same way (STREAMLINED.html): a back that names where it
+   goes, the eyebrow, the display line, then the sentence under it */
 const pageHero=(eyebrow,title,origin)=>`
-  <button class="text-action" onclick="pageBack()" style="margin-bottom:6px;display:inline-block;padding:10px 0;font-size:12px">← ${esc(pageStack.length?PAGE_BACK[pageStack[pageStack.length-1].kind]||'Back':'The atlas')}</button>
-  <div class="hero" style="padding:4px 2px 16px">
-    <div class="eyebrow" style="color:var(--ink-3)">${eyebrow}</div>
-    <h2 style="font-size:31px;line-height:1.05;max-width:14ch">${title}</h2>
-    <div class="origin">${origin}</div>
-  </div>`;
+  <button class="back" onclick="pageBack()">← ${esc(pageStack.length?PAGE_BACK[pageStack[pageStack.length-1].kind]||'Back':'The atlas')}</button>
+  <p class="eyebrow">${eyebrow}</p>
+  <h2 class="display">${title}</h2>
+  ${origin?`<p class="lede">${origin}</p>`:''}`;
 // own readings for one lot — home cups ride in through their bag, café cups carry the ref themselves
 function lotOwnCups(lotId,roasterRef){
   const bagIds=new Set(D.bags.filter(b=>b&&b.lotRef&&lotFwd(b.lotRef)===lotId&&(!roasterRef||b.roasterRef===roasterRef)).map(b=>b.id));
@@ -4348,8 +4414,8 @@ function road6HTML(stations,draw){
 function aggRoadHTML(lotIds){
   const alls=lotIds.map(lotRoadStations).filter(Boolean);
   const n=alls.length;if(!n)return'';
-  return alls[0].map((s0,i)=>{const c=alls.filter(s=>regSubstance(s[i].who)).length;
-    return `<div class="aggrow${c/n<.5?' thin':''}"><span class="lb">${esc(s0.lb)}</span><span class="track"><span class="fill" style="width:${Math.round(c/n*100)}%"></span></span><span class="ct">${c}/${n}</span></div>`}).join('');
+  return `<div class="agg">${alls[0].map((s0,i)=>{const c=alls.filter(s=>regSubstance(s[i].who)).length;
+    return `<div class="aggrow${c/n<.5?' thin':''}"><span class="lb">${esc(s0.lb)}</span><span class="track"><span class="fill" style="width:${Math.round(c/n*100)}%"></span></span><span class="ct">${c}/${n}</span></div>`}).join('')}</div>`;
 }
 function vLotPage(){
   const lotId=pageView.id;
@@ -4380,10 +4446,10 @@ function vLotPage(){
   if(regSubstance(lot.variety))idRows.push({k:'Variety',v:lot.variety});
   if(fp.process&&fp.process.family&&fp.process.family!=='unspecified')idRows.push({k:'Process',v:fp.process.family});
   if(ko)idRows.push({k:'Outturn',v:ko.value,ex:'outturn'});
-  if(gr)idRows.push({k:'Resolution',v:gr[0].toLowerCase(),ex:grainPrimerKey(lot.grain)});
+  // the resolution is stated in the readout above the card, not repeated as a row
   const idCard=idRows.length?`<div class="card">${idRows.map(r=>`<div class="kv"><span class="k">${esc(r.k)}</span>
     ${r.ex?`<button class="v ex" style="font:inherit;color:inherit;text-align:right;background:none;border:none;padding:0" onclick="openPrimer(${jsq(r.ex)})">${esc(r.v)}</button>`:`<span class="v">${esc(r.v)}</span>`}</div>`).join('')}</div>`:'';
-  const idNote=gr?`<div class="muted small serif" style="font-style:italic;margin:-4px 2px 16px">${esc(gr[0])} — ${esc(gr[1])}. That is the record, not a gap in it.</div>`:'';
+  const idNote='';
   // identity confidence — the strongest standing rung, its evidence one read away
   const cmp=compile(lot),hids=(cmp.identity.hardIds)||[];
   const idLine=cmp.identity.rung==='documented'
@@ -4496,19 +4562,30 @@ function vLotPage(){
   // the place, so the head does not say it twice (the identity card below states all of it in full)
   const head=[lot.producer,lot.lotName].filter(regSubstance)[0]||sub||'A green';
   const tail=regSubstance(lot.variety)&&normPlace(lot.variety)!==normPlace(head)?lot.variety:'';
-  return pageHero('A green on the atlas'+(ko?' · outturn '+esc(ko.value):''),esc(head)+(tail?` <em>${esc(tail)}</em>`:'')+'.',esc(sub||'origin unwritten'))+`
+  // the resolution readout — the same component the door shows before a bind, now
+  // stating what this green actually resolved to (STREAMLINED.html)
+  const resHTML=gr?`<div class="res" style="margin:18px 0 22px">
+    <div class="grain">${esc(sentence(gr[0]))}</div>
+    <div class="why">${esc(sentence(gr[1]))}. That is the record, not a gap in it.</div>
+  </div>`:`<div class="res thin" style="margin:18px 0 22px">
+    <div class="grain">No green yet</div>
+    <div class="why">Nothing on file names this coffee finely enough to resolve. Unread is a state, not a verdict.</div>
+  </div>`;
+  return pageHero(esc(gr?sentence(gr[0]):'A green')+(regSubstance(fp.country)?' · '+esc(fp.country):'')+(ko?' · outturn '+esc(ko.value):''),esc(head)+(tail?` <em>${esc(tail)}</em>`:''),esc(sub||'origin unwritten'))+`
   ${road}
-  <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif);margin:8px 2px 20px">${roadTail} <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('road')">The road</button>.</div>
+  <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif);margin:8px 2px 0">${roadTail} <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('road')">The road</button>.</div>
+  ${resHTML}
+  <h2>Identity</h2>
   ${idCard}
   ${idNote}
   <div class="section-head"><h2>The standing</h2><button class="text-action ex" onclick="openPrimer('standing')">How to read it</button></div>
   <div class="card">${standRows.map(r=>`<div class="kv"><span class="k">${esc(r.k)}</span>
     <button class="v ex" style="font:inherit;color:inherit;text-align:right;background:none;border:none;padding:0" onclick="openPrimer(${jsq(r.ex)})">${esc(r.v)}</button></div>`).join('')}</div>
   <div class="muted small" style="margin:-4px 2px 20px">${standNote}</div>
-  <div style="margin:26px 0 10px"><h2 style="margin:0 0 3px">Branch one · availability</h2><div style="font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:-.015em;color:var(--ink)">Where can you find it?</div></div>
-  ${availHTML}
-  <div style="margin:26px 0 10px"><h2 style="margin:0 0 3px">Branch two · the roast</h2><div style="font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:-.015em;color:var(--ink)">${roastHead}</div></div>
+  <h2>${roastHead==='One hand, so far.'?'The one hand it has passed through':'The same green, in other hands'}</h2>
   ${roastCards||'<div class="empty">No roast references this green yet.</div>'}
+  <h2>Where it pours</h2>
+  ${availHTML}
   ${corpusHTML}
   ${ovHTML}
   ${corrections}
@@ -4546,7 +4623,7 @@ function vRoasterPage(){
   const roadHTML=ids.length>=2?`<div class="section-head" style="margin-top:2px"><h2>How far the road runs</h2><button class="text-action ex" onclick="openPrimer('road')">the road</button></div>
   ${aggRoadHTML(ids)}
   <div class="muted small serif" style="font-style:italic;margin:10px 2px 18px">Across ${ids.length} greens this hand has roasted. Where a bar runs short, the record has not been told — it is not a mark against the roaster.</div>`:'';
-  return pageHero('Roaster'+(place?' · '+esc(place):''),esc(r.name)+'.',esc([r.site,place].filter(Boolean).join(' · '))||'a roaster on the atlas')+badges+roadHTML+`
+  return pageHero('Roaster'+(place?' · '+esc(place):''),esc(r.name),esc([r.site,place].filter(Boolean).join(' · '))||'a roaster on the atlas')+badges+roadHTML+`
   <h2>On offer, this season</h2>
   ${offers||'<div class="empty">No green on the atlas names this roaster yet.</div>'}
   ${ids.length?originFrameHTML(atlasGraph(ids),{heading:'Where their greens grew',minMarks:2}):''}
@@ -4565,7 +4642,7 @@ function vRoasterPage(){
 const FACET_LBL={country:'a country',process:'a process',variety:'a variety'};
 function facetVal(lot,fk){const fp=lot.fingerprint||{};
   return fk==='country'?fp.country:fk==='process'?((fp.process&&fp.process.family&&fp.process.family!=='unspecified')?fp.process.family:''):lot.variety}
-function openPlate(fk,fv){pagePush();closeSheet();pageView={kind:'plate',id:fk+'|'+fv,fk,fv};placeView=null;curateOn=false;discOn=false;render()}
+function openPlate(fk,fv){pagePush();closeSheet();pageView={kind:'plate',id:fk+'|'+fv,fk,fv};placeView=null;curateOn=false;discOn=false;doorOn=false;render()}
 function plateFacets(){
   const lots=atlasLots();
   const tally=fk=>{const m=new Map();lots.forEach(x=>{const v=facetVal(x.lot,fk);if(!regSubstance(v))return;
@@ -4587,22 +4664,25 @@ function vPlatePage(){
   const handSet=new Map();
   ids.forEach(id=>CAT.roasts.entries.forEach(r=>{if(!r||r.lotRef!==id||!r.roasterRef)return;
     const e=handSet.get(r.roasterRef)||{ref:r.roasterRef,lots:new Set()};e.lots.add(id);handSet.set(r.roasterRef,e)}));
-  const handRows=[...handSet.values()].sort((a,b)=>b.lots.size-a.lots.size).map(h=>`<div class="card tap" onclick="openRoasterPage(${jsq(h.ref)})">
-    <div class="row"><strong>${esc(roasterName(h.ref))}</strong><span class="n-note" style="flex:none">${h.lots.size} green${h.lots.size===1?'':'s'}</span></div>
-  </div>`).join('');
+  const handRows=[...handSet.values()].sort((a,b)=>b.lots.size-a.lots.size).map(h=>{const rn=catNode('roasters',h.ref)||{};
+    const place=[rn.city,rn.country].filter(regSubstance).join(', ');
+    return `<button class="rowlink" onclick="openRoasterPage(${jsq(h.ref)})"><span><span class="t">${esc(roasterName(h.ref))}</span>${place?`<br><span class="m">${esc(place)}</span>`:''}</span><span class="m num">${h.lots.size} green${h.lots.size===1?'':'s'}</span></button>`}).join('');
   const bars=new Set();(D.pours||[]).forEach(p=>{if(p&&p.lotRef&&ids.includes(lotFwd(p.lotRef))&&regSubstance(p.shop))bars.add(normName(p.shop))});
   const label=fk==='process'?sentence(fv):fv;
   const counts=[`${hit.length} green${hit.length===1?'':'s'}`,handSet.size&&`${handSet.size} hand${handSet.size===1?'':'s'}`,bars.size&&`${bars.size} bar${bars.size===1?'':'s'}`].filter(Boolean).join(' · ');
-  return pageHero('A plate · '+esc(FACET_LBL[fk]||'a facet'),esc(label)+`, <em>in ${['','one','two','three','four','five','six','seven','eight','nine'][hit.length]||hit.length} green${hit.length===1?'':'s'}</em>.`,esc(counts))+`
-  <div class="serif" style="font-size:15px;line-height:1.55;color:var(--ink-2);margin:-6px 2px 16px;max-width:44ch">The ${esc(label)} greens you have met, and how far down the road the record actually follows each one.</div>
-  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 style="margin:4px 0 4px">How far the road runs</h2><button class="text-action ex" style="padding:0;font-size:12px;flex:none" onclick="openPrimer('plate')">the plate</button></div>
+  return pageHero('A plate · '+esc(FACET_LBL[fk]||'a facet'),esc(label)+`, <em>in ${['','one','two','three','four','five','six','seven','eight','nine'][hit.length]||hit.length} green${hit.length===1?'':'s'}</em>`,
+    `The ${esc(label)} greens you have met, and how far down the road the record actually follows each one.`)+`
+  <div class="muted small" style="margin:-8px 2px 16px">${esc(counts)}</div>
+  <div class="section-head"><h2>How far the road runs</h2><button class="text-action ex" onclick="openPrimer('plate')">the plate</button></div>
   ${aggRoadHTML(ids)}
-  <div class="muted small serif" style="font-style:italic;margin:10px 2px 8px">Where a bar runs short, the record is telling you what it has not been told — not a chart of anyone's failure.</div>
+  <p class="note">Where a bar runs short, the record is telling you what it has not been told — not a chart of anyone's failure.</p>
   ${unread?`<div class="muted small" style="margin:0 2px 16px">${all.length} green${all.length===1?'':'s'} on the atlas · ${unread} unread on this facet — counted, never quietly dropped.</div>`:''}
   ${originFrameHTML(atlasGraph(ids),{heading:'Where they grew',minMarks:2})}
+  ${handRows?`<h2>Who roasted them</h2>${handRows}`:''}
   <div class="section-head"><h2>The greens</h2><span class="n-note num">n=${hit.length}</span></div>
-  ${hit.map(atlasLotCard).join('')}
-  ${handRows?`<div class="section-head"><h2>The hands</h2></div>${handRows}`:''}
+  ${hit.map(x=>{const fp=x.lot.fingerprint||{};
+    const sub=[fp.region,fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):'',x.lot.variety].filter(regSubstance).join(' · ');
+    return `<button class="rowlink" onclick="openLotPage(${jsq(x.id)})"><span><span class="t">${esc(lotLabel(x.lot))}</span><br><span class="m">${esc(sub)||'unread'}</span></span><span class="m num">${x.hands?`${x.hands} hand${x.hands===1?'':'s'}`:'unroasted'}</span></button>`}).join('')}
   ${seal(label,'One reading, five scopes. A plate is the atlas, cut.')}`;
 }
 
@@ -5468,33 +5548,39 @@ const DOOR_GRAIN={'green-lot':['Green lot','The finest grain the trade can prove
   'station-season':['Station · season','A legitimate terminal record, not a half-filled lot.'],
   'region-grade':['Region · grade','The honest floor. Named as such, never rounded up.']};
 let doorStep=0,doorText='',doorParsed=null,doorStruck={},doorRoasted='';
+/* The door is a SCREEN, not a sheet (STREAMLINED.html). It is the one way a
+ * coffee enters the record, so it takes the whole leaf: three steps, stepdots,
+ * a back that walks the steps rather than dismissing them. The masthead's
+ * ＋ A coffee opens it from any room. */
 function openDoor(){
   if(guard())return;
   doorStep=0;doorText='';doorParsed=null;doorStruck={};doorRoasted='';
-  renderDoor();
+  closeSheet();doorOn=true;render();
 }
+function doorClose(){doorOn=false;render()}
 function doorRead(){
-  const t=val('d_text');
+  const t=val('d_text')||doorText;
   if(!t){toast('Paste something first — or type it instead');return}
-  doorText=t;doorParsed=doorParse(t);doorStruck={};doorStep=1;renderDoor();
+  doorText=t;doorParsed=doorParse(t);doorStruck={};doorStep=1;render();
 }
-function doorBack(n){if(doorStep===2)doorRoasted=val('d_roasted')||'';doorStep=n;renderDoor()} // a typed date survives a step back — nothing the keeper entered is thrown away
-function doorStrike(k){doorStruck[k]=!doorStruck[k];renderDoor()}
+function doorBack(n){if(doorStep===2)doorRoasted=val('d_roasted')||'';doorStep=n;render()} // a typed date survives a step back — nothing the keeper entered is thrown away
+function doorStrike(k){doorStruck[k]=!doorStruck[k];render()}
 function doorStepDots(label){
   return `<div class="stepdots">${[0,1,2].map(i=>`<i class="${i<=doorStep?'on':''}"></i>`).join('')}<span>${esc(label)}</span></div>`;
 }
-function renderDoor(){
+function vDoor(){
   if(doorStep===0){
-    openSheet(`
+    return `
+    <button class="back" onclick="doorClose()">← Close</button>
     ${doorStepDots('What does it say?')}
-    <h3 class="door-display">Paste <em>the coffee</em></h3>
-    <div class="sub">The roaster’s page, the back of the bag, an auction line — whatever you have. CARTA reads it and asks about the rest.</div>
-    <label class="f"><span class="l">The words</span><textarea id="d_text" placeholder="Paste anything about this coffee…" style="min-height:130px">${esc(doorText)}</textarea></label>
-    <button class="btn btn-primary" onclick="doorRead()">Read it</button>
-    <button class="btn btn-quiet" onclick="closeSheet();openBagForm()">Type it instead</button>
-    <div class="muted small serif" style="font-style:italic;text-align:center;margin-top:10px">Read here, on the device — no key, no account, no network. The same vocabularies the resolver already uses.</div>`);
-    const ta=document.getElementById('d_text');if(ta)ta.focus();
-    return;
+    <h2 class="display">Paste <em>the coffee</em></h2>
+    <p class="lede">The roaster’s page, the back of the bag, an auction line — whatever you have. CARTA reads it and asks about the rest.</p>
+    <textarea id="d_text" oninput="doorText=this.value" placeholder="Paste anything about this coffee…" style="min-height:132px;border:1px solid var(--line);background:var(--paper);padding:12px;font-size:13px">${esc(doorText)}</textarea>
+    <div class="btnrow" style="margin-top:12px">
+      <button class="btn btn-quiet" onclick="doorClose();openBagForm()">Type it instead</button>
+      <button class="btn btn-primary" onclick="doorRead()">Read it</button>
+    </div>
+    <p class="note">Read here, on the device — no key, no account, no network. The same vocabularies the resolver already uses.</p>`;
   }
   if(doorStep===1){
     const f=doorParsed||{},r=doorResolve();
@@ -5506,32 +5592,31 @@ function renderDoor(){
     const why=!r.grain?'Nothing here names a coffee. It would reach the atlas as nothing at all — strike a fact back in, or type it instead.'
       :r.shared?esc(g[1])+' <strong>Two facts stand — this green can meet another keeper’s record.</strong>'
       :'One fact stands. It needs <strong>two</strong> to collide with another record; at one, it forks to a green only you can ever see.';
-    openSheet(`
-    <button class="door-back" onclick="doorBack(0)">← Paste again</button>
+    return `
+    <button class="back" onclick="doorBack(0)">← Paste again</button>
     ${doorStepDots('Is this right?')}
-    <h3 class="door-display">${known.length?`Read <em>${known.length} fact${known.length===1?'':'s'}</em>`:'Nothing <em>read</em>'}</h3>
-    <div class="sub">Strike anything wrong. Nothing is written until you bind it.</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 16px">
+    <h2 class="display">${known.length?`Read <em>${known.length} fact${known.length===1?'':'s'}</em>`:'Nothing <em>read</em>'}</h2>
+    <p class="lede">Strike anything wrong. Nothing is written until you bind it.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 18px">
       ${known.map(k=>{const off=!!doorStruck[k[1]];
         return `<button class="doorchip${off?' struck':' on'}" onclick="doorStrike(${jsq(k[1])})" aria-label="strike ${esc(k[0])}"><span class="k">${esc(k[0])}</span><b>${esc(k[2])}</b><span class="x">×</span></button>`}).join('')
         ||'<span class="chip past">nothing recognised — the words may still name it; type it instead</span>'}
     </div>
-    <div class="doorres${r.shared?'':' thin'}">
+    <div class="res${r.shared?'':' thin'}">
       <div class="grain">${g?esc(g[0]):'No green yet'}</div>
       <div class="why">${why}</div>
       ${meter}
     </div>
-    <div class="muted small" style="margin:6px 2px 16px">The meter is the collision threshold, said out loud — two of six facts and two records can meet.</div>
-    <button class="btn btn-primary" onclick="doorStep=2;renderDoor()">Continue</button>
-    <div class="muted small serif" style="font-style:italic;text-align:center;margin-top:10px">A struck fact is not deleted. It is struck — the line keeps its ink.</div>`);
-    return;
+    <div class="muted small" style="margin:8px 2px 18px">The meter is the collision threshold, said out loud — two of six facts and two records can meet.</div>
+    <button class="btn btn-primary" onclick="doorStep=2;render()">Continue</button>
+    <p class="note">A struck fact is not deleted. It is struck — the line keeps its ink.</p>`;
   }
   const f2=doorParsed||{},r2=doorResolve();
-  openSheet(`
-  <button class="door-back" onclick="doorBack(1)">← The facts</button>
+  return `
+  <button class="back" onclick="doorBack(1)">← The facts</button>
   ${doorStepDots('And this coffee is —')}
-  <h3 class="door-display">One <em>binding</em></h3>
-  <div class="sub">The green exists once you bind it. This last tap says what it is <em>to you</em>.</div>
+  <h2 class="display">One <em>binding</em></h2>
+  <p class="lede">The green exists once you bind it. This last tap says what it is <em>to you</em>.</p>
   <div class="grid2">
     <label class="f"><span class="l">Roaster <span class="opt">optional</span></span><input type="text" id="d_roaster" list="d_roasterlist" value="${esc(f2.roaster||'')}" placeholder="Sey"></label>
     <label class="f"><span class="l">The coffee <span class="opt">optional</span></span><input type="text" id="d_name" value="${esc(f2.nameGuess||'')}" placeholder="as the bag names it"></label>
@@ -5543,10 +5628,10 @@ function renderDoor(){
      ['Poured at a bar','a cup out, at that bar','pour'],
      ['Brewed it just now','the dials open next','brew'],
      ['Just noting it','on the atlas, nothing kept','note']].map(b=>
-    `<button class="doorrow" onclick="doorBind(${jsq(b[2])})"><span class="t">${esc(b[0])}</span><span class="m">${esc(b[1])}</span></button>`).join('')}
-  <div class="muted small serif" style="font-style:italic;margin-top:14px">${r2.shared
+    `<button class="rowlink" onclick="doorBind(${jsq(b[2])})"><span class="t">${esc(b[0])}</span><span class="m">${esc(b[1])}</span></button>`).join('')}
+  <p class="note">${r2.shared
     ?'One paste mints a green, a roaster and a roast. The tap adds exactly one edge.'
-    :'Thin, and the record will say so on every surface it appears.'}</div>`);
+    :'Thin, and the record will say so on every surface it appears.'}</p>`;
 }
 // The origin-actor split (SURFACES.md, "where the farm went"): the parser told farm from
 // station by vocabulary, so the catalog keeps them apart — the producers node tagged with
@@ -5572,7 +5657,7 @@ function doorBind(kind){
   if(!roaster&&!name&&!worthy){toast('Nothing to bind — a name or one fact, at least');return}
   if(kind==='note'&&!roaster&&!worthy){toast('A note needs a hand or a fact — a roaster, or one origin token');return} // a bare name reaches no atlas
   if(kind==='pour'){ // the cup-out flow already knows this law — hand it the facts
-    closeSheet();
+    doorOn=false;
     openCafe({roaster,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,variety:o.variety,process:o.process});
     return;
   }
@@ -5585,7 +5670,7 @@ function doorBind(kind){
     D.authored=D.authored||[];D.authored.push(rec);
     catStampRoaster(rec);const res=catStampLot(rec);catStampRoast(rec);
     doorStampActors(rec,o);save();atlasGeoFill(rec);
-    closeSheet();
+    doorOn=false;
     if(res&&res.action==='propose'&&res.propose)openLotPropose(rec.id,res.propose.lot.id,res.propose.fields);
     else if(rec.lotRef){openLotPage(rec.lotRef);toast(res&&res.action==='auto'?'Noted — folded onto a green already charted':'Noted — the green is on your atlas')}
     else{go('atlas');toast('Noted — on the record')}
@@ -5599,9 +5684,9 @@ function doorBind(kind){
   if(nb.roasterRef)nb.roaster=''; // flat fields retire under a standing node, exactly as saveBag
   if(nb.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>nb[k]='');
   if(nb.roastRef){nb.roastLevel=0;nb.roastDate=''}
-  save();setAccent(lvl<0?0:lvl);atlasGeoFill(nb);closeSheet();
-  if(kind==='brew'){go('today');openBrew(nb.id)}
-  else{go(depth()>=3?'field':'bags');toast('On the shelf. The first brew starts whenever you do.')}
+  save();setAccent(lvl<0?0:lvl);atlasGeoFill(nb);doorOn=false;
+  if(kind==='brew'){go('atlas');openBrew(nb.id)}
+  else{go('bags');toast('On the shelf. The first brew starts whenever you do.')}
   if(lotRes&&lotRes.action==='propose')openLotPropose(nb.id,lotRes.propose.lot.id,lotRes.propose.fields); // one uncertain candidate — ask inline while the context is warm (§4)
 }
 
@@ -5703,9 +5788,12 @@ function openBrew(bagId,editId){
         ${setup&&setup.grindMin!=null&&setup.grindMin!==''&&setup.grindMax!=null&&setup.grindMax!==''?`<div class="kv"><span class="k">Grind scale</span><span class="v num">${setup.grindMin}–${setup.grindMax}${setup.grindStep?' · step '+setup.grindStep:''}</span></div>`:''}
       </div>
       <div class="muted small serif" style="font-style:italic;margin:-2px 2px 12px">Grind is comparable only within one Setup — never across grinders. <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('setup')">Why</button>.</div>`;
+  // the ritual, near-wordless (STREAMLINED.html): every dial arrives carried from
+  // the last brew on this Setup. There is nothing to type — turn the one you changed.
   openSheet(`
-  <h3>${editing?'Edit brew':(last?'Brew from last time':'The first brew')}</h3>
-  <div class="sub">${editing?'Correct the record — the cup it carries stays put.':(last?'It opens as your last cup. Turn the one dial you actually changed.':'No last time to lean on — these are fair defaults. Turn one dial, taste, and the next brew remembers.')}</div>
+  <div class="eyebrow">${esc([bagRoaster(bag),bag.name||bagName(bag)].filter(Boolean).join(' · '))}</div>
+  <h3 class="door-display">${editing?'Correct <em>the brew</em>':(last?'Begin from <em>the last cup</em>':'The <em>first brew</em>')}</h3>
+  <div class="sub">${editing?'Correct the record — the cup it carries stays put.':(last?'Every dial carried from your last brew on this Setup. Nothing to type. Grind is comparable only within one Setup.':'No last time to lean on — these are fair defaults. Turn one dial, taste, and the next brew remembers.')}</div>
   ${bags.length>1&&D.setups.length>1?`<div class="grid2">${bagSel}${setupSel}</div>`:bagSel+setupSel}
   <label class="f"><span class="l">Technique <span class="opt">free text — it's a node, not an enum</span></span>
     <input type="text" id="b_technique" list="techlist" value="${esc(last?last.technique:'')}" placeholder="V60 · 9-bar · turbo · soup">
@@ -6095,7 +6183,7 @@ function vPlace(){
       :`${exBtn('unclaimed','unclaimed','badge ghost')}<span class="muted" style="font-size:12px">compiled from sightings</span>`}
   </div>`:'';
   return `<div class="cafe-theme"${vars?` style="${vars}"`:''}>
-  <button class="text-action" style="margin:2px 0 6px" onclick="closePlace()">← Back</button>
+  <button class="back" onclick="closePlace()">← ${esc(pageStack.length?PAGE_BACK[pageStack[pageStack.length-1].kind]||'Back':'The atlas')}</button>
   ${head}
   ${signedLine}
   ${p&&p.lat!=null?placeMapHTML(shop,p,pal):''}
@@ -6382,33 +6470,40 @@ function restoreBag(id){
 }
 
 
+/* ── the Record — your overlay (STREAMLINED.html): the wash you lay over the
+ * road. Plates, then lately, then the bookkeeping the matching writes. It
+ * never touches the shared page. ── */
 function vTrace(){
-  const home=D.cups.filter(c=>c.kind==='home').slice().sort(byNew);
-  const away=cafeCups().slice().sort(byNew);
   const all=D.cups.slice().sort(byNew);
   const readings=all.filter(c=>c.hedonic!=null);
+  const home=D.cups.filter(c=>c.kind==='home').slice().sort(byNew);
+  const away=cafeCups().slice().sort(byNew);
   const bags=D.bags.filter(b=>brewsOf(b.id).length>1).sort(byNew);
-  const shelfN=D.bags.filter(b=>!b.archived).length;
-  const firstAt=[...D.cups,...D.brews,...D.bags].map(x=>x&&x.createdAt).filter(Boolean).sort()[0];
-  const since=firstAt?new Date(firstAt).toLocaleDateString([],{month:'long',year:'numeric'}):'';
+  const greens=new Set([...D.bags.map(b=>b&&b.lotRef?lotFwd(b.lotRef):null),
+    ...D.cups.map(c=>c&&c.lotRef?lotFwd(c.lotRef):null)].filter(Boolean)).size;
+  const word=n=>['no','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'][n]||n;
   const head=`
-    <div class="hero" style="padding:12px 2px 14px">
-      <div class="eyebrow" style="color:var(--ink-3)">The record · ${readOnly()?esc(viewingUser().name)+"'s":'yours'}</div>
-      <h2 style="font-size:32px;line-height:1.04;max-width:13ch">One taste, the through-line.</h2>
-      <div class="origin">${readings.length} reading${readings.length===1?'':'s'} · ${shelfN} coffee${shelfN===1?'':'s'} on the shelf${since?` · since ${since}`:''}</div>
-    </div>`;
+    <p class="eyebrow">${readOnly()?esc(viewingUser().name)+'’s overlay':'Your overlay'}</p>
+    <h2 class="display">${sentence(word(readings.length))} cup${readings.length===1?'':'s'}, <em>${word(greens)} green${greens===1?'':'s'}</em></h2>
+    <p class="lede">The wash you lay over the road. It never touches the shared page.</p>`;
   if(!all.length)return head+`
-    <div class="continuation">
-      <div class="eyebrow">The record starts thin</div>
-      <div class="finding">No cups yet, from either room. Keep one — anywhere — and the through-line starts drawing itself.</div>
-    </div>
-    ${readOnly()?'':`<button class="btn btn-quiet" onclick="openCafe()">Remember a cup out</button>
-    <button class="btn btn-quiet" onclick="go('today')">Brew one at home</button>`}
-    <div class="empty" style="margin-top:14px">The averages, the trace, every cup — all of it waits on the first one.</div>
+    ${readOnly()?'':`<div class="btnrow" style="margin:4px 0 18px">
+      <button class="btn btn-primary" onclick="openCafe()">Remember a cup out</button>
+      <button class="btn btn-quiet" onclick="go('atlas')">Brew one at home</button>
+    </div>`}
+    <div class="empty">No cups yet, from either room. Keep one — anywhere — and the through-line starts drawing itself.</div>
     ${recordKeepingAny()?recordKeepingHTML():''}
     ${seal('Record','One preference, two rooms.')}`;
   const avgAll=avgHedonic(readings),avgHome=avgHedonic(home),avgOut=avgHedonic(away);
-  const oneSided=!home.length||!away.length;
+  // your plates — the atlas's own facets, counted through your record alone
+  const myLots=new Set([...D.bags.map(b=>b&&b.lotRef?lotFwd(b.lotRef):null),
+    ...D.cups.map(c=>c&&c.lotRef?lotFwd(c.lotRef):null)].filter(Boolean));
+  const bestOn=ids=>{const hs=D.cups.filter(c=>{const l=c&&c.lotRef?lotFwd(c.lotRef):(c&&c.bagId?(bagById(c.bagId)||{}).lotRef:null);
+      return c.hedonic!=null&&l&&ids.has(lotFwd(l))}).map(c=>c.hedonic);
+    return hs.length?Math.max(...hs):null};
+  const plates=plateFacets().map(f=>({...f,ids:new Set(f.ids.filter(id=>myLots.has(id)))}))
+    .filter(f=>f.ids.size).sort((a,b)=>b.ids.size-a.ids.size).slice(0,4);
+  const near=readOnly()?[]:nearTaste(2);
   return head+`
     <div class="continuation">
       <div class="row">
@@ -6420,20 +6515,23 @@ function vTrace(){
       </div>
       <button class="text-action ex" style="margin-top:10px" onclick="openPrimer('shape')">How this is read</button>
     </div>
-    ${oneSided?`<div class="card" style="margin:2px 0 22px">
-      <strong class="small">${!home.length?'The home side is quiet':'The out side is quiet'}</strong>
-      <div class="muted small" style="margin-top:4px">${!home.length
-        ?'Every cup so far was served to you. Put a coffee on the shelf and the other room starts writing.'
-        :'Every cup so far was made at home. The next cup someone hands you can join the record.'}</div>
-      <button class="text-action" style="margin-top:7px" onclick="go('${!home.length?'today':'atlas'}')">${!home.length?'To the instrument →':'To the atlas →'}</button>
-    </div>`:''}
+    ${plates.length?`<h2>Your plates</h2>
+    ${plates.map(f=>{const lbl=f.fk==='process'?sentence(f.v):f.v,b=bestOn(f.ids);
+      return `<button class="rowlink" onclick="openPlate(${jsq(f.fk)},${jsq(f.v)})"><span><span class="t">${esc(lbl)}</span><br><span class="m">${f.ids.size} green${f.ids.size===1?'':'s'}${b!=null?` · best ${b} / 9`:''}</span></span><span class="go">→</span></button>`}).join('')}
+    <p class="note">A plate is the atlas's own cut, counted through your record alone — the road, seen through your overlay.</p>`:''}
+    ${near.length?`<div class="section-head"><h2>Near your taste</h2><button class="text-action" onclick="go('atlas')">The chart</button></div>
+    ${near.map(x=>{const fp=x.lot.fingerprint||{};
+      const sub=[fp.region,fp.country,x.lot.variety].filter(regSubstance).join(' · ');
+      return `<button class="rowlink" onclick="openLotPage(${jsq(x.id)})"><span><span class="t">${esc(lotLabel(x.lot))}</span><br><span class="m">${esc(sub)||'origin unwritten'}</span><br><span class="m">Why this — ${esc(x.w.reasons.join(' · '))}</span></span>${x.w.num?`<span class="num" style="font-family:var(--sans);font-size:18px;color:var(--ink);flex:none">${x.w.num}</span>`:''}</button>`}).join('')}
+    ${lowConf()?`<p class="note">An early read — bands, not numbers, until your third cup out.</p>`:''}`:''}
+    <div class="section-head"><h2>Lately</h2><span class="n-note num">${all.length}</span></div>
+    ${all.slice(0,6).map(c=>cupRow(c,true)).join('')}
     ${recordKeepingHTML()}
-    <div class="section-head"><h2>At home · what changed</h2></div>
-    ${bags.length?bags.map(traceCard).join(''):`<div class="empty">Cup by cup, a line draws itself here — the grind against the score.</div>`}
-    <div class="section-head"><h2>Readings</h2><span class="n-note num">newest first · ${all.length}</span></div>
+    ${bags.length?`<h2>At home · what changed</h2>${bags.map(traceCard).join('')}`:''}
+    <details class="trace-more" style="margin-top:18px"><summary>Every reading — ${all.length} on the record</summary>
     ${[...all.map(c=>({t:c.createdAt,html:cupRow(c,true)})),
        ...mySights(readOnly()?viewingUser().name:activeName()).map(x=>({t:x.s.at,html:sightRow(x)}))]
-      .sort((a,b)=>(b.t||'').localeCompare(a.t||'')).map(x=>x.html).join('')}
+      .sort((a,b)=>(b.t||'').localeCompare(a.t||'')).map(x=>x.html).join('')}</details>
     ${seal('Record','One preference, two rooms.')}`;
 }
 
@@ -7933,7 +8031,7 @@ function vDiscover(){
   if(discSel>=cands.length)discSel=Math.max(0,cands.length-1);
   const area=`${cityLens?esc(cityLens):nearOn?`near you · ${c.radiusEff||s.radius||5} km`:'everywhere'} · ${cands.length} read`;
   const bar=`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:2px 0 10px">
-    <button class="text-action" onclick="closeDiscover()">← Today</button>
+    <button class="back" onclick="closeDiscover()">← The atlas</button>
     <span class="n-note" style="letter-spacing:.12em;text-transform:uppercase">${area}</span>
     <span style="display:flex;gap:14px;flex:none"><button class="text-action" onclick="discToggleView()">${s.view==='map'?'List':'Map'}</button><button class="text-action" onclick="discTune=!discTune;render()">Tune</button></span>
   </div>`;
@@ -7996,107 +8094,29 @@ function vDiscover(){
   ${seal('The map','Read against your record — reasons on every pin.')}`;
 }
 /* --- Today: the day's surface — the thread you left, and the next thing --- */
-function vToday(){
-  const now=new Date();
-  const part=now.getHours()<12?'morning':now.getHours()<18?'afternoon':'evening';
-  const dateLine=now.toLocaleDateString([],{weekday:'long'})+' · '+part;
-  const bags=D.bags.filter(b=>!b.archived).sort(byNew);
-  const bag=bags.length?curBag():null;
-  const last=bag?lastBrewFor(bag.id,null):null;
-  const lastCup=last?D.cups.find(c=>c.brewId===last.id):null;
-  const o=bag?lotRead(bag):{};
-  const scored=bag?brewsOf(bag.id).map(x=>({brew:x,cup:D.cups.find(c=>c.brewId===x.id)}))
-    .filter(x=>x.cup&&x.cup.hedonic!=null).sort((a,b)=>b.cup.hedonic-a.cup.hedonic):[];
-  const best=scored[0]||null;
-  const bestDay=best&&bag&&bag.roastDate?Math.max(1,Math.round((new Date(best.cup.createdAt)-new Date(bag.roastDate))/864e5)):null;
-  const notes=lastCup&&(lastCup.notes||((lastCup.descriptors||[]).join(' · ')));
-  const originLine=bag?[bagRoaster(bag),o.process,[o.region,o.country].filter(Boolean).join(', ')].filter(regSubstance).map(esc).join(' · ')||'origin unwritten':'';
-  // the road under the coffee in hand — the same six stations its green's page draws
-  const heroLot=bag&&bag.lotRef?lotFwd(bag.lotRef):null;
-  const heroRoad=heroLot&&catNode('lots',heroLot)?`<div style="margin-top:14px">${road6HTML(lotRoadStations(heroLot))}
-    <button class="text-action" style="padding:6px 0 0;font-size:12px" onclick="openLotPage(${jsq(heroLot)})">Open the green →</button></div>`:'';
-  const hero=bag?`<div class="hero" style="padding:12px 2px 18px">
-    <div class="eyebrow">${dateLine}</div>
-    <h2 style="font-size:34px;max-width:12ch;line-height:1.04">${last?`The ${esc(bag.name||bagName(bag))}, again.`:`${esc(bag.name||bagName(bag))}.`}</h2>
-    <div class="origin">${originLine} ${restChip(bag)}</div>
-    ${heroRoad}
-  </div>`
-  :`<div class="hero" style="padding:12px 2px 18px">
-    <div class="eyebrow">${dateLine}</div>
-    <h2 style="font-size:34px;max-width:13ch;line-height:1.04">${now.getHours()<12?'Good morning.':now.getHours()<18?'Good afternoon.':'Good evening.'}</h2>
-    <div class="origin">The day's surface — pick up the cup where you left it.</div>
-  </div>`;
-  const instrument=bag?(last?`<div class="continuation">
-    <div class="row">
-      <div class="score">${lastCup&&lastCup.hedonic!=null?lastCup.hedonic:'—'}<small>${lastCup&&lastCup.hedonic!=null?' / 9':''}</small></div>
-      <div style="max-width:62%;text-align:right">
-        <div class="recipe">${brewRecipe(last)}</div>
-        ${notes?`<div class="finding">${esc(notes)}</div>`:''}
-      </div>
-    </div>
-    ${readOnly()?'':`<button class="btn btn-graphite" style="margin-top:14px" onclick="openBrew('${bag.id}')">Pick up the brew</button>
-    <button class="text-action" style="display:block;margin:12px auto 0;text-align:center" onclick="go('bags')">or start from the shelf</button>`}
-  </div>
-  ${best?`<div class="bestline"><span>Best so far</span><strong>${bestDay?`day ${bestDay} · `:''}${best.cup.hedonic}/9</strong></div>`:''}`
-  :`<div class="continuation">
-    <div class="eyebrow">First brew</div>
-    <div class="finding">No last time yet. The dials open at honest defaults — turn one, taste, and the record takes it from there.</div>
-    ${readOnly()?'':`<button class="btn btn-graphite" style="margin-top:14px" onclick="openBrew('${bag.id}')">The first brew</button>
-    <button class="text-action" style="display:block;margin:12px auto 0;text-align:center" onclick="go('bags')">or start from the shelf</button>`}
-  </div>`)
-  :`<div class="continuation">
-    <div class="eyebrow">${D.bags.length?'Between bags':'The shelf is bare'}</div>
-    <div class="finding">${D.bags.length
-      ?'The bags are finished; the record is not. The dials remember where you left them — the next bag starts there, not from zero.'
-      :'Name the bag in your hand — every brew after remembers it. Or read the atlas first; keeping nothing is a whole way to use CARTA.'}</div>
-    ${readOnly()?'':`<button class="btn btn-graphite" style="margin-top:14px" onclick="openDoor()">Put a coffee on the shelf</button>
-    ${D.bags.length?`<button class="text-action" style="display:block;margin:12px auto 0;text-align:center" onclick="go('bags')">the shelf — put away, not lost</button>`:''}`}
-  </div>`;
-  // on the atlas, near your taste — lots argued by the keeper's own record, never a bare number
+/* Today retired into the Atlas (STREAMLINED.html): the coffee in your hands is
+ * inHandHTML(), the head of the reading room; the matching's reading over the
+ * atlas moved onto the Record, where a keeper's own overlay belongs. Nothing
+ * the matching writes is hidden from the Record — the invariant holds. */
+/* the greens your own record argues for — a score never travels without its reasons */
+function nearTaste(n){
   const lc=lowConf();
   const myCups=D.cups.filter(c=>c&&c.hedonic!=null);
   const avgOn=(field,v)=>{if(!v)return null;const hits=myCups.filter(c=>{const r=lotRead(c)||{};return (r[field]||'').toLowerCase()===v.toLowerCase()});
     return hits.length>=2?{avg:(hits.reduce((a,c)=>a+c.hedonic,0)/hits.length).toFixed(1),n:hits.length}:null};
   const keptShops=new Set(cafeCups().map(c=>normName(c.shop||'')).filter(Boolean));
-  const lotWhy=x=>{const fp=x.lot.fingerprint||{};const reasons=[];let num=null;
-    const co=avgOn('country',fp.country||'');const pr=avgOn('process',(fp.process&&fp.process.family)||'');
+  const why=x=>{const fp=x.lot.fingerprint||{};const reasons=[];let num=null;
+    const co=avgOn('country',fp.country||''),pr=avgOn('process',(fp.process&&fp.process.family)||'');
     if(co){reasons.push(`you average ${co.avg} on ${fp.country} cups · n=${co.n}`);num=co.avg}
     else if(pr){reasons.push(`you average ${pr.avg} on ${fp.process.family} lots · n=${pr.n}`);num=pr.avg}
     const at=(D.pours||[]).find(p=>p&&p.lotRef===x.id&&p.shop&&keptShops.has(normName(p.shop)));
     if(at)reasons.push(`poured at ${at.shop}, a place you keep`);
     if(x.hands>=2)reasons.push(`${x.hands} roasters carry it`);
-    return {reasons,num:lc?null:num};
-  };
-  const myLotRefs=new Set(D.bags.map(b=>b&&b.lotRef?lotFwd(b.lotRef):null).filter(Boolean));
-  const nearTaste=atlasLots().map(x=>({...x,w:lotWhy(x)}))
-    .filter(x=>x.w.reasons.length)
-    .sort((a,b)=>(b.w.num||0)-(a.w.num||0)||b.hands-a.hands||(myLotRefs.has(a.id)?1:0)-(myLotRefs.has(b.id)?1:0))
-    .slice(0,2);
-  const atlasHTML=nearTaste.length?`<div class="section-head"><h2>On the atlas, near your taste</h2><button class="text-action" onclick="go('atlas')">The full chart</button></div>
-  ${nearTaste.map(x=>{const fp=x.lot.fingerprint||{};
-    const sub=[fp.region,fp.country,x.lot.variety,fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:''].filter(regSubstance).join(' · ');
-    const ko=(x.lot.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt);
-    return `<div class="card tap" onclick="openLotPage(${jsq(x.id)})">
-    <div class="row">
-      <div><strong>${esc(lotLabel(x.lot))}</strong>${ko?` ${exBtn('outturn',ko.value,'badge')}`:''}
-        <div class="muted" style="margin-top:3px">${esc(sub)||'origin unwritten'}${x.hands?` · ${x.hands} roaster${x.hands===1?'':'s'}`:''}</div>
-      </div>
-      ${x.w.num?`<span class="num" style="font-family:var(--sans);font-size:18px;color:var(--ink);flex:none">${x.w.num}</span>`:''}
-    </div>
-    <div class="muted" style="margin-top:8px;font-size:12px">Why this — ${esc(x.w.reasons.join(' · '))}</div>
-  </div>`}).join('')}
-  ${lc?`<div class="muted small serif" style="font-style:italic;margin:2px 2px 0">An early read — bands, not numbers, until your third cup out.</div>`:''}`
-  :`<div class="section-head"><h2>On the atlas</h2><button class="text-action" onclick="go('atlas')">The full chart</button></div>
-  <div class="empty">The chart ranks by your taste once the record can argue it — a few kept cups is all it takes.</div>`;
-  // the cup out — the last café reading, its place one tap away
-  const outs=cafeCups().slice().sort(byNew);
-  const lastOut=outs[0]||null;
-  const when=lastOut?new Date(lastOut.createdAt).toLocaleDateString([],{weekday:'long'}):'';
-  const outHTML=lastOut?`<div class="section-head"><h2>The cup out</h2>${lastOut.shop?`<button class="text-action" onclick="openPlace(${jsq(lastOut.shop)})">${esc(lastOut.shop)}</button>`:''}</div>
-  <div class="cafeback">Last cup out — ${lastOut.drink?`a <strong>${esc(lastOut.drink)}</strong>`:'a cup'}${lastOut.shop?` at <strong>${esc(lastOut.shop)}</strong>`:''}${lastOut.hedonic!=null?`, ${lastOut.hedonic}/9`:''}, ${esc(when)}.</div>`
-  :`<div class="section-head"><h2>The cup out</h2></div>
-  <div class="cafeback">No cup out on the record yet. ${readOnly()?'':'A bar and one tap is a whole record — <a class="link" onclick="openCafe()">remember one</a>.'}</div>`;
-  return hero+instrument+atlasHTML+outHTML+seal('Today','Pick it up where you left it — or find the next.');
+    return {reasons,num:lc?null:num}};
+  const mine=new Set(D.bags.map(b=>b&&b.lotRef?lotFwd(b.lotRef):null).filter(Boolean));
+  return atlasLots().map(x=>({...x,w:why(x)})).filter(x=>x.w.reasons.length)
+    .sort((a,b)=>(b.w.num||0)-(a.w.num||0)||b.hands-a.hands||(mine.has(a.id)?1:0)-(mine.has(b.id)?1:0))
+    .slice(0,n||2);
 }
 
 /* --- the bookkeeping, on the Record: what waits, what stepped back, what leans --- */
@@ -8254,7 +8274,7 @@ function openGuide(){
 
   <h2>Users</h2>
   <div class="card">
-    <div class="small">Share the device, not the record. Add keepers under <strong>More → Your circle</strong> — each keeps a fully separate record. Tap a keeper to <strong>read</strong> their record (every room, read only, clearly banner-marked) or to <strong>make them active</strong>. And a friend's exported record can be imported as a new keeper, so you can browse their record beside yours.</div>
+    <div class="small">Share the device, not the record. Add keepers under <strong>the Desk → Keepers on this device</strong> — each keeps a fully separate record. Tap a keeper to <strong>read</strong> their record (every room, read only, clearly banner-marked) or to <strong>make them active</strong>. And a friend's exported record can be imported as a new keeper, so you can browse their record beside yours.</div>
   </div>
 
   <h2>Sync — the record, everywhere</h2>
@@ -8300,7 +8320,7 @@ function openWhatsNew(auto){
  * Before it asks anything, it says what CARTA is (the why), then asks the one
  * honest question — how do you take your coffee? — and opens the matching room.
  * The answer sets depth: Reading, Remembering, or Making. Nothing is locked;
- * the ladder in More opens the rest. Gated on firstRun() so returning users
+ * the ladder on the Desk opens the rest. Gated on firstRun() so returning users
  * never see it; replayable from More (a replay never closes an open room). */
 function needsWelcome(){return !readOnly()&&!getPref('onboarded',false)&&firstRun()}
 function openWelcome(){renderWelcome();
