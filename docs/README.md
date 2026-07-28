@@ -19,7 +19,9 @@ alone. Cite the document, not a memory of it.
 - **SURFACES.md** — the surfaces and the graph under them: one door in, one
   reading out, and what to cut so the graph can fill
 - **LOT_IDENTITY.md** — what a lot is, and what it honestly is not
-- **MODEL_QA.md** — questions the model answered, kept for the record
+- **MODEL_QA.md** — the model checked against the trade, kept for the record
+- **MODEL_REVIEW.md** — the model checked against the build: where the two drifted,
+  which side was wrong, and what is left
 
 ## The standards
 
