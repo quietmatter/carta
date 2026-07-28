@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CARTA — one page grammar (prototype)</title>
+<style>
+/* ===== the repo's self-hosted faces, from the prototype's two-deep home ===== */
+@font-face{font-family:'Libre Franklin';font-style:normal;font-weight:100 900;font-display:swap;src:url('../../fonts/LibreFranklin-var.latin.woff2') format('woff2')}
+@font-face{font-family:'Libre Franklin';font-style:italic;font-weight:100 900;font-display:swap;src:url('../../fonts/LibreFranklin-varItalic.latin.woff2') format('woff2')}
+@font-face{font-family:'Spectral';font-style:normal;font-weight:400;font-display:swap;src:url('../../fonts/Spectral-Regular.latin.woff2') format('woff2')}
+@font-face{font-family:'Spectral';font-style:italic;font-weight:400;font-display:swap;src:url('../../fonts/Spectral-RegularItalic.latin.woff2') format('woff2')}
+@font-face{font-family:'Spectral';font-style:normal;font-weight:600;font-display:swap;src:url('../../fonts/Spectral-SemiBold.latin.woff2') format('woff2')}
+@font-face{font-family:'Spectral';font-style:italic;font-weight:600;font-display:swap;src:url('../../fonts/Spectral-SemiBoldItalic.latin.woff2') format('woff2')}
+/* ============================================================================
+ * CARTA · UNIFIED — the prototype for one page grammar.
+ *
+ * Every node in the graph — a country, a region, a grower, a green, a hand, a
+ * bar, a Setup — is drawn by ONE renderer answering the SAME five questions in
+ * the SAME order. The kind only changes the nouns.
+ *
+ * Tokens below are copied from index.html unchanged, so the prototype and the
+ * app are the same paper. Components are the app's: .eyebrow .display .lede
+ * .rowlink .card/.kv .note .back .res .road6/.aggrow .chip .btnrow.
+ * ========================================================================== */
+:root{
+  --s11:.6875rem; --s13:.8125rem; --s15:.9375rem; --s16:1rem; --s18:1.125rem;
+  --track-label:.12em; --w-medium:500; --w-semibold:600;
+  --serif:'Spectral',Georgia,'Times New Roman',serif;
+  --sans:'Libre Franklin',system-ui,-apple-system,sans-serif;
+
+  --ca-paper-0:#f8f5ee; --ca-paper-50:#f2eee6; --ca-paper-100:#e9e3d8; --ca-paper-200:#ddd5c7;
+  --ca-ink-900:#241d18; --ca-ink-600:#554a41; --ca-ink-450:#776b60; --ca-ink-300:#b8b5b0;
+  --ca-line-ink:rgba(36,29,24,.13); --ca-line-paper:rgba(236,233,227,.14);
+  --ca-ember:#a63f2b; --ca-ember-ink:#fffaf1; --ca-danger:#8c3b34;
+  --ca-night-900:#171310; --ca-night-800:#211b17; --ca-night-700:#2d241f; --ca-night-600:#342923;
+  --ca-roastlight-100:#f0e9dd; --ca-roastlight-300:#c8bcae; --ca-roastlight-500:#9f9183; --ca-roastlight-700:#5b574f;
+  --ca-ember-dusk:#e06b4f;
+
+  --text-primary:var(--ca-ink-900); --text-secondary:var(--ca-ink-600); --text-subtle:var(--ca-ink-450);
+  --text-disabled:var(--ca-ink-300); --text-on-fill:var(--ca-ember-ink);
+  --surface-page:var(--ca-paper-50); --surface-card:var(--ca-paper-0); --surface-sunk:var(--ca-paper-100);
+  --border-hairline:var(--ca-line-ink); --border-strong:var(--ca-ink-900); --border-control:var(--ca-ink-450);
+  --fill-strong:var(--ca-ink-900); --signal:var(--ca-ember); --signal-ink:var(--ca-ember-ink);
+
+  --ink:var(--text-primary); --ink-2:var(--text-secondary); --ink-3:var(--text-subtle);
+  --paper:var(--surface-page); --paper-card:var(--surface-card); --paper-2:var(--surface-sunk);
+  --paper-3:var(--ca-paper-200); --line:var(--border-hairline); --line-2:var(--ca-paper-200);
+  --accent:var(--signal); --accent-ink:var(--signal-ink); --danger:var(--ca-danger);
+  --radius:0; --chipr:2px;
+  --mo-fast:120ms; --mo-base:220ms; --mo-considered:420ms; --mo-ease:cubic-bezier(.2,.6,.2,1);
+}
+html[data-theme="dusk"]{
+  --text-primary:var(--ca-roastlight-100); --text-secondary:var(--ca-roastlight-300);
+  --text-subtle:var(--ca-roastlight-500); --text-disabled:var(--ca-roastlight-700);
+  --text-on-fill:var(--ca-night-900);
+  --surface-page:var(--ca-night-900); --surface-card:var(--ca-night-800); --surface-sunk:var(--ca-night-700);
+  --border-hairline:var(--ca-line-paper); --border-strong:var(--ca-roastlight-100);
+  --border-control:var(--ca-roastlight-500); --fill-strong:var(--ca-roastlight-100);
+  --signal:var(--ca-ember-dusk); --signal-ink:var(--ca-night-900);
+  --line-2:var(--ca-night-700); --paper-3:var(--ca-night-600);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+html{background:var(--surface-page)}
+body{background:var(--surface-card);color:var(--ink);font-family:var(--serif);
+  font-size:16px;line-height:1.5;max-width:480px;margin:0 auto;
+  border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);
+  height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.num{font-family:var(--sans);font-variant-numeric:tabular-nums}
+.sans{font-family:var(--sans)}
+.muted{color:var(--ink-3)} .small{font-size:var(--s13)} .serif{font-family:var(--serif)}
+
+header.app{background:var(--surface-card);padding:16px 20px 12px;display:flex;
+  justify-content:space-between;align-items:center;gap:10px;flex:none;border-bottom:1px solid var(--line)}
+header.app .wm{font-family:var(--sans);font-size:var(--s13);font-weight:var(--w-semibold);
+  letter-spacing:var(--track-label);text-transform:uppercase}
+header.app .sub{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);
+  letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+header.app .door{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;
+  text-transform:uppercase;background:none;border:1px solid var(--border-control);
+  color:var(--ink);padding:7px 10px;cursor:pointer;border-radius:var(--chipr)}
+header.app .door:hover{border-color:var(--border-strong)}
+header.app .th{background:none;border:none;color:var(--ink-3);font-size:14px;cursor:pointer;padding:6px}
+
+main{flex:1;overflow-y:auto;padding:20px 20px 30px;-webkit-overflow-scrolling:touch}
+.ca-screen{animation:settle var(--mo-considered) var(--mo-ease)}
+@keyframes settle{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ca-screen{animation:none}}
+
+.back{background:none;border:none;font-family:var(--sans);font-size:var(--s11);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);cursor:pointer;
+  padding:0 0 14px;display:block}
+.back:hover{color:var(--ink)}
+.eyebrow{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:7px}
+/* .display is an h2 by tag, so it must undo every one of the section rule's marks */
+.display{font-family:var(--serif);font-size:1.625rem;line-height:1.12;font-weight:var(--w-semibold);
+  letter-spacing:-.02em;color:var(--ink);margin:0 0 8px;text-transform:none;
+  text-wrap:balance;border:0;padding:0}
+.display em{font-style:italic;font-weight:400}
+.lede{font-family:var(--serif);font-size:var(--s15);color:var(--ink-2);max-width:37ch;margin:0 0 20px}
+/* the section rule — a label under a hairline, exactly as the app draws it */
+h2{font-family:var(--sans);font-size:var(--s11);font-weight:var(--w-medium);
+  letter-spacing:var(--track-label);text-transform:uppercase;color:var(--ink-3);
+  border-bottom:1px solid var(--line);padding-bottom:6px;margin:24px 0 10px}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;
+  border-bottom:1px solid var(--line);padding-bottom:6px;margin:24px 0 10px;gap:10px}
+.section-head h2{border:none;padding:0;margin:0}
+.section-head .n-note{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3)}
+.n-note{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3)}
+
+.rowlink{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;
+  background:none;border:none;border-bottom:1px solid var(--line);padding:12px 2px;
+  text-align:left;font:inherit;color:inherit;cursor:pointer}
+.rowlink:hover{background:var(--surface-sunk)}
+.rowlink .t{font-family:var(--serif);font-size:var(--s16);font-weight:var(--w-medium)}
+.rowlink .m{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3)}
+.rowlink .go{font-family:var(--sans);font-size:var(--s13);color:var(--ink-3);flex:none}
+.rowlink:hover .go{color:var(--ink)}
+
+.card{background:var(--surface-page);border:1px solid var(--line);padding:12px 14px;margin:0 0 14px}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:6px 0;
+  border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:none}
+.kv .k{font-family:var(--sans);font-size:var(--s11);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);flex:none}
+.kv .v{font-family:var(--serif);font-size:var(--s15);text-align:right}
+.note{border-top:1px solid var(--line);padding-top:11px;margin-top:22px;font-family:var(--serif);
+  font-style:italic;font-size:var(--s13);color:var(--ink-3);max-width:44ch}
+.empty{border:1px dashed var(--line-2);padding:14px;font-family:var(--serif);font-style:italic;
+  font-size:var(--s13);color:var(--ink-3);margin-bottom:14px}
+
+.chip{display:inline-block;font-family:var(--sans);font-size:var(--s11);letter-spacing:.04em;
+  border:1px solid var(--line-2);border-radius:var(--chipr);padding:4px 8px;color:var(--ink-2);
+  background:none;cursor:pointer}
+.chip.on{border-color:var(--border-strong);color:var(--ink)}
+.chip.past{border-style:dashed;color:var(--ink-3);cursor:default}
+
+/* the resolution readout — the door before a bind, a node's page about itself */
+.res{background:var(--surface-page);border-left:2px solid var(--ink);padding:11px 14px;margin:18px 0 22px}
+.res.thin{border-left-style:dashed;border-left-color:var(--ink-3)}
+.res .grain{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;font-weight:var(--w-semibold);margin-bottom:4px}
+.res .why{font-family:var(--serif);font-size:var(--s13);color:var(--ink-2);max-width:42ch}
+.meter{display:flex;gap:3px;margin-top:9px}
+.meter i{width:16px;height:3px;background:var(--line-2)}
+.meter i.on{background:var(--ink)}
+
+/* the road — six stations, honesty drawn */
+.road6{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin:2px 0 2px}
+.road6 .stn{position:relative;padding:16px 3px 0;text-align:center;min-width:0}
+.road6 .stn .bar{position:absolute;top:5px;left:-50%;width:100%;height:1px;background:var(--line-2)}
+.road6 .stn:first-child .bar{display:none}
+.road6 .stn.gap .bar{background:none;border-top:1px dashed var(--line-2)}
+.road6 .stn .mk{position:absolute;top:2px;left:50%;transform:translateX(-50%);width:7px;height:7px;
+  border:1px solid var(--ink-3);border-radius:50%;background:var(--surface-card)}
+.road6 .stn.held .mk{background:var(--ink);border-color:var(--ink)}
+.road6 .stn.you .mk{background:var(--accent);border-color:var(--accent)}
+.road6 .stn .lb{display:block;font-family:var(--sans);font-size:9px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-3)}
+.road6 .stn .who{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font-family:var(--serif);font-size:11px;line-height:1.25;color:var(--ink-2);margin-top:2px}
+.road6 .stn:not(.held) .who{font-style:italic;color:var(--ink-3)}
+
+.agg{margin:2px 0 4px}
+.aggrow{display:flex;align-items:center;gap:10px;padding:5px 0}
+.aggrow .lb{font-family:var(--sans);font-size:var(--s11);letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-3);width:72px;flex:none}
+.aggrow .track{flex:1;height:3px;background:var(--line-2);position:relative}
+.aggrow .fill{position:absolute;left:0;top:0;height:100%;background:var(--ink)}
+.aggrow.thin .fill{background:var(--ink-3)}
+.aggrow .ct{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);width:40px;text-align:right;flex:none}
+
+/* the terrace — the section beside the plan */
+.terr{margin:6px 0 0}
+.terr .plot{position:relative;height:132px;border-left:1px solid var(--line-2);margin-left:44px}
+.terr .ct{position:absolute;left:0;width:100%;border-top:1px dotted var(--line-2)}
+.terr .ct span{position:absolute;left:-44px;top:-7px;font-family:var(--sans);font-size:9px;color:var(--ink-3)}
+.terr .m1{position:absolute;left:0;width:100%;background:var(--surface-sunk);
+  border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.terr .m1.pt{border-bottom:none;height:0!important}
+.terr .m1 .val{position:absolute;right:2px;top:-15px;font-family:var(--sans);font-size:9px;
+  font-style:normal;font-weight:600;color:var(--ink)}
+.terr .m2{position:absolute;left:0;width:64%;border-top:1px solid var(--ink-2);border-bottom:1px solid var(--ink-2)}
+.terr .m0{position:absolute;left:0;width:38%;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.terr .m0.pt,.terr .m2.pt{border-bottom:none;height:0!important}
+
+/* the drawn plot — the floor under every map surface */
+.plot-box{border:1px solid var(--line);background:var(--surface-page);margin:4px 0 10px;position:relative}
+.plot-box svg{display:block;width:100%}
+.pin{fill:var(--ink)} .pin.hollow{fill:none;stroke:var(--ink-3);stroke-dasharray:2 2}
+
+.btn{display:block;width:100%;font-family:var(--sans);font-size:var(--s13);letter-spacing:.02em;
+  padding:13px;border:1px solid var(--border-strong);background:none;color:var(--ink);
+  cursor:pointer;margin:0 0 9px}
+.btn-primary{background:var(--fill-strong);color:var(--surface-card);border-color:var(--fill-strong)}
+.btn-quiet{border-color:var(--border-control);color:var(--ink-2)}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 9px}
+.btnrow .btn{margin:0}
+.text-action{background:none;border:none;font-family:var(--sans);font-size:var(--s11);
+  letter-spacing:.04em;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-style:dotted;cursor:pointer;padding:0}
+.text-action:hover{color:var(--ink)}
+
+/* forms — one field grammar, and the suggest rail under it */
+.f{display:block;margin:0 0 14px}
+.f .l{display:block;font-family:var(--sans);font-size:var(--s11);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.f .l .opt{text-transform:none;letter-spacing:0;font-style:italic;color:var(--ink-3);opacity:.8}
+.f input,.f textarea,.f select{width:100%;font-family:var(--serif);font-size:var(--s15);color:var(--ink);
+  background:var(--surface-page);border:1px solid var(--line-2);padding:10px 11px;border-radius:0}
+.f input:focus,.f textarea:focus{outline:none;border-color:var(--border-strong)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.sug{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.sug .s{font-family:var(--sans);font-size:var(--s11);border:1px solid var(--line-2);
+  border-radius:var(--chipr);background:none;color:var(--ink-2);padding:4px 8px;cursor:pointer}
+.sug .s:hover{border-color:var(--border-strong);color:var(--ink)}
+.sug .s b{font-weight:400;color:var(--ink-3);margin-left:5px}
+.sug .lb{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);align-self:center;margin-right:2px}
+
+.stepdots{display:flex;align-items:center;gap:5px;margin:0 0 16px}
+.stepdots i{width:18px;height:2px;background:var(--line-2)}
+.stepdots i.on{background:var(--ink)}
+.stepdots span{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-3);margin-left:6px}
+.doorchip{font-family:var(--sans);font-size:var(--s11);border:1px solid var(--line-2);
+  border-radius:var(--chipr);background:none;color:var(--ink);padding:5px 8px;cursor:pointer;
+  display:inline-flex;align-items:baseline;gap:6px}
+.doorchip.on{border-color:var(--border-strong)}
+.doorchip.struck{opacity:.5;text-decoration:line-through}
+.doorchip .k{color:var(--ink-3);font-size:9px;letter-spacing:.06em;text-transform:uppercase}
+.doorchip b{font-family:var(--serif);font-weight:500}
+.doorchip .x{color:var(--ink-3)}
+
+nav.tabs{flex:none;display:flex;border-top:1px solid var(--line);background:var(--surface-card)}
+nav.tabs button{flex:1;background:none;border:none;padding:13px 4px 16px;font-family:var(--sans);
+  font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;
+  color:var(--ink-3);cursor:pointer}
+nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
+
+.score{font-family:var(--sans);font-size:26px;font-weight:600;color:var(--accent)}
+.score small{font-size:12px;color:var(--ink-3);font-weight:400}
+.continuation{background:var(--surface-page);border-left:2px solid var(--accent);padding:11px 14px;margin-bottom:6px}
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.seal{border-top:1px solid var(--line);margin-top:30px;padding-top:12px;font-family:var(--sans);
+  font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+  display:flex;justify-content:space-between;gap:12px}
+.seal em{font-family:var(--serif);font-size:11px;font-style:italic;letter-spacing:0;text-transform:none}
+.toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);background:var(--fill-strong);
+  color:var(--surface-card);font-family:var(--sans);font-size:var(--s13);padding:9px 14px;
+  z-index:60;max-width:calc(100% - 40px);text-align:center}
+.crumb{display:flex;flex-wrap:wrap;gap:0 4px;align-items:baseline;margin:0 0 16px}
+.crumb button{background:none;border:none;font-family:var(--sans);font-size:var(--s11);
+  letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);cursor:pointer;padding:0;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-style:dotted}
+.crumb button:hover{color:var(--ink)}
+.crumb i{color:var(--ink-3);font-style:normal;font-size:10px}
+</style>
+</head>
+<body>
+<header class="app">
+  <div>
+    <div class="wm">Carta</div>
+    <div class="sub" id="hsub">The atlas</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <button class="th" onclick="toggleTheme()" title="Paper / dusk">◐</button>
+    <button class="door" onclick="openDoor()">＋ A coffee</button>
+  </div>
+</header>
+<main id="main"></main>
+<nav class="tabs" id="tabs"></nav>
+
+<script>
+/* ============================================================================
+ * CARTA · UNIFIED — the prototype
+ *
+ * THE THESIS, in one function: scopeGreens(kind,id).
+ *
+ * A country, a region, a grower, a green, a roaster, a bar, a Setup, a process,
+ * a variety — every one of them is A SCOPE OVER THE SAME SET OF GREENS. Once a
+ * page knows its green set it can answer every question the same way, with the
+ * same components, in the same order. That is why these pages read as one app:
+ * they are one page, pointed at different slices of one graph.
+ *
+ * THE FIVE QUESTIONS every node page answers, in this order, always:
+ *   1. What is it?              — eyebrow · display · lede · identity card
+ *   2. How far does the record follow it?  — the road (single or aggregated)
+ *   3. What can it prove?       — the resolution readout (.res)
+ *   4. Where does it sit, and what does it hold?  — up · across · down
+ *   5. What did you find?       — your overlay
+ * A kind may have nothing to say for a question. It says "unread" — it never
+ * drops the question, and it never reorders them.
+ * ========================================================================== */
+
+/* ============ the graph — a demo record, shaped exactly like the app's ============ */
+const G={
+  countries:[
+    {id:'Ethiopia',lat:8.6,lon:39.5},
+    {id:'Colombia',lat:4.6,lon:-74.1},
+    {id:'Kenya',lat:.3,lon:37.9}
+  ],
+  regions:[
+    {id:'Guji',country:'Ethiopia',lat:5.9,lon:38.9},
+    {id:'Bench Maji',country:'Ethiopia',lat:6.9,lon:35.5},
+    {id:'Huila',country:'Colombia',lat:2.5,lon:-75.6},
+    {id:'Nyeri',country:'Kenya',lat:-.42,lon:36.95}
+  ],
+  producers:[
+    {id:'p1',name:'Tade Gebre Gezehagn',kind:'farm',region:'Guji',country:'Ethiopia',alt:[1900,2100]},
+    {id:'p2',name:'Suke Quto',kind:'station',region:'Guji',country:'Ethiopia',alt:[1850,2100]},
+    {id:'p3',name:'Finca El Paraíso',kind:'farm',region:'Huila',country:'Colombia',alt:[1700,1900]},
+    {id:'p4',name:'Gichathaini Factory',kind:'station',region:'Nyeri',country:'Kenya',alt:[1700,1750]}
+  ],
+  greens:[
+    {id:'g1',name:'Tade GG',lotName:'Lot 12',country:'Ethiopia',region:'Guji',producer:'p1',
+     variety:'Heirloom',process:'Natural',alt:[1900,2100],harvest:2024,grain:'green-lot',mill:''},
+    {id:'g2',name:'Suke Quto',lotName:'',country:'Ethiopia',region:'Guji',producer:'p2',
+     variety:'Heirloom',process:'Washed',alt:[1850,2100],harvest:2024,grain:'station',mill:''},
+    {id:'g3',name:'Bench Maji',lotName:'',country:'Ethiopia',region:'Bench Maji',producer:'',
+     variety:'Gesha',process:'Washed',alt:null,harvest:null,grain:'region',mill:''},
+    {id:'g4',name:'El Paraíso',lotName:'Double anaerobic',country:'Colombia',region:'Huila',producer:'p3',
+     variety:'Castillo',process:'Double anaerobic',alt:[1700,1900],harvest:2024,grain:'green-lot',mill:''},
+    {id:'g5',name:'Gichathaini',lotName:'AA',country:'Kenya',region:'Nyeri',producer:'p4',
+     variety:'SL28',process:'Washed',alt:[1700,1750],harvest:2023,grain:'green-lot',mill:'dry mill · outturn 21'}
+  ],
+  roasters:[
+    {id:'r1',name:'Sey',city:'Brooklyn',country:'United States',lat:40.69,lon:-73.95},
+    {id:'r2',name:'Onyx',city:'Rogers',country:'United States',lat:36.33,lon:-94.12},
+    {id:'r3',name:'Kumquat',city:'Los Angeles',country:'United States',lat:34.11,lon:-118.26}
+  ],
+  roasts:[
+    {id:'ro1',green:'g1',roaster:'r1',offering:'Tade GG',level:'Light',date:'2026-06-12'},
+    {id:'ro2',green:'g1',roaster:'r2',offering:'Guji Natural',level:'Light-medium',date:'2026-06-02'},
+    {id:'ro3',green:'g3',roaster:'r1',offering:'Bench Maji',level:'Light',date:'2026-05-20'},
+    {id:'ro4',green:'g4',roaster:'r2',offering:'El Paraíso',level:'Medium',date:'2026-06-20'},
+    {id:'ro5',green:'g5',roaster:'r3',offering:'Gichathaini AA',level:'Light',date:'2026-07-01'},
+    {id:'ro6',green:'g2',roaster:'r3',offering:'Suke Quto',level:'Medium',date:'2026-06-28'}
+  ],
+  bars:[
+    {id:'b1',name:'Halfpence',city:'Los Angeles',hood:'Arts District',lat:34.04,lon:-118.23},
+    {id:'b2',name:'Maru',city:'Los Angeles',hood:'Silver Lake',lat:34.09,lon:-118.27},
+    {id:'b3',name:'Gilly',city:'Portland',hood:'Alberta',lat:45.56,lon:-122.65}
+  ],
+  pours:[
+    {id:'pr1',bar:'b1',green:'g1',roaster:'r1',at:'2026-07-10'},
+    {id:'pr2',bar:'b1',green:'g4',roaster:'r2',at:'2026-07-02'},
+    {id:'pr3',bar:'b2',green:'g5',roaster:'r3',at:'2026-07-18'},
+    {id:'pr4',bar:'b2',green:'g2',roaster:'r3',at:'2026-07-20'},
+    {id:'pr5',bar:'b3',green:'g1',roaster:'r2',at:'2026-06-30'}
+  ],
+  setups:[
+    {id:'s1',name:'Ode + V60',grinder:'Fellow Ode Gen 2',brewer:'Hario V60 02',papers:'Cafec Abaca',
+     water:'Third Wave Water — Classic',min:1,max:11,step:.5,retired:false},
+    {id:'s2',name:'Niche + Decent',grinder:'Niche Zero',brewer:'Decent DE1',basket:'IMS 18 g',
+     water:'Filtered, 60 ppm',min:0,max:50,step:1,retired:false}
+  ],
+  brews:[
+    {id:'w1',setup:'s1',green:'g1',grind:6.5,dose:15,water:250,tempC:94,sec:170},
+    {id:'w2',setup:'s1',green:'g1',grind:6,dose:15,water:250,tempC:94,sec:182},
+    {id:'w3',setup:'s1',green:'g1',grind:5.5,dose:15,water:255,tempC:95,sec:195},
+    {id:'w4',setup:'s1',green:'g3',grind:7,dose:16,water:260,tempC:93,sec:165},
+    {id:'w5',setup:'s2',green:'g4',grind:22,dose:18,water:40,tempC:92,sec:29},
+    {id:'w6',setup:'s2',green:'g4',grind:21,dose:18,water:40,tempC:92,sec:33}
+  ],
+  cups:[
+    {id:'c1',kind:'home',brew:'w2',green:'g1',hedonic:8,notes:'peach skin, clean finish',at:'2026-06-20'},
+    {id:'c2',kind:'home',brew:'w3',green:'g1',hedonic:7,notes:'heavier, a little flat',at:'2026-06-22'},
+    {id:'c3',kind:'home',brew:'w6',green:'g4',hedonic:9,notes:'strawberry, almost too much',at:'2026-06-28'},
+    {id:'c4',kind:'home',brew:'w4',green:'g3',hedonic:6,notes:'thin — my grind, probably',at:'2026-05-30'},
+    {id:'c5',kind:'cafe',pour:'pr1',bar:'b1',green:'g1',drink:'Filter',hedonic:8,notes:'better than mine',at:'2026-07-11'},
+    {id:'c6',kind:'cafe',pour:'pr3',bar:'b2',green:'g5',drink:'Filter',hedonic:7,notes:'blackcurrant, tight',at:'2026-07-19'},
+    {id:'c7',kind:'cafe',pour:'pr2',bar:'b1',green:'g4',drink:'Cortado',hedonic:8,notes:'',at:'2026-07-03'}
+  ]
+};
+
+/* ============ the small helpers, in the app's terse hand ============ */
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const jsq=s=>"'"+String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
+const has=v=>v!=null&&String(v).trim()!=='';
+const uniq=a=>[...new Set(a.filter(has))];
+const val=id=>{const e=document.getElementById(id);return e?e.value.trim():''};
+const NUMW=['','one','two','three','four','five','six','seven','eight','nine','ten'];
+const nw=n=>NUMW[n]||String(n);
+const plural=(n,s,p)=>n+' '+(n===1?s:(p||s+'s'));
+const green=id=>G.greens.find(g=>g.id===id);
+const producer=id=>G.producers.find(p=>p.id===id);
+const roaster=id=>G.roasters.find(r=>r.id===id);
+const bar=id=>G.bars.find(b=>b.id===id);
+const setup=id=>G.setups.find(s=>s.id===id);
+const roastsOf=gid=>G.roasts.filter(r=>r.green===gid);
+const poursOf=gid=>G.pours.filter(p=>p.green===gid);
+const fmtDate=s=>s?new Date(s+'T12:00:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';
+const gLabel=g=>[g.name,g.lotName].filter(has).join(' · ');
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+function toggleTheme(){const h=document.documentElement;
+  h.dataset.theme=h.dataset.theme==='dusk'?'paper':'dusk'}
+
+/* ============================================================================
+ * THE SCOPE — one function, every page.
+ * Every node kind resolves to a set of greens. Everything a page draws below
+ * this line reads that set: the road, the terrace, the plot, the hands, the
+ * bars, your cups. Add a kind here and it inherits the whole page for free.
+ * ========================================================================== */
+function scopeGreens(k,id){
+  switch(k){
+    case 'country':  return G.greens.filter(g=>g.country===id);
+    case 'region':   return G.greens.filter(g=>g.region===id);
+    case 'producer': return G.greens.filter(g=>g.producer===id);
+    case 'green':    return G.greens.filter(g=>g.id===id);
+    case 'roaster':  return G.greens.filter(g=>roastsOf(g.id).some(r=>r.roaster===id));
+    case 'bar':      return G.greens.filter(g=>G.pours.some(p=>p.bar===id&&p.green===g.id));
+    case 'city':{    // a city is a scope like any other — what pours there, and what is roasted there
+      const bs=G.bars.filter(b=>b.city===id).map(b=>b.id),rs=G.roasters.filter(r=>r.city===id).map(r=>r.id);
+      return G.greens.filter(g=>G.pours.some(p=>p.green===g.id&&bs.includes(p.bar))||roastsOf(g.id).some(r=>rs.includes(r.roaster)));}
+    case 'setup':    return G.greens.filter(g=>G.brews.some(b=>b.setup===id&&b.green===g.id));
+    case 'process':  return G.greens.filter(g=>g.process===id);
+    case 'variety':  return G.greens.filter(g=>g.variety===id);
+    default:         return G.greens.slice();
+  }
+}
+// the edges out of a green set — the same three questions every page asks of its scope
+const handsIn=gs=>uniq(gs.flatMap(g=>roastsOf(g.id).map(r=>r.roaster)));
+const barsIn=gs=>uniq(gs.flatMap(g=>poursOf(g.id).map(p=>p.bar)));
+const cupsIn=gs=>{const ids=new Set(gs.map(g=>g.id));return G.cups.filter(c=>ids.has(c.green))};
+const brewsIn=gs=>{const ids=new Set(gs.map(g=>g.id));return G.brews.filter(b=>ids.has(b.green))};
+
+/* ============ the road — six stations, at any scope ============ */
+function roadStations(g){
+  const p=producer(g.producer);
+  const grower=p&&p.kind==='farm'?p.name:'';
+  const stn=p&&p.kind==='station'?p.name:'';
+  const hands=roastsOf(g.id),shops=poursOf(g.id);
+  const cups=G.cups.filter(c=>c.green===g.id).length;
+  return [
+    {lb:'Grown',who:grower||(stn?'':g.region)||''},
+    {lb:'Processed',who:stn||(has(g.process)?g.process:'')},
+    {lb:'Milled',who:g.mill||''},
+    {lb:'Roasted',who:hands.length?(hands.length>1?plural(hands.length,'hand'):roaster(hands[0].roaster).name):''},
+    {lb:'Poured',who:shops.length?(shops.length>1?plural(shops.length,'bar'):bar(shops[0].bar).name):''},
+    {lb:'Read',who:cups?plural(cups,'cup'):'',you:true}
+  ];
+}
+function road6HTML(st){
+  let prev=true;
+  return `<div class="road6">${st.map(s=>{const held=has(s.who);
+    const cls='stn'+(held?' held':'')+(s.you&&held?' you':'')+((!held||!prev)?' gap':'');
+    prev=held;
+    return `<div class="${cls}"><span class="bar"></span><span class="mk"></span><span class="lb">${esc(s.lb)}</span><span class="who" title="${esc(s.who||'unread')}">${held?esc(s.who):'unread'}</span></div>`}).join('')}</div>`;
+}
+function aggRoadHTML(gs){
+  const all=gs.map(roadStations),n=all.length;if(!n)return'';
+  return `<div class="agg">${all[0].map((s0,i)=>{const c=all.filter(s=>has(s[i].who)).length;
+    return `<div class="aggrow${c/n<.5?' thin':''}"><span class="lb">${esc(s0.lb)}</span><span class="track"><span class="fill" style="width:${Math.round(c/n*100)}%"></span></span><span class="ct num">${c}/${n}</span></div>`}).join('')}</div>`;
+}
+// one call, either scope — a single green draws its stations, a set draws its counts
+const roadHTML=gs=>gs.length===1?road6HTML(roadStations(gs[0])):aggRoadHTML(gs);
+
+/* ============ the terrace — the section beside the plan ============ */
+const altValid=b=>Array.isArray(b)&&b.length===2&&b[0]>=200&&b[1]<=3000&&b[0]<=b[1];
+const altLabel=b=>b[0]===b[1]?b[0].toLocaleString()+' masl':b[0].toLocaleString()+'–'+b[1].toLocaleString()+' masl';
+function terrScale(bands){
+  let lo=Math.min(...bands.map(b=>b[0])),hi=Math.max(...bands.map(b=>b[1]));
+  const step=(hi-lo)>1400?400:200;
+  lo=Math.floor(lo/step)*step-step;hi=Math.ceil(hi/step)*step+step;
+  if(hi-lo<600){const m=(hi+lo)/2;lo=Math.floor((m-300)/step)*step;hi=Math.ceil((m+300)/step)*step}
+  lo=Math.max(0,lo);hi=Math.min(3000,hi);
+  return {lo,hi,step,pc:v=>(v-lo)/(hi-lo)*100};
+}
+function terraceHTML(o){
+  const band=altValid(o.band)?o.band:null;if(!band)return'';
+  const inner=(o.inner||[]).filter(altValid),others=(o.others||[]).filter(altValid);
+  const sc=terrScale([band,...inner,...others]);
+  const at=b=>`bottom:${sc.pc(b[0]).toFixed(2)}%;height:${(sc.pc(b[1])-sc.pc(b[0])).toFixed(2)}%`;
+  const pt=b=>b[0]===b[1]?' pt':'';
+  let rules='';
+  for(let v=Math.ceil(sc.lo/sc.step)*sc.step;v<=sc.hi;v+=sc.step)
+    rules+=`<i class="ct" style="bottom:${sc.pc(v).toFixed(2)}%"><span>${v.toLocaleString()}</span></i>`;
+  return `<div class="terr"><div class="plot">${rules}
+    <i class="m1${pt(band)}" style="${at(band)}">${o.label?`<b class="val">${esc(altLabel(band))}</b>`:''}</i>
+    ${inner.map(b=>`<i class="m2${pt(b)}" style="${at(b)}"></i>`).join('')}
+    ${others.map(b=>`<i class="m0${pt(b)}" style="${at(b)}"></i>`).join('')}
+  </div></div>`;
+}
+function altReading(band,others){
+  if(!others.length)return 'The only green on the atlas that states a height.';
+  const lower=others.filter(b=>b[1]<band[0]).length,higher=others.filter(b=>b[0]>band[1]).length;
+  const over=others.length-lower-higher,one=band[0]===band[1];
+  const spans=n=>one?`${plural(n,'span')} it`:`${n} overlap${n===1?'s':''} this band`;
+  if(others.length===1)return 'The one other green that states a height '+(lower?'grew lower.':higher?'grew higher.':one?'spans this height.':'overlaps this band.');
+  return `Of the ${others.length} other greens that state one — ${[lower&&`${lower} grew lower`,higher&&`${higher} higher`,over&&spans(over)].filter(Boolean).join(', ')}.`;
+}
+// the height section, at any scope — one green draws itself against the atlas, a set draws its span
+function heightHTML(gs){
+  if(gs.length===1){
+    const g=gs[0],band=altValid(g.alt)?g.alt:null;
+    const peers=G.greens.filter(x=>x.id!==g.id&&altValid(x.alt)).map(x=>x.alt);
+    if(!band)return `<h2>The height it grew at</h2>
+      <div class="empty">Unread — nothing on file states one. ${peers.length===1?'One green on the atlas does':plural(peers.length,'green')+' do'}.</div>`;
+    return `<h2>The height it grew at</h2>
+    ${terraceHTML({band,others:peers,label:true})}
+    <div class="muted small serif" style="font-style:italic;margin:10px 2px 0">${esc(altLabel(band))}. ${esc(altReading(band,peers))}</div>
+    <p class="note">A growing condition, not a grade. Nothing on this page sorts by it.</p>`;
+  }
+  const bands=gs.map(g=>g.alt).filter(altValid);
+  if(bands.length<2)return'';
+  const span=[Math.min(...bands.map(b=>b[0])),Math.max(...bands.map(b=>b[1]))];
+  const unread=gs.length-bands.length;
+  return `<h2>The heights they grew at</h2>
+  ${terraceHTML({band:span,inner:bands,label:true})}
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px 0">${esc(altLabel(span))} across ${plural(bands.length,'green')} that state a height.${unread?` ${unread===1?'One more says':unread+' more say'} nothing about it — counted, never dropped.`:''} Placed, never ranked.</div>`;
+}
+
+/* ============ the plot — the drawn floor under every map surface ============ */
+function plotHTML(marks,heading){
+  const pts=marks.filter(m=>m.lat!=null&&m.lon!=null);
+  if(pts.length<2)return'';
+  const W=420,H=170,P=22;
+  const las=pts.map(p=>p.lat),los=pts.map(p=>p.lon);
+  let la0=Math.min(...las),la1=Math.max(...las),lo0=Math.min(...los),lo1=Math.max(...los);
+  if(la1-la0<1){la0-=.5;la1+=.5} if(lo1-lo0<1){lo0-=.5;lo1+=.5}
+  const X=lo=>P+(lo-lo0)/(lo1-lo0)*(W-2*P),Y=la=>H-P-(la-la0)/(la1-la0)*(H-2*P);
+  return `${heading?`<h2>${esc(heading)}</h2>`:''}
+  <div class="plot-box"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(heading||'plot')}">
+    ${pts.map(p=>`<circle class="pin${p.coarse?' hollow':''}" cx="${X(p.lon).toFixed(1)}" cy="${Y(p.lat).toFixed(1)}" r="${p.coarse?4:3.5}"/>
+      <text x="${(X(p.lon)+7).toFixed(1)}" y="${(Y(p.lat)+3.5).toFixed(1)}" font-family="system-ui" font-size="9" fill="currentColor" opacity=".62">${esc(p.label)}</text>`).join('')}
+  </svg></div>
+  <div class="muted small" style="margin:-4px 2px 12px">A hollow mark is a coarse coordinate — a region's centroid, never a farm-precise pin.</div>`;
+}
+
+/* ============ the router — one stack, every kind ============ */
+let tab='atlas',stack=[],view=null,door=null;
+const KIND_BACK={country:'The country',region:'The region',producer:'The grower',green:'The green',
+  roaster:'The roaster',bar:'The bar',city:'The city',setup:'The Setup',
+  process:'The process',variety:'The variety',atlas:'The atlas'};
+function nav(k,id){
+  if(view)stack.push(view);
+  if(stack.length>10)stack.shift();
+  view={k,id};door=null;render();window.scrollTo&&document.getElementById('main').scrollTo(0,0);
+}
+function back(){
+  view=stack.pop()||null;door=null;render();document.getElementById('main').scrollTo(0,0);
+}
+function go(t){tab=t;view=null;stack=[];door=null;render();document.getElementById('main').scrollTo(0,0)}
+const backLabel=()=>stack.length?KIND_BACK[stack[stack.length-1].k]||'Back':(tab==='atlas'?'The atlas':tab==='trace'?'The record':'The desk');
+
+/* ============================================================================
+ * THE NODE PAGE — one renderer, every kind.
+ *
+ * A spec per kind supplies only the NOUNS: what to call it, what its identity
+ * rows are, which node is above it, which nodes are below it. The five
+ * questions, their order, and every component drawing them are shared.
+ * ========================================================================== */
+const GRAIN_READ={
+  'green-lot':['Green lot','One parcel under one identity — the finest grain the trade can prove'],
+  'farm':['Farm','One grower’s parcel named. Short of a lot identity, and said so'],
+  'station':['Washing station','A legitimate terminal record, not a half-filled lot'],
+  'region':['Region','A region and its country. Named as such, never rounded up'],
+  'country':['Country','The honest floor. A name we can’t classify buys nothing above it']
+};
+// the row primitive — the ONE navigation component. Every list on every page is this.
+const rowlink=(k,id,t,m,right)=>`<button class="rowlink" onclick="nav(${jsq(k)},${jsq(id)})">
+  <span><span class="t">${t}</span>${m?`<br><span class="m">${m}</span>`:''}</span>
+  <span class="m num" style="flex:none;display:flex;gap:9px;align-items:baseline">${right?`<span>${right}</span>`:''}<span class="go">→</span></span></button>`;
+
+function spec(k,id){
+  const gs=scopeGreens(k,id);
+  switch(k){
+  case 'country':{
+    const regs=uniq(gs.map(g=>g.region));
+    return {eyebrow:'Country',title:esc(id),qual:'',
+      lede:`Every green the record traces to ${esc(id)} — and everyone who has carried one.`,
+      rows:[['Regions',regs.length?regs.join(' · '):'unread'],['Greens',String(gs.length)],
+        ['Growers',String(uniq(gs.map(g=>g.producer)).length)||'0'],
+        ['Varieties',uniq(gs.map(g=>g.variety)).join(' · ')||'unread']],
+      up:[],
+      down:[{h:'Its regions',items:regs.map(r=>{const n=scopeGreens('region',r).length;
+        return rowlink('region',r,esc(r),esc(id),plural(n,'green'))})},
+        {h:'Its growers',items:uniq(gs.map(g=>g.producer)).map(p=>prodRow(p))}],
+      seal:'One country, read as one scope.'};
+  }
+  case 'region':{
+    const reg=G.regions.find(r=>r.id===id)||{country:''};
+    return {eyebrow:'Region · '+esc(reg.country),title:esc(id),qual:'',
+      lede:`The greens the record traces to ${esc(id)}, and how far it follows each one.`,
+      rows:[['Country',esc(reg.country)],['Greens',String(gs.length)],
+        ['Growers',String(uniq(gs.map(g=>g.producer)).length)],
+        ['Processes',uniq(gs.map(g=>g.process)).join(' · ')||'unread']],
+      up:[{h:'Part of',items:[rowlink('country',reg.country,esc(reg.country),'the country above it',plural(scopeGreens('country',reg.country).length,'green'))]}],
+      down:[{h:'Its growers',items:uniq(gs.map(g=>g.producer)).map(p=>prodRow(p))}],
+      seal:'A region is a scope, not a stamp.'};
+  }
+  case 'producer':{
+    const p=producer(id)||{};
+    return {eyebrow:(p.kind==='station'?'Washing station':'Grower')+' · '+esc(p.country||''),
+      title:esc(p.name),qual:'',
+      lede:p.kind==='station'
+        ?`A station gathers cherry from many hands. Its greens stand apart here — never one blurred farm.`
+        :`The greens the record traces to ${esc(p.name)}, each its own lot.`,
+      rows:[['Kind',p.kind==='station'?'washing station':'farm'],['Region',esc(p.region||'unread')],
+        ['Country',esc(p.country||'unread')],['Greens',String(gs.length)],
+        ['Height',p.alt?esc(altLabel(p.alt)):'unread']],
+      up:[{h:'Part of',items:[
+        rowlink('region',p.region,esc(p.region),'the region around it',plural(scopeGreens('region',p.region).length,'green')),
+        rowlink('country',p.country,esc(p.country),'the country above it',plural(scopeGreens('country',p.country).length,'green'))]}],
+      down:[],
+      seal:'The grower owns the farm, never the roast.'};
+  }
+  case 'green':{
+    const g=green(id)||{},p=producer(g.producer),gr=GRAIN_READ[g.grain];
+    const hands=roastsOf(id);
+    return {eyebrow:'Green · '+esc(gr?gr[0]:'unresolved')+(has(g.country)?' · '+esc(g.country):''),
+      title:esc(g.name),qual:has(g.lotName)?esc(g.lotName):esc(g.variety),
+      lede:esc([g.region,g.country].filter(has).join(', ')||'origin unwritten'),
+      rows:[p&&[p.kind==='station'?'Station':'Grower',esc(p.name)],
+        ['Variety',esc(g.variety||'unread')],['Process',esc(g.process||'unread')],
+        ['Harvest',g.harvest?String(g.harvest):'unread'],
+        ['Altitude',altValid(g.alt)?esc(altLabel(g.alt)):'unread'],
+        g.mill&&['Milled',esc(g.mill)]].filter(Boolean),
+      up:[{h:'Part of',items:[
+        p&&rowlink('producer',p.id,esc(p.name),p.kind==='station'?'the station that processed it':'the grower who grew it',''),
+        rowlink('region',g.region,esc(g.region),'the region it grew in',plural(scopeGreens('region',g.region).length,'green')),
+        rowlink('country',g.country,esc(g.country),'the country above that',plural(scopeGreens('country',g.country).length,'green')),
+        has(g.process)&&rowlink('process',g.process,esc(g.process),'every green processed this way',plural(scopeGreens('process',g.process).length,'green')),
+        has(g.variety)&&rowlink('variety',g.variety,esc(g.variety),'every green of this seed',plural(scopeGreens('variety',g.variety).length,'green'))
+      ].filter(Boolean)}],
+      down:[{h:hands.length>1?`The same green, in ${nw(hands.length)} hands`:'The one hand it has passed through',
+        items:hands.map(r=>{const rr=roaster(r.roaster);
+          return rowlink('roaster',rr.id,`${esc(rr.name)}${r.offering?` <span class="muted">· “${esc(r.offering)}”</span>`:''}`,
+            esc([r.level,r.date&&'roasted '+fmtDate(r.date)].filter(has).join(' · ')),'')})}],
+      seal:'One green, many hands.'};
+  }
+  case 'roaster':{
+    const r=roaster(id)||{};
+    return {eyebrow:'Roaster · '+esc(r.city||''),title:esc(r.name),qual:'',
+      lede:`Every green this hand has roasted into the record — and where those greens grew.`,
+      rows:[['City',esc(r.city||'unread')],['Greens',String(gs.length)],
+        ['Countries',uniq(gs.map(g=>g.country)).join(' · ')||'unread'],
+        ['Bars pouring it',String(barsIn(gs).length)]],
+      up:[{h:'Part of',items:[has(r.city)&&rowlink('city',r.city,esc(r.city),'the city it roasts in',
+        plural(scopeGreens('city',r.city).length,'green'))].filter(Boolean)}],
+      down:[],
+      seal:'The roaster owns the roast, never the farm.'};
+  }
+  case 'bar':{
+    const b=bar(id)||{};
+    const mine=G.cups.filter(c=>c.bar===id);
+    return {eyebrow:'Bar · '+esc([b.hood,b.city].filter(has).join(', ')),title:esc(b.name),qual:'',
+      lede:`The greens this counter has poured into the record, and how far the record follows each one.`,
+      rows:[['City',esc(b.city||'unread')],['Neighbourhood',esc(b.hood||'unread')],
+        ['Greens poured',String(gs.length)],['Your cups here',mine.length?String(mine.length):'none yet'],
+        ['Hands poured',handsIn(gs).map(h=>roaster(h).name).join(' · ')||'unread']],
+      up:[{h:'Part of',items:[has(b.city)&&rowlink('city',b.city,esc(b.city),'every bar and hand in it',
+        plural(scopeGreens('city',b.city).length,'green'))].filter(Boolean)}],
+      down:[],
+      seal:'A page that writes itself, cup by cup.'};
+  }
+  case 'city':{
+    const bs=G.bars.filter(b=>b.city===id),rs=G.roasters.filter(r=>r.city===id);
+    return {eyebrow:'City',title:esc(id),qual:'',
+      lede:`What is poured and what is roasted in ${esc(id)} — the scene, read as one scope.`,
+      rows:[['Bars',String(bs.length)],['Hands',String(rs.length)],['Greens',String(gs.length)],
+        ['Countries',uniq(gs.map(g=>g.country)).join(' · ')||'unread']],
+      up:[],
+      down:[{h:'Its bars',items:bs.map(b=>rowlink('bar',b.id,esc(b.name),esc(b.hood||'the city'),
+        plural(scopeGreens('bar',b.id).length,'green')))},
+        {h:'Its hands',items:rs.map(r=>rowlink('roaster',r.id,esc(r.name),'roasting here',
+          plural(scopeGreens('roaster',r.id).length,'green')))}],
+      covers:['hands','bars'],   // named above, at this scope — the cross-cut would only repeat them
+      seal:'A scene is derived, never stored.'};
+  }
+  case 'setup':{
+    const s=setup(id)||{},bw=G.brews.filter(b=>b.setup===id);
+    return {eyebrow:'Setup'+(s.retired?' · retired':''),title:esc(s.name),qual:'',
+      lede:`The assembly, and every brew read against it. A grind setting outside this page is a rumour.`,
+      rows:[['Grinder',esc(s.grinder||'unread')],['Brewer',esc(s.brewer||'unread')],
+        s.basket&&['Basket',esc(s.basket)],s.papers&&['Papers',esc(s.papers)],
+        ['Water',esc(s.water||'unread')],
+        ['Grind scale',s.min!=null?`${s.min}–${s.max} · step ${s.step}`:'unread'],
+        ['Brews',String(bw.length)]].filter(Boolean),
+      up:[],down:[],
+      seal:'Grind is only comparable within one Setup.'};
+  }
+  case 'process':
+  case 'variety':{
+    const lbl=k==='process'?'a process':'a variety';
+    return {eyebrow:'A plate · '+lbl,title:esc(id),
+      qual:`in ${plural(gs.length,'green')}`,
+      lede:`The ${esc(id)} greens you have met, and how far down the road the record follows each one.`,
+      rows:[['Greens',String(gs.length)],['Countries',uniq(gs.map(g=>g.country)).join(' · ')],
+        ['Hands',String(handsIn(gs).length)],['Bars',String(barsIn(gs).length)]],
+      up:[],down:[],
+      seal:'A plate is the atlas, cut.'};
+  }}
+}
+function prodRow(pid){
+  const p=producer(pid);if(!p)return'';
+  const n=scopeGreens('producer',pid).length;
+  return rowlink('producer',pid,esc(p.name),esc((p.kind==='station'?'washing station':'farm')+' · '+p.region),plural(n,'green'));
+}
+
+/* THE PAGE. One renderer. Every kind. The five questions, in order, always. */
+function nodePage(k,id){
+  const s=spec(k,id);if(!s)return '<div class="empty">Nothing here.</div>';
+  const gs=scopeGreens(k,id);
+  const hands=handsIn(gs),bars=barsIn(gs),cups=cupsIn(gs),brews=brewsIn(gs);
+  const one=gs.length===1;
+
+  /* ── 1 · What is it? ─────────────────────────────────────────────────── */
+  const head=`<button class="back" onclick="back()">← ${esc(backLabel())}</button>
+  ${crumbHTML(k,id)}
+  <p class="eyebrow">${s.eyebrow}</p>
+  <h2 class="display">${s.title}${s.qual?` <em>${s.qual}</em>`:''}</h2>
+  <p class="lede">${s.lede}</p>`;
+
+  /* ── 2 · How far does the record follow it? ──────────────────────────── */
+  const road=gs.length?`${roadHTML(gs)}
+  <div class="muted small serif" style="font-style:italic;margin:8px 2px 0">${one
+    ?'The road stops where the record does. Unread is a state, not a gap invented shut.'
+    :`Counted across ${plural(gs.length,'green')} in this scope. Where a bar runs short, the record has not been told — it is not a mark against anyone.`}</div>`
+  :`<div class="empty">No green in this scope yet. The road opens with the first one.</div>`;
+
+  /* ── 3 · What can it prove? ──────────────────────────────────────────── */
+  const res=resHTML(k,id,gs);
+
+  /* ── 4 · Where does it sit, and what does it hold? ───────────────────── */
+  const up=(s.up||[]).filter(sec=>sec.items.length)
+    .map(sec=>`<h2>${esc(sec.h)}</h2>${sec.items.join('')}`).join('');
+  const down=(s.down||[]).filter(sec=>sec.items.length)
+    .map(sec=>`<h2>${esc(sec.h)}</h2>${sec.items.join('')}`).join('');
+  // the cross-cut — the same three sections on every page, derived from the scope alone.
+  // This is what makes "country → every bar pouring from that country" a walk, not a feature.
+  // a kind that draws its own green list (with the edge that put each one there) does not
+  // also get the generic one — one section per question, never two saying the same thing
+  const OWN_GREENS={bar:1,setup:1};
+  const greensSec=(!one&&gs.length&&!OWN_GREENS[k])?`<div class="section-head"><h2>The greens</h2><span class="n-note num">n=${gs.length}</span></div>
+    ${gs.map(g=>rowlink('green',g.id,esc(gLabel(g)),esc([g.region,g.process,g.variety].filter(has).join(' · ')||'unread'),
+      roastsOf(g.id).length?plural(roastsOf(g.id).length,'hand'):'unroasted')).join('')}`:'';
+  const covers=s.covers||[];
+  const handsSec=(k!=='roaster'&&!covers.includes('hands')&&hands.length)?`<div class="section-head"><h2>${one?'Who roasts it':'The hands that roast from here'}</h2><span class="n-note num">n=${hands.length}</span></div>
+    ${hands.map(h=>{const r=roaster(h),n=gs.filter(g=>roastsOf(g.id).some(x=>x.roaster===h)).length;
+      return rowlink('roaster',h,esc(r.name),esc(r.city),plural(n,'green'))}).join('')}`:'';
+  const barsSec=(k!=='bar'&&!covers.includes('bars'))?(bars.length?`<div class="section-head"><h2>${one?'Where it pours':'Bars pouring from here'}</h2><span class="n-note num">n=${bars.length}</span></div>
+    ${bars.map(bid=>{const b=bar(bid),n=gs.filter(g=>poursOf(g.id).some(p=>p.bar===bid)).length;
+      const last=G.pours.filter(p=>p.bar===bid&&gs.some(g=>g.id===p.green)).map(p=>p.at).sort().pop();
+      return rowlink('bar',bid,esc(b.name),esc([b.hood,b.city].filter(has).join(', '))+(last?' · seen '+esc(fmtDate(last)):''),plural(n,'green'))}).join('')}
+    <div class="muted small" style="margin:8px 2px 0">Each pour is a dated, signed sighting — the shelf may have moved since.</div>`
+    :`<div class="section-head"><h2>${one?'Where it pours':'Bars pouring from here'}</h2></div>
+    <div class="empty">No bar has poured ${one?'it':'one of these'} into the record yet. The branch opens with the first signed sighting.</div>`):'';
+  const setupSec=(k!=='setup'&&brews.length)?`<div class="section-head"><h2>How you brew it</h2><span class="n-note num">n=${brews.length}</span></div>
+    ${uniq(brews.map(b=>b.setup)).map(sid=>{const st=setup(sid),n=brews.filter(b=>b.setup===sid).length;
+      const gr=brews.filter(b=>b.setup===sid).map(b=>b.grind);
+      return rowlink('setup',sid,esc(st.name),esc(st.grinder)+` · grind ${Math.min(...gr)}–${Math.max(...gr)}`,plural(n,'brew'))}).join('')}
+    <div class="muted small" style="margin:8px 2px 0">Grind is shown only within one Setup — it never crosses grinders.</div>`:'';
+  const barGreens=(k==='bar'&&gs.length)?`<div class="section-head"><h2>Greens poured here</h2><span class="n-note num">n=${gs.length}</span></div>
+    ${gs.map(g=>{const p=G.pours.find(x=>x.bar===id&&x.green===g.id)||{};
+      return rowlink('green',g.id,esc(gLabel(g)),esc([roaster(p.roaster)&&roaster(p.roaster).name,p.at&&'seen '+fmtDate(p.at)].filter(has).join(' · ')),
+        roastsOf(g.id).length>1?plural(roastsOf(g.id).length,'hand'):'')}).join('')}`:'';
+  const setupBrews=(k==='setup')?`<div class="section-head"><h2>Brews on this Setup</h2><span class="n-note num">n=${G.brews.filter(b=>b.setup===id).length}</span></div>
+    ${G.brews.filter(b=>b.setup===id).map(b=>{const g=green(b.green),c=G.cups.find(c=>c.brew===b.id);
+      return rowlink('green',b.green,esc(gLabel(g)),`grind ${b.grind} · ${b.dose} g : ${b.water} g · ${b.tempC} °C · ${Math.floor(b.sec/60)}:${String(b.sec%60).padStart(2,'0')}`,
+        c?`${c.hedonic} / 9`:'unread')}).join('')}`:'';
+
+  /* ── 5 · What did you find? ──────────────────────────────────────────── */
+  const scored=cups.filter(c=>c.hedonic!=null).sort((a,b)=>b.hedonic-a.hedonic);
+  const ov=scored[0];
+  const avg=scored.length?(scored.reduce((a,c)=>a+c.hedonic,0)/scored.length).toFixed(1):null;
+  const overlay=`<h2>Your overlay</h2>${ov?`<div class="continuation">
+      <div class="row"><div class="score num">${ov.hedonic}<small> / 9</small></div>
+        <div style="max-width:62%;text-align:right">
+          <div class="sans small">${esc(ov.kind==='home'?brewLine(ov.brew):[ov.drink,bar(ov.bar)&&bar(ov.bar).name].filter(has).join(' at '))}</div>
+          ${ov.notes?`<div class="muted small serif" style="font-style:italic">${esc(ov.notes)}</div>`:''}</div></div></div>
+    <div class="muted small serif" style="font-style:italic;margin:0 2px">Your highest here${scored.length>1?` — ${plural(scored.length,'reading')}, ${avg} average`:''}. The spine stands without you; this wash is yours.</div>`
+    :`<div class="empty">No reading of yours in this scope yet — a blank, not a verdict.</div>`}`;
+
+  /* the one action — the same door, prefilled by the scope you opened it from */
+  const act=`<div class="btnrow" style="margin-top:22px">
+    <button class="btn btn-quiet" onclick="openDoor(${jsq(k)},${jsq(id)})">＋ A coffee from here</button>
+    ${k==='bar'?`<button class="btn btn-primary" onclick="openDoor('bar',${jsq(id)})">Remember a cup here</button>`
+      :k==='green'?`<button class="btn btn-primary" onclick="toast('The dials would open here')">Brew it</button>`
+      :`<button class="btn btn-primary" onclick="go('atlas')">Back to the atlas</button>`}</div>`;
+
+  return `<div class="ca-screen">${head}
+  ${road}
+  ${res}
+  <h2>Identity</h2>
+  <div class="card">${s.rows.map(r=>`<div class="kv"><span class="k">${esc(r[0])}</span><span class="v">${r[1]}</span></div>`).join('')}</div>
+  ${heightHTML(gs)}
+  ${gs.length>1?plotHTML(scopeMarks(gs),'Where they grew'):''}
+  ${up}${down}
+  ${greensSec}${barGreens}${setupBrews}${handsSec}${barsSec}${setupSec}
+  ${overlay}
+  ${act}
+  <p class="note">Every page in CARTA answers the same five questions in the same order. Only the nouns change.</p>
+  <div class="seal"><span>Carta · ${esc(KIND_BACK[k]||'')}</span><em>${esc(s.seal)}</em></div></div>`;
+}
+const brewLine=bid=>{const b=G.brews.find(x=>x.id===bid);if(!b)return'at home';
+  const s=setup(b.setup);return `${s?s.name+' · ':''}grind ${b.grind} · ${b.dose} g : ${b.water} g`};
+function scopeMarks(gs){
+  const out=[];
+  uniq(gs.map(g=>g.region)).forEach(r=>{const reg=G.regions.find(x=>x.id===r);
+    if(reg)out.push({label:r,lat:reg.lat,lon:reg.lon,coarse:true})});
+  return out;
+}
+// the resolution readout — every page states what it can prove, in the same component
+function resHTML(k,id,gs){
+  if(k==='green'){
+    const g=green(id),gr=GRAIN_READ[g.grain];
+    const n=[g.country,g.region,g.producer,g.variety,g.process,g.lotName].filter(has).length;
+    return `<div class="res${n>=2?'':' thin'}">
+      <div class="grain">${esc(gr?gr[0]:'No green yet')}</div>
+      <div class="why">${esc(gr?gr[1]:'Nothing on file names this coffee finely enough to resolve')}. That is the record, not a gap in it.</div>
+      <div class="meter">${[0,1,2,3,4,5].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</div></div>`;
+  }
+  const proved=gs.filter(g=>g.grain==='green-lot'||g.grain==='farm').length;
+  const label={country:'Country scope',region:'Region scope',producer:'Grower scope',roaster:'Roaster scope',
+    bar:'Venue scope',setup:'Instrument scope',process:'Facet scope',variety:'Facet scope'}[k]||'Scope';
+  const coarse=gs.length-proved;
+  return `<div class="res${proved?'':' thin'}">
+    <div class="grain">${esc(label)}</div>
+    <div class="why">${gs.length?`${plural(gs.length,'green')} in scope — ${proved?`${proved} rest${proved===1?'s':''} on a farm or a lot identity`:'not one rests on a farm or a lot identity'}${coarse?`, ${coarse} on something coarser`:''}. A scope is never finer than its coarsest green.`:'Nothing in scope yet.'}</div>
+    <div class="meter">${[0,1,2,3,4,5].map(i=>`<i class="${gs.length&&i<Math.round(proved/gs.length*6)?'on':''}"></i>`).join('')}</div></div>`;
+}
+// the walk up, stated — every page names the scopes above it, tappable
+function crumbHTML(k,id){
+  let parts=[];
+  if(k==='green'){const g=green(id);parts=[['country',g.country],['region',g.region]]}
+  else if(k==='region'){const r=G.regions.find(x=>x.id===id)||{};parts=[['country',r.country]]}
+  else if(k==='producer'){const p=producer(id)||{};parts=[['country',p.country],['region',p.region]]}
+  const live=parts.filter(x=>x&&has(x[1]));
+  if(!live.length)return'';
+  return `<div class="crumb">${live.map((x,i)=>`${i?'<i>›</i>':''}<button onclick="nav(${jsq(x[0])},${jsq(x[1])})">${esc(x[1])}</button>`).join('')}</div>`;
+}
+
+/* ============================================================================
+ * THE DOOR — one way in, every room.
+ *
+ * The café cup does NOT get its own origin form. It is the SAME three steps:
+ * paste → confirm → bind. The only thing a room changes is which bind target
+ * is offered first, and which fields arrive already filled.
+ * ========================================================================== */
+const DOOR_COUNTRIES=['Colombia','Ethiopia','Kenya','Guatemala','Costa Rica','Panama','Brazil','Peru','Rwanda','Burundi','Mexico','Honduras','Indonesia','Yemen'];
+const DOOR_REGIONS=['Guji','Sidama','Yirgacheffe','Bench Maji','Nyeri','Kirinyaga','Huila','Nariño','Tolima','Cauca','Huehuetenango','Tarrazú','Boquete','Minas Gerais','Kayanza'];
+const DOOR_VARIETIES=['Gesha','Geisha','Heirloom','Bourbon','Pink Bourbon','Caturra','Castillo','Typica','SL28','SL34','Pacamara','Sudan Rume','Wush Wush','Chiroso'];
+const DOOR_PROC=['double anaerobic','anaerobic natural','carbonic maceration','extended fermentation','fully washed','washed','natural','red honey','yellow honey','honey','wet hulled','lactic'];
+function findAll(text,list){
+  const low=text.toLowerCase(),hits=[];
+  list.forEach(t=>{const l=t.toLowerCase(),i=low.indexOf(l);if(i<0)return;
+    const b=i===0?' ':low[i-1],a=low[i+l.length]||' ';
+    if(/[a-zà-ÿ0-9]/.test(b)||/[a-zà-ÿ0-9]/.test(a))return;hits.push(t)});
+  return hits.filter(h=>!hits.some(o=>o!==h&&o.toLowerCase().indexOf(h.toLowerCase())>=0));
+}
+function altParse(t){
+  const m=t.match(/(\d{1,2}[.,]?\d{3})\s*(?:–|-|to)\s*(\d{1,2}[.,]?\d{3})\s*(?:m|masl|meters|metres)/i);
+  if(m){const a=+m[1].replace(/[.,]/g,''),b=+m[2].replace(/[.,]/g,'');if(altValid([a,b]))return [a,b]}
+  const s=t.match(/(\d{1,2}[.,]?\d{3})\s*(?:m|masl|meters|metres)\b/i);
+  if(s){const a=+s[1].replace(/[.,]/g,'');if(altValid([a,a]))return [a,a]}
+  return null;
+}
+function doorParse(text){
+  const f={};
+  const c=findAll(text,DOOR_COUNTRIES);if(c.length)f.country=c[0];
+  const r=findAll(text,DOOR_REGIONS);if(r.length)f.region=r[0];
+  const v=findAll(text,DOOR_VARIETIES);if(v.length)f.variety=v[0];
+  const p=findAll(text,DOOR_PROC);if(p.length){const w=p.sort((a,b)=>b.length-a.length)[0];f.process=w[0].toUpperCase()+w.slice(1)}
+  const a=altParse(text);if(a){f.altM=a;f.altitude=altLabel(a)}
+  const y=text.match(/\b(20[12]\d)\b/);if(y)f.harvest=y[1];
+  const rh=findAll(text,G.roasters.map(x=>x.name));if(rh.length)f.roaster=rh[0];
+  const first=(text.split(/\n/).map(s=>s.trim()).filter(Boolean)[0]||'').replace(/\s*[–—-]\s*$/,'');
+  if(first.length>=2&&first.length<=60)f.name=first;
+  return f;
+}
+/* ---- THE PREFILL RAIL — the answer to "never type a country twice."
+ * Every origin field is backed by what the record ALREADY holds, ranked by how
+ * often it holds it, and narrowed by what has already been chosen on this
+ * screen. A country you have recorded is one tap; the regions it offers are
+ * that country's regions, not a global list. ---- */
+// which already-chosen field narrows which rail — the whole rule, in one table
+const NARROW={region:'country',producer:'region',variety:'country',process:'country'};
+function known(field,ctx){
+  ctx=ctx||{};
+  const by=NARROW[field],key=by&&ctx[by];
+  let gs=G.greens.slice();
+  if(has(key))gs=gs.filter(g=>g[by]===key);
+  if(!gs.length&&has(key))gs=G.greens.slice();   // nothing recorded under it yet — offer the wider list rather than nothing
+  const pick=g=>field==='producer'?(producer(g.producer)||{}).name:g[field];
+  const m=new Map();
+  if(field==='roaster')G.roasters.forEach(r=>m.set(r.name,scopeGreens('roaster',r.id).length));
+  else if(field==='bar')G.bars.forEach(b=>m.set(b.name,scopeGreens('bar',b.id).length));
+  else gs.forEach(g=>{const v=pick(g);if(has(v))m.set(v,(m.get(v)||0)+1)});
+  const rows=[...m.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,6);
+  return {rows,narrowedBy:has(key)&&gs.length<G.greens.length?key:''};
+}
+function sugCtx(){return {country:val('d_country'),region:val('d_region')}}
+function sugHTML(inputId,field,ctx){
+  const k=known(field,ctx||sugCtx());
+  if(!k.rows.length)return'';
+  return `<div class="sug"><span class="lb">${k.narrowedBy?'on file in '+esc(k.narrowedBy):'on file'}</span>
+    ${k.rows.map(([v,n])=>`<button class="s" type="button" onclick="fillSug(${jsq(inputId)},${jsq(v)})">${esc(v)}<b class="num">${n}</b></button>`).join('')}</div>`;
+}
+function fillSug(inputId,v){
+  const el=document.getElementById(inputId);if(!el)return;
+  el.value=v;repaintSug();
+}
+// choosing a country repaints the region rail against that country — the narrowing is visible
+const SUG_FIELDS=[['d_roaster','roaster'],['d_country','country'],['d_region','region'],
+  ['d_producer','producer'],['d_variety','variety'],['d_process','process'],['d_bar','bar']];
+function repaintSug(){
+  const ctx=sugCtx();
+  SUG_FIELDS.forEach(([id,f])=>{const box=document.getElementById('sugbox_'+id);
+    if(box)box.innerHTML=sugHTML(id,f,ctx)});
+}
+// the rails are painted empty and filled by repaintSug() once the inputs exist — a rail
+// that read the DOM while building it would always miss the values on the same screen
+const sugField=(id,label,field,v,ph)=>`<label class="f"><span class="l">${label}</span>
+  <input type="text" id="${id}" value="${esc(v||'')}" placeholder="${esc(ph||'')}" oninput="repaintSug()" autocomplete="off">
+  <span id="sugbox_${id}"></span></label>`;
+
+function openDoor(fromK,fromId){
+  door={step:0,text:'',parsed:null,struck:{},from:fromK?{k:fromK,id:fromId}:null};
+  render();document.getElementById('main').scrollTo(0,0);
+}
+function doorRead(){
+  const t=val('d_text')||door.text;
+  if(!t){toast('Paste something first — or type it instead');return}
+  door.text=t;door.parsed=doorParse(t);door.struck={};door.step=1;render();
+}
+function doorFields(){
+  const f=door.parsed||{},s=door.struck;
+  return {country:(!s.country&&f.country)||'',region:(!s.region&&f.region)||'',
+    variety:(!s.variety&&f.variety)||'',process:(!s.process&&f.process)||'',
+    altitude:(!s.altitude&&f.altitude)||'',harvest:(!s.harvest&&f.harvest)||'',
+    roaster:f.roaster||'',name:f.name||''};
+}
+function doorBind(kind){
+  const o={country:val('d_country'),region:val('d_region'),producer:val('d_producer'),
+    variety:val('d_variety'),process:val('d_process'),roaster:val('d_roaster'),name:val('d_name'),
+    bar:val('d_bar')};
+  if(!has(o.country)&&!has(o.name)&&!has(o.roaster)){toast('A name or one fact, at least');return}
+  const alt=(door.parsed&&door.parsed.altM)||null;
+  /* the ≥2-of-6 collision law the readout above just stated, honoured at the bind: two shared
+     facts and this paste lands on the green already on the atlas rather than minting a twin.
+     Below two it forks — a thin record must never be allowed to swallow a well-named one. */
+  const facts=g=>[[g.country,o.country],[g.region,o.region],[(producer(g.producer)||{}).name,o.producer],
+    [g.variety,o.variety],[g.process,o.process]]
+    .filter(([a,b])=>has(a)&&has(b)&&String(a).toLowerCase()===String(b).toLowerCase()).length;
+  const match=G.greens.map(g=>({g,n:facts(g)})).filter(x=>x.n>=2).sort((a,b)=>b.n-a.n)[0];
+  if(match){
+    const g=match.g;
+    if(has(o.roaster)&&!roastsOf(g.id).some(r=>(roaster(r.roaster)||{}).name.toLowerCase()===o.roaster.toLowerCase())){
+      let rid=(G.roasters.find(r=>r.name.toLowerCase()===o.roaster.toLowerCase())||{}).id;
+      if(!rid){rid='r'+(G.roasters.length+1);G.roasters.push({id:rid,name:o.roaster,city:'',country:''})}
+      G.roasts.push({id:'ro'+(G.roasts.length+1),green:g.id,roaster:rid,offering:o.name,level:'',date:''});
+    }
+    if(kind==='pour'&&has(o.bar)){bindPour(g.id,o);return}
+    door=null;nav('green',g.id);
+    toast(`Folded onto a green already charted — ${match.n} facts agreed`);return;
+  }
+  // the prototype writes the green into the graph so the drill-down is real
+  const gid='g'+(G.greens.length+1);
+  let pid='';
+  if(has(o.producer)){const ex=G.producers.find(p=>p.name.toLowerCase()===o.producer.toLowerCase());
+    if(ex)pid=ex.id;else{pid='p'+(G.producers.length+1);
+      G.producers.push({id:pid,name:o.producer,kind:'farm',region:o.region,country:o.country,alt})}}
+  const n=[o.country,o.region,o.producer,o.variety,o.process].filter(has).length;
+  G.greens.push({id:gid,name:o.name||o.producer||o.region||o.country||'A green',lotName:'',
+    country:o.country,region:o.region,producer:pid,variety:o.variety,process:o.process,
+    alt,harvest:door.parsed&&door.parsed.harvest?+door.parsed.harvest:null,
+    grain:has(o.producer)?'farm':has(o.region)?'region':'country',mill:''});
+  if(has(o.country)&&!G.countries.some(c=>c.id===o.country))G.countries.push({id:o.country,lat:null,lon:null});
+  if(has(o.region)&&!G.regions.some(r=>r.id===o.region))G.regions.push({id:o.region,country:o.country,lat:null,lon:null});
+  let rid='';
+  if(has(o.roaster)){const ex=G.roasters.find(r=>r.name.toLowerCase()===o.roaster.toLowerCase());
+    if(ex)rid=ex.id;else{rid='r'+(G.roasters.length+1);G.roasters.push({id:rid,name:o.roaster,city:'',country:''})}
+    G.roasts.push({id:'ro'+(G.roasts.length+1),green:gid,roaster:rid,offering:o.name,level:'',date:''})}
+  if(kind==='pour'&&has(o.bar)){bindPour(gid,o,rid);return}
+  door=null;nav('green',gid);
+  toast(n>=2?'Bound — two facts stand, so it can meet another keeper’s record':'Bound. One fact stands — it forks to a green only you can see');
+}
+/* the cup out. It is not a second flow — it is the same bind, adding one edge: a pour at a
+   venue and a reading of yours over it. Everything about the coffee was settled upstream. */
+function bindPour(gid,o,rid){
+  let bid=(G.bars.find(b=>b.name.toLowerCase()===o.bar.toLowerCase())||{}).id;
+  if(!bid){bid='b'+(G.bars.length+1);G.bars.push({id:bid,name:o.bar,city:'',hood:''})}
+  const at=new Date().toISOString().slice(0,10);
+  if(!rid)rid=(roastsOf(gid)[0]||{}).roaster||'';
+  G.pours.push({id:'pr'+(G.pours.length+1),bar:bid,green:gid,roaster:rid,at});
+  G.cups.push({id:'c'+(G.cups.length+1),kind:'cafe',bar:bid,green:gid,drink:'Filter',hedonic:null,notes:'',at});
+  door=null;nav('bar',bid);
+  toast('Kept — the green is on the atlas, and on that counter');
+}
+function vDoor(){
+  const from=door.from,fromBar=from&&from.k==='bar'?bar(from.id):null;
+  const dots=l=>`<div class="stepdots">${[0,1,2].map(i=>`<i class="${i<=door.step?'on':''}"></i>`).join('')}<span>${esc(l)}</span></div>`;
+  if(door.step===0)return `<div class="ca-screen">
+    <button class="back" onclick="door=null;render()">← Close</button>
+    ${dots('What does it say?')}
+    <h2 class="display">Paste <em>the coffee</em></h2>
+    <p class="lede">${fromBar?`The bag on the counter at ${esc(fromBar.name)}, the menu line, the card by the brewer — whatever they showed you.`
+      :'The roaster’s page, the back of the bag, an auction line — whatever you have. CARTA reads it and asks about the rest.'}</p>
+    <textarea id="d_text" oninput="door.text=this.value" placeholder="Paste anything about this coffee…" style="min-height:132px;width:100%;border:1px solid var(--line);background:var(--paper);padding:12px;font-size:13px;font-family:var(--serif);color:var(--ink)">${esc(door.text)}</textarea>
+    <div class="btnrow" style="margin-top:12px">
+      <button class="btn btn-quiet" onclick="door.parsed={};door.step=2;render()">Type it instead</button>
+      <button class="btn btn-primary" onclick="doorRead()">Read it</button></div>
+    <div class="sug" style="margin-top:14px"><span class="lb">try one</span>
+      <button class="s" onclick="doorDemo(0)">an Ethiopian lot</button>
+      <button class="s" onclick="doorDemo(1)">a Colombian menu line</button></div>
+    <p class="note">Read here, on the device — no key, no account, no network. The same vocabularies the resolver already uses. This is the one way a coffee enters the record: the shelf, the bar and the brew all walk through it.</p></div>`;
+  if(door.step===1){
+    const f=door.parsed||{};
+    const rows=[['Country','country',f.country],['Region','region',f.region],['Variety','variety',f.variety],
+      ['Process','process',f.process],['Harvest','harvest',f.harvest],['Altitude','altitude',f.altitude],
+      ['Roaster','roaster',f.roaster]].filter(r=>has(r[2]));
+    const o=doorFields();
+    const n=[o.country,o.region,o.variety,o.process].filter(has).length;
+    return `<div class="ca-screen">
+    <button class="back" onclick="door.step=0;render()">← Paste again</button>
+    ${dots('Is this right?')}
+    <h2 class="display">${rows.length?`Read <em>${plural(rows.length,'fact')}</em>`:'Nothing <em>read</em>'}</h2>
+    <p class="lede">Strike anything wrong. Nothing is written until you bind it.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 18px">
+      ${rows.map(r=>`<button class="doorchip${door.struck[r[1]]?' struck':' on'}" onclick="door.struck[${jsq(r[1])}]=!door.struck[${jsq(r[1])}];render()">
+        <span class="k">${esc(r[0])}</span><b>${esc(r[2])}</b><span class="x">×</span></button>`).join('')
+      ||'<span class="chip past">nothing recognised — type it instead on the next step</span>'}
+    </div>
+    <div class="res${n>=2?'':' thin'}">
+      <div class="grain">${n>=2?'Two facts stand':'Thin'}</div>
+      <div class="why">${n>=2?'This green can meet another keeper’s record.':'It needs <strong>two</strong> facts to collide with another record; at one, it forks to a green only you can ever see.'}</div>
+      <div class="meter">${[0,1,2,3,4,5].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</div></div>
+    <button class="btn btn-primary" onclick="door.step=2;render()">Continue</button>
+    <p class="note">A struck fact is not deleted. It is struck — the line keeps its ink.</p></div>`;
+  }
+  const o=doorFields();
+  const targets=fromBar
+    ?[['Poured here','a cup at '+fromBar.name,'pour'],['On my shelf','it waits on the shelf','bag'],
+      ['Just noting it','on the atlas, nothing kept','note']]
+    :[['On my shelf','it waits on the shelf','bag'],['Poured at a bar','a cup out, at that bar','pour'],
+      ['Brewed it just now','the dials open next','brew'],['Just noting it','on the atlas, nothing kept','note']];
+  return `<div class="ca-screen">
+  <button class="back" onclick="door.step=${door.parsed&&Object.keys(door.parsed).length?1:0};render()">← ${door.parsed&&Object.keys(door.parsed).length?'The facts':'Paste again'}</button>
+  ${dots('And this coffee is —')}
+  <h2 class="display">One <em>binding</em></h2>
+  <p class="lede">The green exists once you bind it. Everything below is already on file — tap it rather than typing it.</p>
+  <div class="grid2">
+    ${sugField('d_roaster','Roaster','roaster',o.roaster,'Sey')}
+    <label class="f"><span class="l">The coffee <span class="opt">optional</span></span>
+      <input type="text" id="d_name" value="${esc(o.name)}" placeholder="as the bag names it"></label>
+  </div>
+  ${sugField('d_country','Country','country',o.country,'Ethiopia')}
+  ${sugField('d_region','Region','region',o.region,'Guji')}
+  ${sugField('d_producer','Grower / station','producer','','the farm, or the station')}
+  <div class="grid2">
+    ${sugField('d_variety','Variety','variety',o.variety,'Heirloom')}
+    ${sugField('d_process','Process','process',o.process,'Washed')}
+  </div>
+  ${fromBar?`<input type="hidden" id="d_bar" value="${esc(fromBar.name)}">`
+    :`${sugField('d_bar','The bar <span class="opt">if you are out</span>','bar','','Halfpence')}`}
+  <div class="muted small" style="margin:-4px 2px 16px">A field with a rail under it has been recorded before. Tap the value — a country you have already entered is never typed twice, and the regions offered are that country’s.</div>
+  ${targets.map(t=>`<button class="rowlink" onclick="doorBind(${jsq(t[2])})"><span><span class="t">${esc(t[0])}</span><br><span class="m">${esc(t[1])}</span></span><span class="go">→</span></button>`).join('')}
+  <p class="note">One paste mints a green, a hand and a roast. The tap adds exactly one edge — the shelf, the counter, the brew. There is no second form for a cup out.</p></div>`;
+}
+const DEMOS=[
+  `Tade GG — Guji, Ethiopia\nHeirloom · Natural\n1,900–2,100 masl · 2024 harvest\nRoasted by Sey`,
+  `El Paraíso Double anaerobic\nHuila, Colombia — Castillo\n1,700–1,900 m\nOn bar this week at Halfpence`
+];
+function doorDemo(i){door.text=DEMOS[i];door.parsed=doorParse(DEMOS[i]);door.struck={};door.step=1;render()}
+
+/* ============ the rooms ============ */
+function vAtlas(){
+  const gs=G.greens;
+  return `<div class="ca-screen">
+  <p class="eyebrow">The atlas</p>
+  <h2 class="display">Everything you <em>have met</em></h2>
+  <p class="lede">${plural(gs.length,'green')} · ${plural(handsIn(gs).length,'hand')} · ${plural(barsIn(gs).length,'bar')}. Every name below is a door, and every door opens the same page.</p>
+  ${aggRoadHTML(gs)}
+  <div class="muted small serif" style="font-style:italic;margin:8px 2px 0">The road, counted across the whole atlas. Where a bar runs short, the record has not been told.</div>
+  <div class="section-head"><h2>By country</h2><span class="n-note num">n=${uniq(gs.map(g=>g.country)).length}</span></div>
+  ${uniq(gs.map(g=>g.country)).map(c=>{const s=scopeGreens('country',c);
+    return rowlink('country',c,esc(c),`${plural(uniq(s.map(g=>g.region)).length,'region')} · ${plural(barsIn(s).length,'bar')} pouring`,plural(s.length,'green'))}).join('')}
+  <div class="section-head"><h2>Cut the atlas</h2><span class="n-note">plates</span></div>
+  ${uniq(gs.map(g=>g.process)).map(p=>rowlink('process',p,esc(p),'every green processed this way',plural(scopeGreens('process',p).length,'green'))).join('')}
+  ${uniq(gs.map(g=>g.variety)).map(v=>rowlink('variety',v,esc(v),'every green of this seed',plural(scopeGreens('variety',v).length,'green'))).join('')}
+  <div class="section-head"><h2>The hands</h2><span class="n-note num">n=${G.roasters.length}</span></div>
+  ${G.roasters.map(r=>rowlink('roaster',r.id,esc(r.name),esc(r.city),plural(scopeGreens('roaster',r.id).length,'green'))).join('')}
+  <div class="section-head"><h2>The bars</h2><span class="n-note num">n=${G.bars.length}</span></div>
+  ${G.bars.map(b=>rowlink('bar',b.id,esc(b.name),esc([b.hood,b.city].filter(has).join(', ')),plural(scopeGreens('bar',b.id).length,'green'))).join('')}
+  <p class="note">A country, a grower, a green, a hand, a bar, a Setup — one page, six scopes. Walk down into any of them and back up from anywhere.</p>
+  <div class="seal"><span>Carta · the atlas</span><em>One reading, every scope.</em></div></div>`;
+}
+function vRecord(){
+  const cups=G.cups.filter(c=>c.hedonic!=null).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  return `<div class="ca-screen">
+  <p class="eyebrow">The record</p>
+  <h2 class="display">What you <em>found</em></h2>
+  <p class="lede">${plural(cups.length,'reading')} — home and away, side by side. Each one drills to the green it was poured from.</p>
+  ${cups.map(c=>{const g=green(c.green);
+    return rowlink('green',c.green,esc(gLabel(g)),
+      esc(c.kind==='home'?brewLine(c.brew):[c.drink,bar(c.bar)&&bar(c.bar).name].filter(has).join(' at '))+' · '+esc(fmtDate(c.at)),
+      `${c.hedonic} / 9`)}).join('')}
+  <p class="note">The spine stands without you. These readings are yours, and they never leave your ledger.</p>
+  <div class="seal"><span>Carta · the record</span><em>The reading is the reader’s.</em></div></div>`;
+}
+function vDesk(){
+  return `<div class="ca-screen">
+  <p class="eyebrow">The desk</p>
+  <h2 class="display">Your <em>instruments</em></h2>
+  <p class="lede">A Setup is a page like any other — it holds greens, so it answers the same five questions.</p>
+  <div class="section-head"><h2>Setups</h2><span class="n-note num">n=${G.setups.length}</span></div>
+  ${G.setups.map(s=>rowlink('setup',s.id,esc(s.name),esc([s.grinder,s.brewer].filter(has).join(' · ')),
+    plural(G.brews.filter(b=>b.setup===s.id).length,'brew'))).join('')}
+  <p class="note">Grind is only comparable within one Setup. That is why the Setup is a page and not a settings row — it is the scope a grind number is true inside.</p>
+  <div class="seal"><span>Carta · the desk</span><em>The instrument, named.</em></div></div>`;
+}
+
+/* ============ render ============ */
+const SUBS={atlas:'The atlas',trace:'The record',ledger:'The desk'};
+function render(){
+  const main=document.getElementById('main');
+  let html,sub;
+  if(door){html=vDoor();sub='A coffee'}
+  else if(view){html=nodePage(view.k,view.id);sub=KIND_BACK[view.k]||''}
+  else{html=tab==='atlas'?vAtlas():tab==='trace'?vRecord():vDesk();sub=SUBS[tab]}
+  main.innerHTML=html;
+  if(door&&door.step===2)repaintSug();   // the rails need the inputs to exist first
+  document.getElementById('hsub').textContent=sub;
+  document.getElementById('tabs').innerHTML=[['atlas','Atlas'],['trace','Record'],['ledger','Desk']]
+    .map(([t,l])=>`<button class="${!view&&!door&&tab===t?'on':''}" onclick="go(${jsq(t)})">${l}</button>`).join('');
+}
+render();
+</script>
+</body>
+</html>
