@@ -82,23 +82,40 @@ server/
 - **the pen** — who may write the *shared* record (the Register + the catalog),
   temporarily one hand: the founder's. `isAdmin()` answers it (the server's
   `SYNC.founder` flag when synced; else the device-local claim in
-  `carta.pen.v1`, taken up under More → Administration); `penGuard()` fronts
+  `carta.pen.v1`, taken up under the Desk → The pen); `penGuard()` fronts
   every deliberate shared-record write — reach amend/withdraw, the café entry
   editor, the claim ceremony, the standing, merge/split, propose-a-sighting,
   curator ingestion. Both servers enforce it too: `PUT /api/cafes` and
   `PUT /api/catalog/:kind` are founder-only (403 `pen-held`; the first account
   registered is the founder) and the client pulls shared docs for everyone but
-  pushes only as the founder. **The founder's desk** (`openDesk`, More →
-  Administration) is the one door for entering the shared record cleanly.
+  pushes only as the founder. **The founder's desk** (`openDesk`, the
+  Desk → The pen — distinct from the Desk room on the bar) is the one door for
+  entering the shared record cleanly.
   Everyone always writes their own ledger; implicit write-path stamps
   (`catStamp*`, `regUpsert` blank-fills) still run locally and simply never
   leave a non-founder device. Temporary — group curation returns with the
   proposed→stood moderation ceremony.
+- **the grammar** — `docs/redesign-concept/STREAMLINED.html` is the reference
+  file for how a CARTA screen is built, and its component layer is now the
+  app's. Use these, not a one-off: `.eyebrow` (quiet label — never the ember),
+  `.display` (the screen's one big serif line, its `<em>` italic), `.lede` (the
+  sentence under it), `h2` / `.section-head` (a tracked label under a hairline),
+  `.rowlink` (`<span><span class="t">…</span><br><span class="m">…</span></span>`
+  + `<span class="go">→</span>` — the one navigation primitive), `.card` + `.kv`
+  (a sunk block of key/value rows), `.note` (an aside after a block: a hairline,
+  then the keeper's voice), `.back` (a back that names where it goes), `.res` +
+  `.meter` (the resolution readout — the door before a bind, a green's page
+  about itself), `.road6`/`.aggrow` (the road at lot and facet scope), `.chip`
+  (`.on` is a firmer line, **never** a fill), `.btnrow` (two actions side by
+  side). Figure/ground: the app column is `--surface-card` (the leaf), so a
+  `.card` is `--surface-page` and reads sunk into it. Buttons speak in sentence
+  case. Screens open in one order — back · eyebrow · display · lede · the
+  reading · the sections · the note.
 - **the shutter** — `LEGACY_ON=false` (router section) temporarily hides
   pre-redesign surfaces the prototype (`docs/redesign-concept/`) does not
   carry: the matching's cold-start, worth-the-walk and discover-map door on
   the Atlas, the circle stream, taste affinity, beans worth chasing, the
-  cross-context read, More's by-roaster/by-lot folds and quick start. Nothing
+  cross-context read, the Desk's by-roaster/by-lot folds and quick start. Nothing
   is deleted — flip the flag and every one answers again. The Record's
   bookkeeping (wants, skips, leans) stays visible regardless.
 - **the Register** — the shared café ledger ("Jane's Fighting Ships, for
@@ -125,22 +142,27 @@ server/
 - **version tracker** — `APP_VERSION`, `CHANGELOG`, and the "What's New" sheet
   shown to returning users on a version bump. **Bump `APP_VERSION` and prepend a
   `CHANGELOG` entry when you ship a user-visible change.**
-- **router** — four rooms, always on the bar: **Today · Atlas · Record · More**
-  (`tabsFor`, tab ids `today`/`atlas`/`trace`/`ledger`). Home and Café became
-  channels, not rooms — `TAB_ALIAS` keeps the old ids (`field`/`cafes`/`circle`)
-  answering. `go()`, `render()`; each tab has a `vXxx()` view returning an HTML
-  string. Overlays over the tab: `placeView` (a café's page), `pageView`
-  (`{kind:'lot'|'roaster',id}` → `vLotPage`/`vRoasterPage`), `discOn`
-  (`vDiscover`), `curateOn` (`vCurate`). The screen-settle animation
+- **router** — three rooms, always on the bar: **Atlas · Record · Desk**
+  (`tabsFor`, tab ids `atlas`/`trace`/`ledger`), and one door — `＋ A coffee`
+  on the masthead of every screen. Today, Home and Café became channels, not
+  rooms — `TAB_ALIAS` keeps the old ids (`today`/`field`/`cafes`/`circle`)
+  answering, all pointing at the Atlas. `go()`, `render()`; each tab has a
+  `vXxx()` view returning an HTML string. `screenSub()` names the screen in the
+  masthead's second line (the prototype's `SUBS`). Overlays over the tab:
+  `doorOn` (`vDoor`, a screen not a sheet), `placeView` (a café's page),
+  `pageView` (`{kind:'lot'|'roaster'|'plate',id}` → `vLotPage`/`vRoasterPage`/
+  `vPlatePage`), `discOn` (`vDiscover`), `curateOn` (`vCurate`). The screen-settle animation
   (`.ca-screen`) plays only when the screen key changes, never on a repaint.
   Overlays walk into each other, so back is a shallow stack: `pageStack` +
   `pagePush()` (called by `openLotPage`/`openRoasterPage`/`openPlate`/
   `openPlace`) and `pageBack()`, which restores a page, a place or the chart.
   `go()` clears it — a room chosen from the bar is a fresh walk.
-- **today + the matching** — the Today tab (`vToday`, the landing surface: the
-  coffee in hand again, the continuation, *Pick up the brew* / *or start from
-  the shelf*, "On the atlas, near your taste" with its reasons, the last cup
-  out) and the matching engine. `matchOf(shop)` scores an unkept place per
+- **the coffee in hand + the matching** — `inHandHTML()` heads the Atlas (the
+  coffee in your hands, its road, *Open the green* / *Brew it*, *or start from
+  the shelf*); `nearTaste()` is the reading over the atlas argued by the
+  keeper's own record, and it surfaces on the **Record** (a keeper's overlay
+  belongs there), always with its reasons. `vToday` is retired. The matching
+  engine is unchanged: `matchOf(shop)` scores an unkept place per
   spec v1 (trait 60 · proximity 20 · circle 20) and always returns its
   `signals` — a score is never shown without reasons. The signal
   (`signalTraits`) is argued by kept places' tags/reach facts plus the three
@@ -188,10 +210,15 @@ server/
   same-name-different-process guard refuses to merge on the string, and
   nothing-like-it forks a new lot. The sighting lands as an authored line
   (`proposeRec`) bound via `bindRecordTo` or forked onto its own green.
-- **views** — `vToday`, `vAtlas`, `vBags` (the shelf — the Coffee step of the
-  home-cup arc, with put-away/restore), `vSetups`, `vTrace` (Record),
-  `vMore`, plus the page overlays and detail sheets. `vField`/`vCafes`/
-  `vCircle` are retired; their work lives on Today, the Atlas and the pages.
+- **views** — `vAtlas`, `vBags` (the shelf — the Coffee step of the home-cup
+  arc, with put-away/restore), `vSetups`, `vTrace` (Record), `vDesk` + its
+  `deskSection(k)` panels (`deskAtlasHTML`/`deskRecordHTML`/`deskPrefsHTML`/
+  `deskManualHTML`, plus `vAdminSection`/`vSyncSection`/`vUsersSection`),
+  `vDoor`, plus the page overlays and detail sheets. `vToday`/`vMore`/`vField`/
+  `vCafes`/`vCircle` are retired; their work lives on the Atlas, the Record,
+  the Desk and the pages. **The Desk opens one section at a time** (`deskOpen`)
+  — "nine rows, not nine screens"; the shelf and the Setups are rooms of their
+  own, so `deskGo` navigates to them rather than nesting them.
 - **sheet plumbing** — bottom-sheet modal (`openSheet`/`closeSheet`) with
   drag-to-dismiss.
 - **dial component** — the tap / hold-to-accelerate / tap-to-type numeric dials
@@ -217,7 +244,7 @@ server/
 - **the road + the plate** (`SURFACES.md` §2) — one reading, aggregated:
   `lotRoadStations`/`road6HTML` draw the six honest stations (grown → processed →
   milled → roasted → poured → read; hollow marks, dashed connectors — the gap is
-  the product) on the lot page and Today's coffee-in-hand; `aggRoadHTML` counts
+  the product) on the lot page and the Atlas's coffee-in-hand; `aggRoadHTML` counts
   them across a set of greens. A plate is `pageView={kind:'plate',fk,fv}` →
   `vPlatePage` (`openPlate`, facets from `plateFacets` under Atlas → "Cut the
   atlas") — a query over lots, never a stored collection, and one law: unread on
@@ -335,8 +362,9 @@ server/
 - **sync** — optional server sync (see below).
 - **quick start / what's new / welcome / boot** — onboarding guide, changelog
   sheet, the one-screen welcome (three doors — *I read, mostly* → Atlas ·
-  *Someone else makes it* → Atlas · *I make my own* → Today; sets depth, never
-  closes an open room), and the boot sequence at the bottom of the script.
+  *Someone else makes it* → Atlas · *I make my own* → Atlas, the coffee in
+  hand; sets depth, never closes an open room), and the boot sequence at the
+  bottom of the script.
 - **the motion charter** — `--mo-fast/base/considered/ease` tokens in the
   `<style>` block; `ca-settle`/`ca-pins-in`/`ca-draw` keyframes; *used more,
   moves less*; `prefers-reduced-motion` stills everything to its end frame
@@ -480,7 +508,7 @@ is *derived, never stored* — own records with a standing propose-band green
 neither confirmed nor kept apart (`rec.lotApart`); working an item reuses the
 propose sheet ranked for ties, `queueConfirm` binds one and leaves the rest
 apart, `queueApart` forks (the safe default). The **Chart No. 1** view (`vCurate`,
-`curateOn`, reached from `vMore` → "Curate the atlas") reads one city's authored
+`curateOn`, reached from the Desk → "Add to the atlas" → "The chart") reads one city's authored
 roasters, greens and same-green cases, reusing `openLotPage`, and draws them
 geographically in a **Map / List** toggle (step 4, "the map" — see *the atlas
 map* above). `devSeedChart()` (`#seed-chart`) is the marked-demo fixture, and
