@@ -746,7 +746,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 /* ============ store ============ */
 const KEY='carta.v1';           // legacy single-user key — migrated to per-user keys on first boot
 const USERS_KEY='carta.users';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],pours:[],cafes:[],authored:[],cafeFavs:[],cafeWants:[],deleted:[],prefs:{},createdAt:new Date().toISOString()};
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],pours:[],cafes:[],authored:[],cafeFavs:[],cafeWants:[],deleted:[],struck:[],prefs:{},createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dataKey=id=>KEY+'.'+id;
 function loadUsers(){
@@ -818,7 +818,29 @@ function loadReg(){
   return{version:1,rev:0,dirty:false,entries:[],deleted:[]};
 }
 function saveReg(){try{localStorage.setItem(REG_KEY,JSON.stringify(REG))}catch(e){}}
-const regByName=name=>REG.entries.find(e=>normName(e.name)===normName(name))||null;
+/* An entry set down is struck, never removed — the shared record's own law, the
+ * one the sightings already keep. Both dates only ever add, so two devices
+ * converge on max(withdrawnAt) vs max(restoredAt) whatever order they merge in.
+ * regByName is the READ door and answers only for entries that stand; regFind is
+ * the identity door — regUpsert and the restore need to reach a struck entry so a
+ * later sighting reuses its id instead of minting a twin. */
+const regLive=e=>!!e&&!(String(e.withdrawnAt||'')>String(e.restoredAt||''));
+const regFind=name=>REG.entries.find(e=>normName(e.name)===normName(name))||null;
+const regByName=name=>{const e=regFind(name);return e&&regLive(e)?e:null};
+const regEntries=()=>REG.entries.filter(regLive);
+const regStruck=()=>REG.entries.filter(e=>e&&!regLive(e));
+function regWithdraw(name){
+  if(penGuard())return;
+  const e=regFind(name);if(!e||!regLive(e))return;
+  e.withdrawnAt=e.updatedAt=new Date().toISOString();e.by=activeName();
+  REG.dirty=true;saveReg();schedulePush();
+}
+function regRestore(id){
+  if(penGuard())return;
+  const e=REG.entries.find(x=>x&&x.id===id);if(!e||regLive(e))return;
+  e.restoredAt=e.updatedAt=new Date().toISOString();e.by=activeName();
+  REG.dirty=true;saveReg();schedulePush();
+}
 const regSubstance=v=>v!=null&&v!=='';
 const activeName=()=>(typeof SYNC!=='undefined'&&SYNC&&syncedHere()&&SYNC.name)||((userById(USERS.activeId)||{}).name||'');
 // Upsert an entry. Sparse by default — a sighting fills blanks, never erases —
@@ -829,7 +851,7 @@ function regUpsert(name,fields,who,opts){
   name=String(name||'').trim(); if(!name)return null;
   opts=opts||{};
   const now=new Date().toISOString(),at=opts.at||now;
-  let e=regByName(name),changed=false;
+  let e=regFind(name),changed=false; // a struck entry is still the entry — fill it, never mint a twin beside it
   if(!e){e={id:uid(),name,createdAt:at,firstBy:who||'',firstAt:at};REG.entries.push(e);changed=true}
   else if(at<(e.firstAt||e.createdAt||'')){e.firstAt=at;if(who)e.firstBy=who;changed=true}
   Object.keys(fields||{}).forEach(k=>{const v=fields[k];
@@ -1874,7 +1896,7 @@ function openReachRecord(shop){
 // number. The "carries" chip going ghost is how you learn someone read past you.
 function mySights(who){
   const out=[];
-  REG.entries.forEach(e=>(e.sightings||[]).forEach(s=>{if(s.by===who)out.push({e,s})}));
+  regEntries().forEach(e=>(e.sightings||[]).forEach(s=>{if(s.by===who)out.push({e,s})}));
   return out;
 }
 function sightRow(x){
@@ -2102,6 +2124,114 @@ function crossContext(key){
   return {home:{n:home.length,avg:avgHedonic(home)},cafe:{n:cafe.length,avg:avgHedonic(cafe)}};
 }
 
+/* ============ the strike — how a record is set down (docs/CORRECTIONS.md) ============ */
+/* The app always knew how to add. This is how it unmakes, and the shape is the
+ * one the shared record already used: a sighting is struck, never deleted; a
+ * caliber record is withdrawn, never erased. The keeper's own ledger gets the
+ * same law at last.
+ *
+ * A strike is ITSELF a record — signed, dated, and carrying the withdrawn body
+ * whole — and the record is spliced OUT of its live collection while it stands.
+ * That is the whole trick: a struck bag is not in D.bags, so it cannot leak into
+ * a count, a plate, a map or an export because somebody forgot a filter. No read
+ * path in the app had to learn about this.
+ *
+ * Both the strike and the restore are ADDITIONS to one entry (at / restoredAt),
+ * never a removal — because an id-union merge only propagates additions. A
+ * restore that deleted the entry would not travel, and the next sync would set
+ * the record down again. Liveness is derived, monotone and order-free:
+ * struck ⟺ at > restoredAt. Same construction as mergeSightings, same reason. */
+const STRUCK=()=>D.struck||(D.struck=[]);
+const strikeStands=s=>!!(s&&s.at&&String(s.at)>String(s.restoredAt||''));
+const struckBy=ref=>STRUCK().find(s=>s&&s.ref===ref&&strikeStands(s))||null;
+// Strike and restore are ordered by their own dates, so each must land strictly
+// after the last one — a clock with millisecond resolution can otherwise stamp a
+// strike and its undo identically, and the pair would read as neither.
+const afterIso=(t,floor)=>String(t)>String(floor||'')?t:new Date(new Date(floor).getTime()+1).toISOString();
+// the room lists what a keeper set down deliberately; a carried record (via) rides its parent's row
+const strikeList=()=>STRUCK().filter(s=>strikeStands(s)&&!s.via).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+// transitive: a coffee carries its brews, and those carry their cups — the row
+// says how many went, so it must count the whole tree, not just the first rung
+function strikeCarried(ref){
+  const out=[],seen=new Set([ref]);
+  (function walk(r){STRUCK().filter(s=>strikeStands(s)&&s.via===r&&!seen.has(s.ref)).forEach(s=>{seen.add(s.ref);out.push(s);walk(s.ref)})})(ref);
+  return out;
+}
+// the desk row counts only what the keeper can actually act on — a struck Register
+// entry is the pen's to stand back up, so it does not swell a reader's count
+const strikeCount=()=>strikeList().length+(isAdmin()?regStruck().length:0);
+/* The kinds a strike can hold, and how each one names itself. `form` reopens the
+ * record's own form — amending is never a new surface to learn. */
+const STRIKE_KINDS={
+  cups:    {one:'cup',    the:'this cup',      name:r=>strikeCupName(r),        form:r=>editCup(r.id)},
+  brews:   {one:'brew',   the:'this brew',     name:r=>brewRecipe(r),           form:r=>openBrew(r.bagId||'',r.id)},
+  bags:    {one:'coffee', the:'this coffee',   name:r=>bagName(r),              form:r=>openBagForm(r.id)},
+  setups:  {one:'Setup',  the:'this Setup',    name:r=>r.name||'a Setup',       form:r=>openSetupForm(r.id)},
+  authored:{one:'roast',  the:'this roast',    name:r=>authoredName(r),         form:null},
+};
+const strikeCupName=c=>c&&c.kind==='cafe'?([c.drink||'a cup',c.shop].filter(Boolean).join(' at ')||'a cup out')
+  :(()=>{const b=c&&c.bagId?bagById(c.bagId):null;return b?bagName(b):((struckBy(c&&c.bagId)||{}).rec?bagName(struckBy(c.bagId).rec):'a cup at home')})();
+const authoredName=r=>[r&&r.roaster,r&&r.name].filter(Boolean).join(' · ')||'an authored roast';
+const strikeName=(coll,rec)=>{const k=STRIKE_KINDS[coll];return (k&&rec)?(k.name(rec)||k.one):(coll||'a record')};
+// the second line — two cups of the same coffee must not read as the same record
+function strikeSub(coll,rec){
+  const kind=(STRIKE_KINDS[coll]||{one:'record'}).one;
+  const day=t=>t?new Date(t).toLocaleDateString([],{month:'short',day:'numeric'}):'';
+  if(coll==='cups')return [kind,rec.hedonic!=null?`${rec.hedonic} / 9`:'unread',day(rec.createdAt)].filter(Boolean).join(' · ');
+  if(coll==='brews'){const s=setupById(rec.setupId);return [kind,s&&s.name,day(rec.createdAt)].filter(Boolean).join(' · ')}
+  return [kind,day(rec.createdAt)].filter(Boolean).join(' · ');
+}
+/* What has no meaning without it. A brew belongs to a coffee; a cup is a reading
+ * OF a brew; a café cup's Pour must never outlive the cup that attested it (the
+ * pour rides the entry itself — it is derived, not a record you correct).
+ * A Setup deliberately does NOT cascade: it is a tool, not an event. The brews
+ * you pulled on a grinder you sold are still true. */
+function strikeDeps(coll,id){
+  if(coll==='bags')return [...D.brews.filter(x=>x&&x.bagId===id).map(x=>['brews',x.id]),
+    ...D.cups.filter(c=>c&&c.kind==='home'&&c.bagId===id).map(c=>['cups',c.id])];
+  if(coll==='brews')return D.cups.filter(c=>c&&c.brewId===id).map(c=>['cups',c.id]);
+  return [];
+}
+// Named in full BEFORE the tap — a cascade the keeper cannot see coming is a trap.
+function strikeFollows(coll,id){
+  const seen=new Set(),out=[];
+  (function walk(k,i){strikeDeps(k,i).forEach(([ck,ci])=>{if(seen.has(ci))return;seen.add(ci);
+    const rec=(D[ck]||[]).find(r=>r&&r.id===ci);if(rec)out.push({coll:ck,rec});walk(ck,ci)})})(coll,id);
+  return out;
+}
+function strike(coll,id,who,via){
+  const arr=D[coll]||[];const i=arr.findIndex(r=>r&&r.id===id);if(i<0)return null;
+  const rec=arr[i];
+  const prev=STRUCK().find(s=>s&&s.ref===id);
+  const at=afterIso(new Date().toISOString(),prev&&prev.restoredAt); // a re-strike must outrank the restore it undoes
+  strikeDeps(coll,id).forEach(([k,rid])=>strike(k,rid,who,id)); // the carried records first, so the parent leaves last
+  arr.splice(i,1);
+  const e={ref:id,coll,at,by:who||'',rec,via:via||null};
+  if(coll==='cups'&&rec.kind==='cafe'){const pi=(D.pours||[]).findIndex(p=>p&&p.id==='pour:'+id);
+    if(pi>=0)e.pour=D.pours.splice(pi,1)[0]} // the availability edge goes with its attestation
+  if(prev){Object.assign(prev,e);return prev}
+  STRUCK().push({id:'strike:'+id,...e});
+  return STRUCK()[STRUCK().length-1];
+}
+function unstrike(ref){
+  const e=struckBy(ref);if(!e)return null;
+  const arr=D[e.coll]||(D[e.coll]=[]);
+  if(e.rec&&!arr.some(r=>r&&r.id===ref))arr.push(e.rec);
+  if(e.pour){const P=D.pours||(D.pours=[]);if(!P.some(p=>p&&p.id===e.pour.id))P.push(e.pour)}
+  e.restoredAt=afterIso(new Date().toISOString(),e.at);
+  strikeCarried(ref).forEach(s=>unstrike(s.ref)); // exactly the set that went comes back — no more
+  return e;
+}
+// The one irreversible step in the whole grammar, and it lives behind one door in one room.
+function eraseStruck(ref){
+  const e=STRUCK().find(s=>s&&s.ref===ref);if(!e)return;
+  const at=new Date().toISOString(),dead=(D.deleted=D.deleted||[]);
+  strikeCarried(ref).slice().forEach(s=>eraseStruck(s.ref));
+  dead.push({id:ref,at});
+  if(e.pour)dead.push({id:e.pour.id,at});
+  const j=STRUCK().findIndex(s=>s&&s.ref===ref);if(j>=0)STRUCK().splice(j,1);
+}
+
 /* ============ street map ============ */
 // Real streets behind the drawn plot — an enhancement, never a dependency.
 // MapLibre GL (BSD-3) renders OpenFreeMap's vector tiles (OpenStreetMap data),
@@ -2273,10 +2403,18 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.0.0';
+const APP_VERSION='6.1.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.1.0',date:'July 2026',title:'Set down, not erased — one grammar for correcting anything.',items:[
+    'Every record now answers to the same two verbs: amend it, or set it down. One sheet, the same shape for a cup, a brew, a coffee, a Setup, a café, an authored roast — what the record is, what goes with it if it goes, and the two doors.',
+    'A record you set down leaves every reading, count, plot and export, and waits whole under “what you have set down” on the desk. One tap puts it back — with exactly the records that came down with it, and no more. Nothing is erased by an ordinary act.',
+    'The records that had no door have one. A brew is reachable at last — a coffee’s page lists every brew on it, including the ones whose impression you skipped, which no path in the app could reach before. A coffee can be corrected, not only put away. A Setup can be retired, restored, or set down when nothing reads through it. A café entered by a typo can be struck from the Register by the hand that holds the pen.',
+    'Putting a bag away stopped wearing the red button. It is the gentlest act in the app — the bag goes, the record stays — and it was reading as destruction. Red is now spent on one thing only: erasing, the single act in CARTA with no door back.',
+    'The browser dialogs are gone. Removing a cup used to summon the operating system’s own box, in the operating system’s own voice, to promise that it “cannot be undone” — which was never true and is now not even close. Every one of those is a sheet in the keeper’s voice, stating plainly what is about to happen.',
+    'A strike is itself a record — signed, dated, and carrying the withdrawn body whole, exactly as a sighting is struck rather than deleted. It syncs like one: set a record down on one device and it leaves every device; put it back and it comes back everywhere, from either side, in any order.',
+  ]},
   {v:'6.0.0',date:'July 2026',title:'The road, streamlined — three rooms, one door.',items:[
     'Three rooms, not four — Atlas · Record · Desk. Today is not a room any more; the coffee in your hands is the head of the Atlas, with its road and the two things anyone ever does with it: open the green, or brew it. More became the Desk: everything that is not a cup, nine rows and one open at a time.',
     'The door is on the masthead. ＋ A coffee sits beside the wordmark on every screen, and opens as a screen of its own rather than a sheet — paste, strike what is wrong, bind. It was the one way a coffee enters the record; now it is the one thing always within reach.',
@@ -3795,23 +3933,9 @@ function openCupDetail(id){
   ${c.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">"${esc(c.notes)}"</div>`:''}
   ${readOnly()?'':`<button class="btn btn-primary" onclick="editCup('${c.id}')">Edit this cup</button>`}
   ${!readOnly()&&cafe&&c.shop?`<button class="btn btn-quiet" onclick="logAnotherHere('${c.id}')">Log another here</button>`:''}
-  ${readOnly()?'':`<div class="muted small" style="margin:10px 0">Removing a cup deletes this impression only. ${brew?'The brew it came from stays in the ledger.':''}</div>
-  <button class="btn btn-danger" onclick="removeCup('${c.id}')">Remove from ledger</button>`}
+  ${readOnly()?'':`<button class="btn btn-quiet" onclick="openCorrect('cups','${c.id}')">Correct this cup</button>
+  <div class="muted small" style="margin:8px 2px 2px">Amend it, or set it down. ${brew?'The brew it came from stays either way.':'Nothing is erased.'}</div>`}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
-}
-function removeCup(id){
-  if(guard())return;
-  const c=cupById(id); if(!c)return;
-  const b=bagById(c.bagId);
-  const what=c.kind==='cafe'?`${c.shop||'café'} · ${c.drink||'cup'}`:bagName(b);
-  if(!confirm(`Remove this cup from the ledger?\n\n${what}\n\nThis cannot be undone.`))return;
-  const i=D.cups.findIndex(x=>x.id===id);
-  if(i<0)return;
-  D.cups.splice(i,1);
-  (D.deleted=D.deleted||[]).push({id,at:new Date().toISOString()}); // tombstone: survives sync merges
-  if(c.kind==='cafe'){const pid='pour:'+id,pi=(D.pours||[]).findIndex(x=>x.id===pid); // the café cup's Pour goes with it — tombstone so no device resurrects the availability edge
-    if(pi>=0)D.pours.splice(pi,1);D.deleted.push({id:pid,at:new Date().toISOString()})}
-  save();closeSheet();render();toast('Cup removed');
 }
 
 /* The shelf — Coffee, the first step of the home-cup arc (Coffee → Preparation
@@ -3867,18 +3991,27 @@ function vBags(){
 }
 
 function vSetups(){
-  return `<button class="back" onclick="go('ledger')">← The desk</button>
-  ${readOnly()?'':`<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>`}
-  <div class="muted small serif" style="font-style:italic;margin:10px 2px">A grind setting without a Setup is not a number, it's a rumour. Grind settings are only comparable within a Setup.</div>
-  <h2>Setups <span class="n-note">n=${D.setups.length}</span></h2>
-  ${D.setups.length? D.setups.slice().sort(byNew).map(s=>`
+  const live=D.setups.filter(s=>!s.archived).sort(byNew),retired=D.setups.filter(s=>s.archived).sort(byNew);
+  const card=s=>`
     <div class="card tap" onclick="openSetupForm('${s.id}')">
       <strong>${esc(s.name)}</strong>
       <div class="muted small">${esc([s.grinder,s.brewer,s.basket].filter(Boolean).join(' · '))}</div>
       ${s.water?`<div class="muted small">water: ${esc(s.water)}</div>`:''}
       ${s.grindMin!=null&&s.grindMin!==''&&s.grindMax!=null&&s.grindMax!==''?`<div class="muted small num">grind ${s.grindMin}–${s.grindMax}${s.grindStep?` · step ${s.grindStep}`:''}</div>`:''}
-      <div class="muted" style="font-size:11px" class="num">${D.brews.filter(x=>x.setupId===s.id).length} brews on this Setup</div>
-    </div>`).join('') : `<div class="empty">Define the assembly — grinder, brewer, basket, papers, water — before the first brew.</div>`}`;
+      <div class="muted num" style="font-size:11px">${setupBrews(s.id)} brews on this Setup</div>
+    </div>`;
+  return `<button class="back" onclick="go('ledger')">← The desk</button>
+  ${readOnly()?'':`<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>`}
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px">A grind setting without a Setup is not a number, it's a rumour. Grind settings are only comparable within a Setup.</div>
+  <h2>Setups <span class="n-note">n=${live.length}</span></h2>
+  ${live.length? live.map(card).join('') : `<div class="empty">Define the assembly — grinder, brewer, basket, papers, water — before the first brew.</div>`}
+  ${retired.length?`<div class="section-head"><h2>Retired</h2><span class="n-note num">${retired.length}</span></div>
+  ${retired.map(s=>`<div class="card">
+    <div class="row"><span class="small"><strong>${esc(s.name)}</strong></span><span class="num muted small">${setupBrews(s.id)} brews</span></div>
+    <div class="muted small">${esc([s.grinder,s.brewer].filter(Boolean).join(' · '))||'the assembly, unwritten'}</div>
+    ${readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="retireSetup('${s.id}')">Back in the rotation</button>`}
+  </div>`).join('')}
+  <div class="muted small serif" style="font-style:italic;margin:6px 2px">A retired Setup leaves the picker; every brew read against it stays exactly as readable as it was.</div>`:''}`;
 }
 
 function traceCard(b){
@@ -3976,7 +4109,7 @@ function openDesk(){
   ${qn?row('openReviewQueue()','Review queue',`${qn} green${qn===1?'':'s'} the resolver couldn’t call alone`,String(qn)):''}
   ${row('closeSheet();openCurate()','Chart No. 1','the whole authored chart — map and list')}
   <div class="card" style="margin-top:14px">
-    <div class="kv"><span class="k">On the Register</span><span class="v num">${REG.entries.length} café${REG.entries.length===1?'':'s'}</span></div>
+    <div class="kv"><span class="k">On the Register</span><span class="v num">${regEntries().length} café${regEntries().length===1?'':'s'}</span></div>
     <div class="kv"><span class="k">On the atlas</span><span class="v num">${nRoasters} roaster${nRoasters===1?'':'s'} · ${nLots} green${nLots===1?'':'s'} · ${nRoasts} roast${nRoasts===1?'':'s'}</span></div>
     <div class="kv"><span class="k">The pen</span><span class="v">${synced?'the founder’s account, server-held':'this device, until set down'}</span></div>
   </div>
@@ -3984,7 +4117,7 @@ function openDesk(){
 }
 function openDeskCafe(){
   if(penGuard())return;
-  const known=REG.entries.map(e=>e.name).sort((a,b)=>a.localeCompare(b));
+  const known=regEntries().map(e=>e.name).sort((a,b)=>a.localeCompare(b));
   openSheet(`
   <h3>Enter a café</h3>
   <div class="sub">One canonical entry per café — a sighting fills blanks, the editor holds the pen.</div>
@@ -4008,6 +4141,7 @@ const DESK_ROWS=[
   {k:'setups', t:'Setups',                 d:'your grinder and brewer; grind is only comparable within one'},
   {k:'atlas',  t:'Add to the atlas',       d:'the door, a proposed sighting, the chart'},
   {k:'record', t:'The record leaves with you', d:'export the ledger, bring one back, the working copy'},
+  {k:'struck', t:'What you set down',         d:'struck from the record, not erased — and one tap from coming back'},
   {k:'pen',    t:'The pen',                d:'the shared record — who may write it'},
   {k:'sync',   t:'Sync',                   d:'optional, and never required'},
   {k:'keepers',t:'Keepers on this device', d:'add, switch, read another ledger'},
@@ -4017,13 +4151,15 @@ const DESK_ROWS=[
 function vDesk(){
   const ro=readOnly();
   if(deskOpen)return `<button class="back" onclick="deskBack()">← The desk</button>${deskSection(deskOpen,ro)}`;
-  const rows=DESK_ROWS.filter(r=>!(ro&&['atlas','record','pen','sync','keepers','prefs'].includes(r.k)));
+  const sn=ro?0:strikeCount();
+  // the room appears only once there is something in it — an empty drawer is not a row
+  const rows=DESK_ROWS.filter(r=>!(ro&&['atlas','record','pen','sync','keepers','prefs'].includes(r.k))).filter(r=>r.k!=='struck'||sn);
   const qn=ro?0:reviewQueue().length;
   return `
   <p class="eyebrow">The desk</p>
   <h2 class="display">Everything that <em>is not a cup</em></h2>
-  <p class="lede">Nine rows, not nine screens. The desk is where administration lives so no other surface has to carry it.</p>
-  ${rows.map(r=>`<button class="rowlink" onclick="deskGo(${jsq(r.k)})"><span><span class="t">${esc(r.t)}</span><br><span class="m">${esc(r.d)}</span></span><span class="go">${r.k==='atlas'&&qn?qn:'→'}</span></button>`).join('')}
+  <p class="lede">${rows.length} rows, not ${rows.length} screens. The desk is where administration lives so no other surface has to carry it.</p>
+  ${rows.map(r=>`<button class="rowlink" onclick="deskGo(${jsq(r.k)})"><span><span class="t">${esc(r.t)}</span><br><span class="m">${esc(r.d)}</span></span><span class="go">${r.k==='atlas'&&qn?qn:r.k==='struck'?sn:'→'}</span></button>`).join('')}
   <p class="note">Your ledger is yours to write, always. The shared record is kept by one hand for now — every page of it is still yours to read.</p>
   <div class="qm-seal">Quiet Matter<span class="em">We do not sell coffee. We keep the record.</span></div>
   <div class="muted small serif" style="font-style:italic;text-align:center;margin:8px 2px 2px">CARTA v${APP_VERSION}</div>`;
@@ -4031,6 +4167,7 @@ function vDesk(){
 function deskSection(k,ro){
   if(k==='atlas')return deskAtlasHTML();
   if(k==='record')return deskRecordHTML(ro);
+  if(k==='struck')return ro?'':struckRoomHTML();
   if(k==='pen')return vAdminSection()||`<h2>The pen</h2><div class="empty">The shared record is kept by the founder for now. Nothing here to take up on this device.</div>`;
   if(k==='sync')return ro?'':vSyncSection();
   if(k==='keepers')return ro?'':vUsersSection();
@@ -4046,7 +4183,8 @@ function deskAtlasHTML(){
   <p class="lede">One paste is the way in. The rest of this row is the curator's bench — it asks before it binds, always.</p>
   ${readOnly()?'':`<button class="rowlink" onclick="openDoor()"><span><span class="t">The door — paste a coffee</span><br><span class="m">read on the device, resolved by the same ladder a bag runs</span></span><span class="go">→</span></button>`}
   ${isAdmin()?`<button class="rowlink" onclick="openProposeSighting()"><span><span class="t">Propose a sighting</span><br><span class="m">a bag on a shelf, a roast on a bar — CARTA looks for it first</span></span><span class="go">→</span></button>
-  ${qn?`<button class="rowlink" onclick="openReviewQueue()"><span><span class="t">Assisted drafts</span><br><span class="m">greens the resolver couldn’t call alone</span></span><span class="go">${qn}</span></button>`:''}`:''}
+  ${qn?`<button class="rowlink" onclick="openReviewQueue()"><span><span class="t">Assisted drafts</span><br><span class="m">greens the resolver couldn’t call alone</span></span><span class="go">${qn}</span></button>`:''}
+  ${chartRecs().length?`<button class="rowlink" onclick="openAuthoredList()"><span><span class="t">What you have authored</span><br><span class="m">every roast entered straight onto the atlas — correct one, or set it down</span></span><span class="go">${chartRecs().length}</span></button>`:''}`:''}
   <button class="rowlink" onclick="openCurate()"><span><span class="t">The chart${atlas.chart?` · ${esc(atlas.chart.name)}`:''}</span><br><span class="m">${atlas.chart?`${atlas.chart.scenes.length} scene${atlas.chart.scenes.length===1?'':'s'}, derived from the pins`:'derived from the pins as they land'} — ${isAdmin()?'curate by hand':'walk the authored chart'}</span></span><span class="go">→</span></button>
   <p class="note">${isAdmin()?'The spine is curated — a proposal stands once a keeper approves it.':'The shared record is kept by the founder for now. Your own ledger is never gated.'}</p>`;
 }
@@ -4186,7 +4324,7 @@ function atlasSearchIndex(){
   CAT.producers.entries.forEach(p=>{if(!p||!regSubstance(p.name))return;
     ix.push({name:p.name,kind:'grower',sub:[p.region,p.country].filter(regSubstance).join(', ')||'a grower on the atlas',
       k:[p.name,p.region,p.country].filter(Boolean).join(' ').toLowerCase(),go:`openProducerPage(${jsq(p.id)})`})});
-  REG.entries.forEach(e=>{if(!e||!regSubstance(e.name))return;
+  regEntries().forEach(e=>{if(!e||!regSubstance(e.name))return;
     ix.push({name:e.name,kind:'bar',sub:[e.city,e.neighborhood].filter(regSubstance).join(' · ')||'on the register',
       k:[e.name,e.city,e.neighborhood,(e.tags||[]).join(' ')].filter(Boolean).join(' ').toLowerCase(),go:`openPlace(${jsq(e.name)})`})});
   return ix;
@@ -5369,7 +5507,8 @@ function openBagForm(id){
     <label class="f"><span class="l">Notes</span><textarea id="f_notes">${esc(b.notes)}</textarea></label>
   </details>
   <button class="btn btn-primary" onclick="saveBag('${id||''}')">${id?'Save changes':'On the shelf it goes'}</button>
-  ${id?`<button class="btn btn-danger" onclick="archiveBag('${id}')">${b.archived?'Back on the shelf':'Put the bag away'}</button>`:''}`);
+  ${id?`<button class="btn btn-quiet" onclick="archiveBag('${id}')">${b.archived?'Back on the shelf':'Put the bag away'}</button>
+  <button class="btn btn-quiet" onclick="openCorrect('bags','${id}')">Set this coffee down…</button>`:''}`);
 }
 function saveBag(id){
   if(guard())return;
@@ -5444,13 +5583,17 @@ function openBagDetail(id){
     <div class="kv"><span class="k">Roast</span><span class="v">${esc(rr.level)||'—'} · ${esc(rr.roastDate)||'no date'}</span></div>
     ${r?`<div class="kv"><span class="k">Rest</span><span class="v num">day ${r.d} · window ${r.a}–${r.b}d</span></div>`:''}
     <div class="kv"><span class="k">Bought at</span><span class="v">${esc(b.boughtAt)||'—'}</span></div>
-    <div class="kv"><span class="k">Brews</span><span class="v num">${brews.length}</span></div>
+    <div class="kv"><span class="k">Brews</span>${brews.length
+      ?`<button class="v num" style="font:inherit;color:inherit;text-align:right;background:none;border:none;padding:0;text-decoration:underline;text-underline-offset:3px" onclick="openBrewList('${id}')">${brews.length}</button>`
+      :`<span class="v num">0</span>`}</div>
   </div>
   ${kinHTML(b)}
   ${b.lotRef&&catNode('lots',b.lotRef)?`<button class="btn btn-quiet" onclick="closeSheet();openLotPage(${jsq(b.lotRef)})">The same green, in other hands →</button>`:''}
   ${b.notes?`<div class="muted small serif" style="font-style:italic;margin-bottom:10px">${esc(b.notes)}</div>`:''}
   ${readOnly()?`<button class="btn btn-quiet" onclick="closeSheet()">Close</button>`:`<button class="btn btn-primary" onclick="closeSheet();openBrew('${id}')">Brew this</button>
-  <button class="btn btn-quiet" onclick="openBagForm('${id}')">Edit</button>`}`);
+  <button class="btn btn-quiet" onclick="openBagForm('${id}')">Amend the coffee</button>
+  <button class="btn btn-quiet" onclick="openCorrect('bags','${id}')">Correct this coffee</button>
+  <div class="muted small" style="margin:8px 2px 2px">A finished bag is put away — the record stays whole. A coffee entered by mistake is set down.</div>`}`);
 }
 
 /* ============ the door — paste, confirm, bind (SURFACES.md §1) ============ */
@@ -5713,7 +5856,19 @@ function openSetupForm(id){
   </div>
   <div class="muted small" style="margin:-4px 2px 10px">The increment your grinder actually moves in — Lido OG: 0–2000, step 5. Leave blank for the default half-step.</div>
   <label class="f"><span class="l">Notes</span><textarea id="s_notes">${esc(s.notes)}</textarea></label>
-  <button class="btn btn-primary" onclick="saveSetup('${id||''}')">Save Setup</button>`);
+  <button class="btn btn-primary" onclick="saveSetup('${id||''}')">Save Setup</button>
+  ${id?`<button class="btn btn-quiet" onclick="openCorrect('setups','${id}')">Correct this Setup</button>
+  <div class="muted small" style="margin:8px 2px 2px">Retire it when the assembly is gone — every brew you pulled on it stays readable. Set it down only if it was never real.</div>`:''}`);
+}
+/* Retiring is the Setup's "put away": it leaves the picker, its brews keep every
+ * grind they were read against. The one thing you must never do to a Setup is
+ * make its numbers unreadable — grind is only comparable within one. */
+function retireSetup(id){
+  if(guard())return;
+  const s=setupById(id);if(!s)return;
+  s.archived=!s.archived;s.updatedAt=new Date().toISOString();
+  save();closeSheet();render();
+  toast(s.archived?'Retired — the brews on it stay whole.':'Back in the rotation.');
 }
 function saveSetup(id){
   if(guard())return;
@@ -5766,6 +5921,9 @@ function openBrew(bagId,editId){
   setAccent(bag.roastLevel);
   const last=editing||lastBrewFor(bag.id, null);
   const setup=noSetup?null:(editing?setupById(editing.setupId):(last?setupById(last.setupId):D.setups[D.setups.length-1]));
+  // a retired Setup leaves the picker — unless this brew was pulled on it, in
+  // which case amending must not silently re-point the grind to another grinder
+  const setups=D.setups.filter(s=>!s.archived||(setup&&s.id===setup.id));
   const techs=[...new Set(D.brews.map(x=>x.technique).filter(Boolean))];
   const toolsLine=setup?esc([setup.grinder?`Ground on the ${setup.grinder}`:'',setup.brewer?`brewed on the ${setup.brewer}`:''].filter(Boolean).join(' · ')||setup.name):'';
   // In edit mode the fold opens if there's already something to see under it.
@@ -5777,9 +5935,9 @@ function openBrew(bagId,editId){
   const setupSel=noSetup
     ?`<label class="f"><span class="l">Your grinder <span class="opt">named once, remembered always</span></span><input type="text" id="n_grinder" placeholder="Encore, Ode, a hand mill — whatever it is"></label>
       <label class="f"><span class="l">Your brewer</span><input type="text" id="n_brewer" placeholder="V60 · 02"></label>`
-    :D.setups.length>1
+    :setups.length>1
       ?`<label class="f"><span class="l">Setup</span><select id="b_setup" onchange="onSetupChange()">
-        ${D.setups.map(s=>`<option value="${s.id}" ${setup&&s.id===setup.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`
+        ${setups.map(s=>`<option value="${s.id}" ${setup&&s.id===setup.id?'selected':''}>${esc(s.name)}${s.archived?' · retired':''}</option>`).join('')}</select></label>`
       :`<input type="hidden" id="b_setup" value="${setup?setup.id:''}">
       <div class="section-head" style="margin-top:2px"><h2>The Setup</h2><button class="text-action" onclick="closeSheet();openSetupForm('${setup?setup.id:''}')">Adjust</button></div>
       <div class="card">
@@ -5906,7 +6064,7 @@ function openCafe(pre,editId){
   editingCupId=editId||null;
   if(editId){const c=cupById(editId);if(c)pre=c;} // revising an existing cup — prefill from the record
   // the shop field looks up the Register too — every café anyone has named
-  const shops=[...new Set([...cafeCups().map(c=>c.shop).filter(Boolean),...REG.entries.map(e=>e.name)])];
+  const shops=[...new Set([...cafeCups().map(c=>c.shop).filter(Boolean),...regEntries().map(e=>e.name)])];
   const cities=[...new Set(cafeCups().map(c=>c.city).filter(Boolean))];
   brandPalette=palOf(pre);brandAccent=(brandPalette&&brandPalette.brand)||null;cafeStyleState=pre.style||'Espresso';againState=(pre.again==null?null:pre.again);
   brandCtx={kicker:'This cup',title:'The beans, in their colours',cta:'Keep this cup'};
@@ -6203,7 +6361,8 @@ function vPlace(){
   ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}
   ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
   ${!mine.length&&!(sk&&sk.active)?`<button class="btn btn-quiet" onclick="discSkip(${jsq(shop)})">Skip — it steps back for two weeks</button>`:''}
-  ${isAdmin()?`<button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.site||p.palette||p.accent||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>`:''}
+  ${isAdmin()?`<button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.site||p.palette||p.accent||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
+  ${e?`<button class="btn btn-quiet" onclick="openCorrectPlace(${jsq(shop)})">Correct the Register entry</button>`:''}`:''}
   ${mine.length?`<button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`:''}`}
   ${mine.length?`<div class="section-head"><h2>Your cups here</h2></div>
   ${mine.map(c=>cupRow(c)).join('')}`:''}
@@ -6535,6 +6694,210 @@ function vTrace(){
     ${seal('Record','One preference, two rooms.')}`;
 }
 
+/* ============ corrections — one door for amending, one for setting down ============ */
+/* The same sheet for a cup, a brew, a coffee, a Setup, an authored roast: what the
+ * record is, what goes with it if it goes, and the two doors. No browser dialog —
+ * confirm() spoke in the operating system's voice, not the keeper's, and the one
+ * place it was used it told a lie ("this cannot be undone"). See docs/CORRECTIONS.md. */
+const correctRow=(k,v)=>regSubstance(v)?`<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`:'';
+/* `down` marks a record that is already struck: its derived counts would be read
+ * off the live arrays it has left, and would print zeroes that are true of the
+ * ledger but a lie about the record. The carried list states them instead. */
+function correctCard(coll,rec,down){
+  const when=t=>t?new Date(t).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';
+  let rows='';
+  if(coll==='cups'){const cafe=rec.kind==='cafe',b=rec.bagId?bagById(rec.bagId):null;
+    rows=correctRow('Kind',cafe?'a cup out':'a cup at home')
+      +correctRow(cafe?'Where':'The coffee',esc(cafe?[rec.shop,rec.city].filter(Boolean).join(' · '):(b?bagName(b):strikeCupName(rec))))
+      +correctRow('Reading',rec.hedonic!=null?`<span class="num">${rec.hedonic} / 9</span>`:'<span class="unread">no reading — the brew still counted</span>')
+      +correctRow('Kept',when(rec.createdAt));}
+  else if(coll==='brews'){const b=rec.bagId?bagById(rec.bagId):null,s=setupById(rec.setupId),c=down?null:D.cups.find(x=>x&&x.brewId===rec.id);
+    rows=correctRow('The coffee',esc(b?bagName(b):'the bag is gone — the brew remains'))
+      +correctRow('The Setup',esc(s?s.name:'—'))
+      +correctRow('The brew',`<span class="num">${esc(brewRecipe(rec))}</span>`)
+      +(down?'':correctRow('Its cup',c?(c.hedonic!=null?`<span class="num">${c.hedonic} / 9</span>`:'kept, unread'):'<span class="unread">none — the impression was skipped</span>'))
+      +correctRow('Pulled',when(rec.createdAt));}
+  else if(coll==='bags'){const o=lotRead(rec),rr=roastRead(rec);
+    rows=correctRow('Origin',esc([o.country,o.region,o.producer].filter(Boolean).join(' · ')))
+      +correctRow('Roast',esc([rr.level,rr.roastDate&&('roasted '+rr.roastDate)].filter(regSubstance).join(' · ')))
+      +(down?correctRow('On the record','set down'):correctRow('Brews',`<span class="num">${brewsOf(rec.id).length}</span>`)
+        +correctRow('On the shelf',rec.archived?'put away':'yes'));}
+  else if(coll==='setups'){
+    rows=correctRow('The assembly',esc([rec.grinder,rec.brewer,rec.basket].filter(Boolean).join(' · ')))
+      +correctRow('Water',esc(rec.water))
+      +(down?correctRow('On the record','set down'):correctRow('Brews on it',`<span class="num">${setupBrews(rec.id)}</span>`));}
+  else if(coll==='authored'){const o=lotRead(rec);
+    rows=correctRow('Roaster',esc(rec.roaster||roasterName(rec.roasterRef)))
+      +correctRow('Origin',esc([o.country,o.region,o.producer,o.variety].filter(Boolean).join(' · ')))
+      +correctRow('Authored',when(rec.createdAt));}
+  return rows?`<div class="card">${rows}</div>`:'';
+}
+// A Setup is a tool, not an event: the brews you pulled on a grinder you sold are
+// still true, so a Setup with brews reading through it retires rather than goes.
+const setupBrews=id=>D.brews.filter(x=>x&&x.setupId===id).length;
+function openCorrect(coll,id){
+  if(guard())return;
+  const k=STRIKE_KINDS[coll];const rec=(D[coll]||[]).find(r=>r&&r.id===id);
+  if(!k||!rec)return;
+  const follows=strikeFollows(coll,id);
+  const held=coll==='setups'?setupBrews(id):0;
+  // a café cup's Pour is derived, not a record anyone corrects — but it is what
+  // put this green on that bar's page, so say plainly that it goes too
+  const pour=coll==='cups'&&rec.kind==='cafe'&&(D.pours||[]).some(p=>p&&p.id==='pour:'+id)
+    ?`<div class="muted small" style="margin:2px 2px 12px">This cup is also what says that bar poured that green. That reading goes with it — and comes back with it.</div>`:'';
+  const followHTML=follows.length?`<h2>What goes with it</h2>
+  <div class="muted small" style="margin:0 2px 8px">Set this ${k.one} down and these go too — and come back with it, exactly this set and no more.</div>
+  ${follows.map(f=>`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(strikeName(f.coll,f.rec))}</span><span class="dd">${esc(strikeSub(f.coll,f.rec))}</span></span></div>`).join('')}`:'';
+  openSheet(`
+  <h3>${esc(strikeName(coll,rec))}</h3>
+  <div class="sub">The record as it stands. Amend it, or set it down.</div>
+  ${correctCard(coll,rec)}
+  ${followHTML}
+  ${pour}
+  ${k.form?`<button class="btn btn-primary" onclick="correctAmend(${jsq(coll)},${jsq(id)})">Amend the record</button>`
+    :`<div class="muted small" style="margin:2px 2px 12px">An authored roast has no form of its own yet — correct it by setting it down and authoring it again.</div>`}
+  ${coll==='setups'&&rec.archived?`<button class="btn btn-quiet" onclick="retireSetup(${jsq(id)})">Back in the rotation</button>`:''}
+  ${coll==='setups'&&!rec.archived?`<button class="btn btn-quiet" onclick="retireSetup(${jsq(id)})">Retire it — the brews stay whole</button>`:''}
+  ${held?`<div class="muted small serif" style="font-style:italic;margin:8px 2px 4px">${held} brew${held===1?'':'s'} read${held===1?'s':''} through this Setup, so it cannot be set down — those readings are still true. Retire it instead: it leaves the picker, the record keeps every one of them.</div>`
+    :`<button class="btn btn-quiet" onclick="strikeNow(${jsq(coll)},${jsq(id)})">Set ${esc(k.the)} down</button>
+  <p class="note">Set down, not erased. It leaves every reading, every count and every map, and waits under <strong>what you have set down</strong> on the desk — whole, and one tap from coming back.</p>`}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+function correctAmend(coll,id){
+  const k=STRIKE_KINDS[coll],rec=(D[coll]||[]).find(r=>r&&r.id===id);
+  if(!k||!k.form||!rec)return;
+  closeSheet();k.form(rec);
+}
+function strikeNow(coll,id){
+  if(guard())return;
+  const k=STRIKE_KINDS[coll],rec=(D[coll]||[]).find(r=>r&&r.id===id);if(!k||!rec)return;
+  const n=strikeFollows(coll,id).length;
+  strike(coll,id,activeName());
+  if(curBagId===id)curBagId=null; // the coffee in hand can't be one you just set down
+  // the overlays key on lots, roasters and shop names, never on a ledger record —
+  // so the screen you were reading stays open and simply reads one record lighter
+  save();closeSheet();render();
+  toast(n?`Set down — with ${n} record${n===1?'':'s'} it carried.`:'Set down — it waits on the desk.');
+}
+function strikeRestore(ref){
+  if(guard())return;
+  const e=struckBy(ref);if(!e)return;
+  unstrike(ref);save();closeSheet();render();toast('Back on the record, whole.');
+}
+function openStruckItem(ref){
+  const e=struckBy(ref);if(!e)return;
+  const k=STRIKE_KINDS[e.coll]||{one:'record'},carried=strikeCarried(ref);
+  openSheet(`
+  <h3>${esc(strikeName(e.coll,e.rec))}</h3>
+  <div class="sub">Set down ${esc(fmtAgo(e.at))}${e.by?` by ${esc(e.by)}`:''}. It has left every reading; nothing about it is lost.</div>
+  ${correctCard(e.coll,e.rec,true)}
+  ${carried.length?`<h2>Carried with it</h2>
+  ${carried.map(s=>`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(strikeName(s.coll,s.rec))}</span><span class="dd">${esc(strikeSub(s.coll,s.rec))}</span></span></div>`).join('')}
+  <div class="muted small" style="margin:6px 2px 10px">These came down with it and go back with it.</div>`:''}
+  <button class="btn btn-primary" onclick="strikeRestore(${jsq(ref)})">Put it back</button>
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px 6px">Or end it here — the record is destroyed, and a tombstone keeps it from returning on a sync. This is the one thing in CARTA that cannot be taken back.</div>
+  <button class="btn btn-danger" onclick="eraseNow(${jsq(ref)})">Erase it for good</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+function eraseNow(ref){
+  if(guard())return;
+  const e=struckBy(ref);if(!e)return;
+  eraseStruck(ref);save();closeSheet();render();toast('Erased. The record no longer holds it.');
+}
+function openEraseAll(){
+  if(guard())return;
+  const list=strikeList();if(!list.length)return;
+  const n=list.reduce((s,x)=>s+1+strikeCarried(x.ref).length,0);
+  openSheet(`
+  <h3>Erase everything set down</h3>
+  <div class="sub">${n} record${n===1?'':'s'}, destroyed. Not struck — gone.</div>
+  <div class="card">${list.map(s=>{const n=strikeCarried(s.ref).length;
+    return `<div class="kv"><span class="k">${esc((STRIKE_KINDS[s.coll]||{one:'record'}).one)}${n?` <span class="n-note">+${n}</span>`:''}</span><span class="v">${esc(strikeName(s.coll,s.rec))}</span></div>`}).join('')}</div>
+  <p class="note">Everything above has already left your readings, so nothing here changes what the record says. What changes is that it stops being recoverable — on this device and, after the next sync, on every other. There is no door back from this one.</p>
+  <button class="btn btn-danger" onclick="eraseAllNow()">Erase them for good</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Keep them where they are</button>`);
+}
+function eraseAllNow(){
+  if(guard())return;
+  strikeList().forEach(s=>eraseStruck(s.ref));
+  save();closeSheet();render();toast('Erased. The desk is clear.');
+}
+/* A café's entry lives on the shared Register, so its correction is a pen act —
+ * struck and dated on the entry itself, exactly as a sighting is, so it converges
+ * across every keeper rather than vanishing off one device. */
+function openCorrectPlace(shop){
+  if(penGuard())return;
+  const e=regFind(shop);if(!e)return;
+  const cups=cafeCups().filter(c=>normName(c.shop)===normName(shop)).length;
+  const sights=(e.sightings||[]).filter(sightStanding).length;
+  openSheet(`
+  <h3>${esc(e.name)}</h3>
+  <div class="sub">The Register keeps one entry per café. Amend it, or strike it from the shared record.</div>
+  <div class="card">
+    ${correctRow('City',esc([e.city,e.neighborhood].filter(Boolean).join(' · ')))}
+    ${correctRow('Address',esc(e.address))}
+    ${correctRow('Sightings',`<span class="num">${sights}</span>`)}
+    ${correctRow('First entered',esc(e.firstBy||'—'))}
+  </div>
+  <button class="btn btn-primary" onclick="closeSheet();openCafeProfile(${jsq(shop)})">Amend the entry</button>
+  <button class="btn btn-quiet" onclick="placeWithdraw(${jsq(shop)})">Strike it from the Register</button>
+  <p class="note">Struck, never deleted — the entry keeps its provenance and its sightings, and any keeper holding the pen can stand it back up.${cups?` Your ${cups} cup${cups===1?'':'s'} here ${cups===1?'stays':'stay'} on your own record either way; a cup is yours, the entry is everyone's.`:''}</p>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+function placeWithdraw(shop){
+  regWithdraw(shop);closeSheet();placeView=null;pageView=null;pageStack=[];render();
+  toast('Struck from the Register — it waits on the desk.');
+}
+function placeRestore(id){
+  regRestore(id);closeSheet();render();toast('Back on the Register.');
+}
+/* The room — everything set down, in one place, newest first. The only door in
+ * the app where the word "permanently" is honest, and the only red button left. */
+function struckRoomHTML(){
+  const mine=strikeList(),reg=isAdmin()?regStruck():[];
+  const row=s=>{const n=strikeCarried(s.ref).length;
+    return `<button class="rowlink" onclick="openStruckItem(${jsq(s.ref)})"><span><span class="t">${esc(strikeName(s.coll,s.rec))}</span><br><span class="m">${esc(strikeSub(s.coll,s.rec))} · set down ${esc(fmtAgo(s.at))}${n?` · carried ${n} with it`:''}</span></span><span class="go">→</span></button>`};
+  return `
+  <p class="eyebrow">The desk · what you set down</p>
+  <h2 class="display">What you have <em>set down</em></h2>
+  <p class="lede">Struck from the record, not erased. Each one waits here whole — with everything that came down with it — and goes back with one tap.</p>
+  ${mine.length?`<h2>Your ledger</h2>${mine.map(row).join('')}`:''}
+  ${reg.length?`<h2>On the Register</h2>
+  <div class="muted small" style="margin:0 2px 8px">Entries struck from the shared record. Standing one back up returns it for every keeper.</div>
+  ${reg.map(e=>`<button class="rowlink" onclick="placeRestore(${jsq(e.id)})"><span><span class="t">${esc(e.name)}</span><br><span class="m">café · struck ${esc(fmtAgo(e.withdrawnAt))}${e.by?` by ${esc(e.by)}`:''} — tap to stand it back up</span></span><span class="go">↺</span></button>`).join('')}`:''}
+  ${!mine.length&&!reg.length?`<div class="empty">Nothing is set down. Everything you have ever kept is still on the record.</div>`:''}
+  ${mine.length?`<p class="note">Nothing above is counted, averaged, plotted or exported. It is simply held, in case you want it back.</p>
+  <button class="btn btn-danger" onclick="openEraseAll()">Erase them for good</button>
+  <div class="muted small serif" style="font-style:italic;margin:8px 2px 2px">The one act in CARTA with no door back. Everything else here is a correction.</div>`:''}`;
+}
+/* The curator's own entries. An authored roast is a fact about coffee, not a cup
+ * you had — and until now it was the one record with no way back out. */
+function openAuthoredList(){
+  if(penGuard())return;
+  const recs=chartRecs().slice().sort(byNew);
+  openSheet(`
+  <h3>What you have authored</h3>
+  <div class="sub">${recs.length?'Roasts entered straight onto the atlas. Open one to set it down — the green it resolved to stays on the spine.':'Nothing authored yet.'}</div>
+  ${recs.map(r=>{const o=lotRead(r);
+    return `<button class="wc-item" onclick="openCorrect('authored',${jsq(r.id)})"><span class="tx"><span class="tt">${esc(authoredName(r))}</span><span class="dd">${esc([o.country,o.region,o.process].filter(Boolean).join(' · ')||'origin unwritten')} · ${new Date(r.createdAt).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}</span></span><span class="go">→</span></button>`}).join('')
+    ||'<div class="empty">Author a roast and it lists here, correctable.</div>'}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+/* The brews of one coffee — the surface that did not exist. A brew whose
+ * impression was skipped could not be reached by any path in the app; now every
+ * one of them opens to be amended or set down. */
+function openBrewList(bagId){
+  const b=bagById(bagId);if(!b)return;
+  const brews=brewsOf(bagId);
+  openSheet(`
+  <h3>Every brew on ${esc(bagName(b))}</h3>
+  <div class="sub">${brews.length?'The preparations, newest first. Open one to amend it or set it down.':'No brew on this coffee yet.'}</div>
+  ${brews.map(x=>{const c=D.cups.find(y=>y&&y.brewId===x.id),s=setupById(x.setupId);
+    return `<button class="wc-item" onclick="${readOnly()?'':`openCorrect('brews',${jsq(x.id)})`}"><span class="tx"><span class="tt">${esc(brewRecipe(x))}</span><span class="dd">${esc(s?s.name:'no Setup')} · ${new Date(x.createdAt).toLocaleDateString([],{month:'short',day:'numeric'})} · ${c?(c.hedonic!=null?`read ${c.hedonic} / 9`:'kept, unread'):'no cup — the impression was skipped'}</span></span><span class="go">${readOnly()?'':'→'}</span></button>`}).join('')
+    ||'<div class="empty">Brew it once and the corpus starts here.</div>'}
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+
 /* ============ users ============ */
 // Peek at another user's stored ledger without loading it into the app.
 function peek(id){
@@ -6574,8 +6937,25 @@ function openUserSheet(id){
           :`<button class="btn btn-primary" onclick="viewLedger('${u.id}')">View their ledger</button>
   <button class="btn btn-graphite" onclick="switchUser('${u.id}')">Make active user</button>`}
   <button class="btn btn-quiet" onclick="openUserForm('${u.id}')">Rename</button>
-  ${!active?`<button class="btn btn-danger" onclick="deleteUser('${u.id}')">Delete user &amp; ledger</button>`:''}
+  ${!active?`<button class="btn btn-quiet" onclick="openDeleteUser('${u.id}')">Delete user &amp; ledger…</button>`:''}
   <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+// The one act that destroys a whole record. It gets a sheet in the keeper's own
+// voice that states exactly what is lost — never a browser dialog.
+function openDeleteUser(id){
+  const u=userById(id);if(!u||id===USERS.activeId)return;
+  const p=peek(id);
+  openSheet(`
+  <h3>Delete ${esc(u.name)}</h3>
+  <div class="sub">Their whole ledger goes with them. This one has no door back.</div>
+  <div class="card">
+    <div class="kv"><span class="k">Coffees</span><span class="v num">${p.bags}</span></div>
+    <div class="kv"><span class="k">Brews</span><span class="v num">${p.brews}</span></div>
+    <div class="kv"><span class="k">Cups</span><span class="v num">${p.cups}</span></div>
+  </div>
+  <p class="note">Every other correction in CARTA is reversible; this is not one of them. If there is any doubt, export their ledger first — it leaves as one self-contained file and reads without the app.</p>
+  <button class="btn btn-danger" onclick="deleteUser('${u.id}')">Delete ${esc(u.name)} and their ledger</button>
+  <button class="btn btn-quiet" onclick="openUserSheet('${u.id}')">Keep them</button>`);
 }
 function openUserForm(id){
   const u=id?userById(id):{};
@@ -6614,8 +6994,6 @@ function exitView(){
 function deleteUser(id){
   const u=userById(id); if(!u)return;
   if(id===USERS.activeId){toast('Cannot delete the active user');return}
-  const p=peek(id);
-  if(!confirm(`Delete ${u.name} and their entire ledger?\n\n${p.bags} bags, ${p.brews} brews, ${p.cups} cups.\n\nThis cannot be undone.`))return;
   try{localStorage.removeItem(dataKey(id))}catch(e){}
   USERS.users=USERS.users.filter(x=>x.id!==id);saveUsers();
   if(viewingUserId===id){viewingUserId=USERS.activeId;D=load();}
@@ -6672,7 +7050,7 @@ function ledgerData(){
     saved:wa[normName(w)]?when(wa[normName(w)]):'before the record kept dates',state:'unvisited — no cup of yours here yet'}));
   const me=activeName();
   const signedPages=[];
-  REG.entries.forEach(e=>{if(e&&e.signed&&e.signed.at&&e.signed.by===me){
+  regEntries().forEach(e=>{if(e&&e.signed&&e.signed.at&&e.signed.by===me){
     const corr=Object.entries(e.penFacts||{}).map(([f,c])=>({field:f,value:c.v}));
     signedPages.push({page:e.name,kind:'cafe',corrections:corr})}});
   CAT.roasters.entries.forEach(r=>{if(r&&r.signed&&r.signed.at&&r.signed.by===me){
@@ -6904,18 +7282,21 @@ document.getElementById('importInput').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   f.text().then(t=>{const d=JSON.parse(t);
     if(!d.bags||!d.brews){toast('Not a CARTA ledger');return}
-    pendingImport=d;
-    openSheet(`
-    <h3>Import ledger</h3>
-    <div class="sub">${d.user?esc(d.user)+"'s record — ":''}${d.bags.length} bags, ${d.brews.length} brews, ${(d.cups||[]).length} cups.</div>
-    <div class="muted small" style="margin-bottom:12px">Two doors. Bring it in as a <strong>new user</strong> — their ledger sits beside yours, viewable any time. Or <strong>replace</strong> your own ledger with it, wholesale.</div>
-    <label class="f"><span class="l">Name (if adding as a user)</span><input type="text" id="u_name" value="${esc(d.user||'')}" placeholder="Alex"></label>
-    <button class="btn btn-primary" onclick="importAsUser()">Add as a new user</button>
-    <button class="btn btn-danger" onclick="importReplace()">Replace ${esc(userById(USERS.activeId).name)}'s ledger</button>
-    <button class="btn btn-quiet" onclick="pendingImport=null;closeSheet()">Cancel</button>`);
+    pendingImport=d;openImportSheet();
   }).catch(()=>toast('Could not read file'));
   e.target.value='';
 });
+function openImportSheet(){
+  const d=pendingImport;if(!d)return;
+  openSheet(`
+  <h3>Import ledger</h3>
+  <div class="sub">${d.user?esc(d.user)+"'s record — ":''}${d.bags.length} bags, ${d.brews.length} brews, ${(d.cups||[]).length} cups.</div>
+  <div class="muted small" style="margin-bottom:12px">Two doors. Bring it in as a <strong>new user</strong> — their ledger sits beside yours, viewable any time. Or <strong>replace</strong> your own ledger with it, wholesale.</div>
+  <label class="f"><span class="l">Name (if adding as a user)</span><input type="text" id="u_name" value="${esc(d.user||'')}" placeholder="Alex"></label>
+  <button class="btn btn-primary" onclick="importAsUser()">Add as a new user</button>
+  <button class="btn btn-quiet" onclick="openImportReplace()">Replace ${esc(userById(USERS.activeId).name)}'s ledger…</button>
+  <button class="btn btn-quiet" onclick="pendingImport=null;closeSheet()">Cancel</button>`);
+}
 function importAsUser(){
   if(!pendingImport)return;
   const name=val('u_name');
@@ -6930,11 +7311,25 @@ function importAsUser(){
   regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();brewRepoint();cupPrepRepoint(); // an imported record may name cafés/greens/tools the device hasn't met
   viewLedger(nu.id);
 }
+// Replacing a whole ledger destroys the one on the device. It states what it is
+// overwriting, in the keeper's voice, and offers the export door first.
+function openImportReplace(){
+  if(!pendingImport||guard())return;
+  const me=userById(USERS.activeId).name,d=pendingImport;
+  openSheet(`
+  <h3>Replace ${esc(me)}'s ledger</h3>
+  <div class="sub">The record on this device is overwritten by the file. This one has no door back.</div>
+  <div class="card">
+    <div class="kv"><span class="k">On the device now</span><span class="v num">${D.bags.length} coffees · ${D.brews.length} brews · ${D.cups.length} cups</span></div>
+    <div class="kv"><span class="k">In the file</span><span class="v num">${d.bags.length} coffees · ${d.brews.length} brews · ${(d.cups||[]).length} cups</span></div>
+  </div>
+  <p class="note">Nothing here is set down — it is overwritten. Export the ledger first if there is any doubt; it leaves as one file and reads without the app. Or bring the file in as a new user instead, and keep both.</p>
+  <button class="btn btn-danger" onclick="importReplace()">Replace it</button>
+  <button class="btn btn-quiet" onclick="openImportSheet()">Back — keep both instead</button>`);
+}
 function importReplace(){
   if(!pendingImport)return;
   if(guard())return;
-  const me=userById(USERS.activeId).name;
-  if(!confirm(`Replace ${me}'s current ledger with the import?\n\nThis cannot be undone.`))return;
   const cat=pendingImport.catalog;delete pendingImport.catalog; // fold the copy's spine before it becomes the ledger, so retired fields read through
   D=pendingImport;pendingImport=null;foldCatalog(cat,D);save();regSeed();catSeed();catSeedGear();catRepoint();gearRepoint();brewRepoint();cupPrepRepoint();closeSheet();render();toast('Ledger imported');
 }
@@ -7002,7 +7397,16 @@ function mergeLedgers(loc,rem){
   const out=clone(blank);
   const dead=new Map();[...(rem.deleted||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
   out.deleted=[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-  ['setups','bags','brews','cups','pours','cafes','authored'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)));
+  // the strikes merge first: a record set down on one device leaves the live
+  // collections on every device, and its body rides the entry so any of them can
+  // put it back (docs/CORRECTIONS.md)
+  out.struck=mergeStruck(loc.struck,rem.struck).filter(s=>!dead.has(s.ref));
+  // `down` is derived every merge, never persisted as a tombstone: a strike must
+  // stay undoable, and a tombstone is the one thing that cannot be taken back. A
+  // struck café cup's pour is held down the same way, by its own strike entry.
+  const down=new Set();
+  out.struck.filter(strikeStands).forEach(s=>{down.add(s.ref);if(s.pour)down.add(s.pour.id)});
+  ['setups','bags','brews','cups','pours','cafes','authored'].forEach(k=>out[k]=mergeColl(loc[k],rem[k]).filter(r=>!dead.has(r.id)&&!down.has(r.id)));
   const f=new Map();[...(rem.cafeFavs||[]),...(loc.cafeFavs||[])].forEach(x=>f.set(String(x).toLowerCase(),x));
   out.cafeFavs=[...f.values()].sort((a,b)=>a.localeCompare(b));
   const w=new Map();[...(rem.cafeWants||[]),...(loc.cafeWants||[])].forEach(x=>w.set(String(x).toLowerCase(),x));
@@ -7022,6 +7426,22 @@ function mergeLedgers(loc,rem){
  * Sightings never race: they union by id across every copy, and a strike
  * (withdrawn/superseded) only ever adds — deterministic, no conflicts by
  * construction. The reach then recompiles from the merged record. */
+/* The strikes merge like the sightings, for the same reason: both dates only
+ * ever add, so max(at) and max(restoredAt) are order-free and both devices land
+ * on the same answer. The body travels with the newer strike, so whichever
+ * device holds the record last is the one whose copy comes back. A strike entry
+ * deliberately carries no updatedAt — nothing reads one, and an unmerged field
+ * would leave the two sides byte-different for no gain. */
+function mergeStruck(...lists){
+  const m=new Map();
+  lists.flat().filter(s=>s&&s.ref).forEach(s=>{
+    const p=m.get(s.ref);
+    if(!p){m.set(s.ref,{...s,id:s.id||'strike:'+s.ref});return}
+    if(String(s.at||'')>String(p.at||''))Object.assign(p,{at:s.at,by:s.by,coll:s.coll,rec:s.rec,via:s.via,pour:s.pour});
+    if(String(s.restoredAt||'')>String(p.restoredAt||''))p.restoredAt=s.restoredAt;
+  });
+  return [...m.values()].sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||String(a.ref).localeCompare(String(b.ref)));
+}
 function mergeSightings(...lists){
   const m=new Map();
   lists.flat().filter(s=>s&&s.id).forEach(s=>{
@@ -7053,11 +7473,16 @@ function mergeRegister(loc,rem){
     const lf=fuller(l),rf=fuller(r);if(lf!==rf)return lf>rf;
     return JSON.stringify(l)>=JSON.stringify(r)};
   const dead=new Map();[...((rem&&rem.deleted)||[]),...(loc.deleted||[])].forEach(t=>dead.set(t.id,t));
+  // the strike's two dates only ever add, so they take the max independently of
+  // which copy wins the field race — the same monotone rule mergeSightings uses
+  const strikeDates=(w,...g)=>{['withdrawnAt','restoredAt'].forEach(k=>{
+    const v=g.map(e=>String((e&&e[k])||'')).filter(Boolean).sort().pop();if(v)w[k]=v})};
   const m=new Map();((rem&&rem.entries)||[]).forEach(r=>m.set(r.id,r));
   (loc.entries||[]).forEach(l=>{const r=m.get(l.id);
     if(!r){m.set(l.id,l);return}
     const w={...(beats(l,r)?l:r)};
     if(l.sightings||r.sightings)w.sightings=mergeSightings(l.sightings||[],r.sightings||[]);
+    strikeDates(w,l,r);
     m.set(l.id,w)});
   const groups={};
   [...m.values()].filter(e=>e&&e.name&&!dead.has(e.id)).forEach(e=>{const k=normName(e.name);(groups[k]=groups[k]||[]).push(e)});
@@ -7070,6 +7495,7 @@ function mergeRegister(loc,rem){
     });
     const sg=mergeSightings(...g.map(e=>e.sightings||[]));
     if(sg.length)w.sightings=sg;
+    strikeDates(w,...g);
     return w;
   });
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
@@ -7285,7 +7711,21 @@ function vSyncSection(){
     <div class="kv"><span class="k">Status</span><span class="v" id="syncline">${syncLineHTML()}</span></div>
   </div>
   <button class="btn btn-graphite" onclick="syncNow(true)">Sync now</button>
-  <button class="btn btn-quiet" onclick="disconnectSync()">Disconnect</button>`;
+  <button class="btn btn-quiet" onclick="openDisconnect()">Disconnect…</button>`;
+}
+// The last browser dialog in the app, retired. Nothing is lost here — say so and let them tap.
+function openDisconnect(){
+  if(!SYNC)return;
+  openSheet(`
+  <h3>Disconnect from sync</h3>
+  <div class="sub">Only the connection goes.</div>
+  <div class="card">
+    <div class="kv"><span class="k">Server</span><span class="v" style="font-family:var(--mono);font-size:12px">${esc(SYNC.url)}</span></div>
+    <div class="kv"><span class="k">Account</span><span class="v">${esc(SYNC.name)}</span></div>
+  </div>
+  <p class="note">Your ledger stays whole on this device, and the copy on the server stays where it is. Sign in again any time and the two pick up where they left off.</p>
+  <button class="btn btn-quiet" onclick="disconnectSync()">Disconnect</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Stay connected</button>`);
 }
 function openSyncSheet(loginOnly){
   const me=userById(USERS.activeId);
@@ -7327,7 +7767,6 @@ async function connectSync(mode){
   syncNow(true);
 }
 function disconnectSync(){
-  if(!confirm('Disconnect from the sync server?\n\nYour ledger stays on this device (and on the server). Only the connection is removed.'))return;
   SYNC=null;saveSync();
   try{
     localStorage.removeItem(DIR_KEY);
@@ -7459,7 +7898,7 @@ function toggleNear(){if(nearOn){nearOn=false;render()}else requestGeo()}
 function circleCities(){
   const m={};const add=(c,w)=>{if(c&&c.trim())m[c.trim()]=(m[c.trim()]||0)+w};
   circleCups().forEach(c=>add(c.city,1));cafeCups().forEach(c=>add(c.city,1));
-  REG.entries.forEach(e=>add(e.city,.5)); // a pin with no cups still counts, lighter
+  regEntries().forEach(e=>add(e.city,.5)); // a pin with no cups still counts, lighter
   return Object.keys(m).sort((a,b)=>m[b]-m[a]);
 }
 function setCityLens(c){cityLens=(normName(cityLens)===normName(c)?null:c);nearOn=false;render()}
@@ -7519,7 +7958,7 @@ function recommendations(){
     recs.push({shop:p.shop,city,profile:prof,n:p.cups.length,avg:avgHedonic(p.cups),score:ws/wsum,
       dist:distTo(prof),best,again:p.cups.filter(c=>c.again===true).length});
   });
-  REG.entries.forEach(e=>{const k=normName(e.name);if(mine.has(k)||byShop[k])return;if(!inLens(e.city||''))return;
+  regEntries().forEach(e=>{const k=normName(e.name);if(mine.has(k)||byShop[k])return;if(!inLens(e.city||''))return;
     if(nearOn&&e.lat==null)return;
     recs.push({shop:e.name,city:e.city||'',profile:e,n:0,avg:null,score:0,dist:distTo(e),best:null,again:0,reg:true})});
   return recs.sort((a,b)=>{
@@ -7535,7 +7974,7 @@ function circleSearch(q){
   const hay=c=>{const o=circleLot(c);return normName([c.shop,c.city,c.drink,c.style,circleRoaster(c),o.origin,o.country,o.region,o.variety,o.producer,o.process,c._who,(c.descriptors||[]).join(' '),c.notes].filter(Boolean).join(' '))};
   const cups=circleCups().filter(c=>match(hay(c)));
   const places=circlePlaces(cups);
-  const regHits=REG.entries.filter(e=>match(normName([e.name,e.city,e.neighborhood,e.notes,...(e.tags||[])].filter(Boolean).join(' '))))
+  const regHits=regEntries().filter(e=>match(normName([e.name,e.city,e.neighborhood,e.notes,...(e.tags||[])].filter(Boolean).join(' '))))
     .filter(e=>!places.some(p=>normName(p.shop)===normName(e.name)));
   const beans=circleBeans().filter(b=>match(normName(b.label)));
   return {cups,places,regHits,beans};
@@ -7801,7 +8240,7 @@ function discCands(){
   const mine=new Set([...shopAgg().map(s=>normName(s.shop)),...signalPicks().map(p=>normName(p.name))]);
   const byShop=circByShop();
   const names=new Map();
-  REG.entries.forEach(e=>{const k=normName(e.name);if(!mine.has(k))names.set(k,e.name)});
+  regEntries().forEach(e=>{const k=normName(e.name);if(!mine.has(k))names.set(k,e.name)});
   Object.keys(byShop).forEach(k=>{if(!mine.has(k)&&!names.has(k))names.set(k,byShop[k][0].shop)});
   let rows=[...names.values()].map(n=>{const e=regByName(n);return{shop:n,e,city:(e&&e.city)||'',km:distTo(e)}})
     .filter(r=>inLens(r.city));
@@ -7876,7 +8315,7 @@ function keepWaiting(shop){
 let coldQ=['','',''],coldPick=[null,null,null],justSet=false;
 function coldNames(){
   const names=new Map();
-  REG.entries.forEach(e=>names.set(normName(e.name),{name:e.name,where:[e.city,e.neighborhood].filter(Boolean).join(' · ')}));
+  regEntries().forEach(e=>names.set(normName(e.name),{name:e.name,where:[e.city,e.neighborhood].filter(Boolean).join(' · ')}));
   Object.keys(circByShop()).forEach(k=>{if(!names.has(k)){const x=circByShop()[k][0];names.set(k,{name:x.shop,where:x.city||''})}});
   return[...names.values()];
 }

@@ -19,6 +19,8 @@ alone. Cite the document, not a memory of it.
 - **SURFACES.md** — the surfaces and the graph under them: one door in, one
   reading out, and what to cut so the graph can fill
 - **LOT_IDENTITY.md** — what a lot is, and what it honestly is not
+- **CORRECTIONS.md** — how a record is amended and how it is set down: the
+  strike, the cascade, the one irreversible door
 - **MODEL_QA.md** — questions the model answered, kept for the record
 
 ## The standards
