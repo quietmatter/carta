@@ -25,8 +25,8 @@ question, answered by the same component:
 | the question | the component | at lot scope | at set scope |
 |---|---|---|---|
 | how far does the record follow it? | the road | six stations | six counts |
+| where does it sit? | the map, two frames | its origin, and the hands carrying it | countries or regions; scenes or nodes |
 | how high did it grow? | the terrace | one band vs. the atlas | the span, with each band inside it |
-| where did it grow? | the drawn plot | — | coarse marks, hollow |
 | who carried it? | `.rowlink` list | the hands | the hands |
 | where does it pour? | `.rowlink` list | the bars | the bars |
 | what did you find? | the overlay | your cups | your cups |
@@ -50,6 +50,16 @@ A kind may have nothing to say for a question. It says *unread*. It never drops
 the question and it never reorders them. `spec(kind,id)` supplies only the
 **nouns** — what to call it, what its identity rows are, what is above it, what
 is below it. The order, the components and the cross-cuts are shared code.
+
+### The map came with it
+
+`originMarks(gs)` / `chartMarks(gs)` take the green set and nothing else, so
+every page — including the Atlas, which never had one — inherits the map the
+same way it inherits the road. A mark is a `.rowlink` that happens to have a
+position, which means **the map has no zoom: the walk is the zoom.** A frame
+holding more than one scene draws scenes; a frame holding one draws its nodes;
+drilling down is zooming in. See `../MAPPING.md` for the four laws a mark obeys
+and for why the published atlas is this same map with the overlay off.
 
 ## 3. Drill down, drill up, from anywhere
 
@@ -168,6 +178,10 @@ Ordered so each step is shippable on its own.
 | 6 | the cross-cut sections + `crumbHTML` — the drill-up/down the commission asked for | `nodePage` |
 | 7 | `openCafe`'s origin block deleted; `doorBind('pour')` becomes the one way in | `openCafe`, `doorBind` |
 | 8 | the prefill rails on every origin field, in the door **and** in `openBagForm` (the typed fallback must not be poorer than the door) | `sugField`, `known`, `NARROW` |
+
+The map's own delta — and the published atlas layered over it — is sequenced
+separately in `../MAPPING.md`, because it lands on `nodePage` once step 1 exists
+and is otherwise independent of this list.
 
 **Invariants this does not touch.** Grind stays per-Setup and never crosses
 grinders (the Setup page is precisely the scope a grind number is true inside).

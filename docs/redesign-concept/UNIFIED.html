@@ -146,8 +146,9 @@ h2{font-family:var(--sans);font-size:var(--s11);font-weight:var(--w-medium);
 .meter i{width:16px;height:3px;background:var(--line-2)}
 .meter i.on{background:var(--ink)}
 
-/* the road — six stations, honesty drawn */
-.road6{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin:2px 0 2px}
+/* the road — six stations, honesty drawn. Five for a reader: the sixth is their
+   own cups, and a reader has none — an absent reader, not a gap in the record. */
+.road6{display:grid;grid-template-columns:repeat(var(--n,6),1fr);gap:0;margin:2px 0 2px}
 .road6 .stn{position:relative;padding:16px 3px 0;text-align:center;min-width:0}
 .road6 .stn .bar{position:absolute;top:5px;left:-50%;width:100%;height:1px;background:var(--line-2)}
 .road6 .stn:first-child .bar{display:none}
@@ -185,10 +186,54 @@ h2{font-family:var(--sans);font-size:var(--s11);font-weight:var(--w-medium);
 .terr .m0{position:absolute;left:0;width:38%;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
 .terr .m0.pt,.terr .m2.pt{border-bottom:none;height:0!important}
 
-/* the drawn plot — the floor under every map surface */
-.plot-box{border:1px solid var(--line);background:var(--surface-page);margin:4px 0 10px;position:relative}
+/* ============================================================================
+ * THE MAP — the plan. Two frames, because one projection cannot hold a front
+ * door and a country. Monochrome throughout: a mark is a lens, never a rank,
+ * and the ember is never spent here.
+ *
+ * The ink says the grain, and only the grain:
+ *   filled        the coordinate is as fine as the mark claims
+ *   hollow        a centroid — a region, an area standing in for a point
+ *   dashed        coarser still, and admitting it
+ *   a square      a street address; a circle, a centroid; a dashed square, a scene
+ *   a ring        your overlay — added, never subtracted (a reader has none)
+ * ========================================================================== */
+.plot-box{border:1px solid var(--line);background:var(--surface-page);margin:4px 0 8px;position:relative}
 .plot-box svg{display:block;width:100%}
-.pin{fill:var(--ink)} .pin.hollow{fill:none;stroke:var(--ink-3);stroke-dasharray:2 2}
+.plot-box .ed{stroke:var(--ink-3);stroke-width:1;opacity:.55;stroke-dasharray:2 2}
+.plot-box g.mk{cursor:pointer}
+.plot-box g.mk:hover .mk-lbl{fill:var(--ink)}
+.plot-box g.mk.sel .mk-lbl{fill:var(--ink);font-weight:600}
+.mk-venue{fill:var(--ink)}
+.mk-roaster{fill:var(--ink)}
+.mk-origin{fill:none;stroke:var(--ink-2);stroke-width:1.3}
+.mk-origin.coarse{stroke:var(--ink-3);stroke-dasharray:2 2}
+.mk-scene{fill:none;stroke:var(--ink-2);stroke-width:1.3;stroke-dasharray:3 2}
+.mk-merged{fill:var(--ink)}
+.mk-n{fill:var(--surface-page);font-family:var(--sans);font-size:8px;font-weight:600}
+.mk-lbl{font-family:var(--sans);font-size:9px;fill:var(--ink-3)}
+.mk-lbl.near{fill:var(--ink-2)}
+/* your overlay on the map: one ring. The spine stands without it — which is why
+   a reader's map simply has none, rather than a map of dashed absences. */
+.mk-ring{fill:none;stroke:var(--ink);stroke-width:1}
+/* held back from the published copy — the founder's own map, saying what a reader will not see */
+.mk-held{opacity:.4}
+.mapkey{display:flex;flex-wrap:wrap;gap:3px 14px;margin:0 2px 10px;font-family:var(--sans);
+  font-size:var(--s11);color:var(--ink-3);align-items:center}
+.mapkey span{display:inline-flex;align-items:center;gap:5px}
+.mapkey svg{flex:none;overflow:visible}
+.lens{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+/* the hand-off — the two frames are joined in words, never by a line across the sea */
+.handoff{border-left:2px dashed var(--line-2);padding:9px 13px;margin:2px 0 16px;
+  font-family:var(--serif);font-style:italic;font-size:var(--s13);color:var(--ink-3);max-width:44ch}
+/* what has no coordinate lists rather than lies */
+.listedbox{border:1px dashed var(--line-2);padding:10px 12px 4px;margin:0 0 12px}
+.listedbox .lh{display:flex;justify-content:space-between;align-items:baseline;
+  font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.listedbox .rowlink:last-of-type{border-bottom:none}
+.foldout{border-left:2px solid var(--line-2);padding-left:10px;margin:-2px 0 12px}
+.foldout .rowlink:last-of-type{border-bottom:none}
 
 .btn{display:block;width:100%;font-family:var(--sans);font-size:var(--s13);letter-spacing:.02em;
   padding:13px;border:1px solid var(--border-strong);background:none;color:var(--ink);
@@ -265,7 +310,7 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
   </div>
   <div style="display:flex;align-items:center;gap:6px">
     <button class="th" onclick="toggleTheme()" title="Paper / dusk">◐</button>
-    <button class="door" onclick="openDoor()">＋ A coffee</button>
+    <button class="door" id="door" onclick="openDoor()">＋ A coffee</button>
   </div>
 </header>
 <main id="main"></main>
@@ -304,13 +349,15 @@ const G={
     {id:'Guji',country:'Ethiopia',lat:5.9,lon:38.9},
     {id:'Bench Maji',country:'Ethiopia',lat:6.9,lon:35.5},
     {id:'Huila',country:'Colombia',lat:2.5,lon:-75.6},
-    {id:'Nyeri',country:'Kenya',lat:-.42,lon:36.95}
+    {id:'Nyeri',country:'Kenya',lat:-.42,lon:36.95},
+    {id:'Sidama',country:'Ethiopia'}          // no centroid on file — it LISTS, it is never guessed onto the map
   ],
   producers:[
     {id:'p1',name:'Tade Gebre Gezehagn',kind:'farm',region:'Guji',country:'Ethiopia',alt:[1900,2100]},
     {id:'p2',name:'Suke Quto',kind:'station',region:'Guji',country:'Ethiopia',alt:[1850,2100]},
     {id:'p3',name:'Finca El Paraíso',kind:'farm',region:'Huila',country:'Colombia',alt:[1700,1900]},
-    {id:'p4',name:'Gichathaini Factory',kind:'station',region:'Nyeri',country:'Kenya',alt:[1700,1750]}
+    {id:'p4',name:'Gichathaini Factory',kind:'station',region:'Nyeri',country:'Kenya',alt:[1700,1750]},
+    {id:'p5',name:'Bombe Estate',kind:'farm',region:'Sidama',country:'Ethiopia',alt:[1950,2200]}
   ],
   greens:[
     {id:'g1',name:'Tade GG',lotName:'Lot 12',country:'Ethiopia',region:'Guji',producer:'p1',
@@ -322,12 +369,21 @@ const G={
     {id:'g4',name:'El Paraíso',lotName:'Double anaerobic',country:'Colombia',region:'Huila',producer:'p3',
      variety:'Castillo',process:'Double anaerobic',alt:[1700,1900],harvest:2024,grain:'green-lot',mill:''},
     {id:'g5',name:'Gichathaini',lotName:'AA',country:'Kenya',region:'Nyeri',producer:'p4',
-     variety:'SL28',process:'Washed',alt:[1700,1750],harvest:2023,grain:'green-lot',mill:'dry mill · outturn 21'}
+     variety:'SL28',process:'Washed',alt:[1700,1750],harvest:2023,grain:'green-lot',mill:'dry mill · outturn 21'},
+    // its region states no coordinate — the mark LISTS under the origin frame
+    {id:'g6',name:'Bombe',lotName:'',country:'Ethiopia',region:'Sidama',producer:'p5',
+     variety:'Heirloom',process:'Natural',alt:[1950,2200],harvest:2025,grain:'farm',mill:''},
+    // country grain — drawn at the country's centroid EVEN THOUGH a region centroid is at hand,
+    // because the map is never finer than the grain it rests on
+    {id:'g7',name:'Cauca',lotName:'',country:'Colombia',region:'',producer:'',
+     variety:'',process:'Washed',alt:null,harvest:null,grain:'country',mill:''}
   ],
   roasters:[
     {id:'r1',name:'Sey',city:'Brooklyn',country:'United States',lat:40.69,lon:-73.95},
     {id:'r2',name:'Onyx',city:'Rogers',country:'United States',lat:36.33,lon:-94.12},
-    {id:'r3',name:'Kumquat',city:'Los Angeles',country:'United States',lat:34.11,lon:-118.26}
+    {id:'r3',name:'Kumquat',city:'Los Angeles',country:'United States',lat:34.11,lon:-118.26},
+    {id:'r5',name:'Canyon',city:'Pasadena',country:'United States',lat:34.15,lon:-118.14},
+    {id:'r4',name:'Passenger',city:'Lancaster',country:'United States'}   // no coordinate — it lists
   ],
   roasts:[
     {id:'ro1',green:'g1',roaster:'r1',offering:'Tade GG',level:'Light',date:'2026-06-12'},
@@ -335,7 +391,10 @@ const G={
     {id:'ro3',green:'g3',roaster:'r1',offering:'Bench Maji',level:'Light',date:'2026-05-20'},
     {id:'ro4',green:'g4',roaster:'r2',offering:'El Paraíso',level:'Medium',date:'2026-06-20'},
     {id:'ro5',green:'g5',roaster:'r3',offering:'Gichathaini AA',level:'Light',date:'2026-07-01'},
-    {id:'ro6',green:'g2',roaster:'r3',offering:'Suke Quto',level:'Medium',date:'2026-06-28'}
+    {id:'ro6',green:'g2',roaster:'r3',offering:'Suke Quto',level:'Medium',date:'2026-06-28'},
+    {id:'ro7',green:'g6',roaster:'r4',offering:'Bombe Natural',level:'Light',date:'2026-07-04'},
+    {id:'ro8',green:'g7',roaster:'r5',offering:'Cauca Washed',level:'Medium',date:'2026-07-08'},
+    {id:'ro9',green:'g2',roaster:'r5',offering:'Suke Quto',level:'Light',date:'2026-07-12'}
   ],
   bars:[
     {id:'b1',name:'Halfpence',city:'Los Angeles',hood:'Arts District',lat:34.04,lon:-118.23},
@@ -347,7 +406,8 @@ const G={
     {id:'pr2',bar:'b1',green:'g4',roaster:'r2',at:'2026-07-02'},
     {id:'pr3',bar:'b2',green:'g5',roaster:'r3',at:'2026-07-18'},
     {id:'pr4',bar:'b2',green:'g2',roaster:'r3',at:'2026-07-20'},
-    {id:'pr5',bar:'b3',green:'g1',roaster:'r2',at:'2026-06-30'}
+    {id:'pr5',bar:'b3',green:'g1',roaster:'r2',at:'2026-06-30'},
+    {id:'pr6',bar:'b2',green:'g7',roaster:'r5',at:'2026-07-22'}
   ],
   setups:[
     {id:'s1',name:'Ode + V60',grinder:'Fellow Ode Gen 2',brewer:'Hario V60 02',papers:'Cafec Abaca',
@@ -383,6 +443,7 @@ const val=id=>{const e=document.getElementById(id);return e?e.value.trim():''};
 const NUMW=['','one','two','three','four','five','six','seven','eight','nine','ten'];
 const nw=n=>NUMW[n]||String(n);
 const plural=(n,s,p)=>n+' '+(n===1?s:(p||s+'s'));
+const sentence=s=>String(s||'').charAt(0).toUpperCase()+String(s||'').slice(1);
 const green=id=>G.greens.find(g=>g.id===id);
 const producer=id=>G.producers.find(p=>p.id===id);
 const roaster=id=>G.roasters.find(r=>r.id===id);
@@ -398,33 +459,60 @@ function toggleTheme(){const h=document.documentElement;
   h.dataset.theme=h.dataset.theme==='dusk'?'paper':'dusk'}
 
 /* ============================================================================
+ * THE PUBLISHED ATLAS — READER.md, in the unified grammar.
+ *
+ * A keeper and a reader do not get two apps, two maps or two page renderers.
+ * A reader is A SUBTRACTION from a keeper: the record is absent, so everything
+ * argued from the record is absent with it, and everything argued from the
+ * shared documents stands whole. Two things go, and they are the same thing
+ * twice — the road's sixth station (Read: your cups) and the map's ring (a mark
+ * you keep). Both are the OVERLAY, and the overlay is added, never subtracted:
+ * that is why its absence leaves a whole atlas rather than a dashed one.
+ *
+ * HELD is the founder's hold (READER.md L4) — dated, reversible, additive, and
+ * subtracted at publish time. On the founder's own map a held mark still draws,
+ * ghosted and counted, because consent should be visible in the same units the
+ * reader will see. In the reader's copy it is simply not there.
+ * ========================================================================== */
+const PUB={rev:15,at:'2026-07-12',by:'Ellis',from:'sync.quietmatter.co',fetched:'3 hours ago'};
+const HELD=['g5'];                       // one green held back — its roasts and its pours ride with it
+let READER=false;
+const held=gid=>HELD.includes(gid);
+const GREENS=()=>READER?G.greens.filter(g=>!held(g.id)):G.greens;
+const CUPS=()=>READER?[]:G.cups;         // a reader keeps nothing — not hidden, absent
+function readerToggle(){READER=!READER;tab='atlas';view=null;stack=[];door=null;mapSel=null;
+  if(READER)delete mapLens.yours;else mapLens.yours=1;
+  render();document.getElementById('main').scrollTo(0,0)}
+
+/* ============================================================================
  * THE SCOPE — one function, every page.
  * Every node kind resolves to a set of greens. Everything a page draws below
  * this line reads that set: the road, the terrace, the plot, the hands, the
  * bars, your cups. Add a kind here and it inherits the whole page for free.
  * ========================================================================== */
 function scopeGreens(k,id){
+  const A=GREENS();                      // a held green is absent from a reader's copy, at every scope at once
   switch(k){
-    case 'country':  return G.greens.filter(g=>g.country===id);
-    case 'region':   return G.greens.filter(g=>g.region===id);
-    case 'producer': return G.greens.filter(g=>g.producer===id);
-    case 'green':    return G.greens.filter(g=>g.id===id);
-    case 'roaster':  return G.greens.filter(g=>roastsOf(g.id).some(r=>r.roaster===id));
-    case 'bar':      return G.greens.filter(g=>G.pours.some(p=>p.bar===id&&p.green===g.id));
+    case 'country':  return A.filter(g=>g.country===id);
+    case 'region':   return A.filter(g=>g.region===id);
+    case 'producer': return A.filter(g=>g.producer===id);
+    case 'green':    return A.filter(g=>g.id===id);
+    case 'roaster':  return A.filter(g=>roastsOf(g.id).some(r=>r.roaster===id));
+    case 'bar':      return A.filter(g=>G.pours.some(p=>p.bar===id&&p.green===g.id));
     case 'city':{    // a city is a scope like any other — what pours there, and what is roasted there
       const bs=G.bars.filter(b=>b.city===id).map(b=>b.id),rs=G.roasters.filter(r=>r.city===id).map(r=>r.id);
-      return G.greens.filter(g=>G.pours.some(p=>p.green===g.id&&bs.includes(p.bar))||roastsOf(g.id).some(r=>rs.includes(r.roaster)));}
-    case 'setup':    return G.greens.filter(g=>G.brews.some(b=>b.setup===id&&b.green===g.id));
-    case 'process':  return G.greens.filter(g=>g.process===id);
-    case 'variety':  return G.greens.filter(g=>g.variety===id);
-    default:         return G.greens.slice();
+      return A.filter(g=>G.pours.some(p=>p.green===g.id&&bs.includes(p.bar))||roastsOf(g.id).some(r=>rs.includes(r.roaster)));}
+    case 'setup':    return A.filter(g=>G.brews.some(b=>b.setup===id&&b.green===g.id));
+    case 'process':  return A.filter(g=>g.process===id);
+    case 'variety':  return A.filter(g=>g.variety===id);
+    default:         return A.slice();
   }
 }
 // the edges out of a green set — the same three questions every page asks of its scope
 const handsIn=gs=>uniq(gs.flatMap(g=>roastsOf(g.id).map(r=>r.roaster)));
 const barsIn=gs=>uniq(gs.flatMap(g=>poursOf(g.id).map(p=>p.bar)));
-const cupsIn=gs=>{const ids=new Set(gs.map(g=>g.id));return G.cups.filter(c=>ids.has(c.green))};
-const brewsIn=gs=>{const ids=new Set(gs.map(g=>g.id));return G.brews.filter(b=>ids.has(b.green))};
+const cupsIn=gs=>{const ids=new Set(gs.map(g=>g.id));return CUPS().filter(c=>ids.has(c.green))};
+const brewsIn=gs=>{const ids=new Set(gs.map(g=>g.id));return READER?[]:G.brews.filter(b=>ids.has(b.green))};
 
 /* ============ the road — six stations, at any scope ============ */
 function roadStations(g){
@@ -432,8 +520,8 @@ function roadStations(g){
   const grower=p&&p.kind==='farm'?p.name:'';
   const stn=p&&p.kind==='station'?p.name:'';
   const hands=roastsOf(g.id),shops=poursOf(g.id);
-  const cups=G.cups.filter(c=>c.green===g.id).length;
-  return [
+  const cups=CUPS().filter(c=>c.green===g.id).length;
+  const st=[
     {lb:'Grown',who:grower||(stn?'':g.region)||''},
     {lb:'Processed',who:stn||(has(g.process)?g.process:'')},
     {lb:'Milled',who:g.mill||''},
@@ -441,10 +529,13 @@ function roadStations(g){
     {lb:'Poured',who:shops.length?(shops.length>1?plural(shops.length,'bar'):bar(shops[0].bar).name):''},
     {lb:'Read',who:cups?plural(cups,'cup'):'',you:true}
   ];
+  // L7 — the sixth station is the reader's own cups, and a reader has none. Five, not
+  // six-with-one-unread: an empty Read drawn as unread is the record lying about itself.
+  return READER?st.slice(0,5):st;
 }
 function road6HTML(st){
   let prev=true;
-  return `<div class="road6">${st.map(s=>{const held=has(s.who);
+  return `<div class="road6" style="--n:${st.length}">${st.map(s=>{const held=has(s.who);
     const cls='stn'+(held?' held':'')+(s.you&&held?' you':'')+((!held||!prev)?' gap':'');
     prev=held;
     return `<div class="${cls}"><span class="bar"></span><span class="mk"></span><span class="lb">${esc(s.lb)}</span><span class="who" title="${esc(s.who||'unread')}">${held?esc(s.who):'unread'}</span></div>`}).join('')}</div>`;
@@ -512,21 +603,293 @@ function heightHTML(gs){
   <div class="muted small serif" style="font-style:italic;margin:10px 2px 0">${esc(altLabel(span))} across ${plural(bands.length,'green')} that state a height.${unread?` ${unread===1?'One more says':unread+' more say'} nothing about it — counted, never dropped.`:''} Placed, never ranked.</div>`;
 }
 
-/* ============ the plot — the drawn floor under every map surface ============ */
-function plotHTML(marks,heading){
-  const pts=marks.filter(m=>m.lat!=null&&m.lon!=null);
-  if(pts.length<2)return'';
-  const W=420,H=170,P=22;
-  const las=pts.map(p=>p.lat),los=pts.map(p=>p.lon);
-  let la0=Math.min(...las),la1=Math.max(...las),lo0=Math.min(...los),lo1=Math.max(...los);
-  if(la1-la0<1){la0-=.5;la1+=.5} if(lo1-lo0<1){lo0-=.5;lo1+=.5}
-  const X=lo=>P+(lo-lo0)/(lo1-lo0)*(W-2*P),Y=la=>H-P-(la-la0)/(la1-la0)*(H-2*P);
-  return `${heading?`<h2>${esc(heading)}</h2>`:''}
-  <div class="plot-box"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(heading||'plot')}">
-    ${pts.map(p=>`<circle class="pin${p.coarse?' hollow':''}" cx="${X(p.lon).toFixed(1)}" cy="${Y(p.lat).toFixed(1)}" r="${p.coarse?4:3.5}"/>
-      <text x="${(X(p.lon)+7).toFixed(1)}" y="${(Y(p.lat)+3.5).toFixed(1)}" font-family="system-ui" font-size="9" fill="currentColor" opacity=".62">${esc(p.label)}</text>`).join('')}
-  </svg></div>
-  <div class="muted small" style="margin:-4px 2px 12px">A hollow mark is a coarse coordinate — a region's centroid, never a farm-precise pin.</div>`;
+/* ============================================================================
+ * THE MAP — one component, every scope.
+ *
+ * THE MARKS OF A SCOPE ARE scopeGreens, POINTED AT COORDINATES. A scope resolves
+ * to a set of marks (originMarks + chartMarks) exactly as it resolves to a set
+ * of greens, and one component draws them. A mark is a .rowlink that happens to
+ * have a position: tap it and you are on that node's page — which is this page
+ * again, at another scope.
+ *
+ * THE MAP HAS NO ZOOM. THE WALK IS THE ZOOM.
+ * CHARTS.md asked for three altitudes — a region of scenes, a scene of nodes,
+ * one node's locator. Those are not a control to build; they are the scope
+ * stack the keeper is already standing in. A frame holding more than one scene
+ * draws SCENES; a frame holding one draws its NODES. Drilling down is zooming
+ * in, and it is the same gesture as every other drill-down in the app. No
+ * pinch, no slider, no camera to remember — the back button is the zoom-out.
+ *
+ * TWO FRAMES, because one projection cannot hold a front door and a country.
+ * The origin frame answers WHERE IT GREW, at a coarse and admitted grain. The
+ * chart frame answers WHERE YOU CAN WALK TO IT. They are joined in WORDS and
+ * never by a line: the green crossed an ocean in a ship, through an importer
+ * who is on no map here, and a segment drawn across it would be decoration
+ * that reads as data.
+ *
+ * A MARK IS NEVER FINER THAN WHAT IT RESTS ON. The grain ladder decides the
+ * geometry — a green that can prove only its country is drawn at the country's
+ * centroid even when a region centroid is at hand. Rounding a mark up is the
+ * same lie as rounding the grain up, told in ink instead of in words.
+ *
+ * WHAT HAS NO COORDINATE LISTS RATHER THAN LIES. Every frame carries its
+ * listed — named, counted, tappable — so a sparse record reads as sparse.
+ * ========================================================================== */
+const R_KM=111.32, SCENE_KM=40;
+const kmx=(lon,la0)=>lon*R_KM*Math.cos(la0*Math.PI/180), kmy=la=>la*R_KM;
+const mdist=(a,b)=>Math.hypot(kmx(a.lon-b.lon,(a.lat+b.lat)/2),kmy(a.lat-b.lat));
+const modeOf=a=>{const c={};a.filter(has).forEach(v=>c[v]=(c[v]||0)+1);
+  return Object.keys(c).sort((x,y)=>c[y]-c[x])[0]||''};
+// the spatial ladder as rungs — the same five the grain reads, here deciding a coordinate
+const RUNG={'green-lot':3,farm:2,station:2,region:1,country:0};
+let mapLens={growers:1,hands:1,bars:1,edges:1,yours:1},mapSel=null;
+function lensTap(k){mapLens[k]=mapLens[k]?0:1;mapSel=null;render()}
+function lensAll(){Object.keys(mapLens).forEach(k=>mapLens[k]=1);mapSel=null;render()}
+function mapPick(f,i){mapSel=(mapSel&&mapSel.f===f&&mapSel.i===i)?null:{f,i};render()}
+
+/* the marks of a scope — origin, then chart. Both return {marks, listed}: what can
+   be drawn, and what can only be named. Neither ever invents the other. */
+function originMarks(gs){
+  const marks={},listed={};
+  const list=(k,id,sub,gid)=>{const key=k+':'+id;
+    const l=listed[key]=listed[key]||{k,id,label:id,sub,n:0,greens:[]};l.n++;l.greens.push(gid)};
+  gs.forEach(g=>{
+    const reg=G.regions.find(r=>r.id===g.region),ct=G.countries.find(c=>c.id===g.country);
+    // the finest place the GRAIN lets this green claim — region-grain or finer may sit at a region
+    const claim=(RUNG[g.grain]==null?0:RUNG[g.grain])>=1?reg:null;
+    // the fall, STATED. A named place with no coordinate does not silently become the
+    // country it sits in — the drop in grain is the reader's to see, so it lists.
+    if(claim&&claim.lat==null)list('region',claim.id,'no centroid on file — drawn at the country instead',g.id);
+    const at=claim&&claim.lat!=null?{k:'region',src:claim,coarse:false}
+            :ct&&ct.lat!=null?{k:'country',src:ct,coarse:true}:null;
+    if(!at){if(ct)list('country',ct.id,'no coordinate on file',g.id);return}
+    const key=at.k+':'+at.src.id;
+    const m=marks[key]=marks[key]||{k:at.k,id:at.src.id,label:at.src.id,cls:'origin',coarse:at.coarse,
+      sub:at.k==='region'?'region centroid':'country centroid',lat:at.src.lat,lon:at.src.lon,n:0,greens:[]};
+    m.n++;m.greens.push(g.id);
+  });
+  return {marks:Object.values(marks),listed:Object.values(listed)};
+}
+function chartMarks(gs){
+  const marks=[],listed=[];
+  handsIn(gs).forEach(rid=>{const r=roaster(rid);if(!r)return;
+    const mine=gs.filter(g=>roastsOf(g.id).some(x=>x.roaster===rid));
+    const m={k:'roaster',id:rid,label:r.name,sub:r.city||'city unread',cls:'roaster',
+      lat:r.lat,lon:r.lon,n:mine.length,greens:mine.map(g=>g.id)};
+    (r.lat!=null?marks:listed).push(m)});
+  barsIn(gs).forEach(bid=>{const b=bar(bid);if(!b)return;
+    const mine=gs.filter(g=>poursOf(g.id).some(p=>p.bar===bid));
+    const m={k:'bar',id:bid,label:b.name,sub:[b.hood,b.city].filter(has).join(', ')||'address unread',
+      cls:'venue',lat:b.lat,lon:b.lon,n:mine.length,greens:mine.map(g=>g.id)};
+    (b.lat!=null?marks:listed).push(m)});
+  return {marks,listed};
+}
+const chartEdges=gs=>{const ids=new Set(gs.map(g=>g.id));
+  return uniq(G.pours.filter(p=>ids.has(p.green)).map(p=>p.roaster+'|'+p.bar)).map(s=>s.split('|'))};
+
+/* scenes — single-link clusters of located nodes. Derived at read time, never
+   stored: fix a coordinate and membership corrects itself. */
+function clusters(ms,km){
+  const cl=ms.map(m=>[m]);
+  for(let go=1;go;){go=0;
+    for(let i=0;i<cl.length&&!go;i++)for(let j=i+1;j<cl.length&&!go;j++)
+      if(cl[i].some(a=>cl[j].some(b=>mdist(a,b)<=km))){cl[i]=cl[i].concat(cl[j]);cl.splice(j,1);go=1}}
+  return cl;
+}
+/* the origin frame's ladder. A scene is a catchment and clusters by distance;
+   origin grain is ADMINISTRATIVE, so it rolls up the ladder it already has —
+   the atlas draws countries, and inside one country it draws that country's
+   regions. Same rule as the chart frame, in the units origin actually uses. */
+function originRollup(ms){
+  const cty=m=>m.k==='country'?m.id:(G.regions.find(r=>r.id===m.id)||{}).country;
+  if(uniq(ms.map(cty)).length<2)return ms;
+  const out={};
+  ms.forEach(m=>{const c=cty(m),src=G.countries.find(x=>x.id===c);if(!src||src.lat==null)return;
+    const o=out[c]=out[c]||{k:'country',id:c,label:c,cls:'origin',coarse:true,sub:'country centroid',
+      lat:src.lat,lon:src.lon,n:0,greens:[],kept:false,held:true,rolled:[]};
+    o.n+=m.n;o.greens=o.greens.concat(m.greens);o.kept=o.kept||m.kept;o.held=o.held&&m.held;
+    o.rolled.push(m.label)});
+  return Object.values(out);
+}
+// a scene mark sits at its cluster's centroid and is LABELLED AS A SCENE — honest,
+// because a scene genuinely is an area. Clustering that admits what it is.
+// A CLUSTER OF ONE IS NOT A SCENE: one bar is a front door, and drawing it as an
+// area would claim a spread the record never had. It stays its own node.
+function sceneMark(cl){
+  const city=modeOf(cl.map(m=>m.k==='roaster'?(roaster(m.id)||{}).city:(bar(m.id)||{}).city));
+  const hn=cl.filter(m=>m.k==='roaster').length,bn=cl.filter(m=>m.k==='bar').length;
+  return {k:'city',id:city,label:city||'a scene',cls:'scene',
+    lat:cl.reduce((a,m)=>a+m.lat,0)/cl.length,lon:cl.reduce((a,m)=>a+m.lon,0)/cl.length,
+    sub:[hn&&plural(hn,'hand'),bn&&plural(bn,'bar')].filter(Boolean).join(' · '),
+    n:uniq(cl.flatMap(m=>m.greens)).length,greens:uniq(cl.flatMap(m=>m.greens)),scene:cl};
+}
+// your overlay on the map is a RING — added, never subtracted. A reader has none,
+// which is why their map is a whole atlas and not an atlas of dashed absences.
+function markKept(m){
+  if(READER)return false;
+  if(m.k==='bar')return G.cups.some(c=>c.bar===m.id);
+  return (m.greens||[]).some(gid=>G.cups.some(c=>c.green===gid));
+}
+const markHeld=m=>!READER&&(m.greens||[]).length>0&&m.greens.every(held);
+
+/* the plot — the drawn floor. One scale on both axes, an explicit bbox, and a
+   minimum span so a lone mark never implies a zoom the record never earned. */
+function plotSVG(ms,edges,o){
+  o=o||{};if(!ms.length)return null;
+  const W=420,P=28;
+  const la0=ms.reduce((a,m)=>a+m.lat,0)/ms.length;
+  const px=m=>kmx(m.lon,la0),py=m=>kmy(m.lat);
+  let x0=Math.min(...ms.map(px)),x1=Math.max(...ms.map(px)),
+      y0=Math.min(...ms.map(py)),y1=Math.max(...ms.map(py));
+  const min=o.minKm||3;
+  if(x1-x0<min){const c=(x0+x1)/2;x0=c-min/2;x1=c+min/2}
+  if(y1-y0<min){const c=(y0+y1)/2;y0=c-min/2;y1=c+min/2}
+  // the BOX follows the ground, rather than the ground being stretched to the box:
+  // a wide, shallow scene gets a wide, shallow plot instead of a field of dead paper.
+  const H=Math.max(104,Math.min(o.h||188,Math.round((W-2*P)*(y1-y0)/(x1-x0))+2*P));
+  // ONE scale for both axes. Two would be a distortion baked into every reading.
+  const s=Math.min((W-2*P)/(x1-x0),(H-2*P)/(y1-y0)),cx=(x0+x1)/2,cy=(y0+y1)/2;
+  const X=m=>W/2+(px(m)-cx)*s,Y=m=>H/2-(py(m)-cy)*s;
+  // fold marks the plot cannot separate — and marks that READ the same, whatever
+  // their distance: two centroids labelled alike are one mark, and drawing them
+  // apart would claim a precision the grain never had.
+  const out=[];
+  ms.forEach(m=>{const p=Object.assign({},m,{x:X(m),y:Y(m)});
+    const near=out.find(q=>q.label===p.label||Math.hypot(q.x-p.x,q.y-p.y)<(o.sep||19));
+    if(near){near.members.push(p);const n=near.members.length;
+      near.x=(near.x*(n-1)+p.x)/n;near.y=(near.y*(n-1)+p.y)/n;
+      near.kept=near.kept||p.kept;near.held=near.held&&p.held;near.n+=p.n}
+    else out.push(Object.assign({},p,{members:[p]}))});
+  // an edge finds its mark THROUGH the fold: a pour into a bar that is now inside a
+  // scene draws to the scene. Without this the road vanishes exactly where it is
+  // densest, and a blank frame would read as "no pours" rather than "zoomed out".
+  const pos={};out.forEach(m=>m.members.forEach(p=>{pos[p.k+':'+p.id]=m;
+    (p.scene||[]).forEach(x=>pos[x.k+':'+x.id]=m)}));
+  const lines=(edges||[]).map(e=>{const a=pos['roaster:'+e[0]],b=pos['bar:'+e[1]];
+    return (!a||!b||a===b)?'':`<line class="ed" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"/>`}).join('');
+  const n=(v,d)=>Number(v).toFixed(d==null?1:d);
+  const shape=m=>{
+    if(m.members.length>1)return `<circle class="mk-merged" cx="${n(m.x)}" cy="${n(m.y)}" r="9"/>
+      <text class="mk-n" x="${n(m.x)}" y="${n(m.y+3)}" text-anchor="middle">${m.members.length}</text>`;
+    if(m.cls==='scene')return `<rect class="mk-scene" x="${n(m.x-7)}" y="${n(m.y-7)}" width="14" height="14"/>`;
+    if(m.cls==='venue')return `<rect class="mk-venue" x="${n(m.x-3.5)}" y="${n(m.y-3.5)}" width="7" height="7"/>`;
+    if(m.cls==='origin')return `<circle class="mk-origin${m.coarse?' coarse':''}" cx="${n(m.x)}" cy="${n(m.y)}" r="4.5"/>`;
+    return `<circle class="mk-roaster" cx="${n(m.x)}" cy="${n(m.y)}" r="4"/>`;
+  };
+  const ring=m=>(mapLens.yours&&m.kept)?`<circle class="mk-ring" cx="${n(m.x)}" cy="${n(m.y)}" r="8.5"/>`:'';
+  const wide=out.length>9,ranked=out.slice().sort((a,b)=>b.n-a.n).slice(0,8);
+  const lbl=m=>{if(wide&&m.members.length===1&&ranked.indexOf(m)<0)return'';
+    const r=m.x>W*.66,t=m.members.length>1?m.members.length+' here':m.label;
+    return `<text class="mk-lbl${m.members.length>1?'':' near'}" x="${n(r?m.x-10:m.x+10)}" y="${n(m.y+3.5)}"${r?' text-anchor="end"':''}>${esc(t)}</text>`};
+  const g=out.map((m,i)=>`<g class="mk${m.held?' mk-held':''}${mapSel&&mapSel.f===o.frame&&mapSel.i===i?' sel':''}"
+      onclick="${m.members.length>1?`mapPick(${jsq(o.frame)},${i})`:`nav(${jsq(m.k)},${jsq(m.id)})`}">
+      ${ring(m)}${shape(m)}${lbl(m)}</g>`).join('');
+  return {folds:out,html:`<div class="plot-box"><svg viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="${esc(o.label||'plot')}">${lines}${g}</svg></div>`};
+}
+
+/* the key — what each weight of ink means. Every mark on the plot is in it, and
+   nothing is in it that is not on the plot. */
+const KEY_G={
+  origin:['<svg width="11" height="11"><circle class="mk-origin" cx="5.5" cy="5.5" r="4"/></svg>','a region centroid'],
+  country:['<svg width="11" height="11"><circle class="mk-origin coarse" cx="5.5" cy="5.5" r="4"/></svg>','a country — coarser, and it says so'],
+  roaster:['<svg width="11" height="11"><circle class="mk-roaster" cx="5.5" cy="5.5" r="3.5"/></svg>','a hand, at its city'],
+  venue:['<svg width="11" height="11"><rect class="mk-venue" x="2" y="2" width="7" height="7"/></svg>','a bar, at its door'],
+  scene:['<svg width="13" height="13"><rect class="mk-scene" x="1.5" y="1.5" width="10" height="10"/></svg>','a scene — an area, drawn as one'],
+  merged:['<svg width="15" height="15"><circle class="mk-merged" cx="7.5" cy="7.5" r="7"/><text class="mk-n" x="7.5" y="10.5" text-anchor="middle">2</text></svg>','marks the plot cannot separate, folded and counted'],
+  kept:['<svg width="15" height="15"><circle class="mk-roaster" cx="7.5" cy="7.5" r="3.5"/><circle class="mk-ring" cx="7.5" cy="7.5" r="7"/></svg>','you keep a record here'],
+  held:['<svg width="11" height="11" class="mk-held"><circle class="mk-origin" cx="5.5" cy="5.5" r="4"/></svg>','held back — a reader will not see it']
+};
+const keyHTML=ks=>`<div class="mapkey">${uniq(ks).filter(k=>KEY_G[k])
+  .map(k=>`<span>${KEY_G[k][0]}${esc(KEY_G[k][1])}</span>`).join('')}</div>`;
+// the key is derived from WHAT WAS DRAWN, never from what the frame could draw —
+// a legend naming a mark that is not on the plot is the same untruth as a mark
+// naming a place the record cannot prove.
+function keyFor(p){
+  if(!p)return'';
+  const any=f=>p.folds.some(m=>m.members.some(f)),ks=[];
+  if(any(m=>m.cls==='origin'&&!m.coarse))ks.push('origin');
+  if(any(m=>m.cls==='origin'&&m.coarse))ks.push('country');
+  if(any(m=>m.cls==='scene'))ks.push('scene');
+  if(any(m=>m.cls==='roaster'))ks.push('roaster');
+  if(any(m=>m.cls==='venue'))ks.push('venue');
+  if(p.folds.some(m=>m.members.length>1))ks.push('merged');
+  if(mapLens.yours&&p.folds.some(m=>m.kept))ks.push('kept');
+  if(p.folds.some(m=>m.held))ks.push('held');
+  return keyHTML(ks);
+}
+function listedHTML(ls,line){
+  if(!ls.length)return'';
+  return `<div class="listedbox"><div class="lh"><span>Listed, not drawn</span><span class="num">n=${ls.length}</span></div>
+  ${ls.map(m=>rowlink(m.k,m.id,esc(m.label),esc(m.sub||''),m.n?plural(m.n,'green'):'')).join('')}
+  <div class="muted small" style="margin:8px 2px 10px">${esc(line)}</div></div>`;
+}
+const foldHTML=(f,p)=>{const m=p&&mapSel&&mapSel.f===f?p.folds[mapSel.i]:null;
+  if(!m||m.members.length<2)return'';
+  return `<div class="foldout">${m.members.map(x=>rowlink(x.k,x.id,esc(x.label),esc(x.sub||''),
+    x.n?plural(x.n,'green'):'')).join('')}</div>`};
+
+/* THE MAP SECTION — the same two frames at every scope, in the same order. */
+function mapHTML(k,id,gs){
+  if(!gs.length)return'';
+  const one=gs.length===1;
+  const om=originMarks(gs),cm=chartMarks(gs);
+  om.marks.concat(cm.marks).forEach(m=>{m.kept=markKept(m);m.held=markHeld(m)});
+  // the lens narrows BEFORE the scenes are derived — otherwise a hidden bar would
+  // still shape the cluster it was hidden from
+  const kinds=cm.marks.filter(m=>m.k==='roaster'?mapLens.hands:mapLens.bars);
+  const cl=clusters(kinds,SCENE_KM);
+  // the ladder, decided by the scope itself: more than one scene draws scenes, one draws nodes
+  const asScenes=cl.length>1&&cl.some(c=>c.length>1);
+  const chartMs=asScenes?cl.map(c=>c.length>1?sceneMark(c):c[0]):kinds;
+  chartMs.forEach(m=>{if(m.scene){m.kept=m.scene.some(x=>x.kept);m.held=m.scene.every(x=>x.held)}});
+  const oMs=mapLens.growers?originRollup(om.marks):[];
+  const edges=mapLens.edges?chartEdges(gs):null;
+  // a frame holding one mark gets a smaller box: the plot should claim no more paper
+  // than the ground it is actually reporting on
+  const op=plotSVG(oMs,null,{frame:'o',minKm:300,h:oMs.length<2?124:176,sep:22,label:'where the greens grew'});
+  const cp=plotSVG(chartMs,edges,{frame:'c',minKm:3,h:chartMs.length<2?124:196,label:'where they are carried'});
+  const hid=(mapLens.growers?0:om.marks.length)+(cm.marks.length-kinds.length);
+  const heldN=READER?0:gs.filter(g=>held(g.id)).length;
+
+  const lens=`<div class="lens">${[['growers','Growers'],['hands','Hands'],['bars','Bars'],['edges','The road']]
+    .concat(READER?[]:[['yours','Yours']])
+    .map(([kk,l])=>`<button class="chip${mapLens[kk]?' on':''}" onclick="lensTap(${jsq(kk)})">${esc(l)}</button>`).join('')}</div>
+  ${hid?`<div class="muted small" style="margin:-4px 2px 10px">${plural(hid,'mark')} hidden by the lens — <button class="text-action" onclick="lensAll()">show everything</button>. A lens narrows; it never sorts and never promotes.</div>`:''}`;
+
+  const oRolled=oMs.some(m=>m.rolled);
+  const oFrame=`<h2>${one?'Where it grew':'Where they grew'}</h2>
+  ${op?`${op.html}${foldHTML('o',op)}${keyFor(op)}`
+    :`<div class="empty">${mapLens.growers?'Nothing in this scope carries a coordinate to draw.':'Growers are off in the lens.'}</div>`}
+  ${listedHTML(om.listed,'A place the record names but cannot put on a map. It lists here rather than being guessed onto a nearby point.')}
+  <div class="muted small" style="margin:-2px 2px 4px">${oRolled
+    ?'Drawn at country grain, because this scope crosses more than one. Walk into a country and the same frame draws its regions — the walk is the zoom.'
+    :'Drawn at region grain, the finest this scope can prove.'} Every origin mark is coarse by design — a region, never a farm-precise pin. CARTA does not geocode a grower’s name.</div>`;
+
+  // "carried", not "near you" — a place's scope holds the hands that feed it, and
+  // those sit in their own scenes. The frame draws what the scope holds, always.
+  const cFrame=`<h2>${one?'Where it is carried':'Where they are carried'}</h2>
+  ${cp?`${cp.html}${foldHTML('c',cp)}${keyFor(cp)}`
+    :`<div class="empty">No hand or bar in this scope carries a coordinate yet.</div>`}
+  ${listedHTML(cm.listed,'Named by the record, unplaced on it. A node without a coordinate lists rather than lies.')}
+  <div class="muted small" style="margin:-2px 2px 4px">${asScenes
+    ?`${plural(cl.filter(c=>c.length>1).length,'scene')} here — a scene is an area, and the mark says so. A cluster of one is not a scene and stays its own mark. Tap a scene to stand inside it; the walk down is the zoom in.`
+    :`One scene, drawn at its own grain. Walk back up for the wider read.`}${
+    edges?' The dashed lines are pours — this hand, into that bar.':' The road is off in the lens.'}</div>
+  <div class="muted small" style="margin:6px 2px 0">The drawn plot is the floor. In the app real streets fade in behind these marks when tiles can be fetched, and every mark, tap and count works with none.</div>`;
+
+  // the hand-off — the two frames joined in WORDS, and naming what is actually drawn
+  const nm=oMs.slice(0,2).map(m=>m.label),more=oMs.length-nm.length;
+  const handoff=(oMs.length&&chartMs.length)?`<div class="handoff">${esc(
+    nm.join(', ')+(more?` and ${more===1?'one':more} more`:''))} — carried by
+    ${esc(plural(handsIn(gs).length,'hand'))}${barsIn(gs).length?` into ${esc(plural(barsIn(gs).length,'bar'))}`:''}.
+    No line joins these two frames. The green crossed an ocean in a ship, through an importer who is on no map here;
+    a segment drawn over that water would be decoration reading as data.</div>`:'';
+
+  return `<div class="section-head"><h2>Where it sits</h2><span class="n-note num">${
+    plural(oMs.length+chartMs.length,'mark')}</span></div>
+  ${lens}${oFrame}${handoff}${cFrame}
+  ${heldN?`<div class="muted small" style="margin:8px 2px 0">${heldN===1?'One green is':heldN+' greens are'} held back from the published copy — drawn faint here, absent there. Its roasts and its pours are held with it.</div>`:''}`;
 }
 
 /* ============ the router — one stack, every kind ============ */
@@ -645,12 +1008,13 @@ function spec(k,id){
   }
   case 'bar':{
     const b=bar(id)||{};
-    const mine=G.cups.filter(c=>c.bar===id);
+    const mine=CUPS().filter(c=>c.bar===id);
     return {eyebrow:'Bar · '+esc([b.hood,b.city].filter(has).join(', ')),title:esc(b.name),qual:'',
       lede:`The greens this counter has poured into the record, and how far the record follows each one.`,
       rows:[['City',esc(b.city||'unread')],['Neighbourhood',esc(b.hood||'unread')],
-        ['Greens poured',String(gs.length)],['Your cups here',mine.length?String(mine.length):'none yet'],
-        ['Hands poured',handsIn(gs).map(h=>roaster(h).name).join(' · ')||'unread']],
+        ['Greens poured',String(gs.length)],
+        !READER&&['Your cups here',mine.length?String(mine.length):'none yet'],
+        ['Hands poured',handsIn(gs).map(h=>roaster(h).name).join(' · ')||'unread']].filter(Boolean),
       up:[{h:'Part of',items:[has(b.city)&&rowlink('city',b.city,esc(b.city),'every bar and hand in it',
         plural(scopeGreens('city',b.city).length,'green'))].filter(Boolean)}],
       down:[],
@@ -766,7 +1130,9 @@ function nodePage(k,id){
   const scored=cups.filter(c=>c.hedonic!=null).sort((a,b)=>b.hedonic-a.hedonic);
   const ov=scored[0];
   const avg=scored.length?(scored.reduce((a,c)=>a+c.hedonic,0)/scored.length).toFixed(1):null;
-  const overlay=`<h2>Your overlay</h2>${ov?`<div class="continuation">
+  // a reader's overlay is not empty — it is absent. A section reading "you have
+  // nothing" is a nag with a heading on it.
+  const overlay=READER?'':`<h2>Your overlay</h2>${ov?`<div class="continuation">
       <div class="row"><div class="score num">${ov.hedonic}<small> / 9</small></div>
         <div style="max-width:62%;text-align:right">
           <div class="sans small">${esc(ov.kind==='home'?brewLine(ov.brew):[ov.drink,bar(ov.bar)&&bar(ov.bar).name].filter(has).join(' at '))}</div>
@@ -774,8 +1140,13 @@ function nodePage(k,id){
     <div class="muted small serif" style="font-style:italic;margin:0 2px">Your highest here${scored.length>1?` — ${plural(scored.length,'reading')}, ${avg} average`:''}. The spine stands without you; this wash is yours.</div>`
     :`<div class="empty">No reading of yours in this scope yet — a blank, not a verdict.</div>`}`;
 
-  /* the one action — the same door, prefilled by the scope you opened it from */
-  const act=`<div class="btnrow" style="margin-top:22px">
+  /* the one action — the same door, prefilled by the scope you opened it from.
+     For a reader every door here writes, so every one of them is absent; what is
+     left is the one offer that is honestly theirs to take. */
+  const act=READER?`<div class="btnrow" style="margin-top:22px">
+    <button class="btn btn-quiet" onclick="go('ledger')">This copy</button>
+    <button class="btn btn-primary" onclick="readerToggle()">Start keeping</button></div>`
+  :`<div class="btnrow" style="margin-top:22px">
     <button class="btn btn-quiet" onclick="openDoor(${jsq(k)},${jsq(id)})">＋ A coffee from here</button>
     ${k==='bar'?`<button class="btn btn-primary" onclick="openDoor('bar',${jsq(id)})">Remember a cup here</button>`
       :k==='green'?`<button class="btn btn-primary" onclick="toast('The dials would open here')">Brew it</button>`
@@ -786,8 +1157,8 @@ function nodePage(k,id){
   ${res}
   <h2>Identity</h2>
   <div class="card">${s.rows.map(r=>`<div class="kv"><span class="k">${esc(r[0])}</span><span class="v">${r[1]}</span></div>`).join('')}</div>
+  ${mapHTML(k,id,gs)}
   ${heightHTML(gs)}
-  ${gs.length>1?plotHTML(scopeMarks(gs),'Where they grew'):''}
   ${up}${down}
   ${greensSec}${barGreens}${setupBrews}${handsSec}${barsSec}${setupSec}
   ${overlay}
@@ -797,12 +1168,6 @@ function nodePage(k,id){
 }
 const brewLine=bid=>{const b=G.brews.find(x=>x.id===bid);if(!b)return'at home';
   const s=setup(b.setup);return `${s?s.name+' · ':''}grind ${b.grind} · ${b.dose} g : ${b.water} g`};
-function scopeMarks(gs){
-  const out=[];
-  uniq(gs.map(g=>g.region)).forEach(r=>{const reg=G.regions.find(x=>x.id===r);
-    if(reg)out.push({label:r,lat:reg.lat,lon:reg.lon,coarse:true})});
-  return out;
-}
 // the resolution readout — every page states what it can prove, in the same component
 function resHTML(k,id,gs){
   if(k==='green'){
@@ -1068,23 +1433,33 @@ function doorDemo(i){door.text=DEMOS[i];door.parsed=doorParse(DEMOS[i]);door.str
 
 /* ============ the rooms ============ */
 function vAtlas(){
-  const gs=G.greens;
-  return `<div class="ca-screen">
-  <p class="eyebrow">The atlas</p>
+  const gs=GREENS();
+  // the same room, either way. A reader's head states THE COPY — its age and the
+  // hand that published it — because a copy that impersonates a live feed is the
+  // one lie this whole design exists to refuse.
+  const head=READER?`<p class="eyebrow">The published atlas</p>
+  <h2 class="display">${esc(sentence(nw(gs.length)))} greens, <em>as published</em></h2>
+  <p class="lede">Published ${esc(fmtDate(PUB.at))} by ${esc(PUB.by)}. A copy, not a feed — it changes when the keeper publishes again.</p>`
+  :`<p class="eyebrow">The atlas</p>
   <h2 class="display">Everything you <em>have met</em></h2>
-  <p class="lede">${plural(gs.length,'green')} · ${plural(handsIn(gs).length,'hand')} · ${plural(barsIn(gs).length,'bar')}. Every name below is a door, and every door opens the same page.</p>
+  <p class="lede">${plural(gs.length,'green')} · ${plural(handsIn(gs).length,'hand')} · ${plural(barsIn(gs).length,'bar')}. Every name below is a door, and every door opens the same page.</p>`;
+  return `<div class="ca-screen">
+  ${head}
   ${aggRoadHTML(gs)}
-  <div class="muted small serif" style="font-style:italic;margin:8px 2px 0">The road, counted across the whole atlas. Where a bar runs short, the record has not been told.</div>
+  <div class="muted small serif" style="font-style:italic;margin:8px 2px 0">The road, counted across the whole atlas.${READER?' Five stations, not six — the sixth is a reader’s own cups, and a reader keeps none.':' Where a bar runs short, the record has not been told.'}</div>
+  ${mapHTML('atlas','',gs)}
   <div class="section-head"><h2>By country</h2><span class="n-note num">n=${uniq(gs.map(g=>g.country)).length}</span></div>
   ${uniq(gs.map(g=>g.country)).map(c=>{const s=scopeGreens('country',c);
     return rowlink('country',c,esc(c),`${plural(uniq(s.map(g=>g.region)).length,'region')} · ${plural(barsIn(s).length,'bar')} pouring`,plural(s.length,'green'))}).join('')}
   <div class="section-head"><h2>Cut the atlas</h2><span class="n-note">plates</span></div>
   ${uniq(gs.map(g=>g.process)).map(p=>rowlink('process',p,esc(p),'every green processed this way',plural(scopeGreens('process',p).length,'green'))).join('')}
   ${uniq(gs.map(g=>g.variety)).map(v=>rowlink('variety',v,esc(v),'every green of this seed',plural(scopeGreens('variety',v).length,'green'))).join('')}
-  <div class="section-head"><h2>The hands</h2><span class="n-note num">n=${G.roasters.length}</span></div>
-  ${G.roasters.map(r=>rowlink('roaster',r.id,esc(r.name),esc(r.city),plural(scopeGreens('roaster',r.id).length,'green'))).join('')}
-  <div class="section-head"><h2>The bars</h2><span class="n-note num">n=${G.bars.length}</span></div>
-  ${G.bars.map(b=>rowlink('bar',b.id,esc(b.name),esc([b.hood,b.city].filter(has).join(', ')),plural(scopeGreens('bar',b.id).length,'green'))).join('')}
+  ${(()=>{const rs=G.roasters.filter(r=>scopeGreens('roaster',r.id).length);
+    return `<div class="section-head"><h2>The hands</h2><span class="n-note num">n=${rs.length}</span></div>
+    ${rs.map(r=>rowlink('roaster',r.id,esc(r.name),esc(r.city||'city unread'),plural(scopeGreens('roaster',r.id).length,'green'))).join('')}`})()}
+  ${(()=>{const bs=G.bars.filter(b=>scopeGreens('bar',b.id).length);
+    return `<div class="section-head"><h2>The bars</h2><span class="n-note num">n=${bs.length}</span></div>
+    ${bs.map(b=>rowlink('bar',b.id,esc(b.name),esc([b.hood,b.city].filter(has).join(', ')),plural(scopeGreens('bar',b.id).length,'green'))).join('')}`})()}
   <p class="note">A country, a grower, a green, a hand, a bar, a Setup — one page, six scopes. Walk down into any of them and back up from anywhere.</p>
   <div class="seal"><span>Carta · the atlas</span><em>One reading, every scope.</em></div></div>`;
 }
@@ -1102,6 +1477,30 @@ function vRecord(){
   <div class="seal"><span>Carta · the record</span><em>The reading is the reader’s.</em></div></div>`;
 }
 function vDesk(){
+  const gs=GREENS();
+  /* R7/R8 — a reader's desk is five rows, and the first of them is the provenance
+     of the copy. This is the surface that keeps the app honest about staleness:
+     it states its own age instead of impersonating a live service. */
+  if(READER)return `<div class="ca-screen">
+  <p class="eyebrow">This copy</p>
+  <h2 class="display">The atlas, <em>as it stood</em></h2>
+  <p class="lede">A published copy is a copy. What the keeper has written since is not here, and nothing you do can change what is.</p>
+  <div class="card">
+    <div class="kv"><span class="k">From</span><span class="v">${esc(PUB.from)}</span></div>
+    <div class="kv"><span class="k">Revision</span><span class="v num">${PUB.rev}</span></div>
+    <div class="kv"><span class="k">Published</span><span class="v">${esc(fmtDate(PUB.at))}, by ${esc(PUB.by)}</span></div>
+    <div class="kv"><span class="k">Fetched</span><span class="v">${esc(PUB.fetched)}</span></div>
+    <div class="kv"><span class="k">Holds</span><span class="v">${esc(plural(gs.length,'green'))} · ${esc(plural(handsIn(gs).length,'hand'))} · ${esc(plural(barsIn(gs).length,'bar'))}</span></div>
+  </div>
+  <div class="btnrow"><button class="btn btn-quiet" onclick="toast('Offline — this copy stands.')">Check for a newer copy</button>
+    <button class="btn btn-quiet" onclick="toast('One self-contained page, yours offline, forever.')">Download this atlas</button></div>
+  <h2>Start keeping</h2>
+  <p class="lede" style="margin-bottom:12px">Your own record, on this device. The atlas stays exactly as it is; your cups lay over it.</p>
+  <button class="btn btn-primary" onclick="readerToggle()">Start keeping</button>
+  <p class="note">The published copy is never merged into what you write, and never pushed back. It is a layer under yours — which is why the day you start keeping, nothing about it has to move.</p>
+  <div class="seal"><span>Carta · this copy</span><em>A copy, not a feed.</em></div></div>`;
+
+  const heldN=HELD.length,pubG=G.greens.filter(g=>!held(g.id));
   return `<div class="ca-screen">
   <p class="eyebrow">The desk</p>
   <h2 class="display">Your <em>instruments</em></h2>
@@ -1110,6 +1509,16 @@ function vDesk(){
   ${G.setups.map(s=>rowlink('setup',s.id,esc(s.name),esc([s.grinder,s.brewer].filter(has).join(' · ')),
     plural(G.brews.filter(b=>b.setup===s.id).length,'brew'))).join('')}
   <p class="note">Grind is only comparable within one Setup. That is why the Setup is a page and not a settings row — it is the scope a grind number is true inside.</p>
+  <h2>The pen · publish the atlas</h2>
+  <p class="lede" style="margin-bottom:10px">A copy of the shared record, readable by anyone with the address. No ledger travels — no cups, no brews, no bags. The hands that attested are named.</p>
+  <div class="card">
+    <div class="kv"><span class="k">Greens</span><span class="v num">${pubG.length}</span></div>
+    <div class="kv"><span class="k">Hands</span><span class="v num">${handsIn(pubG).length}</span></div>
+    <div class="kv"><span class="k">Bars</span><span class="v num">${barsIn(pubG).length}</span></div>
+    <div class="kv"><span class="k">Held back</span><span class="v num">${heldN}</span></div>
+  </div>
+  <button class="btn btn-quiet" onclick="readerToggle()">Read it as a reader would</button>
+  <p class="note">The counts are the consent: you see exactly what leaves, in the units a reader will see it in. A copy, not a switch — what you publish stands until you publish again.</p>
   <div class="seal"><span>Carta · the desk</span><em>The instrument, named.</em></div></div>`;
 }
 
@@ -1123,8 +1532,12 @@ function render(){
   else{html=tab==='atlas'?vAtlas():tab==='trace'?vRecord():vDesk();sub=SUBS[tab]}
   main.innerHTML=html;
   if(door&&door.step===2)repaintSug();   // the rails need the inputs to exist first
-  document.getElementById('hsub').textContent=sub;
-  document.getElementById('tabs').innerHTML=[['atlas','Atlas'],['trace','Record'],['ledger','Desk']]
+  document.getElementById('hsub').textContent=READER&&tab==='ledger'&&!view?'This copy':sub;
+  // the bar: Atlas · Record · Desk, or Atlas · Desk. The Record is a reader's own
+  // overlay, and a room whose whole content is "you have nothing" is a nag with a tab.
+  document.getElementById('door').style.display=READER?'none':'';
+  document.getElementById('tabs').innerHTML=[['atlas','Atlas'],['trace','Record'],['ledger',READER?'This copy':'Desk']]
+    .filter(([t])=>!(READER&&t==='trace'))
     .map(([t,l])=>`<button class="${!view&&!door&&tab===t?'on':''}" onclick="go(${jsq(t)})">${l}</button>`).join('');
 }
 render();
