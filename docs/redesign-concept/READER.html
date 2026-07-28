@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARTA — the reader's flow</title>
+<!-- ===========================================================================
+     A prototype, not the app. Reference file for docs/READER.md.
+
+     The token layer and the component layer below are lifted UNCHANGED from
+     ../../index.html (its <style> block, with the font paths repointed), so
+     every surface here is drawn in real CARTA ink at real metrics. The data is
+     a fixture. Nothing in this file ships.
+     ======================================================================== -->
+<style>
+
+/* ===== Quiet Matter fonts (self-hosted Spectral + Libre Franklin, woff2 subsets) ===== */
+@font-face{font-family:'Libre Franklin';font-style:italic;font-weight:100 900;font-display:swap;src:url('../../fonts/LibreFranklin-varItalic.latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Libre Franklin';font-style:italic;font-weight:100 900;font-display:swap;src:url('../../fonts/LibreFranklin-varItalic.latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Libre Franklin';font-style:normal;font-weight:100 900;font-display:swap;src:url('../../fonts/LibreFranklin-var.latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Libre Franklin';font-style:normal;font-weight:100 900;font-display:swap;src:url('../../fonts/LibreFranklin-var.latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Spectral';font-style:italic;font-weight:400;font-display:swap;src:url('../../fonts/Spectral-RegularItalic.latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Spectral';font-style:italic;font-weight:400;font-display:swap;src:url('../../fonts/Spectral-RegularItalic.latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Spectral';font-style:italic;font-weight:600;font-display:swap;src:url('../../fonts/Spectral-SemiBoldItalic.latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Spectral';font-style:italic;font-weight:600;font-display:swap;src:url('../../fonts/Spectral-SemiBoldItalic.latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Spectral';font-style:normal;font-weight:400;font-display:swap;src:url('../../fonts/Spectral-Regular.latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Spectral';font-style:normal;font-weight:400;font-display:swap;src:url('../../fonts/Spectral-Regular.latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Spectral';font-style:normal;font-weight:600;font-display:swap;src:url('../../fonts/Spectral-SemiBold.latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Spectral';font-style:normal;font-weight:600;font-display:swap;src:url('../../fonts/Spectral-SemiBold.latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+/* ============================================================================
+ * CARTA — the token layer  (sub-brand of Quiet Matter)
+ * ----------------------------------------------------------------------------
+ * Carta was cut from Quiet Matter and has since grown a deliberate personality
+ * the parent forbids — warm stock, an ember signal, editorial display type, a
+ * colour per café. We keep that personality, but adopt Quiet Matter's TOKEN
+ * ARCHITECTURE so the two systems stay mechanically compatible and QM's
+ * structural fixes can still be pulled in. Charter: SUBBRAND.md.
+ *
+ * The structure, exactly as QM's static/qm.css:
+ *   1. Inherited primitives   — values TRACKED against Quiet Matter, unchanged.
+ *   2. Carta brand primitives — the sanctioned overrides (see SUBBRAND.md).
+ *   3. Semantic roles         — QM-compatible names; every rule consumes ONLY
+ *                               roles, never primitives (as QM does).
+ *   4. Legacy aliases         — old flat names (--ink/--paper/--accent…) mapped
+ *                               onto the roles, so existing rules keep working
+ *                               unchanged. Migrate rules onto the role names
+ *                               opportunistically, then delete these.
+ *   5. Dusk                   — remaps ONLY the roles to the night primitives;
+ *                               primitives never change (QM D1).
+ * ========================================================================== */
+
+:root{
+  /* ── 1. Inherited primitives — tracked to Quiet Matter, values identical ──
+     These already match QM byte-for-byte. Declaring them here makes the shared
+     inheritance a RULE, not a coincidence. When QM moves one, move it here. */
+
+  /* Type scale — the sanctioned steps 11/13/15/16/18. 1rem = 16px. */
+  --s11:0.6875rem; --s13:0.8125rem; --s15:0.9375rem; --s16:1rem; --s18:1.125rem;
+  /* Tracking + weights */
+  --track-label:0.12em; --track-foot:0.04em;
+  --w-regular:400; --w-medium:500; --w-semibold:600;
+  /* Measures + touch minimum */
+  --measure:37ch;
+  --measure-editorial:56ch;
+  --touch-min:44px;                 /* WCAG 2.5.5 */
+  /* Faces — Spectral (interpretive) + Libre Franklin (operational), as QM. */
+  --serif:'Spectral',Georgia,'Times New Roman',serif;
+  --sans:'Libre Franklin',system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,monospace;   /* Carta addition: code */
+
+  /* ── 2. Carta brand primitives — the sanctioned sub-brand overrides ───────
+     Documented departures from QM. See SUBBRAND.md §"Sanctioned overrides".
+     Both the day (paper) and night (roast) ramps exist as fixed primitives;
+     the theme block below only ever repoints ROLES between them. */
+
+  /* Paper ramp — warm stock, warmer + darker than QM's #fafaf8 */
+  --ca-paper-0:#f8f5ee;    /* lifted paper (card) */
+  --ca-paper-50:#f2eee6;   /* the page — warm stock */
+  --ca-paper-100:#e9e3d8;  /* sunk surface */
+  --ca-paper-200:#ddd5c7;  /* opaque hairline */
+  /* Ink ramp — roasted, warm brown-black (QM is neutral #1a1a1a) */
+  --ca-ink-900:#241d18;    /* roasted ink — body */
+  --ca-ink-600:#554a41;    /* operational */
+  --ca-ink-450:#776b60;    /* subtle / footer — ≥4.5:1 on paper (≈ QM #6e6c6a) */
+  --ca-ink-300:#b8b5b0;    /* disabled/placeholder only */
+  /* Hairlines */
+  --ca-line-ink:rgba(36,29,24,.13);
+  --ca-line-paper:rgba(236,233,227,.14);
+  /* The ember — Carta's one warm signal: current action and the cup's score.
+     THE core break from QM, which admits no colour on customer surfaces. */
+  --ca-ember:#a63f2b;
+  --ca-ember-ink:#fffaf1;
+  /* Functional destructive — always paired with a text label */
+  --ca-danger:#8c3b34;
+
+  /* Night ramp — "paper at night", warm off-black (QM night is #161513) */
+  --ca-night-900:#171310;    /* page at night */
+  --ca-night-800:#211b17;    /* card at night */
+  --ca-night-700:#2d241f;    /* sunk surface at night */
+  --ca-night-600:#342923;    /* opaque hairline at night */
+  --ca-roastlight-100:#f0e9dd;   /* primary text on night */
+  --ca-roastlight-300:#c8bcae;   /* secondary text on night */
+  --ca-roastlight-500:#9f9183;   /* subtle text on night */
+  --ca-roastlight-700:#5b574f;   /* disabled on night */
+  --ca-ember-dusk:#e06b4f;   /* the ember, lifted for the dark surface */
+
+  /* Shape — square by default; the one sanctioned rounding is 2px (chips/code) */
+  --radius:0;
+  --chipr:2px;
+
+  /* ── 3. Semantic roles — QM-compatible. Rules consume ONLY these. ─────────── */
+  --text-primary:var(--ca-ink-900);
+  --text-secondary:var(--ca-ink-600);
+  --text-subtle:var(--ca-ink-450);
+  --text-disabled:var(--ca-ink-300);
+  --text-on-fill:var(--ca-ember-ink);
+  --surface-page:var(--ca-paper-50);
+  --surface-card:var(--ca-paper-0);
+  --surface-sunk:var(--ca-paper-100);
+  --border-hairline:var(--ca-line-ink);
+  --border-strong:var(--ca-ink-900);
+  --border-control:var(--ca-ink-450);
+  --link:var(--ca-ink-600);
+  --link-hover:var(--ca-ink-900);
+  --focus-ring:var(--ca-ink-900);
+  --fill-strong:var(--ca-ink-900);
+  --fill-strong-hover:var(--ca-ink-600);
+  /* Carta-only roles — the sanctioned extensions QM has no equivalent for */
+  --signal:var(--ca-ember);       /* action + score */
+  --signal-ink:var(--ca-ember-ink);
+  --status-danger:var(--ca-danger);
+
+  /* ── 4. Legacy aliases — keep existing index.html rules working ───────────
+     Old flat names now point at roles. Migrate rules onto the role names over
+     time, then delete this block. Nothing else in the file needs to change. */
+  --ink:var(--text-primary);
+  --ink-2:var(--text-secondary);
+  --ink-3:var(--text-subtle);
+  --ink-d:var(--text-disabled);
+  --paper:var(--surface-page);
+  --paper-card:var(--surface-card);
+  --paper-2:var(--surface-sunk);
+  --paper-3:var(--ca-paper-200);     /* opaque hairline primitive */
+  --line:var(--border-hairline);
+  --line-2:var(--ca-paper-200);
+  --line-strong:var(--border-strong);
+  --accent:var(--signal);
+  --accent-ink:var(--signal-ink);
+  --danger:var(--status-danger);
+}
+
+/* ── 5. Dusk — "paper at night". Remaps ONLY roles to the night primitives;
+   primitives never change (QM D1). Legacy aliases follow for free, because
+   they point at the roles, not at the primitives. ─────────────────────────── */
+html[data-theme="dusk"]{
+  --text-primary:var(--ca-roastlight-100);
+  --text-secondary:var(--ca-roastlight-300);
+  --text-subtle:var(--ca-roastlight-500);
+  --text-disabled:var(--ca-roastlight-700);
+  --text-on-fill:var(--ca-night-900);
+  --surface-page:var(--ca-night-900);
+  --surface-card:var(--ca-night-800);
+  --surface-sunk:var(--ca-night-700);
+  --border-hairline:var(--ca-line-paper);
+  --border-strong:var(--ca-roastlight-100);
+  --border-control:var(--ca-roastlight-500);
+  --link:var(--ca-roastlight-300);
+  --link-hover:var(--ca-roastlight-100);
+  --focus-ring:var(--ca-roastlight-100);
+  --fill-strong:var(--ca-roastlight-100);
+  --fill-strong-hover:var(--ca-roastlight-300);
+  --signal:var(--ca-ember-dusk);
+  --signal-ink:var(--ca-night-900);
+  --line-2:var(--ca-night-700);      /* legacy alias override (opaque) */
+  --paper-3:var(--ca-night-600);     /* legacy alias override (opaque) */
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+/* The leaf (STREAMLINED.html) — the app is one 480px column framed like a page
+   from a bound register: the column is the CARD, the ground behind it the PAGE.
+   That figure/ground is what makes a .card read as sunk rather than as a box
+   floating on nothing. On a phone the frame lands off-screen; on a desk it is
+   the whole point. */
+html{background:var(--surface-page)}
+body{
+  background:var(--surface-card);color:var(--ink);
+  font-family:var(--serif);
+  font-size:16px;line-height:1.5;
+  max-width:480px;margin:0 auto;
+  border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);
+  height:100vh;height:100dvh;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.num{font-family:var(--sans);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.sans{font-family:var(--sans)}
+
+/* ===== header — the masthead of the leaf: the wordmark, the room, the door ===== */
+header.app{
+  background:var(--surface-card);color:var(--ink);
+  padding:calc(16px + env(safe-area-inset-top)) 20px 12px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  flex:none;z-index:20;border-bottom:1px solid var(--line);
+}
+header.app h1{font-family:var(--serif);font-size:var(--s16);letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--ink);line-height:1}
+header.app .sub{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;color:var(--ink-3);margin-top:3px;display:block}
+/* the door, always on the masthead — one way in, from anywhere */
+.doorbtn{flex:none;display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:6px 11px;
+  border:1px solid var(--line-strong);border-radius:var(--radius);background:none;color:var(--ink);
+  font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em}
+.doorbtn:active{background:var(--paper-2)}
+main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 26px}
+
+/* ===== section label ===== */
+/* the section rule — a label under a hairline, the prototype's h3.sect. Every
+   section on every screen wears the same one, so the page reads as a register. */
+h2{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h2:first-child{margin-top:2px}
+
+/* ═══ the display voice — the prototype's three type roles ═══
+   .display  the screen's one big line, serif, its em set in italic
+   .lede     the sentence under it, serif, at reading size
+   .note     the aside after a block: a hairline, then the keeper's own voice */
+.display{font-family:var(--serif);font-weight:600;font-size:1.625rem;line-height:1.12;letter-spacing:-.02em;
+  color:var(--ink);margin:0 0 6px;text-wrap:balance;text-transform:none;border:0;padding:0}
+.display em{font-style:italic;font-weight:400}
+.lede{font-family:var(--serif);font-size:var(--s16);line-height:1.55;color:var(--ink-2);margin:0 0 14px}
+.note{border-top:1px solid var(--line);padding-top:12px;margin:10px 0 4px;
+  font-family:var(--serif);font-style:italic;font-size:var(--s13);color:var(--ink-3)}
+.rowlink+.note,.agg+.note{border-top:0;padding-top:8px}
+.back{display:inline-block;background:none;border:0;padding:0 0 12px;cursor:pointer;color:var(--ink-3);
+  font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase}
+.back:active{color:var(--ink)}
+/* the row-link — the one navigation primitive: a title, its meta, and a rule */
+.rowlink{width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);
+  padding:12px 0;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.rowlink:active{background:var(--paper-2)}
+.rowlink .t{font-family:var(--serif);font-size:var(--s16);color:var(--ink)}
+.rowlink .m{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);letter-spacing:.02em;line-height:1.5}
+.rowlink .go{flex:none;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11)}
+.unread{font-style:italic;color:var(--ink-3)}
+/* two actions side by side — the stacked-button margin has no business in a row */
+.btnrow{display:flex;gap:8px;align-items:stretch}
+.btnrow .btn,.btnrow .btn+.btn{margin-top:0;flex:1}
+
+/* ===== card — sunk on the leaf, never lifted off it ===== */
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.card.tap{cursor:pointer;transition:background .15s ease}
+.card.tap:active{background:var(--paper-2)}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.muted{color:var(--ink-3);font-family:var(--sans);font-size:13px}
+.small{font-size:13px}
+.serif{font-family:var(--serif)}
+strong{font-family:var(--serif);font-weight:600;font-style:normal}
+
+/* ===== chips (square, monochrome — weight/label carry meaning) ===== */
+.chip{
+  display:inline-block;font-family:var(--sans);font-size:11px;letter-spacing:.02em;
+  padding:2px 8px;border-radius:var(--chipr);background:var(--paper);
+  border:1px solid var(--line);color:var(--ink-3);font-variant-numeric:tabular-nums;
+}
+.chip b{font-weight:500;color:var(--ink)}
+.chip.window{border-color:var(--line-strong);color:var(--ink);font-weight:500}
+.chip.resting{color:var(--ink-3)}
+.chip.past{color:var(--ink-3);border-style:dashed}
+/* selected is a firmer line and darker ink — never a fill. A filled chip reads
+   as a badge of rank; a lens narrows, it does not rank (CHARTS.md). */
+.chip.on{border-color:var(--line-strong);color:var(--ink)}
+.chip.struck{color:var(--ink-3);text-decoration:line-through;opacity:.5}
+.lens{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
+.lens .chip{cursor:pointer;padding:5px 11px}
+
+/* ===== the road — six stations, honesty drawn (SURFACES.md) =====
+   A filled mark is a station the record holds; a hollow one is a station it
+   does not. The connector is solid between two held stations and dashed
+   across a gap. The gap is the product — never a blank to fill. */
+.road6{display:grid;grid-template-columns:repeat(6,1fr);align-items:start;margin:6px 0 4px;padding-top:6px}
+.road6 .stn{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative;min-width:0}
+.road6 .stn .bar{position:absolute;top:5px;left:calc(-50% + 7px);width:calc(100% - 14px);height:1px;background:var(--line-strong);opacity:.5}
+.road6 .stn:first-child .bar{display:none}
+.road6 .stn.gap .bar{background:none;height:0;border-top:1px dashed var(--ink-d);opacity:1}
+.road6 .stn .mk{width:11px;height:11px;border:1px solid var(--line-strong);background:var(--paper-card);position:relative;z-index:1;flex:none}
+.road6 .stn.held .mk{background:var(--line-strong)}
+.road6 .stn.you .mk{background:var(--line-strong);box-shadow:0 0 0 2px var(--paper-card),0 0 0 3px var(--line-strong)}
+.road6 .stn .lb{font-family:var(--sans);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);text-align:center;line-height:1.25}
+.road6 .stn.held .lb{color:var(--ink-2)}
+/* six cells across a phone: a long name reads to two lines and stops, its whole
+   text on the mark; the page states it in full a line below. A third ragged line
+   costs more legibility than the ellipsis does. */
+.road6 .stn .who{font-family:var(--serif);font-size:11px;text-align:center;line-height:1.3;color:var(--ink);
+  overflow-wrap:break-word;hyphens:auto;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.road6 .stn:not(.held) .who{color:var(--ink-d);font-style:italic}
+@media (prefers-reduced-motion:no-preference){
+  .road6.draw .stn{animation:stnIn .5s var(--mo-ease) both}
+  .road6.draw .stn:nth-child(2){animation-delay:.07s}
+  .road6.draw .stn:nth-child(3){animation-delay:.14s}
+  .road6.draw .stn:nth-child(4){animation-delay:.21s}
+  .road6.draw .stn:nth-child(5){animation-delay:.28s}
+  .road6.draw .stn:nth-child(6){animation-delay:.35s}
+  @keyframes stnIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+/* the aggregate road — the same six stations, counted across a plate's greens */
+.aggrow{display:grid;grid-template-columns:84px 1fr 48px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.aggrow:last-child{border-bottom:0}
+.aggrow .lb{font-family:var(--sans);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.aggrow .track{height:9px;background:var(--paper-2);position:relative;overflow:hidden}
+.aggrow .fill{position:absolute;inset:0 auto 0 0;background:var(--line-strong);opacity:.72}
+.aggrow.thin .fill{opacity:.3}
+.aggrow .ct{font-family:var(--sans);font-size:13px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+@media (prefers-reduced-motion:no-preference){.aggrow .fill{transition:width .82s var(--mo-ease)}}
+
+/* ===== the terrace — the atlas's second projection =====
+   The map is a plan: it answers WHERE a coffee came from. The terrace is a
+   SECTION: it answers how high it sat. Drawn like a surveyor's level book —
+   contour rules at a stated interval, and every mark placed against them.
+   The geometry carries the honesty, not the caption: a stated RANGE draws as a
+   band with two edges, a single stated figure as one rule. Nothing here widens
+   a point or narrows a range, because a lot sold as 1,800–1,900 m never said
+   1,850. Monochrome and unsorted — height is a growing condition, never a
+   grade, so it never wears the ember and never ranks a thing. */
+/* the label cuts its own rule, so it must be painted in whatever the terrace is standing on:
+   the leaf on a page, the sheet's paper inside one (the grower's page is a sheet) */
+.terr{margin:10px 0 2px;--terr-paper:var(--surface-card)}
+.sheet .terr{--terr-paper:var(--surface-page)}
+.terr .plot{position:relative;height:148px;margin-left:46px;border-left:1px solid var(--line-2)}
+.terr i{position:absolute;left:0;right:0;display:block}
+/* the contours — the ruled ground, dotted and light. Three weights carry the whole
+   drawing: dotted is the ground, a hairline is another green, the sunk zone is this
+   one. Dashed is not used here at all — in this app a dashed line means COARSE (the
+   road's gap, a centroid pin), and a height another green actually stated is held. */
+.terr .ct{border-top:1px dotted var(--line-2);opacity:.7}
+.terr .ct span{position:absolute;right:calc(100% + 8px);top:-.68em;font-family:var(--sans);font-size:10px;
+  letter-spacing:.04em;color:var(--ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* another green that states a height — placed, never ordered. The comparison set */
+.terr .m0{right:34%;border-top:1px solid var(--ink-3);border-bottom:1px solid var(--ink-3);opacity:.55}
+/* the subject — its band sunk into the section, exactly as a .card sinks into the leaf */
+.terr .m1{background:var(--surface-sunk);border-top:1px solid var(--line-strong);border-bottom:1px solid var(--line-strong)}
+.terr .m1::before{content:'';position:absolute;left:-5px;top:calc(50% - 4.5px);width:9px;height:9px;background:var(--line-strong)}
+/* one figure, not a range: one rule and no zone — the drawing says which was stated */
+.terr .m0.pt,.terr .m1.pt{border-bottom:0}
+.terr .m1.pt{background:none;border-top-width:2px}
+/* a green inside an aggregate span — solid, thin, unlabelled; the sentence carries the numbers */
+.terr .m2{right:14%;border-top:1px solid var(--ink-3);border-bottom:1px solid var(--ink-3);opacity:.65}
+.terr .m2.pt{border-bottom:0}
+/* the value, cut into its own rule the way a dimension is labelled on a drawing */
+.terr .val{position:absolute;right:0;top:calc(50% - .72em);padding-left:7px;background:var(--terr-paper);
+  font-family:var(--serif);font-weight:600;font-size:11px;line-height:1.3;color:var(--ink);white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){
+  .terr.draw i{animation:terrIn .55s var(--mo-ease) both}
+  .terr.draw .m1{animation-delay:.1s}
+  @keyframes terrIn{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:none}}
+}
+/* the door — the display voice, the fact chips, the binding rows, the readout */
+.door-display,.sheet h3.door-display{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.12;letter-spacing:-.02em;color:var(--ink);margin:0 0 6px;text-wrap:balance}
+.door-display em{font-style:italic;font-weight:400}
+.door-back{display:inline-block;background:none;border:none;padding:2px 0 10px;cursor:pointer;color:var(--ink-3);font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.door-back:active{color:var(--ink)}
+.doorchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:var(--chipr);padding:5px 9px;background:var(--paper);color:var(--ink-2);font-family:var(--sans);font-size:11px;letter-spacing:.02em;cursor:pointer}
+.doorchip .k{letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.doorchip b{font-weight:500;color:var(--ink)}
+.doorchip .x{color:var(--ink-3);font-size:14px;line-height:1;padding-left:2px}
+.doorchip.on{border-color:var(--line-strong)}
+.doorchip.struck{opacity:.42}
+.doorchip.struck b{text-decoration:line-through}
+/* the resolution readout — the one line that teaches the whole model. The door
+   states it before a bind; a green's page states the same thing about itself,
+   so both wear the same component (.res is the name the prototype gives it). */
+.doorres,.res{border:1px solid var(--line-strong);border-radius:var(--radius);padding:12px 14px;background:var(--paper);margin:4px 0 2px}
+.doorres.thin,.res.thin{border-color:var(--line)}
+.doorres .grain,.res .grain{font-family:var(--serif);font-size:var(--s18);font-weight:400;margin:0 0 3px}
+.doorres.thin .grain,.res.thin .grain{color:var(--ink-3);font-style:italic}
+.doorres .why,.res .why{font-family:var(--sans);font-size:var(--s13);color:var(--ink-2);margin:0;line-height:1.5}
+.doormeter,.meter{display:flex;gap:3px;margin-top:10px}
+.doormeter i,.meter i{height:3px;flex:1;background:var(--paper-2);display:block}
+.doormeter i.on,.meter i.on{background:var(--line-strong)}
+.stepdots{display:flex;gap:5px;align-items:center;margin:0 0 12px}
+.stepdots i{width:5px;height:5px;border:1px solid var(--ink-d);display:block}
+.stepdots i.on{background:var(--line-strong);border-color:var(--line-strong)}
+.stepdots span{font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-left:5px}
+
+/* ===== buttons ===== */
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+/* Sentence case, not shouted. The prototype's buttons speak in the keeper's
+   voice — "Open the green", not "OPEN THE GREEN" (VOICE.md). */
+.btn{
+  display:block;width:100%;text-align:center;min-height:44px;padding:11px 16px;border-radius:var(--radius);
+  font-family:var(--sans);font-size:var(--s13);font-weight:400;letter-spacing:.02em;text-transform:none;
+  transition:background .2s ease,color .2s ease,border-color .2s ease;
+}
+.btn.mini{min-height:32px;padding:5px 10px;font-size:var(--s11)}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent)}
+.btn-primary:active{filter:brightness(.88)}
+.btn-quiet{background:none;border:1px solid var(--line-strong);color:var(--ink)}
+.btn-quiet:active{background:var(--paper-2)}
+.btn-graphite{background:var(--ink);color:var(--accent-ink);border:1px solid var(--ink)}
+.btn-graphite:active{background:var(--ink-2)}
+.btn-danger{color:var(--danger);border:1px solid var(--danger);background:none}
+.btn-danger:active{background:var(--paper-2)}
+.btn+.btn{margin-top:8px}
+
+/* ===== forms ===== */
+label.f,div.f{display:block;margin-bottom:14px}
+label.f span.l,div.f span.l{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px;font-weight:500}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;font-family:var(--serif);font-size:16px;padding:9px 0;
+  border:none;border-bottom:1px solid var(--ink-3);border-radius:0;
+  background:transparent;color:var(--ink);appearance:none;-webkit-appearance:none;
+}
+input::placeholder,textarea::placeholder{color:var(--ink-d);font-style:italic}
+select{background:transparent}
+input:focus,select:focus,textarea:focus{outline:none;border-bottom-color:var(--ink)}
+textarea{min-height:60px;resize:vertical;border:1px solid var(--line);padding:9px 11px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px}
+
+/* ===== dial (the field-tool scale exception) ===== */
+.dial{border:1px solid var(--line);border-radius:var(--radius);background:var(--paper-card);padding:9px 6px 11px;margin-bottom:10px;text-align:center;position:relative}
+.dial .l{font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.dial .v{font-family:var(--sans);font-size:30px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.15;margin:3px 0;color:var(--ink)}
+.dial .v .u{font-family:var(--sans);font-size:12px;color:var(--ink-3);font-weight:400;margin-left:2px}
+.dial .ctl{display:flex;justify-content:center;gap:6px}
+.dial .ctl button{
+  width:52px;height:34px;border:1px solid var(--line-strong);border-radius:var(--radius);background:transparent;
+  font-size:20px;font-weight:400;color:var(--ink-2);
+}
+.dial .ctl button:active{background:var(--ink);color:var(--accent-ink);border-color:var(--ink)}
+.dial .ticks{position:absolute;top:9px;right:11px;font-family:var(--sans);font-size:9px;color:var(--ink-3);letter-spacing:.06em}
+.dial .v.tapedit{display:inline-block;cursor:text;border-bottom:1px dotted var(--ink-3)}
+.dedit{width:2.7em;min-width:46px;max-width:88%;font-family:var(--sans);font-size:30px;font-weight:500;font-variant-numeric:tabular-nums;text-align:center;border:none;background:transparent;color:var(--ink);padding:0}
+.dedit:focus{outline:none}
+.dcorner{position:absolute;top:7px;right:7px;display:flex;gap:3px}
+.dcorner .ut{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.02em;padding:2px 6px;border:1px solid var(--line-strong);background:transparent;color:var(--ink-3);border-radius:var(--chipr);cursor:pointer}
+.dcorner .ut.on{background:var(--ink);color:var(--accent-ink);border-color:var(--ink)}
+.dialrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ===== hedonic ===== */
+.hedonic{display:flex;gap:5px;justify-content:space-between;margin:6px 0 4px}
+.hedonic button{
+  flex:1;aspect-ratio:1/1.15;border:1px solid var(--line-strong);border-radius:var(--radius);background:transparent;
+  font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink-2);max-width:46px;
+}
+.hedonic button.on{background:var(--ink);color:var(--accent-ink);border-color:var(--ink);font-weight:500}
+.desc{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.desc button{font-family:var(--sans);font-size:13px;padding:6px 12px;border:1px solid var(--line-strong);border-radius:var(--chipr);background:transparent;color:var(--ink-2)}
+.desc button.on{background:var(--ink);color:var(--accent-ink);border-color:var(--ink)}
+
+/* ===== segmented ===== */
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:var(--radius);overflow:hidden;margin-bottom:12px}
+.seg button{flex:1;padding:9px 4px;font-family:var(--sans);font-size:13px;background:transparent;color:var(--ink-2);border-right:1px solid var(--line-strong)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:var(--ink);color:var(--accent-ink)}
+
+/* ===== timer (field-tool scale exception; flattened chrome) ===== */
+.timer{background:var(--paper-2);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:16px;text-align:center;margin-bottom:12px}
+.timer .t{font-family:var(--sans);font-size:40px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.timer .ctl{display:flex;gap:8px;margin-top:10px}
+.timer .ctl button{flex:1;padding:11px;border-radius:var(--radius);border:1px solid var(--line-strong);color:var(--ink);font-family:var(--sans);font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.timer .ctl button.go{background:var(--ink);border-color:var(--ink);color:var(--accent-ink)}
+
+/* ===== tab bar — typographic, no icons ===== */
+/* three rooms, ruled apart like columns in a register */
+nav.tabs{
+  flex:none;background:var(--surface-card);display:grid;grid-template-columns:repeat(3,1fr);z-index:30;
+  padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line);
+}
+nav.tabs button{padding:13px 4px 15px;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11);
+  letter-spacing:var(--track-label);text-transform:uppercase;font-weight:400;min-height:44px;
+  border-right:1px solid var(--line)}
+nav.tabs button:last-child{border-right:0}
+nav.tabs button .ic{display:none}
+nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
+
+/* ===== the daily loop ===== */
+.hero{padding:2px 0 16px}
+/* the eyebrow is quiet — the ember stays reserved for the current action and
+   the score (SUBBRAND.md); a label is neither. */
+.eyebrow{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;color:var(--ink-3);font-weight:500;margin:0 0 8px}
+.hero h2{font-family:var(--serif);font-size:1.625rem;line-height:1.12;letter-spacing:-.02em;text-transform:none;color:var(--ink);font-weight:600;margin:0;max-width:none;text-wrap:balance;border:0;padding:0}
+.hero h2 em{font-style:italic;font-weight:400}
+.hero .origin{font-family:var(--serif);font-style:italic;color:var(--ink-3);font-size:15px;margin-top:8px}
+/* the café's own page — a gradient drawn from its derived hue (or a neutral roast
+   tone, unread), never the app's ember: that signal stays reserved for the score. */
+.cafe-banner{position:relative;overflow:hidden;border:1px solid var(--line);margin:2px 0 4px}
+.cafe-banner .grad{width:100%;height:172px}
+.cafe-banner .fade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,14,10,0) 32%,rgba(18,14,10,.74) 100%)}
+.cafe-banner .bar{position:absolute;left:0;right:0;bottom:0;height:4px}
+.cafe-banner .txt{position:absolute;left:16px;right:16px;bottom:15px;color:#fff}
+.cafe-banner .txt h2{font-family:var(--serif);font-size:25px;font-weight:600;line-height:1.02;letter-spacing:-.02em;margin:0;color:#fff;text-transform:none;text-shadow:0 1px 14px rgba(0,0,0,.55)}
+.cafe-banner .txt .city{font-family:var(--sans);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-top:6px;opacity:.92;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+/* the map — real lat/lon scaled to fit the box; a filled dot is a place you
+   keep, a dashed one is not. The drawn plot is the floor: real streets (the
+   street map section) fade in behind the pins when tiles can be fetched, and
+   this plot simply stands when they can't. */
+/* the plot's ruled ground — a chart's grid, not a picture of a map. It says
+   "this is a drawing at a stated grain" before a single tile ever lands. */
+.cafe-map{position:relative;height:110px;background:var(--paper);border:1px solid var(--line);margin-bottom:8px;overflow:hidden;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:34px 34px}
+/* the plot's key — what a filled mark means, and what a dashed one admits */
+.plotkey{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 2px 10px;font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);align-items:center}
+.cafe-map .pin{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--ink);cursor:pointer;transform:translate(-50%,-50%)}
+.cafe-map .pin.unread{width:7px;height:7px;border:1px dashed var(--ink-3);background:none}
+.cafe-map .pin .lbl{position:absolute;left:100%;top:50%;transform:translate(6px,-50%);font-family:var(--sans);font-size:11px;color:var(--ink);font-weight:500;white-space:nowrap}
+.cafe-map .pin.unread .lbl{color:var(--ink-3);font-weight:400}
+/* the map, read for you — ranked pins on the same decorative plot, drawn taller */
+.cafe-map.tall{height:320px;border-radius:var(--radius)}
+.cafe-map .pin.nn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-size:10px;font-weight:600;color:var(--paper);border-radius:50%;transition:width .2s,height .2s}
+.cafe-map .pin.nn.sel{width:28px;height:28px;font-size:11px}
+.cafe-map .pin.nn.dashed{background:var(--paper);border:1px dashed var(--ink-3);color:var(--ink-3)}
+.cafe-map .pin.nn.saved{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--ink)}
+.cafe-map .pin.you{width:14px;height:14px;background:var(--paper);border:1.5px solid var(--accent);border-radius:50%}
+.cafe-map .pin.you::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%)}
+.cafe-map .pin .lbl.top{left:50%;top:auto;bottom:100%;transform:translate(-50%,-6px);font-weight:600}
+/* the street layer — MapLibre over the plot; fades in only once tiles actually land */
+.cafe-map .smap-live{position:absolute;inset:0;opacity:0;transition:opacity .45s ease}
+.cafe-map .smap-live.in{opacity:1}
+.cafe-map .smap-live .maplibregl-map{width:100%;height:100%}
+.cafe-map .smap-live .lbl{text-shadow:0 0 2px var(--paper),0 1px 2px var(--paper),0 0 5px var(--paper)}
+.cafe-map .maplibregl-ctrl-attrib{font-family:var(--sans)!important;font-size:9px!important;letter-spacing:.02em;background:color-mix(in srgb,var(--paper-card) 82%,transparent)!important;color:var(--ink-3)!important;padding:1px 6px}
+.cafe-map .maplibregl-ctrl-attrib a{color:var(--ink-3)!important;text-decoration:none}
+.cafe-map .maplibregl-ctrl-attrib-button{display:none!important}
+.cafe-map .maplibregl-canvas{outline:none!important}
+.cafe-map .maplibregl-cooperative-gesture-screen{font-family:var(--sans)!important;font-size:13px}
+.cafe-map .pin.spot{width:13px;height:13px;background:var(--accent);box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent)}
+/* the atlas map — three monochrome marks, a lens never a fill: a coarse origin (hollow), a roaster's
+   hand (filled dot), a bar (filled square). Ember stays reserved for the current action. */
+.cafe-map .pin.origin{width:10px;height:10px;background:var(--paper);border:1.5px solid var(--ink-2);border-radius:50%}
+.cafe-map .pin.roaster{width:9px;height:9px;background:var(--ink);border-radius:50%}
+.cafe-map .pin.venue{width:9px;height:9px;background:var(--ink);border-radius:2px}
+/* grain, rendered (CHARTS.md): a mark drawn as coarsely as the record knows it — a region or
+   country centroid goes hollow and dashed, a street or city point stays filled. Monochrome, a
+   lens never a rank. */
+.cafe-map .pin.coarse{background:var(--paper);border-style:dashed}
+.cafe-map .pin.roaster.coarse,.cafe-map .pin.venue.coarse{border:1.5px dashed var(--ink-2)}
+/* a scene mark — an area, drawn as one mark that says so: hollow and dashed like every coarse
+   fact, never a filled cluster badge pretending to be a location. Its counts ride the label and
+   the chips. A merged mark is different — real pins the plot cannot separate, folded into one
+   mark carrying a count rather than stacking labels. */
+.cafe-map .pin.scene{width:14px;height:14px;background:var(--paper);border:1.5px dashed var(--ink-2);border-radius:3px}
+.cafe-map .pin.merged{width:19px;height:19px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--paper);font-family:var(--sans);font-size:10px;font-weight:600;border-radius:50%}
+.cafe-map .atlas-edges{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.cafe-map .atlas-edges line{stroke:var(--ink-3);stroke-width:1;opacity:.5;stroke-dasharray:2 2;vector-effect:non-scaling-stroke}
+.atlas-key{display:inline-block;width:9px;height:9px;vertical-align:middle;margin-right:3px}
+.atlas-key.origin{background:var(--paper);border:1.5px solid var(--ink-2);border-radius:50%}
+.atlas-key.roaster{background:var(--ink);border-radius:50%}
+.atlas-key.venue{background:var(--ink);border-radius:2px}
+.atlas-key.scene{background:var(--paper);border:1.5px dashed var(--ink-2);border-radius:2px}
+.cafe-map .smap-note{position:absolute;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;gap:9px;padding:8px 11px;background:color-mix(in srgb,var(--paper-card) 92%,transparent);border-top:1px solid var(--line);font-family:var(--sans);font-size:12px;color:var(--ink-2)}
+.cafe-map .smap-note .dot{flex:none;width:5px;height:5px;border-radius:50%;background:var(--ink-3)}
+.cafe-map .smap-note .text-action{margin-left:auto;flex:none}
+.hscroll{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 6px;margin:0 -2px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.hscroll>*{flex:none;scroll-snap-align:start}
+@media (prefers-reduced-motion: reduce){.cafe-map .pin.nn{transition:none}.cafe-map .smap-live{transition:none}}
+.continuation{border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:15px 0;margin:2px 0 16px}
+.continuation .score{font-family:var(--sans);font-size:46px;line-height:.9;color:var(--accent);font-weight:550;letter-spacing:-.05em}
+.continuation .score small{font-size:12px;letter-spacing:.04em;color:var(--ink-3);font-weight:400}
+.continuation .row>div:last-child{max-width:62%}
+.recipe{font-family:var(--sans);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-2);margin-top:5px;overflow-wrap:anywhere}
+.finding{font-family:var(--serif);font-style:italic;font-size:15px;margin-top:9px;color:var(--ink)}
+.bestline{display:flex;justify-content:space-between;gap:12px;margin:12px 1px 0;font-size:12px;color:var(--ink-3)}
+.bestline strong{color:var(--ink);font-family:var(--sans);font-weight:550}
+/* a section head with an action on its right — the rule runs under both, so it
+   reads as the same rule every other section wears */
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.section-head h2{margin:0;padding:0;border:0}
+.section-head:first-child{margin-top:2px}
+.text-action{font-family:var(--sans);font-size:11px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
+.coffee-card{position:relative;padding-right:70px}
+.coffee-card .count{position:absolute;right:16px;top:16px;font-family:var(--sans);font-size:11px;color:var(--ink-3)}
+.empty-hero{padding:34px 4px 24px}
+.empty-hero h2{font-family:var(--serif);font-size:1.625rem;line-height:1.12;letter-spacing:-.02em;text-transform:none;color:var(--ink);margin:0 0 10px;padding:0;border:0}
+.empty-hero p{color:var(--ink-3);font-style:italic;margin-bottom:22px;max-width:30ch}
+
+/* ===== welcome (first-run home flow — the way in) ===== */
+.welcome{position:fixed;inset:0;z-index:120;background:var(--paper);display:none;flex-direction:column}
+.welcome.open{display:flex}
+.wc{flex:1;display:flex;flex-direction:column;width:100%;max-width:480px;margin:0 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(24px + env(safe-area-inset-top)) 28px calc(24px + env(safe-area-inset-bottom))}
+.wc-top{display:flex;justify-content:space-between;align-items:center}
+.wc-mark{font-family:var(--sans);font-size:12px;letter-spacing:.42em;font-weight:600;color:var(--ink)}
+.wc-prog{display:flex;gap:6px;align-items:center}
+.wc-prog i{width:18px;height:1px;background:var(--ink);opacity:.18;transition:opacity .35s}
+.wc-prog i.on{opacity:1}
+.wc-body{padding:34px 0 8px}
+.wc-eyebrow{font-family:var(--sans);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);font-weight:650;margin-bottom:14px}
+.wc-head{font-family:var(--serif);font-size:42px;line-height:1.0;letter-spacing:-.04em;font-weight:600;color:var(--ink);margin:0 0 18px;max-width:13ch}
+.wc-head.sm{font-size:36px}
+.wc-lede{font-family:var(--serif);font-size:17px;line-height:1.5;color:var(--ink-2);max-width:34ch;margin-bottom:14px}
+.wc-lede em{font-style:italic;color:var(--ink)}
+.wc-note{font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-top:16px;line-height:1.5;max-width:36ch}
+.wc-foot{margin-top:auto;padding-top:22px}
+.wc-seal{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3);text-align:center;margin-top:18px}
+.wc-list{margin-top:28px}
+/* the welcome's doors are row-links at the same metrics as every other one —
+   one navigation primitive across the whole app */
+.wc-item{width:100%;text-align:left;display:flex;align-items:baseline;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--line);transition:background .15s}
+.wc-item:active{background:var(--paper-2)}
+.wc-item .tx{flex:1;min-width:0}
+.wc-item .tt{font-family:var(--serif);font-size:var(--s16);font-weight:400;letter-spacing:0;color:var(--ink);display:block}
+.wc-item .dd{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);margin-top:4px;line-height:1.5;display:block;letter-spacing:.02em}
+.wc-item .go{align-self:center;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11);flex:none}
+/* inside the welcome the same row is a door, and a door gets its full height */
+.wc .wc-item{padding:19px 2px;border-top:1px solid var(--line);border-bottom:0}
+.wc .wc-item:last-of-type{border-bottom:1px solid var(--line)}
+.wc .wc-item .tt{font-size:21px;font-weight:600;letter-spacing:-.01em}
+.wc .wc-item .dd{font-size:var(--s13);text-transform:none;letter-spacing:0;margin-top:5px}
+.wc .wc-item .go{font-size:15px}
+.wc-skip{font-family:var(--sans);font-size:12px;color:var(--ink-3);text-decoration:underline;text-underline-offset:3px;text-align:center;width:100%;margin-top:14px;min-height:26px}
+@keyframes wc-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.wc-rise{opacity:0;animation:wc-rise var(--mo-considered,.55s) var(--mo-ease,cubic-bezier(.22,.61,.36,1)) forwards}
+@media (prefers-reduced-motion:reduce){.wc-rise{animation:none;opacity:1}}
+
+/* ===== motion charter =====
+ * used more, moves less. Three durations, one shared ease-out; nothing
+ * bounces, nothing pulses. Reduced motion is first-class: the media block
+ * below stills everything to its end frame. */
+:root{
+  --mo-fast:130ms;        /* controls touched most — a chip, a dial: barely moves */
+  --mo-base:230ms;        /* a screen settles, a sheet rises — the standard move */
+  --mo-considered:820ms;  /* the one sanctioned moment — arrival, the interlude */
+  --mo-ease:cubic-bezier(.22,.61,.36,1);
+}
+@keyframes ca-settle{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes ca-pins-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ca-draw{from{stroke-dashoffset:220}to{stroke-dashoffset:0}}
+.ca-screen{animation:ca-settle var(--mo-base) var(--mo-ease) both}
+/* the interlude — the one place the map pauses to compose itself */
+.ca-season-line{fill:none;stroke:var(--ink-3);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.7;stroke-dasharray:220;stroke-dashoffset:0}
+.ca-map.is-reading .ca-season-line{animation:ca-draw var(--mo-considered) var(--mo-ease) both}
+.ca-map.is-reading .ca-pin-layer{animation:ca-pins-in var(--mo-considered) var(--mo-ease) both}
+@media (prefers-reduced-motion:reduce){
+  .ca-screen,.ca-map .ca-pin-layer{animation:none!important;opacity:1!important;transform:none!important}
+  .ca-map .ca-season-line{animation:none!important;stroke-dashoffset:0!important}
+  .sheet{transition:none}
+}
+
+/* ===== sheet ===== */
+.sheet-bg{position:fixed;inset:0;background:rgba(26,26,22,.42);z-index:40;display:none}
+.sheet-bg.open{display:block}
+.sheet{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;
+  background:var(--paper);border-radius:0;border-top:1px solid var(--line-strong);z-index:50;
+  max-height:92vh;max-height:92dvh;overflow-y:auto;display:none;
+  padding:8px 18px calc(22px + env(safe-area-inset-bottom));
+  transition:transform var(--mo-base) var(--mo-ease);
+}
+.sheet.open{display:block}
+/* the primer layer — "how to read the record", stacked above any open sheet */
+.sheet-bg.primerbg{z-index:58}
+.sheet.primerlayer{z-index:59}
+.primer-over{font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:500;margin-bottom:7px}
+.primer-b{font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);max-width:37ch;margin:0 0 16px}
+.ex{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.sheet .grab{height:26px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
+.sheet .grab::before{content:"";width:34px;height:3px;background:var(--ink-3);border-radius:2px;transition:background .15s,width .15s}
+.sheet.dragging{transition:none}
+.sheet.dragging .grab{cursor:grabbing}
+.sheet.dragging .grab::before{background:var(--ink);width:44px}
+.sheet h3{font-family:var(--serif);font-size:18px;font-weight:600;margin-bottom:3px;color:var(--ink)}
+.sheet .sub{font-family:var(--serif);font-style:italic;color:var(--ink-3);font-size:14px;margin-bottom:16px;max-width:37ch}
+
+/* ===== misc ===== */
+.empty{font-family:var(--serif);font-style:italic;color:var(--ink-3);text-align:center;padding:30px 20px;font-size:15px}
+.kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;gap:10px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--ink-3);font-family:var(--sans);font-size:13px;flex:none}
+.kv .v{font-variant-numeric:tabular-nums;text-align:right}
+.n-note{font-family:var(--sans);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+svg text{font-family:'Libre Franklin',sans-serif}
+.toast{
+  position:fixed;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  background:var(--ink);color:var(--paper);padding:9px 18px;border-radius:var(--chipr);font-family:var(--sans);font-size:13px;
+  z-index:99;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:1}
+.link{font-family:var(--sans);color:var(--ink-2);font-weight:400;font-size:13px;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.link:hover{color:var(--ink)}
+
+/* ===== quick start ===== */
+ol.steps{list-style:none;counter-reset:s;margin:2px 0 4px}
+ol.steps>li{counter-increment:s;position:relative;padding-left:38px;margin-bottom:16px}
+ol.steps>li::before{
+  content:counter(s);position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:var(--radius);
+  background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;
+  font-family:var(--sans);font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;
+}
+ol.steps .t{font-family:var(--serif);font-size:15px;font-weight:600;line-height:24px}
+ol.steps .b{font-size:14px;color:var(--ink-2);margin-top:2px;line-height:1.5}
+ol.steps .go{font-family:var(--sans);font-size:12px;color:var(--ink-2);font-weight:500;margin-top:6px;display:inline-block;text-decoration:underline;text-underline-offset:2px}
+.rule{border-left:2px solid var(--ink);padding:2px 0 2px 13px;margin:14px 0;background:var(--paper-2)}
+.rule.hard{border-left-color:var(--danger)}
+.rule .t{font-family:var(--serif);font-size:14px;font-weight:600}
+.rule .b{font-size:14px;color:var(--ink-2)}
+.warn{border:1px solid var(--danger);border-radius:var(--radius);padding:12px 14px;margin:12px 0;background:var(--paper-2)}
+.warn .t{font-family:var(--sans);font-size:11px;font-weight:500;color:var(--danger);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.warn .b{font-size:14px;color:var(--ink-2)}
+.loop{display:flex;align-items:stretch;gap:4px;margin:10px 0 6px}
+.loop .s{flex:1;background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);padding:8px 3px;text-align:center}
+.loop .s .k{font-family:var(--sans);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.loop .s .v{font-family:var(--serif);font-size:12px;font-weight:600;margin-top:3px;line-height:1.25}
+.loop .a{display:flex;align-items:center;color:var(--ink-3);font-size:12px}
+.gtab{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.gtab:last-child{border-bottom:none}
+.gtab .ic{display:none}
+.gtab .nm{width:52px;font-family:var(--sans);font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase;flex:none;color:var(--ink)}
+.gtab .ds{font-size:13px;color:var(--ink-2);flex:1}
+.gt{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}
+.gt td{padding:7px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.gt td:last-child{text-align:right;color:var(--ink-2);font-family:var(--sans)}
+.gt tr:last-child td{border-bottom:none}
+code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1px 5px;border-radius:var(--chipr)}
+.helpbtn{font-family:var(--sans);color:var(--ink-3);font-size:12px;padding:0 0 0 14px;line-height:1;text-decoration:underline;text-underline-offset:2px}
+.helpbtn:active{color:var(--ink)}
+
+/* ===== café ===== */
+.opt{text-transform:none;letter-spacing:0;color:var(--ink-3);font-weight:400;font-size:10px;font-style:italic;font-family:var(--serif)}
+.cafeback{background:var(--paper-2);border:1px solid var(--line);border-left:2px solid var(--ink);border-radius:var(--radius);padding:9px 12px;font-size:13px;color:var(--ink-2);margin:2px 0 12px;font-family:var(--serif);font-style:italic}
+.cafeback strong{font-style:normal;color:var(--ink)}
+.verdict{display:flex;gap:6px}
+.verdict button{flex:1;padding:10px;border:1px solid var(--line-strong);border-radius:var(--radius);background:transparent;color:var(--ink-2);font-family:var(--sans);font-size:13px;font-weight:500}
+.verdict button.yes.on{background:var(--ink);color:var(--accent-ink);border-color:var(--ink)}
+.verdict button.no.on{background:transparent;color:var(--ink);border-color:var(--ink);text-decoration:line-through}
+.badge{display:inline-block;font-family:var(--sans);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:var(--chipr);background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:500;vertical-align:middle}
+.badge.ghost{border-color:var(--line);color:var(--ink-3)}
+/* the reach: solid says fact, dashed says state — no mark mode may collapse the two */
+.badge.dashed{border-style:dashed;border-color:var(--ink-3);color:var(--ink-3)}
+.desc button.held{border-style:dashed;border-color:var(--ink-3);color:var(--ink-3)}
+.shopcard .big{font-family:var(--sans);font-size:22px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.swatch{width:11px;height:11px;border-radius:var(--chipr);vertical-align:-1px;margin-left:6px;display:none;border:1px solid var(--line)}
+/* café theme — a whole surface derived from the café's website colours. The vars are set inline. */
+.cafe-theme{background:var(--paper);color:var(--ink);margin:0 -18px;padding:6px 18px 8px}
+/* the derived palette, shown while setting a café's branding */
+.palette{display:flex;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);margin:2px 0 0}
+.palette span{flex:1;height:36px}
+.brandmark{width:14px;height:14px;border-radius:var(--chipr);display:inline-block;vertical-align:-2px;border:1px solid var(--line)}
+.georow{padding:8px 11px;margin:6px 0 0}
+.pinned{font-family:var(--sans);font-size:12px;color:var(--ink-2);padding:6px 2px}
+.pinned .link{margin-left:8px;cursor:pointer}
+.trace-more{margin-bottom:14px}
+.trace-more>summary{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;padding:6px 0;list-style:none}
+.trace-more>summary::-webkit-details-marker{display:none}
+.trace-more>summary::before{content:"+ ";color:var(--ink-3)}
+.trace-more[open]>summary::before{content:"– "}
+
+/* ===== read-only banner ===== */
+.viewbar{
+  background:var(--paper-2);color:var(--ink);border:1px solid var(--line);border-left:2px solid var(--ink);border-radius:var(--radius);
+  padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;
+  font-family:var(--serif);font-style:italic;font-size:13px;gap:10px;
+}
+.viewbar button{background:var(--ink);color:var(--accent-ink);border-radius:var(--radius);padding:6px 13px;font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;flex:none;font-style:normal}
+
+/* ===== changelog ===== */
+.rel{border-left:2px solid var(--line-2);padding:2px 0 2px 14px;margin:0 0 18px}
+.rel.latest{border-left-color:var(--ink)}
+.rel-h{display:flex;align-items:baseline;gap:8px}
+.rel-v{font-family:var(--sans);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
+.rel-d{font-family:var(--sans);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.rel-new{font-family:var(--sans);font-size:9px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line-strong);color:var(--ink);padding:1px 6px;border-radius:var(--chipr);font-weight:500}
+.rel-t{font-family:var(--serif);font-size:15px;font-weight:600;margin:3px 0 5px}
+.rel-l{list-style:none;margin:0}
+.rel-l li{font-size:14px;color:var(--ink-2);padding:2px 0 2px 15px;position:relative;line-height:1.5}
+.rel-l li::before{content:"—";position:absolute;left:0;color:var(--ink-3)}
+
+/* ===== Quiet Matter seal ===== */
+.qm-seal{font-family:var(--sans);font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--ink-3);text-align:center;font-weight:500;margin:20px 0 2px}
+.qm-seal .em{display:block;font-family:var(--serif);font-style:italic;font-size:12px;letter-spacing:0;text-transform:none;color:var(--ink-3);margin-top:6px}
+
+</style>
+<style>
+/* ═══ prototype chrome — not part of the app. Everything above this block is
+   index.html's own token + component layer, lifted unchanged so the surfaces
+   below are drawn in real CARTA ink, at real metrics. ═══ */
+.pt-rail{position:fixed;top:0;left:0;bottom:0;width:212px;overflow-y:auto;padding:20px 16px 28px;
+  background:var(--surface-page);border-right:1px solid var(--line);z-index:200}
+.pt-note{position:fixed;top:0;right:0;bottom:0;width:288px;overflow-y:auto;padding:24px 22px 32px;
+  background:var(--surface-page);border-left:1px solid var(--line);z-index:200}
+.pt-rail h4,.pt-note h4{font-family:var(--sans);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;margin:18px 0 8px}
+.pt-rail h4:first-child{margin-top:0}
+.pt-rail button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 8px;
+  font-family:var(--sans);font-size:12px;color:var(--ink-2);letter-spacing:.02em;line-height:1.35;cursor:pointer}
+.pt-rail button b{display:block;font-weight:500;color:var(--ink-3);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.pt-rail button.on{background:var(--surface-sunk);color:var(--ink);box-shadow:inset 2px 0 0 var(--ink)}
+.pt-note p{font-family:var(--sans);font-size:12px;line-height:1.6;color:var(--ink-2);margin:0 0 10px}
+.pt-note p.q{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3)}
+.pt-note ul{list-style:none;margin:0 0 12px}
+.pt-note li{font-family:var(--sans);font-size:12px;line-height:1.55;color:var(--ink-2);padding:3px 0 3px 16px;position:relative}
+.pt-note li::before{content:"—";position:absolute;left:0;color:var(--ink-3)}
+.pt-note li.gone{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--ink-3)}
+.pt-note code{font-family:var(--mono);font-size:11px;background:var(--surface-sunk);padding:1px 4px}
+.pt-mark{font-family:var(--sans);font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+.pt-sub{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3);line-height:1.45;margin-bottom:16px}
+.pt-side{display:flex;gap:6px;margin:0 0 14px}
+.pt-side button{flex:1;text-align:center;border:1px solid var(--line-strong);padding:6px 4px;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase}
+.pt-side button.on{background:var(--ink);color:var(--surface-card);border-color:var(--ink);box-shadow:none}
+/* the welcome, drawn inside the frame rather than over the viewport */
+.welcome.pt-inline{position:static;display:flex;background:none;flex:1;min-height:0}
+main.pt-bare{padding:0}
+@media (max-width:1180px){.pt-note{display:none}}
+@media (max-width:900px){.pt-rail{position:static;width:auto;border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+
+<nav class="pt-rail" id="rail"></nav>
+<aside class="pt-note" id="ptnote"></aside>
+
+<header class="app">
+  <div><h1>Carta</h1><div class="sub" id="who">The atlas</div></div>
+  <button class="doorbtn" id="doorbtn">＋ A coffee</button>
+</header>
+<main id="main"></main>
+<nav class="tabs" id="tabs"></nav>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ============================================================================
+ * CARTA — the reader's flow, prototyped.
+ *
+ * Reference file for docs/READER.md. Every surface a person who keeps nothing
+ * sees, plus the founder's side of the same act. The data is a fixture; the
+ * ink, the metrics and the component layer are index.html's own, lifted whole,
+ * so a line that reads wrong here reads wrong in the app.
+ *
+ * Nothing here is app code. It is the argument, drawn.
+ * ========================================================================== */
+
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const jsq=s=>"'"+String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
+
+/* ============ the fixture — one chart, as a founder would have published it ============ */
+/* Four greens. Three publish; one is held back, so the hold is visible as a
+ * difference between the two sides rather than as a claim in prose. */
+const F={
+  server:'sync.quietmatter.co', founder:'Ellis',
+  rev:15, publishedAt:'12 July 2026', fetchedAgo:'3 hours ago',
+  chart:'Los Angeles',
+  lots:[
+    {id:'l1',name:'Kiangoi AB',variety:'SL28 · SL34',country:'Kenya',region:'Kirinyaga',
+     process:'Washed',grower:'Kiangoi Factory',growerKind:'station',mill:'dry mill · AB/12',
+     alt:[1750,1900],grain:'green-lot',hardId:'kenya-outturn · AB/12',
+     hands:['Canyon Coffee','Go Get Em Tiger'],bars:['Maru Coffee','Cognoscenti'],
+     caliber:{score:87.5,protocol:'SCA',cupper:'Nairobi Coffee Exchange lab',tier:'2'},
+     rarity:'440 kg · 6 bags to this chart',held:false},
+    {id:'l2',name:'Chaka',variety:'Gesha',country:'Ethiopia',region:'Bench Maji',
+     process:'Natural',grower:'Gesha Village',growerKind:'farm',mill:'',
+     alt:[1909,2100],grain:'green-lot',hardId:'gesha-village · CH-1119',
+     hands:['Canyon Coffee'],bars:['Maru Coffee'],
+     caliber:null,rarity:'scarce variety · lot size unread',held:false},
+    {id:'l3',name:'La Soledad',variety:'Caturra',country:'Guatemala',region:'Acatenango',
+     process:'Washed',grower:'Finca La Soledad',growerKind:'farm',mill:'',
+     alt:[1550,1700],grain:'farm',hardId:'',
+     hands:['Go Get Em Tiger'],bars:[],caliber:null,rarity:'unread',held:false},
+    {id:'l4',name:'El Diviso',variety:'Pink bourbon',country:'Colombia',region:'Huila',
+     process:'Anaerobic',grower:'Finca El Diviso',growerKind:'farm',mill:'',
+     alt:[1750,1750],grain:'farm',hardId:'',
+     hands:['Canyon Coffee'],bars:['Cognoscenti'],caliber:null,rarity:'unread',held:true}
+  ],
+  roasters:[{id:'r1',name:'Canyon Coffee',city:'Los Angeles',signed:true},
+            {id:'r2',name:'Go Get Em Tiger',city:'Los Angeles',signed:false}],
+  bars:[{id:'b1',name:'Maru Coffee',hood:'Los Feliz',reach:3,hue:22},
+        {id:'b2',name:'Cognoscenti',hood:'Culver City',reach:2,hue:198}]
+};
+const pub=()=>F.lots.filter(l=>!l.held);         // what a reader holds
+const held=()=>F.lots.filter(l=>l.held);
+const lotById=id=>F.lots.find(l=>l.id===id);
+const REACH=[null,{g:'○',w:'Counter'},{g:'◎',w:'House'},{g:'◉',w:'Roastery'},{g:'●',w:'Origin'}];
+const comma=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const altLabel=b=>b[0]===b[1]?comma(b[0])+' m':comma(b[0])+'–'+comma(b[1])+' m';
+
+/* ============ the components, as index.html draws them ============ */
+/* the road — but five stations, never six. The sixth is Read, and Read is the
+ * reader's own cups. An absent reader is not a gap in the record. (READER.md L7) */
+function road(lot,forReader){
+  const st=[
+    {lb:'Grown',who:lot.growerKind==='station'?lot.region:lot.grower},
+    {lb:'Processed',who:lot.growerKind==='station'?lot.grower:lot.process},
+    {lb:'Milled',who:lot.mill},
+    {lb:'Roasted',who:lot.hands.length>1?lot.hands.length+' hands':lot.hands[0]||''},
+    {lb:'Poured',who:lot.bars.length>1?lot.bars.length+' bars':lot.bars[0]||''}
+  ];
+  if(!forReader)st.push({lb:'Read',who:'2 cups',you:true});
+  let prev=true;
+  const cells=st.map(s=>{const h=!!s.who;
+    const cls='stn'+(h?' held':'')+(s.you&&h?' you':'')+((!h||!prev)?' gap':'');prev=h;
+    return `<div class="${cls}"><span class="bar"></span><span class="mk"></span><span class="lb">${s.lb}</span><span class="who">${h?esc(s.who):'unread'}</span></div>`}).join('');
+  return `<div class="road6" style="grid-template-columns:repeat(${st.length},1fr)">${cells}</div>`;
+}
+// the terrace — a section, not a plan. Unchanged for a reader: it is a reading.
+function terrace(band,others){
+  const all=[band,...others];
+  let lo=Math.min(...all.map(b=>b[0])),hi=Math.max(...all.map(b=>b[1]));
+  const step=(hi-lo)>1400?400:200;
+  lo=Math.max(0,Math.floor(lo/step)*step-step);hi=Math.ceil(hi/step)*step+step;
+  if(hi-lo<600){const m=(hi+lo)/2;lo=Math.floor((m-300)/step)*step;hi=Math.ceil((m+300)/step)*step}
+  const pc=v=>(v-lo)/(hi-lo)*100, at=b=>`bottom:${pc(b[0]).toFixed(2)}%;height:${(pc(b[1])-pc(b[0])).toFixed(2)}%`;
+  let rules='';
+  for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step)rules+=`<i class="ct" style="bottom:${pc(v).toFixed(2)}%"><span>${comma(v)}</span></i>`;
+  return `<div class="terr"><div class="plot">${rules}
+    <i class="m1${band[0]===band[1]?' pt':''}" style="${at(band)}"><b class="val">${altLabel(band)}</b></i>
+    ${others.map(b=>`<i class="m0${b[0]===b[1]?' pt':''}" style="${at(b)}"></i>`).join('')}</div></div>`;
+}
+const rowlink=(t,m,go)=>`<button class="rowlink" onclick="${go||''}"><span><span class="t">${t}</span><br><span class="m">${m}</span></span><span class="go">→</span></button>`;
+const kv=(k,v)=>`<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+const back=t=>`<button class="back" onclick="S(${jsq(t[1])})">← ${t[0]}</button>`;
+const hero=(eb,d,l)=>`<p class="eyebrow">${eb}</p><h2 class="display">${d}</h2>${l?`<p class="lede">${l}</p>`:''}`;
+const seal=(n,em)=>`<div class="qm-seal">${n}<span class="em">${em}</span></div>`;
+// the drawn plot, at the fidelity this prototype needs: the reader gets the same
+// one a keeper does — real coordinates, coarse marks dashed, tiles an enhancement
+function plot(marks,heading){
+  return `<div style="border:1px solid var(--line);background:var(--surface-sunk);height:150px;position:relative;margin:8px 0 6px">
+    ${marks.map(m=>`<span style="position:absolute;left:${m.x}%;top:${m.y}%;width:9px;height:9px;
+      border:1px solid var(--line-strong);${m.coarse?'border-style:dashed;background:none':'background:var(--line-strong)'};
+      transform:translate(-50%,-50%)"></span>
+      <span style="position:absolute;left:${m.x}%;top:calc(${m.y}% + 9px);transform:translateX(-50%);
+      font-family:var(--sans);font-size:9px;letter-spacing:.06em;color:var(--ink-3);white-space:nowrap">${esc(m.lb)}</span>`).join('')}
+  </div><p class="note" style="border-top:0;padding-top:4px">${heading}</p>`;
+}
+
+/* ============ the reader's surfaces ============ */
+
+/* R0 — the welcome. Unchanged, except that door one now means something:
+ * it asks the server for the published atlas instead of opening an empty one. */
+function r0(){
+  const door=(tt,dd,d)=>`<button class="wc-item wc-rise" style="animation-delay:${d}s" onclick="S('r1')">
+    <span class="tx"><span class="tt">${tt}</span><span class="dd">${dd}</span></span><span class="go">→</span></button>`;
+  return `<div class="welcome open pt-inline"><div class="wc">
+    <div class="wc-top"><span class="wc-mark">CARTA</span></div>
+    <div class="wc-body">
+      <div class="wc-eyebrow wc-rise" style="animation-delay:.04s">The record of specialty coffee</div>
+      <h1 class="wc-head wc-rise" style="animation-delay:.12s">One coffee, from the ground to the cup in your hand.</h1>
+      <p class="wc-lede wc-rise" style="animation-delay:.24s">Every lot traced — farm, process, roast, pour. Your taste is a wash laid over the trace. <em>The record is yours; the atlas is everyone's.</em></p>
+      <div class="wc-list">
+        ${door('I read, mostly','The atlas opens. Keep nothing, ever.','.34')}
+        ${door('Someone else makes it','A bar and one tap is a whole record.','.41')}
+        ${door('I make my own','The instrument opens — begin from the last cup.','.48')}
+      </div>
+      <div class="wc-note wc-rise" style="animation-delay:.56s">Rooms open when you ask; nothing is ever taken away. This only sets where you land first.</div>
+    </div>
+    <div class="wc-foot wc-rise" style="animation-delay:.6s">
+      <div class="qm-seal" style="margin:0"><span class="em" style="margin-top:0">We do not sell coffee. We keep the record.</span></div>
+    </div></div></div>`;
+}
+
+/* R1 — the Atlas. The room stands whole; its head changes, because a reader has
+ * no coffee in their hands, and every write leaves. */
+function r1(){
+  const lots=pub();
+  return `${hero('The published atlas',`${F.chart}, in <em>${lots.length} greens</em>.`,
+      `Published ${F.publishedAt} by ${F.founder}. A copy, not a feed — it changes when the keeper publishes again.`)}
+  <label class="f" style="margin:0 0 12px"><input type="text" placeholder="Search the atlas — a coffee, a station, a roaster, a bar…"></label>
+  <h2>${F.chart}, at scene altitude</h2>
+  ${plot([{x:26,y:38,lb:'Canyon'},{x:58,y:30,lb:'GGET'},{x:44,y:64,lb:'Maru'},{x:71,y:58,lb:'Cognoscenti'}],
+    'Four marks on one scene. Coarse where the record is coarse; never a farm pin invented.')}
+  <div class="chips" style="display:flex;gap:6px;margin:10px 0 0">
+    <button class="chip on" style="padding:5px 9px">Los Angeles <b>4</b></button>
+    <button class="chip" style="padding:5px 9px">Origins <b>3</b></button></div>
+  <p class="note">One mark cannot hold a front door and a country — so a scene stays a scene until you go down to it.</p>
+  <div class="section-head"><h2>Cut the atlas</h2><span class="text-action ex">the plate</span></div>
+  ${rowlink('Kenya','a country · 1 green · 2 hands',"S('r5')")}
+  ${rowlink('Washed','a process · 2 greens · 3 hands',"S('r5')")}
+  ${rowlink('Gesha','a variety · 1 green · 1 hand',"S('r5')")}
+  <p class="note">A facet is a query over the greens, never a stored collection. One that leaves a field unread is counted, not hidden.</p>
+  <div class="section-head"><h2>The greens</h2><span class="n-note num">n=${lots.length}</span></div>
+  ${lots.map(l=>`<button class="rowlink" onclick="S('r2',${jsq(l.id)})"><span><span class="t">${esc(l.name)}</span><br><span class="m">${esc([l.region,l.country,l.variety,l.process].join(' · '))}</span></span><span class="m num">${l.hands.length} hand${l.hands.length===1?'':'s'}</span></button>`).join('')}
+  <div class="section-head"><h2>The hands</h2><span class="n-note num">n=${F.roasters.length}</span></div>
+  ${F.roasters.map(r=>rowlink(esc(r.name),`${esc(r.city)} · ${F.lots.filter(l=>!l.held&&l.hands.includes(r.name)).length} greens`,`S('r3',${jsq(r.id)})`)).join('')}
+  ${seal('Atlas','One graph. Every hand. The record is the nexus.')}`;
+}
+
+/* R2 — a green. The page the reader came for; it loses only what is theirs. */
+function r2(id){
+  const l=lotById(id)||F.lots[0];
+  const others=pub().filter(x=>x.id!==l.id).map(x=>x.alt);
+  return `${back(['The atlas','r1'])}
+  ${hero('A green',`${esc(l.name)}, <em>${esc(l.variety)}</em>`,`${esc(l.region)}, ${esc(l.country)} — ${esc(l.process.toLowerCase())}.`)}
+  <h2>The road</h2>
+  ${road(l,true)}
+  <p class="note">Five stations, and the fifth is where you can drink it. The sixth — <em>read</em> — is a keeper's own cups, and you keep none, so this road does not draw it.</p>
+  <h2>Identity</h2>
+  <div class="card">
+    ${kv('Grain',`<span class="badge">${esc(l.grain)}</span>`)}
+    ${l.hardId?kv('Bound by',`<span class="num">${esc(l.hardId)}</span>`):''}
+    ${kv('Grown',esc(l.grower))}
+    ${kv('Process',esc(l.process))}
+    ${kv('Height',altLabel(l.alt))}
+  </div>
+  <p class="note">A record rests on the coarsest rung it can prove. ${l.grain==='green-lot'?'A printed lot code stands here, so this green can meet another keeper\'s record.':'No lot identity stands — this green rests at the farm.'}</p>
+  <h2>The standing</h2>
+  <div class="card">
+    ${kv('Caliber',l.caliber?`<span class="num">${l.caliber.score}</span> <span class="muted small">${esc(l.caliber.protocol)} · ${esc(l.caliber.cupper)}</span>`:'<span class="badge dashed">unread</span>')}
+    ${kv('Rarity',l.rarity==='unread'?'<span class="badge dashed">unread</span>':esc(l.rarity))}
+    ${kv('Traceability',`<span class="badge">${esc(l.grain)}</span>`)}
+  </div>
+  <p class="note">Three axes, never merged into a verdict. ${l.caliber?`Admitted at tier ${esc(l.caliber.tier)} — a named lab, so the number stands. An unnamed source is recorded as a claim, never admitted as the read.`:'Unread is a state, not a low score.'}</p>
+  <h2>The height</h2>
+  ${terrace(l.alt,others)}
+  <p class="note">Of the ${others.length} other greens that state one — ${others.filter(b=>b[1]<l.alt[0]).length} grew lower, ${others.filter(b=>b[0]>l.alt[1]).length} higher. Height places; it never ranks.</p>
+  <h2>Roasted by</h2>
+  ${l.hands.map(h=>{const r=F.roasters.find(x=>x.name===h);
+    return rowlink(esc(h),`${esc(r?r.city:'')}${r&&r.signed?' · signed':''}`,`S('r3',${jsq(r?r.id:'r1')})`)}).join('')}
+  <h2>Poured at</h2>
+  ${l.bars.length?l.bars.map(b=>{const v=F.bars.find(x=>x.name===b);
+    return rowlink(esc(b),`${esc(v?v.hood:'')} · attested by ${esc(F.founder)}`,`S('r4',${jsq(v?v.id:'b1')})`)}).join('')
+    :'<div class="empty">No bar on the record pouring this green.</div>'}
+  <p class="note">A pour says a green was poured, where, and when — never how it tasted. The reading stayed on the keeper's device.</p>
+  ${seal('Carta','One green, many hands.')}`;
+}
+
+/* R3 — a roaster. Same reading at its own scope. The claim offer stays: a reader
+ * who owns this roastery is exactly the person who should sign it. */
+function r3(id){
+  const r=F.roasters.find(x=>x.id===id)||F.roasters[0];
+  const mine=pub().filter(l=>l.hands.includes(r.name));
+  return `${back(['The atlas','r1'])}
+  ${hero('The roaster',esc(r.name),`${esc(r.city)} — ${mine.length} green${mine.length===1?'':'s'} on this chart.`)}
+  <h2>The road, across ${mine.length} greens</h2>
+  ${['Grown','Processed','Milled','Roasted','Poured'].map((lb,i)=>{
+    const c=[mine.length,mine.length,mine.filter(l=>l.mill).length,mine.length,mine.filter(l=>l.bars.length).length][i];
+    return `<div class="aggrow${c/mine.length<.5?' thin':''}"><span class="lb">${lb}</span><span class="track"><span class="fill" style="width:${Math.round(c/mine.length*100)}%"></span></span><span class="ct">${c}/${mine.length}</span></div>`}).join('')}
+  <p class="note">Where a hand's road goes dark, counted. The gap is the product — it is the record stating what it has not been told.</p>
+  <h2>Origins</h2>
+  ${plot(mine.map((l,i)=>({x:22+i*30,y:40+(i%2)*22,lb:l.country,coarse:true})),'At region grain — coarse marks are drawn hollow, because that is how finely the record can place them.')}
+  <h2>The greens</h2>
+  ${mine.map(l=>rowlink(esc(l.name),`${esc(l.region)}, ${esc(l.country)} · ${esc(l.variety)}`,`S('r2',${jsq(l.id)})`)).join('')}
+  ${r.signed?`<h2>Their facts</h2><div class="card">${kv('Signed by',esc(r.name))}${kv('Scope','their own roasts')}</div>
+    <p class="note">A first party holds the pen on its own facts and nowhere else.</p>`
+  :`<h2>Unsigned</h2>
+    <div class="card"><p style="margin:0;font-size:14px;color:var(--ink-2)">This page is unsigned. If the roastery is yours — sign in and take the pen on your own facts.</p></div>
+    <button class="btn btn-quiet" onclick="S('r9')">Sign in</button>
+    <p class="note">The one thing the app asks a reader for, and it asks only of the person with a right to answer.</p>`}
+  ${seal('Carta','The pen is scoped, never sovereign.')}`;
+}
+
+/* R4 — a bar. The café page keeps its palette, its locator and its reach; only
+ * the two writes leave — logging a cup, and entering a sighting. */
+function r4(id){
+  const b=F.bars.find(x=>x.id===id)||F.bars[0];
+  const pours=pub().filter(l=>l.bars.includes(b.name));
+  return `<div style="height:96px;margin:-20px -20px 14px;background:linear-gradient(160deg,hsl(${b.hue} 34% 42%),hsl(${b.hue} 22% 26%))"></div>
+  ${back(['The atlas','r1'])}
+  ${hero('The bar',esc(b.name),`${esc(b.hood)} — ${pours.length} green${pours.length===1?'':'s'} poured here, on the record.`)}
+  <h2>The reading</h2>
+  <div class="card">
+    ${kv('The reach',`<span class="badge">${REACH[b.reach].g} ${REACH[b.reach].w}</span> <span class="muted small">${b.reach===3?'the roast in the room':'answers at the counter'}</span>`)}
+    ${kv('Sightings',`<span class="num">3</span> <span class="muted small">by ${esc(F.founder)}</span>`)}
+  </div>
+  <p class="note">Compiled, never picked. Keepers attest facts — the bag named, the methods on the menu — and the depth follows. No depth outranks another.</p>
+  <h2>Where</h2>
+  ${plot([{x:50,y:50,lb:b.name}],'The locator. Streets lay in behind it when the network answers; the drawn plot is the floor.')}
+  <h2>Poured here</h2>
+  ${pours.length?pours.map(l=>rowlink(esc(l.name),`${esc(l.region)}, ${esc(l.country)} · ${esc(l.hands[0])}`,`S('r2',${jsq(l.id)})`)).join('')
+    :'<div class="empty">Nothing on the record poured here.</div>'}
+  <p class="note">Dated and signed, its recipe unknown and never invented.</p>
+  ${seal('Carta','The place is common knowledge.')}`;
+}
+
+/* R5 — a plate. A query over the greens, at facet scope. Nothing to cut. */
+function r5(){
+  const set=pub().filter(l=>l.process==='Washed');
+  return `${back(['The atlas','r1'])}
+  ${hero('A plate',`Washed, in <em>${set.length} greens</em>`,'A facet is a query over the greens, never a stored collection.')}
+  <h2>The road, across ${set.length} greens</h2>
+  ${['Grown','Processed','Milled','Roasted','Poured'].map((lb,i)=>{
+    const c=[set.length,set.length,set.filter(l=>l.mill).length,set.length,set.filter(l=>l.bars.length).length][i];
+    return `<div class="aggrow${c/set.length<.5?' thin':''}"><span class="lb">${lb}</span><span class="track"><span class="fill" style="width:${Math.round(c/set.length*100)}%"></span></span><span class="ct">${c}/${set.length}</span></div>`}).join('')}
+  <h2>The span</h2>
+  ${terrace([Math.min(...set.map(l=>l.alt[0])),Math.max(...set.map(l=>l.alt[1]))],set.map(l=>l.alt))}
+  <p class="note">The span, with each green's band inside it. ${pub().length-set.length} green on the atlas states no height, and is counted here rather than hidden.</p>
+  <h2>The greens</h2>
+  ${set.map(l=>rowlink(esc(l.name),`${esc(l.region)}, ${esc(l.country)} · ${esc(l.variety)}`,`S('r2',${jsq(l.id)})`)).join('')}
+  ${seal('Carta','One reading, five scopes.')}`;
+}
+
+/* R7 — the Desk. Five rows, and no others. */
+function r7(){
+  return `${hero('The desk','Everything that is not a green.','Five rows. A reader keeps no record, so there is nothing here to correct, export or sync.')}
+  ${rowlink('This copy',`${esc(F.server)} · revision ${F.rev} · fetched ${F.fetchedAgo}`,"S('r8')")}
+  ${rowlink('Start keeping','Your own record, on this device. The atlas stays as it is; your cups lay over it.',"S('r9')")}
+  ${rowlink('Sign in','You have an account on this server. Your record comes down; the pen stays where it is.',"S('r9')")}
+  ${rowlink('Preferences','Theme, °C / °F, the reach mark.','')}
+  ${rowlink('The manual','What the marks mean.','')}
+  <p class="note">Gone, because there is nothing for them to act on: sync setup, the keepers room, the pen, what you set down, export and import, the shelf, the tools, the ladder.</p>
+  ${seal('Carta','We keep the record.')}`;
+}
+
+/* R8 — this copy. The surface that keeps the app honest about staleness. */
+function r8(){
+  return `${back(['The desk','r7'])}
+  ${hero('This copy','The atlas, as it stood.','')}
+  <div class="card">
+    ${kv('From',esc(F.server))}
+    ${kv('Revision',`<span class="num">${F.rev}</span>`)}
+    ${kv('Published',`${F.publishedAt}, by ${esc(F.founder)}`)}
+    ${kv('Fetched',F.fetchedAgo)}
+    ${kv('Holds',`<span class="num">${pub().length}</span> greens · <span class="num">${F.roasters.length}</span> roasters · <span class="num">${F.bars.length}</span> bars`)}
+  </div>
+  <div class="btnrow">
+    <button class="btn btn-quiet" onclick="toast('This copy stands — revision ${F.rev} is the newest.')">Check for a newer copy</button>
+    <button class="btn btn-quiet" onclick="toast('Downloaded — one page, yours, offline.')">Download this atlas</button>
+  </div>
+  <p class="note">A published copy is a copy. What the keeper has written since is not here, and nothing you do can change what is.</p>
+  <p class="note" style="border-top:0">Offline, the first action reads <em>“Offline — this copy stands.”</em> and does not spin. The download is one self-contained page on CARTA paper stock, the machine-readable record embedded — a reader who can read but not carry away is being kept.</p>
+  ${seal('Carta','The record is yours.')}`;
+}
+
+/* R9 — the door out. Nothing is locked; nothing is lost. */
+function r9(){
+  return `${back(['The desk','r7'])}
+  ${hero('When you\'re ready','Start keeping.','Your own record, on this device. Nothing about the atlas changes — your cups lay over it, the way a keeper\'s always have.')}
+  ${rowlink('Someone else makes it','A bar and one tap is a whole record.','')}
+  ${rowlink('I make my own','The instrument opens — begin from the last cup.','')}
+  <p class="note">The published copy stays exactly where it is, read-only, underneath. Your record reads over it: your node first, the published one behind. Nothing is merged, nothing is pushed, and nothing you write is anyone else's.</p>
+  <div class="section-head"><h2>Already a keeper</h2></div>
+  ${rowlink('Sign in','Your record comes down from '+esc(F.server)+'. The pen stays where it is.','')}
+  ${seal('Carta','The atlas is everyone\'s; the record is yours.')}`;
+}
+
+/* ============ the founder's side ============ */
+
+/* F1 — the publish act. The counts are the consent. */
+function f1(){
+  const p=pub();
+  return `${back(['The desk','r7'])}
+  ${hero('The pen','Publish the atlas.','A copy of the shared record, readable by anyone with the address. No ledger travels — no cups, no brews, no bags. The hands that attested are named.')}
+  <div class="card">
+    ${kv('Greens',`<span class="num">${p.length}</span>`)}
+    ${kv('Roasters',`<span class="num">${F.roasters.length}</span>`)}
+    ${kv('Bars',`<span class="num">${F.bars.length}</span>`)}
+    ${kv('Sightings',`<span class="num">61</span>`)}
+    ${kv('Pours',`<span class="num">${p.reduce((n,l)=>n+l.bars.length,0)}</span> <span class="muted small">readings cut</span>`)}
+    ${kv('Held back',`<span class="num">${held().length}</span>`)}
+  </div>
+  <button class="btn btn-primary" onclick="toast('Published. Revision ${F.rev+1}.')">Publish</button>
+  <button class="btn btn-quiet" onclick="S('f2')">What you're holding back</button>
+  <p class="note">A copy, not a switch. What you publish stands until you publish again.</p>
+  <h2>The address</h2>
+  <div class="card"><div style="font-family:var(--mono);font-size:12px;color:var(--ink-2);word-break:break-all">https://carta.quietmatter.co/#atlas=https://${esc(F.server)}</div></div>
+  <p class="note">One link. No account, no install — it opens the atlas read-only and skips the welcome.</p>
+  ${seal('Carta','Nothing leaves without a hand.')}`;
+}
+
+/* F2 — the held list. Additive, dated, reversible — the strike's grammar. */
+function f2(){
+  return `${back(['Publish','f1'])}
+  ${hero('The pen','What you\'re holding back.','Held greens leave the published copy at the next publish. The record keeps them whole.')}
+  ${held().map(l=>`<button class="rowlink" onclick="toast('Released — it rides the next publish.')"><span><span class="t">${esc(l.name)}</span><br><span class="m">held 4 July 2026 · and its ${l.hands.length} roast${l.hands.length===1?'':'s'}, and its ${l.bars.length} pour${l.bars.length===1?'':'s'}</span></span><span class="go">Release</span></button>`).join('')}
+  <p class="note">A hold is a dated, signed entry, exactly like a strike — it only ever adds, so two of your devices land on the same answer without an order. Holding a green holds its roasts and its pours with it: a green whose roasts are public and whose identity is not is a broken road, not a redaction.</p>
+  ${seal('Carta','Set down, never erased.')}`;
+}
+
+/* F3 — the hold, taken from the green's own corrections fold. In ink, never red. */
+function f3(){
+  const l=F.lots[0];
+  return `${back(['A green','r2'])}
+  ${hero('Corrections & identity',esc(l.name),'The fold a reader never sees.')}
+  ${rowlink('Amend this green','Reopen its form.','')}
+  ${rowlink('Merge or split','Two records of one green, or one record of two.','')}
+  ${rowlink('Enter a standing','A score, with the protocol and the cupper that earned it.','')}
+  ${rowlink('Hold this green back','It leaves the published copy at the next publish.',"toast('Held. It leaves at the next publish.')")}
+  ${rowlink('Withdraw','Struck from the record. Reversible.','')}
+  <p class="note">Holding is not withdrawing and not erasing. The record keeps it whole; readers simply never see it. Its roasts and its pours are held with it. In ink, never in red — red is spent once, on erase.</p>
+  ${seal('Carta','One grammar for correcting anything.')}`;
+}
+
+/* ============ the prototype's own chrome ============ */
+const SCREENS=[
+  {id:'r0',side:'reader',n:'R0',t:'The welcome',sub:'The way in',tabs:null,note:{
+    p:'Unchanged markup — but door one now means something. It asks the server for the published atlas rather than opening an empty one on the device.',
+    keep:['“I read, mostly — keep nothing, ever.” The name was already here.'],
+    gone:[],
+    q:'A keeper keeps a record. A reader reads one. The only difference is whether anything is written down.'}},
+  {id:'r1',side:'reader',n:'R1',t:'The Atlas',sub:'The atlas',tabs:'atlas',note:{
+    p:'The room stands whole. Its head changes, because a reader has no coffee in their hands — and the head is where the copy states its own age.',
+    keep:['search over greens, hands, growers and bars','the chart hero, both frames, the lenses','the greens, the plates, the hands','the street layer, with the drawn plot as its floor'],
+    gone:['the coffee in hand — replaced by the copy stating itself','“Read the season for me” — taste-ranked, and there is no taste','propose a sighting','the Chart No. 1 curator door','worth-the-walk — argued from a record'],
+    q:'A copy, not a feed — it changes when the keeper publishes again.'}},
+  {id:'r2',side:'reader',n:'R2',t:'A green',sub:'A green',tabs:'atlas',note:{
+    p:'The page they came for, and it loses only what was theirs. Note the road: five stations, not six.',
+    keep:['the road, the grain, the standing, the height','availability — the pours, with their readings cut','the roasts by hand, the hard-ID rung, the primers'],
+    gone:['the corpus — own brews','your overlay','corrections & identity — amend, merge/split, the standing entry, the hold'],
+    q:'The sixth station is a keeper\'s own cups. An absent reader is not a gap in the record.'}},
+  {id:'r3',side:'reader',n:'R3',t:'A roaster',sub:'The roaster',tabs:'atlas',note:{
+    p:'The same reading at its own scope. One thing survives that looks like a write and is not: the claim offer.',
+    keep:['the aggregate road, the origin plot, the greens','their facts, where a first party has signed','the claim offer on an unsigned page'],
+    gone:['every correction','the geo fix'],
+    q:'If the roastery is yours — sign in and take the pen on your own facts.'}},
+  {id:'r4',side:'reader',n:'R4',t:'A bar',sub:'The bar',tabs:'atlas',note:{
+    p:'The café page keeps its whole personality — the derived palette, the banner, the locator, the reach. Only the two writes leave.',
+    keep:['the palette and the banner','the reach and its record','the locator, and what is poured here'],
+    gone:['log a cup here','enter a sighting','favourite, and the want'],
+    q:'Dated and signed, its recipe unknown and never invented.'}},
+  {id:'r5',side:'reader',n:'R5',t:'A plate',sub:'A plate',tabs:'atlas',note:{
+    p:'A facet-scoped page — a query over the greens. There is nothing on it to cut, so it arrives whole.',
+    keep:['the aggregate road','the terrace span','the greens, and the unread counted out loud'],
+    gone:[],
+    q:'One that leaves a field unread is counted, not hidden.'}},
+  {id:'r7',side:'reader',n:'R7',t:'The Desk',sub:'The desk',tabs:'ledger',note:{
+    p:'Two rooms on the bar — Atlas and Desk. The Record is gone: it is the reader\'s overlay over the atlas, and a room whose whole content is “you have nothing” is a nag with a tab of its own.',
+    keep:['this copy','start keeping','sign in','preferences','the manual'],
+    gone:['sync setup','the keepers room','the pen','what you set down','export and import','the shelf and the tools','the ladder'],
+    q:'DESK_ROWS is already filtered per state — this is a filter, not a fork.'}},
+  {id:'r8',side:'reader',n:'R8',t:'This copy',sub:'This copy',tabs:'ledger',note:{
+    p:'The provenance surface, and the one that keeps the app honest about staleness. It also carries the download, because a reader who can read but not carry away is being kept.',
+    keep:['where it came from, its revision, when it was published and fetched','check for a newer copy — never a spinner in front of the record','download this atlas'],
+    gone:[],
+    q:'What the keeper has written since is not here, and nothing you do can change what is.'}},
+  {id:'r9',side:'reader',n:'R9',t:'Start keeping',sub:'When you\'re ready',tabs:'ledger',note:{
+    p:'The door out. It sets depth, ends reader mode, and leaves the published copy exactly where it is.',
+    keep:['the welcome\'s other two doors','sign in, for someone who already has an account'],
+    gone:[],
+    q:'Your node first, the published one behind. Nothing is merged, nothing is pushed.'}},
+  {id:'f1',side:'founder',n:'F1',t:'Publish the atlas',sub:'The pen',tabs:'ledger',note:{
+    p:'The founder\'s side. The counts are the consent — the founder sees exactly what leaves, in the same units the reader will see it in.',
+    keep:['the counts, before the tap','the address, ready to copy — the whole distribution story','the held count'],
+    gone:[],
+    q:'A copy, not a switch. What you publish stands until you publish again.'}},
+  {id:'f2',side:'founder',n:'F2',t:'Holding back',sub:'The pen',tabs:'ledger',note:{
+    p:'The held list. Each row names what rides with it; each releases with a tap, and no confirm — nothing here erases.',
+    keep:['the hold\'s date and its cascade, stated'],
+    gone:[],
+    q:'A green whose roasts are public and whose identity is not is a broken road, not a redaction.'}},
+  {id:'f3',side:'founder',n:'F3',t:'Hold a green',sub:'A green',tabs:'atlas',note:{
+    p:'The hold lives in the corrections fold, beside amend and withdraw, because it is the same grammar — a dated, signed, reversible entry.',
+    keep:['the whole fold, which a reader never sees'],
+    gone:[],
+    q:'In ink, never in red — red is spent once, on erase.'}}
+];
+const VIEW={r0,r1,r2,r3,r4,r5,r7,r8,r9,f1,f2,f3};
+let cur='r1',arg=null;
+function S(id,a){cur=id;arg=a||null;paint();document.getElementById('main').scrollTop=0}
+function paint(){
+  const s=SCREENS.find(x=>x.id===cur)||SCREENS[1];
+  document.getElementById('who').textContent=s.sub;
+  document.getElementById('doorbtn').style.display=s.side==='founder'?'':'none';
+  const m=document.getElementById('main');
+  m.className=cur==='r0'?'pt-bare ca-screen':'ca-screen';
+  m.innerHTML=VIEW[cur](arg);
+  // the bar: two rooms for a reader, three for the founder. nav.tabs is hard-coded
+  // to three columns in index.html — a real finding, noted rather than patched over.
+  const t=document.getElementById('tabs');
+  if(!s.tabs){t.style.display='none'}else{
+    t.style.display='';
+    const desk=s.side==='founder'?'f1':'r7';
+    const rooms=s.side==='reader'?[['atlas','Atlas','r1'],['ledger','Desk',desk]]
+      :[['atlas','Atlas','r1'],['trace','Record','r1'],['ledger','Desk',desk]];
+    t.style.gridTemplateColumns=`repeat(${rooms.length},1fr)`;
+    t.innerHTML=rooms.map(([id,lb,go])=>`<button class="${s.tabs===id?'on':''}" onclick="S(${jsq(go)})">${lb}</button>`).join('');
+  }
+  const r=document.getElementById('rail');
+  r.innerHTML=`<div class="pt-mark">CARTA</div>
+    <div class="pt-sub">The reader's flow — a prototype for <b>docs/READER.md</b>.</div>
+    <h4>The reader</h4>${SCREENS.filter(x=>x.side==='reader').map(btn).join('')}
+    <h4>The founder</h4>${SCREENS.filter(x=>x.side==='founder').map(btn).join('')}
+    <h4>The record</h4>
+    <button onclick="window.open('../READER.md')"><b>read</b>docs/READER.md</button>`;
+  const n=document.getElementById('ptnote');
+  n.innerHTML=`<h4>${s.n} · ${esc(s.t)}</h4><p>${s.note.p}</p>
+    ${s.note.keep.length?`<h4>Stands</h4><ul>${s.note.keep.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
+    ${s.note.gone.length?`<h4>Absent</h4><ul>${s.note.gone.map(x=>`<li class="gone">${x}</li>`).join('')}</ul>`:''}
+    <h4>The line</h4><p class="q">${s.note.q}</p>`;
+}
+const btn=x=>`<button class="${cur===x.id?'on':''}" onclick="S(${jsq(x.id)})"><b>${x.n}</b>${esc(x.t)}</button>`;
+paint();
+</script>
+</body>
+</html>
