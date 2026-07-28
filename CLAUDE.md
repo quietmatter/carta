@@ -33,6 +33,7 @@ CNAME                 GitHub Pages custom domain
 docs/                 The design record — reference, never runtime (see docs/README.md)
   VOICE.md            The voice standard every user-facing string screens against
   NORTH_STAR.md, VISION.md, RESOLVER.md, SCHEMA.md, …   the thesis + specs
+  CORRECTIONS.md      The grammar for amending a record and setting one down
   DESIGN_BRIEF.md     The redesign commission
   redesign-concept/   The Claude Design prototype (CARTA Redesign.dc.html) — THE
                       reference file for the app's surfaces — plus its handoff
@@ -118,6 +119,32 @@ server/
   cross-context read, the Desk's by-roaster/by-lot folds and quick start. Nothing
   is deleted — flip the flag and every one answers again. The Record's
   bookkeeping (wants, skips, leans) stays visible regardless.
+- **the strike** (`docs/CORRECTIONS.md`) — how a record is unmade. Three verbs
+  beyond making: **amend** (reopen its own form), **put away / retire** (it
+  leaves the working surfaces, the record stays whole — a finished bag, a
+  grinder you sold), **withdraw** (struck from the record). One irreversible
+  door, **erase**, in one room. A strike is *itself a record* —
+  `{id:'strike:<ref>', ref, coll, at, by, rec, via, restoredAt}` in `D.struck` —
+  and the withdrawn body is **spliced out of its live collection** while the
+  strike stands. That is the point: a struck bag is not in `D.bags`, so it
+  cannot leak into a count, a plate, a map or an export because a read path
+  forgot a filter; the ~160 direct ledger reads were never touched. Both the
+  strike and the restore are **additions** to one entry (`at` / `restoredAt`,
+  each nudged by `afterIso` so ties can't form), because an id-union merge only
+  propagates additions — liveness derives as `at > restoredAt`, monotone and
+  order-free, exactly like `mergeSightings`. `strike`/`unstrike`/`eraseStruck`
+  are the model; `strikeDeps` is the cascade (a coffee carries its brews and
+  their cups; a brew carries its cup; a café cup carries its Pour; **a Setup
+  never cascades** — it is a tool, not an event, so a Setup with brews retires
+  instead), `strikeFollows` names it in full before the tap. UI: `openCorrect`
+  (one sheet, every kind), `struckRoomHTML` (Desk → *What you set down*, the row
+  appearing only once filled), `openStruckItem`, `openEraseAll`, `openBrewList`
+  (a coffee's brews — the surface that did not exist), `openCorrectPlace` +
+  `regWithdraw`/`regRestore` (the Register entry, pen-gated and struck on the
+  shared document). `mergeStruck` in the sync; `regLive`/`regEntries` are the
+  Register's read door (`regFind` is the identity door — `regUpsert` must reach
+  a struck entry so a later sighting reuses its id).
+  **No browser dialogs.** `confirm()` is gone from the app entirely.
 - **the Register** — the shared café ledger ("Jane's Fighting Ships, for
   cafés"): one canonical entry per café, stored *outside* the per-user keys
   under `carta.register.v1` (`REG`), shared by every user of the device and —
@@ -211,14 +238,17 @@ server/
   nothing-like-it forks a new lot. The sighting lands as an authored line
   (`proposeRec`) bound via `bindRecordTo` or forked onto its own green.
 - **views** — `vAtlas`, `vBags` (the shelf — the Coffee step of the home-cup
-  arc, with put-away/restore), `vSetups`, `vTrace` (Record), `vDesk` + its
-  `deskSection(k)` panels (`deskAtlasHTML`/`deskRecordHTML`/`deskPrefsHTML`/
-  `deskManualHTML`, plus `vAdminSection`/`vSyncSection`/`vUsersSection`),
+  arc, with put-away/restore), `vSetups` (live Setups, then the retired), `vTrace`
+  (Record), `vDesk` + its `deskSection(k)` panels (`deskAtlasHTML`/
+  `deskRecordHTML`/`struckRoomHTML`/`deskPrefsHTML`/`deskManualHTML`, plus
+  `vAdminSection`/`vSyncSection`/`vUsersSection`),
   `vDoor`, plus the page overlays and detail sheets. `vToday`/`vMore`/`vField`/
   `vCafes`/`vCircle` are retired; their work lives on the Atlas, the Record,
   the Desk and the pages. **The Desk opens one section at a time** (`deskOpen`)
-  — "nine rows, not nine screens"; the shelf and the Setups are rooms of their
-  own, so `deskGo` navigates to them rather than nesting them.
+  — rows, not screens; the shelf and the Setups are rooms of their
+  own, so `deskGo` navigates to them rather than nesting them. `DESK_ROWS` is
+  filtered per state — *What you set down* appears only once something is (an
+  empty drawer is not a row), so the lede counts the rows it actually drew.
 - **sheet plumbing** — bottom-sheet modal (`openSheet`/`closeSheet`) with
   drag-to-dismiss.
 - **dial component** — the tap / hold-to-accelerate / tap-to-type numeric dials
@@ -418,7 +448,11 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   Setup** — each Setup's grind dial moves the way that grinder does. Also carries
   `grinderRef`/`brewerRef` — refs into the canonical **Gear** catalog (the shared
   grinder/brewer model). The grind scale stays per-Setup, untouched; Gear is what
-  transfers, the Setup is how one keeper's dial moves.
+  transfers, the Setup is how one keeper's dial moves. `archived` **retires** a
+  Setup (`retireSetup`) — it leaves the brew form's picker while every brew read
+  against it stays exactly as readable. The picker still offers a retired Setup
+  when *that* brew was pulled on it, so an amend can never silently re-point a
+  grind to a different grinder.
 - **bags** — a bag of coffee: `roaster`, `name`, origin fields (`originCountry`,
   `originRegion`, `producer`, `variety`, `process`, `lot`), `roastDate`,
   `roastLevel` (index into `ROAST_LEVELS`), `price`, `archived`, plus its `site`
@@ -475,7 +509,15 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   catalog nodes through the same `catStamp*` machinery and runs `resolveLot`
   exactly as a bag's origin does, so the atlas fills pre-adjudicated. Swept by
   `catSeed`/`catRepoint` like a bag; merged in sync like any collection.
-- **deleted** — tombstones so removed records stay removed across a sync merge.
+- **struck** — the strikes (see *the strike* above): one entry per set-down
+  record, carrying the withdrawn body whole. Merged by `mergeStruck` (max `at`,
+  max `restoredAt`, independently); `mergeLedgers` then subtracts every actively
+  struck ref — and its carried pour — from the live collections. That
+  subtraction is **derived every merge, never written as a tombstone**: a strike
+  must stay undoable, and a tombstone is the one thing that cannot be taken
+  back.
+- **deleted** — tombstones so *erased* records stay erased across a sync merge.
+  Written only by `eraseStruck` (and `deleteUser`'s whole-ledger removal).
 - **prefs** — per-user preferences (`tempUnit`, `hideTimer`, …) via
   `getPref`/`setPref`. The matching's bookkeeping lives here too: `signal`
   (the three named cafés), `wantAt`/`wantAsk` (save dates and aging asks),
@@ -585,11 +627,26 @@ the brew corpus (step 6) and discovery (step 7) follow.
   aggregate grind across Setups.
 - **Existing single-user data migrates automatically** to the per-user key on
   first boot — don't break that migration path.
-- Deletions must record tombstones (`deleted`) so sync doesn't resurrect them.
+- **Nothing is erased by an ordinary act.** Removal is two-stage: *set down*
+  (instant, reversible, in reach of the record itself) then *erase* (deliberate,
+  gathered, one room). Never add a delete that skips the first stage. A struck
+  record leaves its live collection whole — never invent a parallel "hidden"
+  flag that read paths must remember to filter.
+- **Red is spent once.** `--danger` / `.btn-danger` belongs to *erase* and the
+  two whole-record destructions (delete a keeper, replace a ledger on import)
+  and nowhere else. A reversible act in red reads as destruction and teaches the
+  keeper to fear a correction. VOICE.md: guard rails stay in ink, never in red.
+- **No `confirm()`, ever.** A browser dialog speaks in the operating system's
+  voice, breaks the paper, and cannot say anything true about the record. State
+  the consequence in a sheet.
+- **Erasures** must record tombstones (`deleted`) so sync doesn't resurrect
+  them; **strikes must not** — a tombstone would make the restore impossible.
 - **A café's identity lives in the Register; cups stay per-user.** Café reads
   resolve Register-first (`cafeProfile`); café writes go through `regUpsert`
   *and* the per-user `D.cafes` copy. A sighting fills blanks, never erases —
-  don't let a sparse write strip a rich entry.
+  don't let a sparse write strip a rich entry. New Register **reads** go through
+  `regEntries()`/`regByName`, never raw `REG.entries` — only the identity door
+  (`regFind`) and the merge see struck entries.
 - **The reach is compiled, never picked.** Keepers attest facts; the depth
   follows from `reachCompile`. Reach sightings are append-only — withdraw and
   supersede strike a line with a date, never delete it — and `unread` is a

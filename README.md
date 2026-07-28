@@ -33,8 +33,8 @@ taken away.
   for (with their reasons), lately, the bookkeeping the matching writes, and
   every reading one fold down.
 - **Desk** — everything that is not a cup: the shelf, your Setups, adding to
-  the atlas, the export that leaves with you, the pen, sync, keepers,
-  preferences, the manual. Nine rows, one open at a time.
+  the atlas, the export that leaves with you, what you've set down, the pen,
+  sync, keepers, preferences, the manual. One row open at a time.
 
 Every café, every green, every roaster is a **page**, not a popup — reached
 from anywhere its name appears. A lot's page carries **the road** — six
@@ -121,6 +121,39 @@ When a bag is finished, **put it away** from the shelf (the Atlas → *or start 
 the shelf*) — it waits under *Put away* with your best cup, and restores with
 everything you learned when you buy it again.
 
+## Correcting the record
+
+Every record answers to the same two verbs, behind one door: **amend it**, or
+**set it down**. Open any record — a cup, a brew, a coffee, a Setup, a café, an
+authored roast — and the correction sheet states what it is, names every record
+that will go with it if it goes, and offers both.
+
+- **Amend** reopens the form the record was written in. Nothing new to learn.
+- **Set it down** strikes it from the record. It leaves every reading, count,
+  average, plot and export, and waits — whole — under **the Desk → What you set
+  down**. One tap puts it back, with exactly the records that came down with it
+  and no more. **Nothing is erased by an ordinary act.**
+- **Put away / retire** is the third verb and a different thing: a finished bag,
+  a grinder you sold. It leaves the working surfaces; the record stays whole and
+  readable. A bag you *finished* is put away; a bag you typed by *mistake* is set
+  down. Collapsing those into one "delete" would make the record lie either way.
+- **Erase** is the only irreversible act in CARTA, and lives in one place — the
+  bottom of that same desk row, on records you have already set down. It is the
+  one thing wearing the red button.
+
+A strike is itself a record: signed, dated, and carrying the withdrawn body
+whole — exactly as a reach sighting is struck rather than deleted. It syncs like
+one, so a record set down on one device leaves every device, and putting it back
+puts it back everywhere, from either side, in any order.
+
+Three things the correction reaches that nothing reached before: a **brew** (a
+coffee's page lists every brew on it, including the ones whose impression you
+skipped, which no path in the app could open before); a **coffee** (removable at
+last, not merely put away); and a **café entry** on the Register (struck by the
+hand that holds the pen, so a phantom minted by a typo is no longer permanent).
+
+The full grammar and why it is shaped this way: [docs/CORRECTIONS.md](docs/CORRECTIONS.md).
+
 ## Appearance
 
 CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, and one ember-red signal for the current action and the cup’s score. Two themes — **Paper** and **Dusk** — switch under **the Desk → Preferences**, remembered per user. A third choice, **Auto**, follows the device's own light/dark setting (iOS Settings → Display & Brightness, etc.) and moves with it live, no reload needed. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
@@ -178,7 +211,7 @@ page — "Why this" — and no score is ever shown without them.
 
 Your cafés live as pages off the Atlas — a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, the order-again verdict, traceability — waits behind one line, to add now or later.
 
-- **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put).
+- **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put), and any of them can be set down instead — see *Correcting the record* above.
 - **Each café wears its own colours.** Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — and builds a whole surface from that one signature colour: the café's page and every cup logged there take on the palette. A small design system, held in light and dusk alike. Only the palette is kept, never a hotlinked image, so the record stays offline and yours.
 - **A banner drawn from that same colour.** The café's own page opens on a gradient built from its hue — a neutral roast tone while the café is still unbranded. Just the name, on its own colour; nothing fetched, nothing photographed.
 - **One read fills the rest.** The same website read pulls more than colour — the site's own description becomes the café's line, the name it states is surfaced, and the map lookup opens on its address — so you retype nothing the site already knows. It fills only what's still blank, and offline you fill it in by hand.
@@ -218,6 +251,12 @@ record, and the tags you've given it.
 - **Anyone can amend, provenance is kept.** At this early stage every
   contributor may edit an entry ("Amend the entry" on the café's page). The
   entry remembers who entered it first and who amended it last.
+- **An entry can be struck, never deleted.** "Correct the Register entry" on a
+  café's page withdraws it from the shared record — the fix for a phantom café a
+  typo'd shop name minted. The entry keeps its provenance and every sighting on
+  it, waits under **the Desk → What you set down**, and any hand holding the pen
+  can stand it back up. Your own cups there stay on your own record either way:
+  a cup is yours, the entry is everyone's.
 - **Lookup and discovery.** The café cup form looks the shop up against the
   Register as you type — "A known place — Halfpence, Portland, first entered by
   Jane." Find surfaces Register entries you haven't been to, ranked as
@@ -340,7 +379,7 @@ CARTA can synchronize ledgers through a tiny self-hosted server, so your record 
 - Run the server: `node server/server.js` — one file, zero dependencies, JSON storage. Or skip the hardware entirely: the same server deploys serverless to Cloudflare's free plan with one command. See **[server/README.md](server/README.md)** for deployment, the HTTPS requirement, and the API.
 - Connect from the app: **the Desk → Sync → Connect to a sync server** (server URL, name, passcode).
 - Offline-first: with no server configured or reachable, nothing changes. Edits queue and sync when the app comes back to the foreground.
-- Conflicts merge by record — logging on two devices keeps both entries; removed cups stay removed (tombstones).
+- Conflicts merge by record — logging on two devices keeps both entries; a record set down on one device leaves every device, and putting it back puts it back everywhere (the strike and the restore are both dated additions, so the two sides converge in any order). Erased records stay erased (tombstones).
 - Viewed ledgers are cached locally, so a friend's record remains browsable while offline (marked as a cached copy).
 
 ## What's Included
