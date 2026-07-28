@@ -155,6 +155,73 @@ you sure?* — the first stage does not warrant the question, and the second sta
   reversible, so it converges across every keeper.
 - **An authored roast** — the curator's direct entry to the atlas — can be set
   down from the desk where it was authored.
+- **A sighting** — the line you signed on a café's Register entry. It was the
+  model for all of this and the last thing that could not be taken back; see
+  *the sighting*, below.
+
+## The sighting — the line that taught the grammar
+
+A reach sighting was struck-not-deleted before any of this existed. What it did
+not have was the sheet, or the way home:
+
+- withdrawing fired **on a tap**, with nothing said about what the reading would
+  become;
+- there was **no restore**. The code claimed a withdrawal was "reversible by
+  simply sighting again" — but sighting again mints a *new* line. The old one
+  stayed struck forever, and the record kept a strike nobody could answer.
+
+So the sighting now answers the same verbs, at the shared record's scale:
+`openCorrectSighting(shop, sid)` states what you saw, what you signed, what the
+bar reads — then **what falls with it**.
+
+### The cascade, for a fact
+
+A record's withdrawal carries other *records*. A sighting's carries other
+*facts*: it un-carries what it attested, and each one falls to the next line
+standing, or to unread. `reachFalls(e, s)` names them one by one — the bag with
+whatever reading takes its place ("falls to roaster named, your earlier line"),
+each counter fact nothing else attests ("no other line attests it — it goes
+unread"). **A fact another standing line still attests never appears there at
+all**, because nothing about it changes. And the sheet shows the badge as it
+stands beside the badge without the line, so the recompile is read before it is
+caused, never after.
+
+### Liveness, and why the strike had to change shape
+
+Liveness derives exactly as a record's does:
+
+```
+struck  ⟺  withdrawnAt > (restoredAt || '')
+```
+
+Both dates are additions on one line, because a sighting merges by **union of
+ids** across every keeper's copy — a removal would not travel.
+
+This forced one correction in `mergeSightings`: `withdrawnAt` used to merge as
+the **earliest** strike. With an undo that is wrong, and quietly — a stale
+withdrawal would outrank the restore that undid it, and a re-strike could never
+take. Both dates now merge as a **max**, independently, the construction
+`mergeStruck` uses. `supersededAt` keeps the earliest: it has no undo, so once a
+line is answered it stays answered, whichever copy saw it first.
+
+`sightStanding` / `sightStandingAt` are now the one liveness rule every sighting
+in the app reads through — the reach's lines and the catalog's bind lines both —
+so a line's state means the same thing wherever it is compiled, at now or at any
+past moment (`reachHistory` replays the restore exactly as it replays the
+strike).
+
+### What a sighting deliberately cannot do
+
+**It cannot be erased.** The desk's red button does not reach it, and the sheet
+says why: every keeper holds a copy of this line, and a line deleted here would
+return on the next sync. A tombstone could suppress it — and a tombstone is the
+one thing that cannot be taken back, on a record that is not only yours. *Struck*
+is the strongest honest answer, so it is the last one offered.
+
+**Only your own line, and only while it stands unanswered.** A keeper strikes
+what they signed, never another keeper's line. A *superseded* line has no strike
+and no restore: it was already corrected, by the line you wrote next — and that
+line is itself withdrawable, which is the door back.
 
 ### Red is spent once
 
@@ -175,9 +242,11 @@ question already answered, and it would sit uncomfortably close to the resolver.
 Corrections there stay where they are, in the lot page's *Corrections &
 identity* fold.
 
-**Reach sightings, caliber records, hard IDs, penFacts.** Already struck-not-
-deleted, already signed, already dated. They were the model for this. They keep
-their own withdraw paths.
+**Caliber records, hard IDs, penFacts.** Already struck-not-deleted, already
+signed, already dated. They were the model for this, alongside the sighting, and
+they keep their own withdraw paths. (The sighting no longer sits in this list —
+see *the sighting* above. What is written there is the pattern the rest of them
+would follow, if and when they need the door home too.)
 
 **Deleting a keeper and their whole ledger** stays what it is — the one act
 that destroys a whole record — but it stopped using a browser dialog and now

@@ -141,7 +141,9 @@ server/
   appearing only once filled), `openStruckItem`, `openEraseAll`, `openBrewList`
   (a coffee's brews — the surface that did not exist), `openCorrectPlace` +
   `regWithdraw`/`regRestore` (the Register entry, pen-gated and struck on the
-  shared document). `mergeStruck` in the sync; `regLive`/`regEntries` are the
+  shared document), `openCorrectSighting` + `reachWithdraw`/`reachRestore` (a
+  signed sighting — see *the reach*, the one thing in the room that cannot be
+  erased). `mergeStruck` in the sync; `regLive`/`regEntries` are the
   Register's read door (`regFind` is the identity door — `regUpsert` must reach
   a struck entry so a later sighting reuses its id).
   **No browser dialogs.** `confirm()` is gone from the app entirely.
@@ -158,8 +160,20 @@ server/
   Keepers attest *facts* (`bag`: unnamed/roaster/lot/farm; `seen`: inhouse/
   methods/answers/story), never depths; `reachCompile` derives the reading (the
   deepest fact standing; per fact the newest standing sighting carries).
-  `regSight` enters a line, `reachWithdraw` strikes one (no confirm — nothing
-  erases), amend supersedes your own line via `{supersede}`. UI: `reachBadge`
+  `regSight` enters a line, amend supersedes your own line via `{supersede}`.
+  A sighting is **set down and stood back up** exactly as a record is
+  (`docs/CORRECTIONS.md`): `reachWithdraw`/`reachRestore` are dated *additions*,
+  liveness derives as `sightStruck` (`withdrawnAt > restoredAt`), and
+  `sightStanding`/`sightStandingAt` are the one rule every sighting in the app
+  compiles through — the reach's lines and the catalog's bind lines, at now or
+  at any past moment. `openCorrectSighting` is the one door (own line only,
+  never a superseded one): what you saw, what the bar reads, and **what falls
+  with it** — `reachFalls`/`reachWithout`/`reachWith` name each carried fact and
+  whatever stands in its place, so the recompile is read before it is caused. A
+  struck line waits in `struckSights()` under Desk → *What you set down* and
+  stands back up for every keeper. **A sighting is never erased** — every keeper
+  holds a copy and the merge is a union by id, so a deletion here would return
+  on the next sync; the room's red button does not reach it. UI: `reachBadge`
   (mark pref `reachMark`), `openReachPrimer`/`openReachAmend`/`openReachRecord`
   sheets, a depth lens in Find, sighting rows in the Record tab.
 - **domain** — pure helpers: roast levels + accent color, rest-window math
@@ -530,9 +544,14 @@ Outside the ledger, the device keeps **the Register** (`carta.register.v1`):
 `{version, rev, dirty, entries, deleted}` where each entry is a canonical café
 — `id`, `name`, `city`, `neighborhood`, `address`, `lat`/`lon`, `palette`/`accent`,
 `notes`, `tags[]`, provenance (`firstBy`/`firstAt`, `by`/`updatedAt`), and `sightings`
-(the reach: `{id, by, at, bag?, seen?[], withdrawnAt?, supersededAt?}` — signed
-lines that only ever accumulate; strikes add a date, nothing is removed, and
-`mergeRegister` unions them by id so sync never loses a line). It is shared by
+(the reach: `{id, by, at, bag?, seen?[], withdrawnAt?, restoredAt?, supersededAt?}`
+— signed lines that only ever accumulate; a strike, a restore and a supersede each
+add a date, nothing is removed, and `mergeRegister` unions them by id so sync never
+loses a line. `mergeSightings` takes the **max** of `withdrawnAt` and of
+`restoredAt` independently — the `mergeStruck` construction, because liveness is
+`withdrawnAt > restoredAt` and an earliest-strike rule would let a stale withdrawal
+outrank the restore that undid it — and the **earliest** `supersededAt`, which has
+no undo). It is shared by
 all users on the device and synced as one shared document (founder-writable
 for now — see *the pen* above).
 
@@ -648,9 +667,13 @@ the brew corpus (step 6) and discovery (step 7) follow.
   `regEntries()`/`regByName`, never raw `REG.entries` — only the identity door
   (`regFind`) and the merge see struck entries.
 - **The reach is compiled, never picked.** Keepers attest facts; the depth
-  follows from `reachCompile`. Reach sightings are append-only — withdraw and
-  supersede strike a line with a date, never delete it — and `unread` is a
-  state, never a default to ○ Counter. Depth is a filter in Find, never a sort
+  follows from `reachCompile`. Reach sightings are append-only — withdraw,
+  restore and supersede each add a date to a line, never delete it, and a
+  sighting is the one struck thing in the app with **no erase at all** (every
+  keeper holds a copy; a deletion would return on the next sync). A keeper
+  strikes only their own line, never another keeper's, and a superseded line
+  has no strike and no restore — it was already answered by the line written
+  next. `unread` is a state, never a default to ○ Counter. Depth is a filter in Find, never a sort
   key. Badges stay monochrome: never the ember, never a fill.
 - **The grain is never rounded up.** A green rests on the coarsest rung it can
   prove. A rung is promoted by evidence, never by a field merely being non-empty,
