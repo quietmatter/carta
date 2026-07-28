@@ -361,7 +361,7 @@ server/
   never admitted as the read; **rarity** (`lotSetRarity`, blanks-only —
   `sizeKg`/`sizeBags`/`auctionPrice`/`scarceVariety`) reuses `lotHands` for
   "how narrowly carried," never a new field; **traceability** is the existing
-  `grain` (RESOLVER §6), reused, not reinvented. `lotTier(lot)` folds all
+  `grain` (see *the grain* below), reused, not reinvented. `lotTier(lot)` folds all
   three into the compiled read — named apart from `compile()`'s own
   `standing` key (the identity sightings array) to avoid colliding with it.
   Surfaces on `openLotPage` beside the grain/identity lines, monochrome, each
@@ -369,6 +369,21 @@ server/
   `saveLotStanding` are the entry sheet, gated by `readOnly()` exactly like
   the page's other corrections. `devSeedChart` demonstrates both a real
   sourced reading and an unnamed claim, clearly demo-labeled.
+- **the grain** — how finely a green's origin is proven: **one spatial ladder,
+  five rungs** (`country` · `region` · `station` · `farm` · `green-lot`), derived
+  in `lotIdentity` and read through `GRAIN_READ`/`grainRead`, `DOOR_GRAIN` and
+  `grainPrimerKey`. A record rests on the **coarsest rung it can prove** — the
+  ladder reads evidence, never field-presence. `green-lot` needs a lot identity
+  (a printed lot name or a hard-ID), not a mere producer name; `farm` and
+  `station` are told apart by `actorKind` — the door's tag (`producerKind`), the
+  lot's `processorRefs` edge, or the shared `FARM_RE`/`STATION_RE` vocabulary,
+  the mill tested first. **An unmatched name buys no rung** (SURFACES' law:
+  never guessed into a tier). The **season is not a rung** (MODEL_QA A5) — the
+  harvest is its own column, `fingerprint.harvest.year`, read by `harvestYear`
+  and weighted 0.18 by the scorer. Grain is a rule's output, not an attestation,
+  so `lotRederive` writes it **through** on every re-derivation (blanks-only
+  would freeze the first guess); the year fills blanks only. The two pre-6.1
+  values (`station-season`, `region-grade`) stay readable for an unswept record.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
 - **export / import** — two copies. The **ledger export** (`ledgerData` →
@@ -580,13 +595,22 @@ the brew corpus (step 6) and discovery (step 7) follow.
   supersede strike a line with a date, never delete it — and `unread` is a
   state, never a default to ○ Counter. Depth is a filter in Find, never a sort
   key. Badges stay monochrome: never the ember, never a fill.
+- **The grain is never rounded up.** A green rests on the coarsest rung it can
+  prove. A rung is promoted by evidence, never by a field merely being non-empty,
+  and never by a name the record cannot classify. If a new rung is added, its
+  label, its `GRAIN_READ` gloss, its `DOOR_GRAIN` line and its primer must all
+  say the same thing — the copy promises this on every surface it appears.
+  The ladder is **spatial only**: harvest, process and variety are their own
+  columns and never become rungs (MODEL_QA A5) — and so is height, which is not
+  even a column of identity (below).
 - **Height places, it never ranks.** `altitudeMasl` is additive beside identity and
   stays there — never in `lotKeyOf`, never in the fingerprint, never a coordinate,
-  never a standing axis, and never a facet you can cut the atlas by (banding greens
-  by height *is* a ranking, whatever it is called). A stated range renders as a band
-  and a single figure as one rule; never widen a point or narrow a range to make a
-  drawing tidier. Two heights that disagree are carried, not resolved — the first
-  band stands and the later one is appended, never overwritten.
+  never a standing axis, never a rung of the grain, and never a facet you can cut
+  the atlas by (banding greens by height *is* a ranking, whatever it is called). A
+  stated range renders as a band and a single figure as one rule; never widen a
+  point or narrow a range to make a drawing tidier. Two heights that disagree are
+  carried, not resolved — the first band stands and the later one is appended,
+  never overwritten.
 - **A match score never travels without its reasons.** Anywhere a score or
   band shows, "Why this" (the `signals` from `matchOf`) must be reachable.
   Location is consent-gated and ephemeral (`myGeo`, in memory only — never
