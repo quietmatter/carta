@@ -306,6 +306,48 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 .aggrow.thin .fill{opacity:.3}
 .aggrow .ct{font-family:var(--sans);font-size:13px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)}
 @media (prefers-reduced-motion:no-preference){.aggrow .fill{transition:width .82s var(--mo-ease)}}
+
+/* ===== the terrace — the atlas's second projection =====
+   The map is a plan: it answers WHERE a coffee came from. The terrace is a
+   SECTION: it answers how high it sat. Drawn like a surveyor's level book —
+   contour rules at a stated interval, and every mark placed against them.
+   The geometry carries the honesty, not the caption: a stated RANGE draws as a
+   band with two edges, a single stated figure as one rule. Nothing here widens
+   a point or narrows a range, because a lot sold as 1,800–1,900 m never said
+   1,850. Monochrome and unsorted — height is a growing condition, never a
+   grade, so it never wears the ember and never ranks a thing. */
+/* the label cuts its own rule, so it must be painted in whatever the terrace is standing on:
+   the leaf on a page, the sheet's paper inside one (the grower's page is a sheet) */
+.terr{margin:10px 0 2px;--terr-paper:var(--surface-card)}
+.sheet .terr{--terr-paper:var(--surface-page)}
+.terr .plot{position:relative;height:148px;margin-left:46px;border-left:1px solid var(--line-2)}
+.terr i{position:absolute;left:0;right:0;display:block}
+/* the contours — the ruled ground, dotted and light. Three weights carry the whole
+   drawing: dotted is the ground, a hairline is another green, the sunk zone is this
+   one. Dashed is not used here at all — in this app a dashed line means COARSE (the
+   road's gap, a centroid pin), and a height another green actually stated is held. */
+.terr .ct{border-top:1px dotted var(--line-2);opacity:.7}
+.terr .ct span{position:absolute;right:calc(100% + 8px);top:-.68em;font-family:var(--sans);font-size:10px;
+  letter-spacing:.04em;color:var(--ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* another green that states a height — placed, never ordered. The comparison set */
+.terr .m0{right:34%;border-top:1px solid var(--ink-3);border-bottom:1px solid var(--ink-3);opacity:.55}
+/* the subject — its band sunk into the section, exactly as a .card sinks into the leaf */
+.terr .m1{background:var(--surface-sunk);border-top:1px solid var(--line-strong);border-bottom:1px solid var(--line-strong)}
+.terr .m1::before{content:'';position:absolute;left:-5px;top:calc(50% - 4.5px);width:9px;height:9px;background:var(--line-strong)}
+/* one figure, not a range: one rule and no zone — the drawing says which was stated */
+.terr .m0.pt,.terr .m1.pt{border-bottom:0}
+.terr .m1.pt{background:none;border-top-width:2px}
+/* a green inside an aggregate span — solid, thin, unlabelled; the sentence carries the numbers */
+.terr .m2{right:14%;border-top:1px solid var(--ink-3);border-bottom:1px solid var(--ink-3);opacity:.65}
+.terr .m2.pt{border-bottom:0}
+/* the value, cut into its own rule the way a dimension is labelled on a drawing */
+.terr .val{position:absolute;right:0;top:calc(50% - .72em);padding-left:7px;background:var(--terr-paper);
+  font-family:var(--serif);font-weight:600;font-size:11px;line-height:1.3;color:var(--ink);white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){
+  .terr.draw i{animation:terrIn .55s var(--mo-ease) both}
+  .terr.draw .m1{animation-delay:.1s}
+  @keyframes terrIn{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:none}}
+}
 /* the door — the display voice, the fact chips, the binding rows, the readout */
 .door-display,.sheet h3.door-display{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.12;letter-spacing:-.02em;color:var(--ink);margin:0 0 6px;text-wrap:balance}
 .door-display em{font-style:italic;font-weight:400}
@@ -1378,6 +1420,57 @@ function lotRarityStanding(lot){
   if(regSubstance(lot&&lot.scarceVariety))facts.push(`${lot.scarceVariety} — an inherently scarce varietal`);
   return {read:(facts.length||hands>=2)?'sourced':'unread',facts,hands,narrow:hands>0&&hands<=2};
 }
+/* ---- The height it grew at (SCHEMA: altitudeMasl:[min,max]). Of everything a bag prints about
+ * where a coffee came from, height is the ONLY continuous fact — country, region, variety and
+ * process are categories, and no two categories can be read on one scale. Height can, which is
+ * the only reason it earns a drawing rather than a row.
+ *
+ * Deliberately OUTSIDE identity, and it stays there: never in lotKeyOf, never in the fingerprint,
+ * never a coordinate. Two greens at 1,900 m are not the same green, and a height is not a place —
+ * either read would claim a precision nobody stated. Additive beside the standing's three axes,
+ * exactly as rarity is, and just as firmly not a fourth axis: the trade's shorthand that higher
+ * is better is a shorthand, and this record does not repeat it.
+ *
+ * The band the lot carries is what the LOT was sold as. A producer's own range is a different
+ * fact belonging to a different desk (PLATFORM's scope table gives the producer altitude,
+ * first-party); the two disagreeing is not an error to fix but the divergence case, below. ---- */
+const ALT_LO=200,ALT_HI=3000;   // the coffee belt, generously — outside it the figure is not an altitude
+const altValid=b=>Array.isArray(b)&&b.length===2&&b.every(n=>typeof n==='number'&&isFinite(n))&&b[0]>=ALT_LO&&b[1]<=ALT_HI&&b[0]<=b[1];
+const altComma=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+$)/g,',');
+const altLabel=b=>!altValid(b)?'':(b[0]===b[1]?altComma(b[0])+' m':altComma(b[0])+'–'+altComma(b[1])+' m');
+const altOf=lot=>{const b=lot&&lot.altitudeMasl;return altValid(b)?b:null};
+// A thousands separator read as a word boundary is how "1,930 masl" becomes 930 — a number the
+// page never said. Here the separator is part of the figure, and a bare 3–4 digits still reads.
+const altNum=s=>Number(String(s).replace(/[.,](?=\d{3}\b)/g,''));
+const ALT_FIG='(\\d{1,2}[.,]\\d{3}|\\d{3,4})',
+      ALT_UNIT='\\s*(?:m|masl|m\\.a\\.s\\.l\\.?|mts?|met(?:er|re)s?|msnm)\\b';
+// The paste's height, as NUMBERS — the string a chip shows is built from these, so what the door
+// displays and what the record keeps can never disagree. A figure outside the belt is refused
+// outright rather than stored: it is a price, a page number or a typo, and none of those is a height.
+function altParse(text){
+  const t=String(text||'');
+  const r=new RegExp('(?:^|[^\\d.,])'+ALT_FIG+'\\s*(?:m|masl|msnm)?\\s*[–—-]\\s*'+ALT_FIG+ALT_UNIT,'i').exec(t);
+  if(r){const b=[altNum(r[1]),altNum(r[2])].sort((x,y)=>x-y);if(altValid(b))return b}
+  const s=new RegExp('(?:^|[^\\d.,])'+ALT_FIG+ALT_UNIT,'i').exec(t);
+  if(s){const v=altNum(s[1]);if(altValid([v,v]))return[v,v]}
+  return null;
+}
+// Blanks-only, exactly as lotSetRarity — and a second band that DISAGREES is carried, not resolved
+// (PLATFORM.md's own worked example is altitude): the standing band never moves, the other line is
+// appended with its author, and the page shows the seam. Picking between them is compile()'s rung
+// comparator, a later pass; until it exists, first-stated stands and the disagreement stays visible
+// rather than being silently dropped — which is the whole difference between a record and a claim.
+function lotSetAltitude(lot,band,who,src){
+  if(!lot||lot.role||!altValid(band))return null;
+  const now=new Date().toISOString(),stamp=()=>{lot.updatedAt=now;if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots')};
+  if(!altOf(lot)){lot.altitudeMasl=band;lot.altitudeSrc=src||'keeper';lot.altitudeBy=who||'';lot.altitudeAt=now;stamp();return 'set'}
+  const cur=lot.altitudeMasl;
+  if(cur[0]===band[0]&&cur[1]===band[1])return 'same';
+  lot.altitudeAlt=lot.altitudeAlt||[];
+  if(lot.altitudeAlt.some(a=>a&&a.band&&a.band[0]===band[0]&&a.band[1]===band[1]))return 'same';
+  lot.altitudeAlt.push({id:uid(),band,src:src||'keeper',by:who||'',at:now});stamp();
+  return 'diverged';
+}
 // The standing: the three axes, read side by side, never merged into one number. Traceability is
 // the existing grain (RESOLVER §6) — reused here, not reinvented.
 function lotTier(lot){
@@ -2339,10 +2432,18 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.1.0';
+const APP_VERSION='6.2.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.2.0',date:'July 2026',title:'The terrace — the atlas gets its second projection.',items:[
+    'A green’s page draws the height it grew at. The map is a plan and answers where a coffee came from; it cannot answer how high. So the atlas gained a section: contour rules, this green’s height placed against every other green the record holds one for, and the reading in words — how many grew lower, how many higher, how many overlap this band.',
+    'A range is drawn as a band and a single figure as one line. A lot sold as 1,800–1,900 m never said 1,850, so the drawing never says it either. Height is a growing condition, never a grade — nothing anywhere sorts by it, and it is never part of a coffee’s identity.',
+    'The height finally lands. The door has always read an altitude off a paste and shown it as a fact you could strike; it then spent it as a sentence in the notes, where nothing could read it back. It now goes onto the green itself, in a column of its own.',
+    'Two heights that disagree are carried, not resolved. The first stands, the other is kept beside it with its author, and the page shows the seam rather than flattening it.',
+    'The same section at four scopes — a green, a plate, a roaster, a grower. Where this hand buys, at what heights a facet grew. Greens that state no height are counted out loud, never quietly dropped.',
+    'A thousands separator no longer breaks the read: “1,930 masl” was landing as 930 m, a number no page ever said. Heights outside the coffee belt are refused rather than stored.',
+  ]},
   {v:'6.1.0',date:'July 2026',title:'The grain, told truly — five rungs, and the harvest kept.',items:[
     'The resolution ladder now reads the evidence instead of counting fields, and it had been rounding every green up by one rung. A country alone was printed as a region; a region as a washing station and a season; a bare producer name as a green lot — the finest grain the trade can prove. The record said “never rounded up” on the same screen. It does now.',
     'Five rungs, named for what they prove: country · region · washing station · farm · green lot. A green rests on the coarsest rung its record can prove and no finer. A washing station reads as a washing station — it had been reading as a green lot, while a green that knew only its region read as a station. The two were exactly inverted.',
@@ -2853,6 +2954,7 @@ function openProducerPage(producerId){
     :'No green traces to this grower yet.'}</div>
   ${lots.length>=2?`<h2>How far the road runs</h2>${aggRoadHTML(lots.map(l=>l.id))}
   <div class="muted small" style="margin:8px 2px 14px">Counted across every green traced here — the record's reach, not this grower's.</div>`:''}
+  ${aggTerraceHTML(lots.map(l=>l.id),'The heights it grows at','as each green was stated')}
   ${lots.length?lots.map(row).join(''):'<div class="empty">No green on the atlas names this grower.</div>'}
   ${isAdmin()?`<button class="btn btn-quiet" style="margin-top:10px" onclick="openGeoFix('producers',${jsq(p.id)})">Correct the pin${p.lat!=null?'':' — unplaced'}</button>`:''}
   <button class="btn btn-quiet" style="margin-top:${isAdmin()?'6':'10'}px" onclick="closeSheet()">Close</button>`);
@@ -2894,6 +2996,13 @@ function openLotStanding(lotId){
     <label class="f"><span class="l">Variety <span class="opt">if inherently scarce</span></span><input type="text" id="rar_variety" list="scarcelist" placeholder="gesha"></label>
   </div>
   <datalist id="scarcelist">${SCARCE_VARIETIES.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
+  <hr style="border:none;border-top:1px solid var(--line);margin:16px 2px">
+  <div class="sub" style="margin-bottom:6px">The height it grew at</div>
+  <div class="grid2">
+    <label class="f"><span class="l">From, metres <span class="opt">optional</span></span><input type="number" id="alt_lo" min="${ALT_LO}" max="${ALT_HI}" placeholder="1800"></label>
+    <label class="f"><span class="l">To, metres <span class="opt">a range only</span></span><input type="number" id="alt_hi" min="${ALT_LO}" max="${ALT_HI}" placeholder="1900"></label>
+  </div>
+  <div class="muted small" style="margin:2px 2px 10px">${altOf(lot)?`<strong>${esc(altLabel(altOf(lot)))}</strong> stands. A different figure is kept beside it, attributed — the first line is never overwritten. `:''}Leave <em>to</em> blank when the bag states one figure: a single height draws as one line, a range as a band. A growing condition, never a grade.</div>
   <button class="btn btn-primary" onclick="saveLotStanding(${jsq(lotId)})">Save</button>
   <button class="btn btn-quiet" onclick="closeSheet();openLotPage(${jsq(lotId)})">Cancel</button>`);
 }
@@ -2904,9 +3013,18 @@ function saveLotStanding(lotId){
   const score=val('cal_score');
   const calAdded=regSubstance(score)&&!!lotAddCaliber(lot,{score,tier:tierMap[segState.cal_tier]||'',event:val('cal_event'),cupper:val('cal_cupper'),protocol:val('cal_protocol'),date:val('cal_date')},activeName());
   const rarAdded=lotSetRarity(lot,{sizeKg:val('rar_kg'),sizeBags:val('rar_bags'),auctionPrice:val('rar_price'),scarceVariety:val('rar_variety')},activeName());
-  if(!calAdded&&!rarAdded){toast('Nothing to save — leave a field blank to skip it');return}
+  const aLo=numv('alt_lo'),aHi=numv('alt_hi');
+  // either field alone is one stated figure — a keeper who fills only "to" meant a height,
+  // not nothing, and reading it as a range would invent the other end
+  const aEnds=[aLo,aHi].filter(v=>v!=null);
+  const aBand=aEnds.length?[Math.min(...aEnds),Math.max(...aEnds)]:null;
+  if(aBand&&!altValid(aBand)){toast(`A height reads between ${altComma(ALT_LO)} and ${altComma(ALT_HI)} m — outside that it is not one`);return}
+  const altRes=aBand?lotSetAltitude(lot,aBand,activeName(),'keeper'):null;
+  if(!calAdded&&!rarAdded&&!altRes){toast('Nothing to save — leave a field blank to skip it');return}
   closeSheet();openLotPage(lotId);
-  toast(calAdded?'Recorded — the reading is on the record':'Rarity recorded');
+  toast(altRes==='diverged'?'Kept beside the standing height — carried, not resolved'
+    :calAdded?'Recorded — the reading is on the record'
+    :rarAdded?'Rarity recorded':'The height is on the green');
 }
 const findRec=id=>(D.bags||[]).find(b=>b&&b.id===id)||(D.cups||[]).find(c=>c&&c.id===id)||(D.authored||[]).find(a=>a&&a.id===id)||null;
 /* ---- §5 the merge/split affordances, on the lot page. Own+writable only; each shows its reason. A join
@@ -3835,6 +3953,12 @@ function devSeedChart(){
     lotSetRarity(wgLot,{sizeKg:300},demoWho);
   }
   if(ngLot)lotAddCaliber(ngLot,{score:92,tier:''},demoWho); // no named source — resolves to tier 4, a claim only
+  // (8) the height, demonstrated in both geometries the terrace distinguishes — a stated RANGE on the
+  // washed green, a single stated FIGURE on the natural — and the divergence case with it: a second
+  // hand states the washed green higher, so the first line stands and the other is kept beside it.
+  [[wgLot,[1900,2100]],[ngLot,[1950,1950]],[catNode('lots',ga.rec.lotRef),[2000,2150]],[catNode('lots',gb.rec.lotRef),[1700,1850]]]
+    .forEach(([l,b])=>{if(l)lotSetAltitude(l,b,demoWho,'door')});
+  if(wgLot)lotSetAltitude(wgLot,[2000,2200],'Seabright (demo)','keeper'); // the seam: two standing lines disagree, and the page says so
   save();
   closeSheet();
   toast('Seeded — a chart to walk and a map to read: one green in two hands, a station with two greens, a roaster’s other greens, a green poured at a bar, and a standing on the washed one');
@@ -4500,6 +4624,67 @@ function aggRoadHTML(lotIds){
   return `<div class="agg">${alls[0].map((s0,i)=>{const c=alls.filter(s=>regSubstance(s[i].who)).length;
     return `<div class="aggrow${c/n<.5?' thin':''}"><span class="lb">${esc(s0.lb)}</span><span class="track"><span class="fill" style="width:${Math.round(c/n*100)}%"></span></span><span class="ct">${c}/${n}</span></div>`}).join('')}</div>`;
 }
+/* ---- the terrace (SURFACES §2's reading, second projection). The atlas has always drawn one
+ * kind of picture: a plan. A plan answers WHERE, and it is the right drawing for a scene, a
+ * region, a front door. It cannot answer how high, because height is not a position on the
+ * ground — and height is the one origin fact continuous enough to put two greens on a single
+ * scale without inventing anything to get them there.
+ *
+ * So: a section. Same laws as every other reading here. It PLACES, it never ranks — nothing
+ * sorts by height, no facet cuts by it, and the comparison never travels without its denominator
+ * or its unread count. And it is never a map: a height is not a coordinate, and no mark drawn
+ * here has any business becoming a pin. ---- */
+function terrScale(bands){
+  let lo=Math.min(...bands.map(b=>b[0])),hi=Math.max(...bands.map(b=>b[1]));
+  const step=(hi-lo)>1400?400:200;
+  lo=Math.floor(lo/step)*step-step;hi=Math.ceil(hi/step)*step+step;
+  if(hi-lo<600){const m=(hi+lo)/2;lo=Math.floor((m-300)/step)*step;hi=Math.ceil((m+300)/step)*step} // one green must not fill the frame and imply a range it never stated
+  lo=Math.max(0,lo);hi=Math.min(ALT_HI,hi);
+  return {lo,hi,step,pc:v=>(v-lo)/(hi-lo)*100};
+}
+// band: the subject, drawn as a zone. inner: each green inside an aggregate span. others: the
+// comparison set, hairline. Every one of them keeps its own geometry — a point stays a point.
+function terraceHTML(o){
+  o=o||{};
+  const band=altValid(o.band)?o.band:null;
+  const inner=(o.inner||[]).filter(altValid),others=(o.others||[]).filter(altValid);
+  if(!band)return '';
+  const sc=terrScale([band,...inner,...others]);
+  const at=b=>`bottom:${sc.pc(b[0]).toFixed(2)}%;height:${(sc.pc(b[1])-sc.pc(b[0])).toFixed(2)}%`;
+  const pt=b=>b[0]===b[1]?' pt':'';
+  let rules='';
+  for(let v=Math.ceil(sc.lo/sc.step)*sc.step;v<=sc.hi;v+=sc.step)
+    rules+=`<i class="ct" style="bottom:${sc.pc(v).toFixed(2)}%"><span>${altComma(v)}</span></i>`;
+  // the subject's zone is an opaque surface, so the comparison marks are laid over it, never
+  // under — a green whose height falls inside this band must still be visible in it
+  return `<div class="terr${o.draw&&!reducedMotion()?' draw':''}"><div class="plot">${rules}
+    <i class="m1${pt(band)}" style="${at(band)}">${o.label?`<b class="val">${esc(altLabel(band))}</b>`:''}</i>
+    ${inner.map(b=>`<i class="m2${pt(b)}" style="${at(b)}"></i>`).join('')}
+    ${others.map(b=>`<i class="m0${pt(b)}" style="${at(b)}"></i>`).join('')}
+  </div></div>`;
+}
+// The only honest way to compare two RANGES: wholly below, wholly above, or overlapping. No
+// midpoint stands in for a band, nothing is ordered, and the denominator travels with the reading.
+function altReading(band,others){
+  if(!others.length)return 'The only green on the atlas that states a height.';
+  const lower=others.filter(b=>b[1]<band[0]).length,higher=others.filter(b=>b[0]>band[1]).length;
+  const over=others.length-lower-higher,one=band[0]===band[1];
+  const spans=n=>one?`${n} span${n===1?'s':''} it`:`${n} overlap${n===1?'s':''} this band`;
+  if(others.length===1)return 'The one other green that states a height '+(lower?'grew lower.':higher?'grew higher.':one?'spans this height.':'overlaps this band.');
+  const parts=[lower&&`${lower} grew lower`,higher&&`${higher} higher`,over&&spans(over)].filter(Boolean);
+  return `Of the ${others.length} other greens that state one — ${parts.join(', ')}.`;
+}
+// the same reading at set scope: the facet's own span, with each green's band drawn inside it.
+// Fewer than two states a height and there is no spread to read — the green's own page says it better.
+function aggTerraceHTML(lotIds,heading,tail){
+  const bands=lotIds.map(id=>altOf(catNode('lots',id))).filter(Boolean);
+  if(bands.length<2)return '';
+  const span=[Math.min(...bands.map(b=>b[0])),Math.max(...bands.map(b=>b[1]))];
+  const unread=lotIds.length-bands.length;
+  return `<div class="section-head" style="margin-top:16px"><h2>${esc(heading)}</h2><button class="text-action ex" onclick="openPrimer('altitude')">the height</button></div>
+  ${terraceHTML({band:span,inner:bands,label:true})}
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px 0">${esc(altLabel(span))} across ${bands.length} greens that state a height${tail?', '+tail:''}.${unread?` ${unread===1?'One more says':unread+' more say'} nothing about it — counted, never dropped.`:''} Placed, never ranked.</div>`;
+}
 function vLotPage(){
   const lotId=pageView.id;
   const lot=catNode('lots',lotId);
@@ -4529,6 +4714,10 @@ function vLotPage(){
   if(regSubstance(lot.variety))idRows.push({k:'Variety',v:lot.variety});
   if(fp.process&&fp.process.family&&fp.process.family!=='unspecified')idRows.push({k:'Process',v:fp.process.family});
   if(fp.harvest&&fp.harvest.year)idRows.push({k:'Harvest',v:fp.harvest.year}); // its own column, never a rung of the grain (MODEL_QA A5) — and what tells one crop from the next
+  // the height sits last of the origin facts, and after the harvest deliberately: everything above
+  // it is identity the resolver reads, and this one never is — a growing condition, stated beside
+  const alt=altOf(lot);
+  if(alt)idRows.push({k:'Altitude',v:altLabel(alt),ex:'altitude'});
   if(ko)idRows.push({k:'Outturn',v:ko.value,ex:'outturn'});
   // the resolution is stated in the readout above the card, not repeated as a row
   const idCard=idRows.length?`<div class="card">${idRows.map(r=>`<div class="kv"><span class="k">${esc(r.k)}</span>
@@ -4543,6 +4732,18 @@ function vLotPage(){
       :cmp.identity.rung==='derived'
         ?`<div class="muted small" style="margin:0 2px 12px"><strong>Matched by fingerprint</strong>${(cmp.identity.bind.evidence&&(cmp.identity.bind.evidence.fields||[]).length)?' — '+esc(cmp.identity.bind.evidence.fields.join(' · ')):''}. A read the record can defend, and undo. ${exBtn('fingerprint','the fingerprint','badge ghost')}</div>`
         :'';
+  // ── the terrace — the section beside the plan (SURFACES §2). This green's height against every
+  // other green the atlas holds one for. It places; it never ranks, and it never becomes a pin ──
+  const peers=atlasLots().filter(x=>x.id!==lotId),peerAlt=peers.map(x=>altOf(x.lot)).filter(Boolean);
+  const altUnread=peers.length-peerAlt.length;
+  const altDiv=(lot.altitudeAlt||[]).filter(a=>a&&altValid(a.band));
+  const terrHTML=alt?`<div class="section-head"><h2>The height it grew at</h2><button class="text-action ex" onclick="openPrimer('altitude')">how to read it</button></div>
+  ${terraceHTML({band:alt,others:peerAlt,label:true,draw:true})}
+  <div class="muted small serif" style="font-style:italic;margin:10px 2px 0">${esc(altLabel(alt))}. ${esc(altReading(alt,peerAlt))}${altUnread?` ${altUnread===1?'One more green says':altUnread+' more greens say'} nothing about height — counted, never dropped.`:''}</div>
+  ${altDiv.length?`<div class="muted small" style="margin:8px 2px 0">Also stated — ${altDiv.map(a=>esc(altLabel(a.band))+(a.by?`, by ${esc(a.by)}`:'')).join(' · ')}. The first line stands; this one is kept beside it. ${exBtn('divergence','carried, not resolved','badge ghost')}</div>`:''}
+  <p class="note">A growing condition, not a grade. Nothing on this page sorts by it.</p>`
+  :peerAlt.length?`<div class="section-head"><h2>The height it grew at</h2><button class="text-action ex" onclick="openPrimer('altitude')">how to read it</button></div>
+  <div class="empty">Unread — nothing on file states one. ${peerAlt.length===1?'One green on the atlas does':peerAlt.length+' greens on the atlas do'}.</div>`:'';
   // ── the standing — three axes, never merged, unread until their own evidence stands ──
   const tier=lotTier(lot),cal=tier.caliber,rar=tier.rarity;
   const standRows=[
@@ -4662,6 +4863,7 @@ function vLotPage(){
   <h2>Identity</h2>
   ${idCard}
   ${idNote}
+  ${terrHTML}
   <div class="section-head"><h2>The standing</h2><button class="text-action ex" onclick="openPrimer('standing')">How to read it</button></div>
   <div class="card">${standRows.map(r=>`<div class="kv"><span class="k">${esc(r.k)}</span>
     <button class="v ex" style="font:inherit;color:inherit;text-align:right;background:none;border:none;padding:0" onclick="openPrimer(${jsq(r.ex)})">${esc(r.v)}</button></div>`).join('')}</div>
@@ -4711,6 +4913,7 @@ function vRoasterPage(){
   <h2>On offer, this season</h2>
   ${offers||'<div class="empty">No green on the atlas names this roaster yet.</div>'}
   ${ids.length?originFrameHTML(atlasGraph(ids),{heading:'Where their greens grew',minMarks:2}):''}
+  ${aggTerraceHTML(ids,'The heights this hand buys at','across the greens it has roasted')}
   <div class="muted small serif" style="font-style:italic;margin:12px 2px 0">${note}</div>
   ${isAdmin()?`<button class="text-action" style="margin-top:8px" onclick="openGeoFix('roasters',${jsq(r.id)})">Correct the pin${r.lat!=null?'':' — unplaced'}</button>`:''}
   ${claimBlock('roaster',r.id,r.name)}
@@ -4762,6 +4965,7 @@ function vPlatePage(){
   <p class="note">Where a bar runs short, the record is telling you what it has not been told — not a chart of anyone's failure.</p>
   ${unread?`<div class="muted small" style="margin:0 2px 16px">${all.length} green${all.length===1?'':'s'} on the atlas · ${unread} unread on this facet — counted, never quietly dropped.</div>`:''}
   ${originFrameHTML(atlasGraph(ids),{heading:'Where they grew',minMarks:2})}
+  ${aggTerraceHTML(ids,'The heights they grew at','on this plate')}
   ${handRows?`<h2>Who roasted them</h2>${handRows}`:''}
   <div class="section-head"><h2>The greens</h2><span class="n-note num">n=${hit.length}</span></div>
   ${hit.map(x=>{const fp=x.lot.fingerprint||{};
@@ -5130,6 +5334,7 @@ const PR={
   country:{t:'Country',b:'A country, and nothing under it yet — the coarsest honest grain. A named grower the record cannot classify buys no rung above this: an unmatched name is never guessed into a tier.'},
   caliber:{t:'Caliber',b:'A cup score never travels bare. A score enters the standing only through its source — a competition, an estate auction, a named cupper or lab. An unnamed number is on file as a claim, unverified, and it never prints as the score.'},
   standing:{t:'The standing',b:'What the coffee is in the world — caliber, rarity, traceability — compiled from sourced facts, never picked. It is not whether you’ll love it. That stays yours, on the overlay.'},
+  altitude:{t:'The height it grew at',b:'Metres above sea level, as the record was told them. Height is a growing condition — slower cherry, denser bean — never a grade: the trade’s shorthand that higher is better is a shorthand, and this record does not repeat it. Nothing here sorts by it. A stated range draws as a band and a single figure as one line, because a lot sold as 1,800–1,900 m never said 1,850. It is the one origin fact continuous enough to read two greens on the same scale, which is why it earns a drawing — a section, beside the map’s plan. It is never part of a coffee’s identity, and never a pin: a height is not a place.'},
   rarity:{t:'Rarity',b:'How much of it exists — bags landed, an auction price, a scarce variety, how narrowly it is carried. Scarcity stated as a fact, never as a countdown.'},
   outturn:{t:'The outturn',b:'Kenya sews an identifier into the bag: one cherry delivery, milled and graded into sibling lots — AA, AB, PB — under one outturn. Two records naming this code are the same green, outright.'},
   hands:{t:'One green, many hands',b:'The same green lot, bought by more than one roaster — each a different reading of one coffee. The page nothing else can render.'},
@@ -5601,9 +5806,8 @@ function doorParse(text){
   const farm=doorFindNamed(text,FARM_RE),stn=doorFindNamed(text,STATION_RE);
   if(farm.length)f.producer=farm[0];
   if(stn.length&&(!farm.length||normPlace(stn[0])!==normPlace(farm[0])))f.processor=stn[0];
-  const alt=text.match(/(\d{3,4})\s*[–—-]\s*(\d{3,4})\s*m(?:asl)?\b/i)||text.match(/\b(\d{3,4})\s*m(?:asl)?\b/i);
-  const comma=n=>String(n).replace(/\B(?=(\d{3})+$)/g,',');
-  if(alt)f.altitude=alt[2]?comma(alt[1])+'–'+comma(alt[2])+' masl':comma(alt[1])+' masl';
+  const alt=altParse(text);   // numbers, not a string — the chip below is built FROM them, so the
+  if(alt){f.altitudeM=alt;f.altitude=altLabel(alt)}   // door and the record can never disagree
   const yr=text.match(/\b(20[12]\d)\b/);      if(yr)f.harvest=yr[1];
   const rst=text.match(/\b(light-medium|medium-dark|light|medium|dark)\s+roast\b/i);
   if(rst)f.roastLevel=rst[1].charAt(0).toUpperCase()+rst[1].slice(1).toLowerCase();
@@ -5621,7 +5825,7 @@ function doorFields(){
   return {originCountry:(!s.country&&f.country)||'',originRegion:(!s.region&&f.region)||'',
     producer:farm||stn,producerKind:farm?'farm':stn?'station':'',station:stn,
     variety:(!s.variety&&(f.varieties||[])[0])||'',process:(!s.process&&f.process)||'',lot:'',
-    altitude:(!s.altitude&&f.altitude)||'',harvest:(!s.harvest&&f.harvest)||'',
+    altitude:(!s.altitude&&f.altitude)||'',altitudeM:(!s.altitude&&f.altitudeM)||null,harvest:(!s.harvest&&f.harvest)||'',
     roastLevel:(!s.roastLevel&&f.roastLevel)||''};
 }
 // lotIdentity's grain rule and lotKeyOf's ≥2-of-6 threshold, computed exactly as the save will
@@ -5737,6 +5941,14 @@ function doorStampActors(rec,o){
     if(pn&&lot&&!(lot.processorRefs||[]).length){lot.processorRefs=[pn.id];lot.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots')}
   }
 }
+// The height the paste stated, onto the green it describes. It was already read and already shown
+// as a strikeable chip; until now the bind spent it as a sentence in the notes, where nothing could
+// ever read it back. This is the goal's first test — a fact entering the record at the point it was
+// born, in the column that holds it. Blanks-only, and a disagreement is carried (lotSetAltitude).
+function doorStampAltitude(rec,o){
+  if(!rec.lotRef||!altValid(o.altitudeM))return;
+  lotSetAltitude(catNode('lots',lotFwd(rec.lotRef)),o.altitudeM,activeName(),'door');
+}
 function doorBind(kind){
   if(guard())return;
   const o=doorFields(),roaster=val('d_roaster'),name=val('d_name');
@@ -5750,17 +5962,18 @@ function doorBind(kind){
     return;
   }
   const lvl=ROAST_LEVELS.indexOf(o.roastLevel);
-  const extras=[o.altitude&&('grown at '+o.altitude)].filter(Boolean).join(' · '); // facts with no field yet — kept in the record's own words, never dropped
-  // the harvest and the actor's kind ride on the record now, not in a prose aside: the year is the
-  // scorer's third-heaviest column (one crop is not the next), and the kind is what the grain reads
+  // The prose aside is empty now, and stays gone. It held the two facts the paste could read and
+  // the record could not keep: the harvest (its own column, the scorer's third-heaviest — one crop
+  // is not the next) and the height (doorStampAltitude, below). Both are columns; neither is a
+  // sentence. The actor's kind rides on the record too — it is what the grain reads.
   const base={roaster,name,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,
     producerKind:o.producerKind,station:o.station,harvest:o.harvest,
-    variety:o.variety,process:o.process,lot:'',roastDate:doorRoasted,roastLevel:lvl<0?0:lvl,hardIds:[],notes:extras};
+    variety:o.variety,process:o.process,lot:'',roastDate:doorRoasted,roastLevel:lvl<0?0:lvl,hardIds:[],notes:''};
   if(kind==='note'){ // bag-shaped, no shelf, no cup — swept exactly as a bag (it carries a roast)
     const rec={id:uid(),createdAt:new Date().toISOString(),curator:activeName(),...base};
     D.authored=D.authored||[];D.authored.push(rec);
     catStampRoaster(rec);const res=catStampLot(rec);catStampRoast(rec);
-    doorStampActors(rec,o);save();atlasGeoFill(rec);
+    doorStampActors(rec,o);doorStampAltitude(rec,o);save();atlasGeoFill(rec);
     doorOn=false;
     if(res&&res.action==='propose'&&res.propose)openLotPropose(rec.id,res.propose.lot.id,res.propose.fields);
     else if(rec.lotRef){openLotPage(rec.lotRef);toast(res&&res.action==='auto'?'Noted — folded onto a green already charted':'Noted — the green is on your atlas')}
@@ -5771,7 +5984,7 @@ function doorBind(kind){
   const nb={id:uid(),createdAt:new Date().toISOString(),archived:false,boughtAt:'',price:null,site:'',palette:null,...base};
   D.bags.push(nb);curBagId=nb.id;
   catStampRoaster(nb);const lotRes=catStampLot(nb);catStampRoast(nb);
-  doorStampActors(nb,o);
+  doorStampActors(nb,o);doorStampAltitude(nb,o);
   if(nb.roasterRef)nb.roaster=''; // flat fields retire under a standing node, exactly as saveBag
   if(nb.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>nb[k]='');
   if(nb.roastRef){nb.roastLevel=0;nb.roastDate=''}
@@ -7123,6 +7336,11 @@ function mergeSightings(...lists){
   });
   return [...m.values()].sort(bySight);
 }
+// Union an append-only, id-keyed line list — the mergeHardIds move with no strike semantics,
+// for lists whose lines only ever accumulate (the altitude divergences).
+const mergeById=(...ls)=>{const m=new Map();
+  ls.flat().filter(x=>x&&x.id).forEach(x=>{if(!m.has(x.id))m.set(x.id,{...x})});
+  return [...m.values()].sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||String(a.id).localeCompare(String(b.id)))};
 // The lot's hard-ID set unions across devices exactly as sightings do — append-only, union by id,
 // a strike (withdrawnAt) only ever adds. Two keepers each entering a token on the same green both
 // stand; a bind is never lost in a merge. Deterministic, no conflicts by construction (RESOLVER §1).
@@ -7184,6 +7402,7 @@ function mergeCatalog(loc,rem){
     const w={...(beats(l,r)?l:r)};
     if(l.sightings||r.sightings)w.sightings=mergeSightings(l.sightings||[],r.sightings||[]);
     if(l.hardIds||r.hardIds)w.hardIds=mergeHardIds(l.hardIds||[],r.hardIds||[]); // the identity set unions — a bind is never lost to the winner
+    if(l.altitudeAlt||r.altitudeAlt)w.altitudeAlt=mergeById(l.altitudeAlt||[],r.altitudeAlt||[]); // a divergence recorded on one device is not lost to the other's copy — the seam is the point
     m.set(l.id,w)});
   const groups={};
   [...m.values()].filter(e=>e&&e._key&&!dead.has(e.id)).forEach(e=>{(groups[e._key]=groups[e._key]||[]).push(e)});
@@ -7198,6 +7417,8 @@ function mergeCatalog(loc,rem){
     if(sg.length)w.sightings=sg;
     const hg=mergeHardIds(...g.map(e=>e.hardIds||[])); // two devices seeding one node both carry their tokens
     if(hg.length)w.hardIds=hg;
+    const ag=mergeById(...g.map(e=>e.altitudeAlt||[]));
+    if(ag.length)w.altitudeAlt=ag;
     return w;
   });
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};

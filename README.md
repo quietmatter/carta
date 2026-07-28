@@ -58,12 +58,24 @@ page with the aggregate road: how many of the facet's greens reach each
 station, and where those greens grew. Greens that leave the field unread are
 counted, never quietly dropped. Find plates under **Atlas → Cut the atlas**.
 
-**One reading, five scopes.** The road, the plot and the hands are one
-component pointed at a different slice of one graph — a green, a plate, a
-roaster, a grower, a bar. A roaster's page counts the road across every green
-that hand has roasted; a bar's counts it across what it pours. Back always
-means the page you came from: a green opened from a plate returns to that
-plate.
+**The terrace** is the atlas's second projection. The map is a plan — it
+answers *where* a coffee came from, and it cannot answer how high. So a
+green's page draws a **section**: contour rules, this green's height placed
+against every other green the record holds one for, and the reading in words
+— how many grew lower, how many higher, how many overlap this band. A stated
+range draws as a band and a single figure as one line, because a lot sold as
+1,800–1,900 m never said 1,850. Height is a growing condition, never a grade:
+nothing sorts by it, no plate cuts by it, and it is never part of a coffee's
+identity or a pin on a map. Two heights that disagree are **carried, not
+resolved** — the first stands, the other is kept beside it with its author.
+Heights arrive through the door, which has always read them off a paste.
+
+**One reading, five scopes.** The road, the plot, the terrace and the hands
+are one component pointed at a different slice of one graph — a green, a
+plate, a roaster, a grower, a bar. A roaster's page counts the road across
+every green that hand has roasted and draws the heights it buys at; a bar's
+counts it across what it pours. Back always means the page you came from: a
+green opened from a plate returns to that plate.
 
 See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the product thesis and restraint standard.
 
