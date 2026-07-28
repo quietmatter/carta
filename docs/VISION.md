@@ -13,6 +13,43 @@ against the trade across five sourcing channels (`LOT_IDENTITY.md`): identity is
 compiled resolution, not a key, and the finest provable unit is often the processor
 and the season, not the green lot.*
 
+*Fourth pass — read back against the build (`MODEL_REVIEW.md`). The resolution
+ladder settled at five spatial rungs and the season unbundled from it; the gate
+retired as an admission bar and kept as two signals; every drawn-but-unbuilt entity
+marked as such; and each field said to be born at the desk that can know it.*
+
+## Where this sits — the through-line has turned twice more
+
+This document is the **second turn**: the through-line stops being *you* and becomes
+*the coffee*. It is not the last word, and reading it as one is the commonest way to
+steer wrong.
+
+- **Turn one — the record** (`NORTH_STAR.md`). One cup, two contexts; your taste the
+  through-line.
+- **Turn two — the atlas** (*this document*). The lot at the centre; taste a wash
+  laid over it.
+- **Turn three — the road** (`ECOSYSTEM.md`, and the suite under it: `CONSTITUENTS`,
+  `COMMERCE`, `PLATFORM`, `SEQUENCE`). Every hand a coffee passes through keeps its
+  own page on one shared spine.
+
+Two things from turn three reach back into this model and change how it must be
+read. First, **authority is scoped to your own link of the chain** — the roaster is
+the authority on the roast, never on the farm — which is what *Where each fact is
+born* (below) applies to the fields drawn here. Second, the confidence a value
+carries is a **ladder, not a boolean** (`PLATFORM.md`):
+
+```
+derived     < machine inference — a resolver proposal, a palette read
+stated      < any keeper's attestation — the default
+confirmed   < a keeper adjudicating a proposal
+first-party < a signed page attesting facts WITHIN ITS OWN LINK
+documented  < a line carrying a verifiable public instrument
+```
+
+Compiled per field, strongest rung first, and **first-party is scoped, never
+sovereign**. Where this document says a fact is *compiled from sourced facts*, that
+ladder is the mechanism. Disagreement is carried, not resolved.
+
 ## The turn
 
 CARTA began as a personal coffee memory: **one cup, two contexts, your taste the
@@ -119,8 +156,9 @@ shared, provenance-carrying entity, and lets records *reference* them:
   region). Variety *as a set* (incl. *mixed heirloom* / *unknown*); process *in
   stages* (fermentation → drying → finishing); harvest as crop · year · hemisphere.
   Carries a **sourcing channel** and, separately, an **intermediary** (see *Lot
-  identity*); a recorded **traceability resolution** with its **grain** (green-lot ·
-  station-season · region-grade); an optional **namespaced hard-id set** (a Kenyan
+  identity*, and *Where each fact is born*); a recorded **traceability resolution**
+  with its **grain** (country · region · station · farm · green-lot); an optional
+  **namespaced hard-id set** (a Kenyan
   outturn, an auction lot, an ICO mark — when one exists, zero-or-many); split/merge
   **lineage**; and a stable opaque id — identity *compiled*, never keyed on the text.
 - **Blend** — a roaster's named composite. References a **Roaster** and two or more
@@ -160,6 +198,46 @@ The machinery for all of this is written. The Register already does canonical
 identity, provenance, sparse merge (a sighting fills blanks, never erases), and
 sync as a group document. The restructure extends that one proven pattern upstream
 from the café to the producer, the lot, the roaster, the roast.
+
+### What of this is standing
+
+A drawing is not a build, and an entity that is drawn but never written reads as
+finished when it is empty. The state of each, plainly:
+
+| entity | state |
+|---|---|
+| Producer · Lot · Roaster · Roast · Venue · Gear | **standing** — written, referenced, and each with a page |
+| Processor | **standing** — a write path (the door's actor split) and the `processorRefs` edge |
+| Preparation (Brew · Pour) · Reading | **standing** |
+| **Blend** | **drawn, not built** — the document exists and syncs; nothing writes it. It waits on the **Roast Desk** (Act IV), where a roaster authors their own compositions. A blend authored by anyone else would be a guess about someone's recipe. |
+| **Aggregator** | **drawn, not built** — same. It waits on the **Import Desk** (Act IV): the importer is the only hand that knows the pooling, and `CONSTITUENTS.md` gives them the pen for it. |
+
+Neither is a gap to fill opportunistically. Both are *first-party facts belonging to
+a link of the road that has no desk yet* — which is the point of the next section.
+
+### Where each fact is born
+
+The ecosystem turn (`ECOSYSTEM.md`) set one design law over the whole graph: **each
+constituent writes the facts born at its own node, and reads the whole road.** Read
+backwards, it explains the fields the model draws that nothing fills — and stops them
+being mistaken for oversights.
+
+- **`sourcingChannel`** and **`intermediary`** (`MODEL_QA` #4's two orthogonal axes)
+  are **Import Desk** facts. A keeper pasting a bag cannot know whether the green came
+  through a competition auction or a spot offer, or whose book it moved on. Until the
+  Import Desk exists (Act IV) these read *unread* — never inferred, never asked of
+  someone standing three links downstream.
+- **`scope`** (single-farm … region) is an **Origin Desk** fact, born with the
+  harvest at the mill.
+- **Roast level** is the roaster's own word and stays a **free descriptor** — never a
+  normalised scale, because one roaster's *medium* is another's *dark* (`MODEL_QA`
+  A10).
+- **Caliber** is born at a *calibrated event*, which is why it carries its protocol,
+  its cupper and its date, and why an unattributed number is filed as a claim.
+
+A field with no desk is not missing data. It is a fact the record has not yet earned
+the right to hold, and printing a guess in its place would break the one law under
+all of them.
 
 ## Lot identity — how the lot stays singular
 
@@ -202,15 +280,34 @@ always correctable. It is a **ladder**, walked strongest rung first:
   is the **processor in a given harvest** — a washing station blends thousands of
   smallholders into indistinguishable day-lots, and the ECX floor bottoms out at
   region-and-grade. So each lot records the grain its identity was actually
-  established at — *green-lot · station-season · region-grade* — and **a
-  station-season node is a legitimate, terminal record, often the very node a keeper
-  browses**, never a half-filled lot or a blank coerced into false precision.
-  Resolution is one *spatial* ladder — *country → region → washing-station → farm →
-  lot → micro/nano*; process, variety and harvest are their own fields, not rungs.
-  What improves later is the **record**, not the coffee: supply the missing facts and
-  the entry is enriched, timestamped and signed. And **traceability** (how finely
-  origin is *known*) stays distinct from **transparency** (whether price and
-  relationship are *disclosed*).
+  established at, and **a station node is a legitimate, terminal record, often the
+  very node a keeper browses**, never a half-filled lot or a blank coerced into false
+  precision.
+
+  Resolution is **one spatial ladder, five rungs, and nothing else rides on it**:
+
+  | rung | promoted by |
+  |---|---|
+  | `country` | a country named |
+  | `region` | a region named |
+  | `station` | a processor named — a mill's catchment, many growers pooled |
+  | `farm` | one grower's parcel named |
+  | `green-lot` | a lot *identity* — a printed lot name, or a hard-ID the trade minted |
+
+  Three laws hold it honest. **A rung is promoted by evidence, never by a field
+  merely being non-empty** — a bare producer *name* is not an identity the trade
+  bought and sold under, so it does not reach `green-lot`. **A record rests on the
+  coarsest rung it can prove and no finer.** And **an unmatched name buys no rung**:
+  a grower the record cannot tell from a mill stays where it stood, because guessing
+  a tier is the same lie as inventing a coordinate.
+
+  Process, variety and **harvest** are their own fields, not rungs — the earlier
+  shorthand *station-**season*** bundled the season back into a spatial rung, which
+  is exactly what `MODEL_QA` **A5** ruled against; it is retired. What improves later
+  is the **record**, not the coffee: supply the missing facts and the entry is
+  enriched, timestamped and signed. And **traceability** (how finely origin is
+  *known*) stays distinct from **transparency** (whether price and relationship are
+  *disclosed*).
 - **Merge, split, and the guards.** You *will* learn later that two lots were one, or
   one was two — and a Kenyan outturn is genuinely *one cherry graded into sibling
   export lots* under a shared processing batch. Merge and split are first-class: both
@@ -377,19 +474,31 @@ The catalog is **moderated**, and at the start the moderator is you.
   second contributor ever exists, and it is the same pipeline that later helps a
   traveller find a cup in a city they have never walked.
 
-## The gate: specialty *and* traceable — two bars, not one
+## The two signals: specialty *and* traceable — two bars, not one
 
-CARTA curates coffee that is both **specialty-grade** and **traceable** — but these
-are **two independent facts, and the model never infers one from the other.** The
-SCA's own 2021 definition splits them for a reason: quality is an intrinsic cup
-property, traceability an extrinsic one about disclosure, and they diverge all the
-time — an 84-point coffee can be thinly traced, a meticulously-traced lot can score
-below the line. So each coffee carries a **quality** signal and a **traceability**
-signal *separately*; the catalog can be filtered on either, and neither is ever read
-off the other. Bounding the atlas to coffee that clears both bars is not a limit that
-costs something — it is what keeps the universe small enough for one keeper to seed
-and moderate, and clean enough for discovery to mean something. The scarcity is the
-luxury.
+Quality and traceability are **two independent facts, and the model never infers one
+from the other.** The SCA's own 2021 definition splits them for a reason: quality is
+an intrinsic cup property, traceability an extrinsic one about disclosure, and they
+diverge all the time — an 84-point coffee can be thinly traced, a meticulously-traced
+lot can score below the line. So each coffee carries a **quality** signal and a
+**traceability** signal *separately*; the catalog can be filtered on either, and
+neither is ever read off the other. This is `MODEL_QA` **A13**, the single most
+important correction the industry check forced, and it stands.
+
+**What is retired is the word *gate*.** This section once described the pair as an
+admission bar — coffee that cleared both got in, and that was what kept the universe
+small enough for one keeper to seed. Two things overtook it. The bounding job passed
+to real machinery: the pen (one hand writes the shared record for now) and
+`SEQUENCE.md`'s *charts, not campaigns* — one city at a time. And a bar that
+*excludes* contradicts the law the rest of the record is built on: **unread is a
+state, never a verdict.** A green with no admissible cup score is not a lesser green;
+it is a green whose caliber has not been read. Refusing it entry would be the record
+deciding, on absence, something absence cannot support.
+
+So the two signals live where they already are — **two of the standing's three
+axes** — stated on each coffee's own page, each showing its evidence, each able to
+read *unread*. They narrow, they do not admit. The scarcity is still the luxury; it
+is now a consequence of curation, not a turnstile.
 
 ## What this keeps, and what it demotes
 
