@@ -246,6 +246,18 @@ of columns the resolver walks strongest-first.
   caliber:  [ { score, protocol, cupper, event, date, tier, src } ],  // records, never bare
   rarity:   { auctionPrice?, scarceVariety?, … },
   // traceability = grain, above. quality (caliber) and traceability stay INDEPENDENT.
+
+  // --- the height, as the LOT was sold (built) ---
+  altitudeMasl: [ min, max ],      // min === max when one figure was stated. The producer's
+                                   //   own range is a DIFFERENT fact on a different node
+                                   //   (Producer, above) — the producer's desk owns it
+                                   //   first-party; a roaster repeating it writes `stated`.
+  altitudeSrc, altitudeBy, altitudeAt,       // provenance of the standing band
+  altitudeAlt: [ { id, band, src, by, at } ],// bands that DISAGREE — carried, not resolved
+                                   //   (PLATFORM's rung ladder picks between them later)
+  // NOT identity, and never becomes it: outside lotKeyOf, outside the fingerprint, never
+  // a coordinate. Height is a growing condition, not a fourth standing axis — nothing
+  // sorts or facets by it. Two greens at 1,900 m are not the same green.
 }
 ```
 
