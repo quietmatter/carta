@@ -1494,6 +1494,9 @@ function lotSetAltitude(lot,band,who,src){
 }
 // The standing: the three axes, read side by side, never merged into one number. Traceability is
 // the existing grain (RESOLVER §6) — reused here, not reinvented.
+// Two harvests with no new evidence is old enough to say so. The threshold governs one SENTENCE
+// and nothing else: no score moves, no axis dims, nothing sorts. Stating an age is not decaying it.
+const STANDING_STALE_MS=18*30*864e5;
 function lotTier(lot){
   if(!lot)return null;
   return {caliber:lotCaliberStanding(lot),rarity:lotRarityStanding(lot),traceability:{grain:lot.grain,read:grainRead(lot.grain)}};
@@ -2206,6 +2209,10 @@ const avgHedonic=cups=>{const h=cups.map(c=>c.hedonic).filter(v=>v!=null);return
 const money=n=>n==null?null:'$'+(n%1===0?String(n):n.toFixed(2));
 // a lowercase compiled term (a process family, a grain) read at the head of a line
 const sentence=s=>{const t=String(s??'');return t?t.charAt(0).toUpperCase()+t.slice(1):''};
+// a small count read as a word — the record speaks its counts. Past nine the digit is
+// clearer than the word, and a page counting that high is stating a distribution anyway.
+const NUM_WORDS=['','one','two','three','four','five','six','seven','eight','nine'];
+const numWord=n=>NUM_WORDS[n]||String(n);
 const roasterList=()=>[...new Set([...D.bags.map(bagRoaster),...cafeCups().map(cupRoaster)].filter(Boolean))];
 // escape a string for use inside a single-quoted JS call within a double-quoted HTML attribute
 const jsq=s=>`'${String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;')}'`;
@@ -2604,10 +2611,18 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.4.0';
+const APP_VERSION='6.5.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.5.0',date:'July 2026',title:'The road says how far it runs — out loud, with its denominator.',items:[
+    'The six marks under a coffee were always honest, and always silent. They made you count pips to learn how much of the road stands, and a count nobody performs is a fact nobody has. Now the road states itself: four of six stations stand, the dry mill and the bar are silent — unread, not a gap invented shut.',
+    'The coffee in your hands gets the same line. It drew the road and said nothing about it, on the screen you open most.',
+    'A page will now warn you against over-reading it. Where half a set is known only from the roast on, it says so plainly — the spread you are looking at is the record’s reach, not a difference between the coffees. Under three greens it says there is no distribution to read at all. On a set that earns neither, it stays quiet.',
+    'One reading, five scopes: a green, a roaster, a plate, a grower, a counter. Four hand-written lines that each said a piece of this became one that says all of it and knows which greens it is talking about.',
+    'A cupping score now carries the date it was cupped, and a standing nothing has been added to in a year and a half says when it last moved. Stated, never discounted — elsewhere a reading this old is quietly faded toward the middle to keep the number looking current. A cupping is a fact, dated and signed by the hand that made it, and a fact is not less true for having been true a while.',
+    'None of it grades anything. A station count is what the record holds, not a measure of the coffee, the grower or the roaster. Nothing sorts by it and it never joins the standing.',
+  ]},
   {v:'6.4.0',date:'July 2026',title:'The sighting, set down — the line that taught the grammar now answers it.',items:[
     'A sighting is a line you signed on the shared record, and it was the model for how everything else in CARTA is corrected — struck, never deleted. It was also the last thing that could not be taken back. Withdrawing one fired on a tap, said nothing about what the reading would become, and had no door home: sighting again mints a new line, it does not stand the old one up.',
     'Now it answers the same verbs every record does. One sheet: what you saw, what you signed, what the bar reads — and what falls if the line goes, named fact by fact before you tap. A fact another line still attests never appears there; a fact nothing else attests says so, in words.',
@@ -3141,7 +3156,7 @@ function openProducerPage(producerId){
     ?`${lots.length} green${lots.length===1?'':'s'} traced to this grower, each its own lot. A washing station gathers cherry from many hands — its greens stand apart, never one blurred farm.`
     :'No green traces to this grower yet.'}</div>
   ${lots.length>=2?`<h2>How far the road runs</h2>${aggRoadHTML(lots.map(l=>l.id))}
-  <div class="muted small" style="margin:8px 2px 14px">Counted across every green traced here — the record's reach, not this grower's.</div>`:''}
+  ${aggRoadReading(lots.map(l=>l.id),'traced to this grower')}`:''}
   ${aggTerraceHTML(lots.map(l=>l.id),'The heights it grows at','as each green was stated')}
   ${lots.length?lots.map(row).join(''):'<div class="empty">No green on the atlas names this grower.</div>'}
   ${isAdmin()?`<button class="btn btn-quiet" style="margin-top:10px" onclick="openGeoFix('producers',${jsq(p.id)})">Correct the pin${p.lat!=null?'':' — unplaced'}</button>`:''}
@@ -4667,7 +4682,8 @@ function inHandHTML(){
   <p class="eyebrow">In your hands</p>
   <h2 class="display">${esc(nm)}${em?` <em>${esc(em)}</em>`:''}</h2>
   <p class="lede">${esc(lede)||'Origin unwritten — the road below says so.'}${read}</p>
-  ${lot?road6HTML(lotRoadStations(lotId),true):''}
+  ${lot?(()=>{const st=lotRoadStations(lotId);
+    return road6HTML(st,true)+`<div class="muted small serif" style="font-style:italic;margin:8px 2px 0">${esc(roadReading(st))}</div>`})():''}
   ${readOnly()?'':`<div class="btnrow" style="margin:16px 0 22px">
     ${lot?`<button class="btn btn-primary" onclick="openLotPage(${jsq(lotId)})">Open the green</button>`:''}
     <button class="btn btn-quiet" onclick="openBrew('${bag.id}')">${last?'Brew it again':'Brew it'}</button>
@@ -4804,6 +4820,27 @@ function road6HTML(stations,draw){
     return `<div class="${cls}"><span class="bar"></span><span class="mk"></span><span class="lb">${esc(s.lb)}</span><span class="who"${held?` title="${esc(s.who)}"`:''}>${held?esc(s.who):'unread'}</span></div>`}).join('');
   return `<div class="road6${draw&&!reducedMotion()?' draw':''}">${cells}</div>`;
 }
+/* The road's stated reading — what altReading() is to the terrace. The drawing was always
+ * honest, but it made the reader count pips to learn how much of the road stands, and a
+ * count nobody performs is a fact nobody has. So the road says it, with its denominator,
+ * and names the stations that are silent rather than leaving them to be inferred.
+ *
+ * One law, and it is the whole reason this function is allowed to exist: COVERAGE COUNTS,
+ * IT NEVER GRADES. A station count is what the record holds — not a measure of the coffee,
+ * the grower or the roaster. Four of six is not a worse green than six of six; it is a
+ * green the record has been told less about. Nothing sorts by this number, nothing merges
+ * it into the standing, and no copy here may imply a coffee is lesser for it. */
+function roadReading(stations){
+  if(!stations||!stations.length)return '';
+  const n=stations.length,dark=stations.filter(s=>!regSubstance(s.who)),held=n-dark.length;
+  if(!held)return 'No station stands yet. Unread is a state, not a verdict.';
+  if(!dark.length)return `All ${numWord(n)} stations stand — grown to read, unbroken.`;
+  const names=dark.map(s=>STN_THE[s.lb]||s.lb.toLowerCase());
+  const list=names.length>1?names.slice(0,-1).join(', ')+' and '+names[names.length-1]:names[0];
+  return `${sentence(numWord(held))} of ${numWord(n)} stations ${held===1?'stands':'stand'}. ${sentence(list)} ${names.length>1?'are':'is'} silent — unread, not a gap invented shut.`;
+}
+// a silent station named the way the page would say it aloud, not by its column label
+const STN_THE={Grown:'the farm',Processed:'the wet mill',Milled:'the dry mill',Roasted:'the roaster',Poured:'the bar',Read:'your own reading'};
 // the aggregate road — count(lots where the station edge exists) / count(lots), per station.
 // The reading a single green can't give: where a whole facet's road goes dark.
 function aggRoadHTML(lotIds){
@@ -4811,6 +4848,35 @@ function aggRoadHTML(lotIds){
   const n=alls.length;if(!n)return'';
   return `<div class="agg">${alls[0].map((s0,i)=>{const c=alls.filter(s=>regSubstance(s[i].who)).length;
     return `<div class="aggrow${c/n<.5?' thin':''}"><span class="lb">${esc(s0.lb)}</span><span class="track"><span class="fill" style="width:${Math.round(c/n*100)}%"></span></span><span class="ct">${c}/${n}</span></div>`}).join('')}</div>`;
+}
+/* The set-scope reading, shaped like aggTerraceHTML's tail so the two aggregate readings
+ * are one grammar. The bars above already count honestly; what they cannot say is what
+ * their SHAPE means for the reader — and a page that draws a spread without saying whose
+ * spread it is invites the one misreading that matters: taking the record's reach for a
+ * difference between the coffees. So the page warns against over-reading itself, in the
+ * two cases where it can be misread, and stays quiet in every other. A warning on a set
+ * that does not earn one is noise, and noise teaches the keeper to stop reading these. */
+// half a set placed no finer than a country is a lopsided record, not a lopsided shelf; and
+// under three greens there is no spread to read at all — the same line the corpus takes.
+const ROAD_LOPSIDED=.5,ROAD_THIN=3;
+function aggRoadReading(lotIds,tail){
+  const alls=lotIds.map(lotRoadStations).filter(Boolean),n=alls.length;
+  if(!n)return '';
+  // one green is not an aggregate — the plate can hold a facet only one green answers, and
+  // its own page reads it better than a bar chart of one ever will
+  if(n===1)return `<div class="muted small serif" style="font-style:italic;margin:8px 2px 16px">One green${tail?' '+tail:''} — a single road, not a spread. Its own page reads it in full.</div>`;
+  const out=[`Across ${numWord(n)} greens${tail?' '+tail:''}.`];
+  // An exact count, never an average of thresholds — and it asks the GRAIN, not the road. The
+  // road's first mark stands on a country alone, which almost every record can name, so counting
+  // hollow marks would have found a lopsided set roughly never. The grain is the ladder the app
+  // already keeps for exactly this question (RESOLVER §6): a green resting on the coarsest rung
+  // is one the record can place in a country and nowhere finer.
+  const coarse=lotIds.map(id=>catNode('lots',id)).filter(l=>l&&(!l.grain||l.grain==='country')).length;
+  if(n>=ROAD_THIN&&coarse>=n*ROAD_LOPSIDED)
+    out.push(`${sentence(numWord(coarse))} of them rest on the country and no finer. What separates these greens here is the record's reach, not a difference between the coffees.`);
+  else if(n<ROAD_THIN)out.push('Too few to read as a spread — a shape, not a distribution.');
+  else out.push('Where a bar runs short the record has not been told — it is not a mark against anyone on the road.');
+  return `<div class="muted small serif" style="font-style:italic;margin:8px 2px 16px">${esc(out.join(' '))}</div>`;
 }
 /* ---- the terrace (SURFACES §2's reading, second projection). The atlas has always drawn one
  * kind of picture: a plan. A plan answers WHERE, and it is the right drawing for a scene, a
@@ -4887,10 +4953,13 @@ function vLotPage(){
   const bat=lot.processingBatchRef&&catNode('lots',lot.processingBatchRef);
   const ko=(lot.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt)||(bat&&(bat.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt));
   // ── the road — six stations, hollow where the record is silent; the gap is the product ──
-  const road=road6HTML(lotRoadStations(lotId),true);
+  const stations=lotRoadStations(lotId);
+  const road=road6HTML(stations,true);
   const mine=lotOwnCups(lotId).filter(c=>c.hedonic!=null).sort((a,b)=>b.hedonic-a.hedonic||String(b.createdAt).localeCompare(String(a.createdAt)));
   const ov=mine[0]||null;
-  const roadTail=ov?'Your reading rests at the end of it — below.':'The road stops where the record does. Unread is a state, not a gap invented shut.';
+  // the drawing states itself, then the overlay's own clause — the count first, because it
+  // is the fact the six marks were always carrying and never quite said
+  const roadTail=roadReading(stations)+(ov?' Your reading rests at the end of it — below.':'');
   // ── identity — the columns, each mark opening its meaning ──
   const idRows=[];
   const stns=(lot.processorRefs||[]).map(id=>catNode('processors',id)).filter(Boolean);
@@ -4935,14 +5004,25 @@ function vLotPage(){
   // ── the standing — three axes, never merged, unread until their own evidence stands ──
   const tier=lotTier(lot),cal=tier.caliber,rar=tier.rarity;
   const standRows=[
-    {k:'Caliber',v:cal.best?`${cal.best.score} · ${caliberTier(cal.best.tier).label}${cal.best.event?' — '+cal.best.event:cal.best.cupper?' — '+cal.best.cupper:''}${cal.best.protocol?' · '+cal.best.protocol:''}`
+    // the date rides with the score for the same reason the grader does: a number that
+    // does not say when it was cupped is a number you cannot weigh against a later one
+    {k:'Caliber',v:cal.best?`${cal.best.score} · ${caliberTier(cal.best.tier).label}${cal.best.event?' — '+cal.best.event:cal.best.cupper?' — '+cal.best.cupper:''}${cal.best.protocol?' · '+cal.best.protocol:''}${cal.best.date?' · '+fmtMDY(cal.best.date):''}`
       :cal.claims.length?`${cal.claims.map(c=>c.score).join(', ')} — a claim, unverified`:'unread',ex:cal.best?'caliber':cal.claims.length?'caliber':'unread'},
     {k:'Rarity',v:rar.facts.length?rar.facts.join(' · ')+(rar.narrow?` · carried by ${rar.hands} roaster${rar.hands===1?'':'s'}`:''):rar.narrow?`carried by ${rar.hands} roaster${rar.hands===1?'':'s'} — narrowly held`:'unread',ex:(rar.facts.length||rar.narrow)?'rarity':'unread'},
     {k:'Traceability',v:gr?gr[0].toLowerCase():'unread',ex:gr?grainPrimerKey(lot.grain):'unread'}
   ];
-  const standNote=cal.best?'Compiled from sourced facts, never picked.'
+  let standNote=cal.best?'Compiled from sourced facts, never picked.'
     :cal.claims.length?'Compiled from sourced facts, never picked. An unnamed number is on file as a claim — unverified, and it never prints as the score.'
     :'No admissible cup score exists yet, so none prints. Unread is the truth here — never a low number standing in for one.';
+  // How old the standing is, said out loud — and the refusal that goes with it. Elsewhere in
+  // the trade a reading like this is decayed: an old score quietly discounted toward neutral
+  // so the number stays current. CARTA will not. A cupping is a FACT, dated and signed by the
+  // hand that made it, and a fact does not become less true for having been true a while. So
+  // the age is stated where it can be read, and the arithmetic that would have hidden it is
+  // refused in the open — which is the only place a refusal is worth anything.
+  const evAt=[cal.best&&cal.best.date,...pours.map(p=>p.at),...roasts.map(r=>r.roastDate)].filter(regSubstance).sort().pop();
+  if(evAt&&Date.now()-new Date(evAt).getTime()>STANDING_STALE_MS)
+    standNote+=` Nothing has been added since ${fmtMY(evAt)}. Age is stated, never discounted — an old fact is still a fact.`;
   // ── branch one · availability ──
   const availBy={};pours.forEach(p=>{const k=normName(p.shop);if(!availBy[k]||String(p.at||'')>String(availBy[k].at||''))availBy[k]=p});
   const avail=Object.values(availBy).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
@@ -4955,7 +5035,7 @@ function vLotPage(){
   <div class="muted small" style="margin:-4px 2px 20px">Each pour is a dated, signed sighting — the shelf may have moved since.</div>`
   :`<div class="card"><div class="muted" style="font-size:13px;font-style:italic;font-family:var(--serif)">No bar has poured it into the record yet. The branch opens with the first signed sighting.</div></div>`;
   // ── branch two · the roast ──
-  const roastHead=hands>=2?`Same green, ${['','one','two','three','four','five','six'][hands]||hands} hands.`:'One hand, so far.';
+  const roastHead=hands>=2?`Same green, ${numWord(hands)} hands.`:'One hand, so far.';
   const roastCards=roasts.map(r=>{
     const n=lotOwnCups(lotId,r.roasterRef).filter(c=>c.hedonic!=null).length;
     const line=[r.level,r.roastDate&&('roasted '+fmtMDY(r.roastDate))].filter(regSubstance).map(esc).join(' · ');
@@ -5046,7 +5126,7 @@ function vLotPage(){
   </div>`;
   return pageHero(esc(gr?sentence(gr[0]):'A green')+(regSubstance(fp.country)?' · '+esc(fp.country):'')+(ko?' · outturn '+esc(ko.value):''),esc(head)+(tail?` <em>${esc(tail)}</em>`:''),esc(sub||'origin unwritten'))+`
   ${road}
-  <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif);margin:8px 2px 0">${roadTail} <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('road')">The road</button>.</div>
+  <div class="muted" style="font-size:12px;font-style:italic;font-family:var(--serif);margin:8px 2px 0">${esc(roadTail)} <button class="text-action ex" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('road')">The road</button>.</div>
   ${resHTML}
   <h2>Identity</h2>
   ${idCard}
@@ -5096,7 +5176,7 @@ function vRoasterPage(){
   const ids=greens.map(e=>e.id);
   const roadHTML=ids.length>=2?`<div class="section-head" style="margin-top:2px"><h2>How far the road runs</h2><button class="text-action ex" onclick="openPrimer('road')">the road</button></div>
   ${aggRoadHTML(ids)}
-  <div class="muted small serif" style="font-style:italic;margin:10px 2px 18px">Across ${ids.length} greens this hand has roasted. Where a bar runs short, the record has not been told — it is not a mark against the roaster.</div>`:'';
+  ${aggRoadReading(ids,'this hand has roasted')}`:'';
   return pageHero('Roaster'+(place?' · '+esc(place):''),esc(r.name),esc([r.site,place].filter(Boolean).join(' · '))||'a roaster on the atlas')+badges+roadHTML+`
   <h2>On offer, this season</h2>
   ${offers||'<div class="empty">No green on the atlas names this roaster yet.</div>'}
@@ -5145,12 +5225,12 @@ function vPlatePage(){
   const bars=new Set();(D.pours||[]).forEach(p=>{if(p&&p.lotRef&&ids.includes(lotFwd(p.lotRef))&&regSubstance(p.shop))bars.add(normName(p.shop))});
   const label=fk==='process'?sentence(fv):fv;
   const counts=[`${hit.length} green${hit.length===1?'':'s'}`,handSet.size&&`${handSet.size} hand${handSet.size===1?'':'s'}`,bars.size&&`${bars.size} bar${bars.size===1?'':'s'}`].filter(Boolean).join(' · ');
-  return pageHero('A plate · '+esc(FACET_LBL[fk]||'a facet'),esc(label)+`, <em>in ${['','one','two','three','four','five','six','seven','eight','nine'][hit.length]||hit.length} green${hit.length===1?'':'s'}</em>`,
+  return pageHero('A plate · '+esc(FACET_LBL[fk]||'a facet'),esc(label)+`, <em>in ${numWord(hit.length)} green${hit.length===1?'':'s'}</em>`,
     `The ${esc(label)} greens you have met, and how far down the road the record actually follows each one.`)+`
   <div class="muted small" style="margin:-8px 2px 16px">${esc(counts)}</div>
   <div class="section-head"><h2>How far the road runs</h2><button class="text-action ex" onclick="openPrimer('plate')">the plate</button></div>
   ${aggRoadHTML(ids)}
-  <p class="note">Where a bar runs short, the record is telling you what it has not been told — not a chart of anyone's failure.</p>
+  ${aggRoadReading(ids,'on this plate')}
   ${unread?`<div class="muted small" style="margin:0 2px 16px">${all.length} green${all.length===1?'':'s'} on the atlas · ${unread} unread on this facet — counted, never quietly dropped.</div>`:''}
   ${originFrameHTML(atlasGraph(ids),{heading:'Where they grew',minMarks:2})}
   ${aggTerraceHTML(ids,'The heights they grew at','on this plate')}
@@ -5543,7 +5623,7 @@ const PR={
   interlude:{t:'Reading the season',b:'Ask, and the atlas composes the season in front of you — the pins settle and a line is drawn through them, once, over about a second. It is a reading being composed, not a screen loading, and never a score revealed; the ember stays reserved. What it ranks is only ever your own taste — the coffees you keep reaching for, the places you keep — and it shows its reasons. Ask again and it composes again; it never plays on its own.'},
   setup:{t:'The Setup',b:'Grinder, brewer, and the scale your grind is read on. A grind number means one thing on your grinder and nothing on another — so grind lives inside a Setup and never travels between them. Name the Setup once and the dial is read against it, and only against it. The bag names the coffee; your own zero names the grind.'},
   door:{t:'The door',b:'One paste field, where six forms stood. Paste the roaster’s page or the back of the bag and CARTA reads it here, on the device — no key, no account, no network — against the same vocabularies the resolver already uses. You strike anything wrong, then bind it with one tap. Nothing is written before the bind, and a struck fact keeps its ink.'},
-  road:{t:'The road',b:'Six stations — grown, processed, milled, roasted, poured, read. A filled mark is a station the record holds; a hollow one is a station it has not been told about, and the connector across a gap is dashed. The gap is the product: it is the record stating what it does not know, never a blank to fill.'},
+  road:{t:'The road',b:'Six stations — grown, processed, milled, roasted, poured, read. A filled mark is a station the record holds; a hollow one is a station it has not been told about, and the connector across a gap is dashed. The gap is the product: it is the record stating what it does not know, never a blank to fill. The count beneath says the same thing in words, with its denominator, so it need not be read off the marks. Read it as the record’s reach and nothing else — four of six is not a lesser coffee than six of six, it is a coffee the record has been told less about. Nothing here sorts by that count, and it never joins the standing.'},
   plate:{t:'A plate',b:'One facet of the atlas — a country, a process, a variety — read as a page. Its road is the aggregate: how many of the facet’s greens reach each station, so you can see exactly where the record goes dark. A facet is a query, never a collection, and a green that leaves the field unread is counted out loud, never quietly dropped.'},
   grain:{t:'Drawn to its grain',b:'A mark is drawn as coarsely as the record knows it. A filled mark sits at a street or a city — somewhere you could stand. A dashed, hollow mark is a region or a country centroid: honestly an area, never a farm pin invented. A node with no coordinate at all lists by name instead of lying. Correct a pin and every chart redraws — nothing sorts or ranks by grain.'},
   scene:{t:'Scenes and charts',b:'A scene is a cluster of roasters and bars close enough to move through in one outing — derived from the pins, never authored. A chart is one or more scenes under one name you give it. Membership follows the coordinates at read time: fix a pin and the chart corrects itself; a stored tag would only rot. The chart frame holds the ground you can walk; where the green came from keeps its own frame, at its own grain, joined in words — a sea route is not a line on a map.'},
@@ -6709,7 +6789,7 @@ function vPlace(){
   ${(()=>{const gp=poursHere(shop,e);return gp.length?`<div class="section-head"><h2>Greens poured here</h2></div>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The greens seen in a cup at this counter — the availability edge, each drilling to the same green in other hands.</div>
   ${gp.length>=2?`${aggRoadHTML(gp.map(x=>x.id))}
-  <div class="muted small" style="margin:8px 2px 12px">The road, counted across what this counter has poured into the record.</div>`:''}
+  ${aggRoadReading(gp.map(x=>x.id),'poured at this counter')}`:''}
   ${gp.map(x=>{const h=lotHands(x.id);return `<button class="wc-item" onclick="openLotPage(${jsq(x.id)})"><span class="tx"><span class="tt">${esc(lotLabel(x.lot))}</span><span class="dd">${h>=2?`${h} hands · the same green`:'a green on the atlas'}</span></span><span class="go">→</span></button>`}).join('')}`:''})()}
   ${readOnly()?'':`
   ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}

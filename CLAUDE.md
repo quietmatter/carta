@@ -293,7 +293,15 @@ server/
   `lotRoadStations`/`road6HTML` draw the six honest stations (grown → processed →
   milled → roasted → poured → read; hollow marks, dashed connectors — the gap is
   the product) on the lot page and the Atlas's coffee-in-hand; `aggRoadHTML` counts
-  them across a set of greens. A plate is `pageView={kind:'plate',fk,fv}` →
+  them across a set of greens. Each drawing **states itself** — `roadReading` is to
+  the road what `altReading` is to the terrace (how many stations stand, of how many,
+  and which are silent), and `aggRoadReading(lotIds,tail)` is the set-scope line,
+  shaped like `aggTerraceHTML`'s tail and replacing the four hand-written ones that
+  used to follow each `aggRoadHTML`. It also carries the page's two self-warnings —
+  **lopsided** (half the set resting on `grain==='country'` or unread; asked of the
+  grain, *never* of the road's Grown mark, which a bare country already fills, so a
+  station-based test would have fired essentially never) and **thin** (`n<3`) —
+  and says nothing when a set earns neither. A plate is `pageView={kind:'plate',fk,fv}` →
   `vPlatePage` (`openPlate`, facets from `plateFacets` under Atlas → "Cut the
   atlas") — a query over lots, never a stored collection, and one law: unread on
   a facet is counted, never silently hidden. **One reading, five scopes**: the
@@ -691,6 +699,21 @@ the brew corpus (step 6) and discovery (step 7) follow.
   point or narrow a range to make a drawing tidier. Two heights that disagree are
   carried, not resolved — the first band stands and the later one is appended,
   never overwritten.
+- **Coverage counts, it never grades.** A station count is what the record holds —
+  never a measure of the coffee, the grower or the roaster. Four of six is not a
+  lesser green than six of six; it is a green the record has been told less about.
+  Nothing sorts or facets by it, it never merges into the standing, and no copy may
+  imply a coffee is diminished by it. Where a set-scope reading could be mistaken for
+  a difference between the coffees, the page says so itself — and stays quiet when
+  the set earns no warning, because a warning that always fires teaches the keeper to
+  stop reading them.
+- **Age is stated, never decayed.** A cupping, a sighting, a pour is a *fact* —
+  dated and signed by the hand that made it — and a fact is not less true for having
+  been true a while. Surface how old the newest standing evidence is (`vLotPage`'s
+  standing note, `STANDING_STALE_MS`); never discount a reading toward neutral for
+  age, never let a date move a score, an axis or an order. The trade's habit of
+  fading old evidence to keep a number looking current is the precise thing CARTA
+  refuses, and it refuses it in the open, on the page.
 - **A match score never travels without its reasons.** Anywhere a score or
   band shows, "Why this" (the `signals` from `matchOf`) must be reachable.
   Location is consent-gated and ephemeral (`myGeo`, in memory only — never

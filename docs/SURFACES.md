@@ -102,6 +102,15 @@ slice of one graph:
   A filled mark is a station the record holds; a hollow one is a station it does
   not, and the connector across a gap is dashed. **The gap is the product.** It is
   not a blank to fill; it is the record stating what it has not been told.
+  The drawing also **states itself** (`roadReading` / `aggRoadReading`), the way the
+  terrace states itself through `altReading`: how many stations stand, out of how
+  many, and which are silent — because a count the reader has to perform off the
+  marks is a fact nobody actually has. At set scope the reading also names the two
+  ways the page can be misread — half the greens placed no finer than a country
+  (asked of **the grain**, never of the road's first mark, which a bare country
+  fills), or fewer than three greens at all — and stays silent otherwise. One law
+  governs all of it: **coverage counts, it never grades.** Four of six is not a
+  lesser coffee than six of six; it is a coffee the record has been told less about.
 - **the plot** — where, at honest grain (`CHARTS.md`).
 - **the hands** — the list.
 
