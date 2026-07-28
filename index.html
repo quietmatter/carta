@@ -980,8 +980,7 @@ function catUpsert(kind,key,fields,who,opts){
 // and folds the judged sightings on top; a struck line keeps its ink but stops carrying
 // (RESOLVER §6, PLATFORM's rung ladder).
 function compile(e,asOf){
-  const stand=s=>asOf?(s.at<=asOf&&(!s.withdrawnAt||s.withdrawnAt>asOf)&&(!s.supersededAt||s.supersededAt>asOf)):sightStanding(s);
-  const st=((e&&e.sightings)||[]).filter(stand).sort(bySight);
+  const st=((e&&e.sightings)||[]).filter(s=>sightStandingAt(s,asOf)).sort(bySight); // one liveness rule for every sighting in the app, replayed at a moment
   const carry={};
   st.forEach(s=>{Object.keys(s.fields||{}).forEach(k=>{if(regSubstance(s.fields[k]))carry[k]=s})});
   const fields={};Object.keys(carry).forEach(k=>{fields[k]=carry[k].fields[k]});
@@ -1827,7 +1826,18 @@ const REACH=[null,
   {glyph:'●',word:'Origin',name:'The origin',line:'the farm in the cup: producer, lot, process, freely told.'}];
 const BAG_FACTS={unnamed:{label:'unnamed',depth:1,why:'an honest, unnamed bag'},roaster:{label:'roaster named',depth:2,why:'the bag was named'},lot:{label:'lot named',depth:3,why:'the lot was named'},farm:{label:'farm named',depth:4,why:'the farm was named'}};
 const SEEN_FACTS={inhouse:{label:'roasts in-house',depth:3,why:'the roast in the room'},methods:{label:'more than one method',depth:3,why:'more than one method'},answers:{label:'answers at the counter',depth:2,why:'answers at the counter'},story:{label:'the story, freely told',depth:4,why:'the story, freely told'}};
-const sightStanding=s=>!s.withdrawnAt&&!s.supersededAt;
+/* A sighting is set down the way a record is (docs/CORRECTIONS.md): the strike
+ * is an addition, and so is the undo, because an id-union merge only propagates
+ * additions — a withdrawal that removed the line would not travel, and a restore
+ * that removed the date would be undone by the next sync. So liveness derives,
+ * monotone and order-free: struck ⟺ withdrawnAt > restoredAt. Superseded has no
+ * undo and needs none — the line that superseded it IS the correction, and it is
+ * itself withdrawable. */
+const sightStruck=s=>String((s&&s.withdrawnAt)||'')>String((s&&s.restoredAt)||'');
+const sightStanding=s=>!!s&&!s.supersededAt&&!sightStruck(s);
+// the same rule replayed at a moment — only the dates that had landed by then count
+const sightStandingAt=(s,asOf)=>!asOf?sightStanding(s):(s.at<=asOf&&!(s.supersededAt&&s.supersededAt<=asOf)
+  &&!(String((s.withdrawnAt&&s.withdrawnAt<=asOf&&s.withdrawnAt)||'')>String((s.restoredAt&&s.restoredAt<=asOf&&s.restoredAt)||'')));
 const bySight=(a,b)=>(a.at||'').localeCompare(b.at||'')||String(a.id).localeCompare(String(b.id));
 const fmtMY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',year:'numeric'}):'';
 const fmtMDY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';
@@ -1835,7 +1845,7 @@ const fmtMDY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',day:'nu
 // each counter fact stands while any standing sighting attests it (attest-only:
 // silence is not denial — a shallow sighting at a deep café changes nothing).
 function reachCompile(e,asOf){
-  const st=((e&&e.sightings)||[]).filter(s=>asOf?(s.at<=asOf&&(!s.withdrawnAt||s.withdrawnAt>asOf)&&(!s.supersededAt||s.supersededAt>asOf)):sightStanding(s)).sort(bySight);
+  const st=((e&&e.sightings)||[]).filter(s=>sightStandingAt(s,asOf)).sort(bySight);
   const carry={};
   st.forEach(s=>{if(s.bag&&BAG_FACTS[s.bag])carry.bag=s;(s.seen||[]).forEach(k=>{if(SEEN_FACTS[k])carry[k]=s})});
   let depth=0;
@@ -1854,7 +1864,7 @@ function reachWhy(e){
 // Replay the record to find when the reading last moved — {depth,since,was}.
 function reachHistory(e){
   const ss=(e&&e.sightings)||[];
-  const times=[...new Set(ss.flatMap(s=>[s.at,s.withdrawnAt,s.supersededAt]).filter(Boolean))].sort();
+  const times=[...new Set(ss.flatMap(s=>[s.at,s.withdrawnAt,s.restoredAt,s.supersededAt]).filter(Boolean))].sort(); // a line standing back up moves the reading exactly as its withdrawal did
   let depth=0,since=null,was=0;
   times.forEach(t=>{const d=reachCompile(e,t).depth;if(d!==depth){was=depth;depth=d;since=t}});
   return {depth,since,was};
@@ -1901,15 +1911,43 @@ function regSight(name,facts,who,opts){
   return s;
 }
 // Withdrawing un-carries: the fact falls to the next line standing — to unread,
-// if none does. No confirm — the strike is visible, signed, and reversible by
-// simply sighting again. Nothing is lost.
+// if none does. Set down, not erased: the line keeps its ink, its signature and
+// its date, and stands back up from the desk. Only your own line, and only while
+// nothing has superseded it — a superseded line is already answered, by yours.
 function reachWithdraw(shop,sid){
   if(penGuard())return;
-  const e=regByName(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
-  if(!s||s.by!==activeName()||!sightStanding(s))return;
-  s.withdrawnAt=new Date().toISOString();
+  const e=regFind(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
+  if(!s||s.by!==activeName()||!sightStanding(s))return null;
+  // a re-strike must outrank the restore it undoes — a millisecond clock can
+  // otherwise stamp the pair identically, and the line would read as neither
+  s.withdrawnAt=afterIso(new Date().toISOString(),s.restoredAt);
   e.updatedAt=s.withdrawnAt;e.by=activeName();REG.dirty=true;saveReg();schedulePush();
-  openReachRecord(shop);render();
+  return s;
+}
+// The undo, in the same shape: a date that only ever adds. Restoring re-carries —
+// unless a later line has read past it, in which case the ink returns and the
+// reading does not move. The sheet says which before the tap.
+function reachRestore(shop,sid){
+  if(penGuard())return;
+  const e=regFind(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
+  if(!s||s.by!==activeName()||!sightStruck(s)||s.supersededAt)return null;
+  s.restoredAt=afterIso(new Date().toISOString(),s.withdrawnAt);
+  e.updatedAt=s.restoredAt;e.by=activeName();REG.dirty=true;saveReg();schedulePush();
+  return s;
+}
+// what the reading becomes with this one line taken out of the record — the
+// sighting's cascade: not other records, but the facts that fall to the next
+// line standing. Named in full before the tap, exactly as a strike names what
+// it carries.
+const reachWithout=(e,sid)=>reachCompile({...e,sightings:(e.sightings||[]).filter(x=>x.id!==sid)});
+const reachWith=(e,sid)=>reachCompile({...e,sightings:(e.sightings||[]).map(x=>x.id===sid?{...x,withdrawnAt:'',restoredAt:''}:x)});
+// per fact this line carries, what stands in its place — {to:''} where nothing
+// does, and a fact another standing line still attests never appears at all
+function reachFalls(e,s){
+  const now=reachCompile(e).carry,r=reachWithout(e,s.id).carry,out=[];
+  if(now.bag&&now.bag.id===s.id)out.push({label:'the bag: '+BAG_FACTS[s.bag].label,to:r.bag?BAG_FACTS[r.bag.bag].label+', '+(r.bag.by===activeName()?'your':(r.bag.by||'a keeper')+'’s')+' earlier line':''});
+  Object.keys(SEEN_FACTS).forEach(k=>{if(now[k]&&now[k].id===s.id&&!r[k])out.push({label:SEEN_FACTS[k].label,to:''})});
+  return out;
 }
 /* --- the mark. The tweak (Preferences) restyles depth badges only — state
  * chips (unread, re-read, held, withdrawn) keep their words and their dashes
@@ -2025,20 +2063,23 @@ function openReachRecord(shop){
   const flag=contested?'<span class="badge dashed">the bag · read two ways</span>'
     :(r.depth&&h.was>0&&h.since?`<span class="badge dashed">re-read ${fmtMY(h.since)} · was ${REACH[h.was].glyph} ${REACH[h.was].word.toLowerCase()}</span>`:'');
   const rows=ss.map(s=>{
-    const struck=!!(s.withdrawnAt||s.supersededAt);
+    const down=sightStruck(s),sup=!!s.supersededAt,struck=down||sup;
     const carries=!struck&&sightCarries(e,s);
     const rr=struck?null:(!carries?reReadAt(e,s):null);
-    const chip=s.withdrawnAt?`<span class="badge dashed">withdrawn · ${fmtMY(s.withdrawnAt)}</span>`
-      :s.supersededAt?`<span class="badge dashed">superseded · ${fmtMY(s.supersededAt)}</span>`
+    const chip=down?`<span class="badge dashed">withdrawn · ${fmtMY(s.withdrawnAt)}</span>`
+      :sup?`<span class="badge dashed">superseded · ${fmtMY(s.supersededAt)}</span>`
       :carries?'<span class="badge">carries</span>'
       :`<span class="badge dashed">read again${rr?` · ${fmtMY(rr)}`:''}</span>`;
-    const own=isAdmin()&&s.by===me&&!struck;
+    // a line that went and came back says so — the record shows the seam, never tidies it away
+    const back=!struck&&s.restoredAt?` <span class="badge dashed">stood back up · ${fmtMY(s.restoredAt)}</span>`:'';
+    const own=isAdmin()&&s.by===me&&!sup;
     return `<div style="padding:11px 0;border-top:1px solid var(--line)">
-      <div class="row"><span class="sans" style="font-size:13px;font-weight:500${carries?'':';color:var(--ink-3)'}${struck?';text-decoration:line-through':''}">${s.by===me?'You':esc(s.by||'a keeper')} <span class="num" style="color:var(--ink-3);font-weight:400">· ${fmtMDY(s.at)}</span></span><span style="flex:none">${chip}</span></div>
+      <div class="row"><span class="sans" style="font-size:13px;font-weight:500${carries?'':';color:var(--ink-3)'}${struck?';text-decoration:line-through':''}">${s.by===me?'You':esc(s.by||'a keeper')} <span class="num" style="color:var(--ink-3);font-weight:400">· ${fmtMDY(s.at)}</span></span><span style="flex:none">${chip}${back}</span></div>
       <div style="font-size:14px;margin-top:4px;line-height:1.5;color:${carries?'var(--ink-2)':'var(--ink-3)'}${struck?';text-decoration:line-through':''}">${esc(sightLine(s))}</div>
       ${own?`<div style="display:flex;gap:14px;margin-top:7px">
-        <button class="text-action" onclick="openReachAmend(${jsq(shop)},'${s.id}')">amend</button>
-        <button class="text-action" onclick="reachWithdraw(${jsq(shop)},'${s.id}')">withdraw</button></div>`:''}
+        ${down?`<button class="text-action" onclick="sightRestoreNow(${jsq(shop)},'${s.id}')">stand it back up</button>`
+          :`<button class="text-action" onclick="openReachAmend(${jsq(shop)},'${s.id}')">amend</button>
+        <button class="text-action" onclick="openCorrectSighting(${jsq(shop)},'${s.id}')">set it down</button>`}</div>`:''}
     </div>`}).join('');
   openSheet(`
   <h3>The record of the reach</h3>
@@ -2059,11 +2100,11 @@ function mySights(who){
   return out;
 }
 function sightRow(x){
-  const struck=!!(x.s.withdrawnAt||x.s.supersededAt);
+  const down=sightStruck(x.s),struck=down||!!x.s.supersededAt;
   const carries=!struck&&sightCarries(x.e,x.s);
   return `<div class="card tap" onclick="openReachRecord(${jsq(x.e.name)})">
     <div class="row"><span class="small" style="color:var(--ink-2)"><strong style="color:var(--ink-2)">You read ${esc(x.e.name)}</strong> <span class="badge ghost">sighting</span></span>
-      <span class="badge${carries?'':' ghost'}"${struck?' style="text-decoration:line-through"':''}>${x.s.withdrawnAt?'withdrawn':x.s.supersededAt?'superseded':'carries'}</span></div>
+      <span class="badge${carries?'':' ghost'}"${struck?' style="text-decoration:line-through"':''}>${down?'withdrawn':x.s.supersededAt?'superseded':'carries'}</span></div>
     <div class="muted small">${esc(sightLine(x.s))}</div>
     <div class="muted" style="font-size:11px">${new Date(x.s.at).toLocaleDateString([],{month:'short',day:'numeric'})}</div>
   </div>`;
@@ -2317,8 +2358,9 @@ function strikeCarried(ref){
   return out;
 }
 // the desk row counts only what the keeper can actually act on — a struck Register
-// entry is the pen's to stand back up, so it does not swell a reader's count
-const strikeCount=()=>strikeList().length+(isAdmin()?regStruck().length:0);
+// entry and a struck sighting are the pen's to stand back up, so neither swells a
+// reader's count
+const strikeCount=()=>strikeList().length+(isAdmin()?regStruck().length+struckSights().length:0);
 /* The kinds a strike can hold, and how each one names itself. `form` reopens the
  * record's own form — amending is never a new surface to learn. */
 const STRIKE_KINDS={
@@ -2562,10 +2604,18 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.3.0';
+const APP_VERSION='6.4.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.4.0',date:'July 2026',title:'The sighting, set down — the line that taught the grammar now answers it.',items:[
+    'A sighting is a line you signed on the shared record, and it was the model for how everything else in CARTA is corrected — struck, never deleted. It was also the last thing that could not be taken back. Withdrawing one fired on a tap, said nothing about what the reading would become, and had no door home: sighting again mints a new line, it does not stand the old one up.',
+    'Now it answers the same verbs every record does. One sheet: what you saw, what you signed, what the bar reads — and what falls if the line goes, named fact by fact before you tap. A fact another line still attests never appears there; a fact nothing else attests says so, in words.',
+    'The reading you are about to cause is shown before you cause it. The badge as it stands, the badge without your line, and the sentence between them — or, where a later line already reads past yours, the plain statement that no reading moves at all and only the ink changes hands.',
+    'A withdrawn sighting waits under “what you have set down” on the desk, beside your struck records and struck cafés, and stands back up with one tap — for every keeper, not just this device. A line that went and came back says so on the record; the seam is not tidied away.',
+    'A sighting is never erased, and now says why: every keeper holds a copy, the merge is a union of lines, and a line deleted here would simply return on the next sync. Struck is the strongest honest answer — so the room’s one red button does not reach this far.',
+    'The strike and the undo travel like the record’s do — both are dates that only ever add, so two devices converge on the same answer from either side, in any order, however many times a line goes down and comes back.',
+  ]},
   {v:'6.3.0',date:'July 2026',title:'Set down, not erased — one grammar for correcting anything.',items:[
     'Every record now answers to the same two verbs: amend it, or set it down. One sheet, the same shape for a cup, a brew, a coffee, a Setup, a café, an authored roast — what the record is, what goes with it if it goes, and the two doors.',
     'A record you set down leaves every reading, count, plot and export, and waits whole under “what you have set down” on the desk. One tap puts it back — with exactly the records that came down with it, and no more. Nothing is erased by an ordinary act.',
@@ -7155,10 +7205,70 @@ function placeWithdraw(shop){
 function placeRestore(id){
   regRestore(id);closeSheet();render();toast('Back on the Register.');
 }
+/* A sighting is the shared record's own line, and it was the model the whole
+ * strike grammar was built from — signed, dated, struck-not-deleted. What it
+ * never had was the sheet. A withdrawal fired on a tap, said nothing about what
+ * the reading would become, and could not be taken back: "sight it again" mints
+ * a new line, it does not stand the old one up. So the sighting now answers the
+ * same verbs every record does — amend, set down, put back — with the one
+ * difference stated out loud: a sighting is never erased. Every other keeper
+ * holds a copy, the merge is a union by id, and a line deleted here would simply
+ * return on the next sync. Struck is the strongest honest answer. */
+function openCorrectSighting(shop,sid){
+  if(penGuard())return;
+  const e=regFind(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
+  if(!s||s.by!==activeName()||s.supersededAt)return;
+  const down=sightStruck(s);
+  const r=reachCompile(e),after=down?reachWith(e,sid):reachWithout(e,sid);
+  const carries=!down&&sightCarries(e,s);
+  const falls=down?[]:reachFalls(e,s);
+  const mark=d=>d?`<span class="badge">${reachMarkOf(d)}</span>`:'<span class="badge dashed">unread</span>';
+  const moves=r.depth!==after.depth;
+  const followHTML=falls.length?`<h2>What falls with it</h2>
+  <div class="muted small" style="margin:0 2px 8px">Set this line down and these facts stop being attested by it. Nothing else about ${esc(e.name)} changes.</div>
+  ${falls.map(f=>`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(f.label)}</span><span class="dd">${f.to?'falls to '+esc(f.to):'no other line attests it — it goes unread'}</span></span></div>`).join('')}`:'';
+  openSheet(`
+  <h3>${esc(e.name)}</h3>
+  <div class="sub">${down?'Your line, set down. Nothing about it is lost — put it back and it carries again.':'The line you signed. Amend it, or set it down.'}</div>
+  <div class="card">
+    ${correctRow('What you saw',esc(sightLine(s)))}
+    ${correctRow('Signed',esc(`${s.by||'you'} · ${fmtMDY(s.at)}`))}
+    ${correctRow('Standing',down?`withdrawn ${esc(fmtMY(s.withdrawnAt))}`:carries?'it carries the reading':'<span class="unread">a later line reads past it — the ink stays</span>')}
+    ${correctRow('The bar reads',mark(r.depth))}
+  </div>
+  ${followHTML}
+  <div class="card" style="padding:10px 12px;margin-top:${falls.length?'12px':'0'}"><div class="row" style="align-items:center">
+    <span class="serif" style="font-style:italic;font-size:14px;color:var(--ink-3)">${down?'Put back, it will read':'Without it, it will read'}</span>
+    <span style="text-align:right">${mark(after.depth)}</span></div></div>
+  <div class="muted small" style="margin:8px 2px 12px">${moves?`The reading recompiles the moment you tap — ${esc(r.depth?reachMarkOf(r.depth):'unread')} becomes ${esc(after.depth?reachMarkOf(after.depth):'unread')}. Keepers attest facts; the depth follows.`:'No reading moves either way. This line and the record already agree — only the ink changes hands.'}</div>
+  ${down?`<button class="btn btn-primary" onclick="sightRestoreNow(${jsq(shop)},${jsq(sid)})">Put it back</button>`
+    :`<button class="btn btn-primary" onclick="closeSheet();openReachAmend(${jsq(shop)},${jsq(sid)})">Amend the record</button>
+  <button class="btn btn-quiet" onclick="sightWithdrawNow(${jsq(shop)},${jsq(sid)})">Set this sighting down</button>`}
+  <p class="note">${down?'Struck, never erased — and never erasable. Every keeper holds a copy of this line, so the record can only ever add to it: withdrawn, and stood back up, both signed and dated.':'Struck, never erased. It keeps its ink, its signature and its date, leaves the reading, and waits under <strong>what you have set down</strong> on the desk — one tap from standing back up, for every keeper.'}</p>
+  <button class="btn btn-quiet" onclick="openReachRecord(${jsq(shop)})">Back to the record of the reach</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
+}
+// Both acts land in the record and show themselves there — the struck line in
+// place, still signed, with the door back.
+function sightWithdrawNow(shop,sid){
+  if(!reachWithdraw(shop,sid))return;
+  render();openReachRecord(shop);toast('Set down — the reading recompiled.');
+}
+function sightRestoreNow(shop,sid){
+  if(!reachRestore(shop,sid))return;
+  render();openReachRecord(shop);toast('Back in the record, signed as it was.');
+}
+// your own lines, set down — the desk's row reaches them, and only yours: a
+// keeper stands up their own line, never another's
+function struckSights(){
+  const me=activeName(),out=[];
+  regEntries().forEach(e=>(e.sightings||[]).forEach(s=>{if(s.by===me&&sightStruck(s)&&!s.supersededAt)out.push({e,s})}));
+  return out.sort((a,b)=>String(b.s.withdrawnAt||'').localeCompare(String(a.s.withdrawnAt||'')));
+}
 /* The room — everything set down, in one place, newest first. The only door in
  * the app where the word "permanently" is honest, and the only red button left. */
 function struckRoomHTML(){
-  const mine=strikeList(),reg=isAdmin()?regStruck():[];
+  const mine=strikeList(),reg=isAdmin()?regStruck():[],sg=isAdmin()?struckSights():[];
   const row=s=>{const n=strikeCarried(s.ref).length;
     return `<button class="rowlink" onclick="openStruckItem(${jsq(s.ref)})"><span><span class="t">${esc(strikeName(s.coll,s.rec))}</span><br><span class="m">${esc(strikeSub(s.coll,s.rec))} · set down ${esc(fmtAgo(s.at))}${n?` · carried ${n} with it`:''}</span></span><span class="go">→</span></button>`};
   return `
@@ -7169,7 +7279,11 @@ function struckRoomHTML(){
   ${reg.length?`<h2>On the Register</h2>
   <div class="muted small" style="margin:0 2px 8px">Entries struck from the shared record. Standing one back up returns it for every keeper.</div>
   ${reg.map(e=>`<button class="rowlink" onclick="placeRestore(${jsq(e.id)})"><span><span class="t">${esc(e.name)}</span><br><span class="m">café · struck ${esc(fmtAgo(e.withdrawnAt))}${e.by?` by ${esc(e.by)}`:''} — tap to stand it back up</span></span><span class="go">↺</span></button>`).join('')}`:''}
-  ${!mine.length&&!reg.length?`<div class="empty">Nothing is set down. Everything you have ever kept is still on the record.</div>`:''}
+  ${sg.length?`<h2>Your sightings</h2>
+  <div class="muted small" style="margin:0 2px 8px">Lines you signed and set down. They keep their ink; standing one back up returns it — and its reading — for every keeper.</div>
+  ${sg.map(x=>`<button class="rowlink" onclick="openCorrectSighting(${jsq(x.e.name)},${jsq(x.s.id)})"><span><span class="t">${esc(x.e.name)}</span><br><span class="m">sighting · withdrawn ${esc(fmtAgo(x.s.withdrawnAt))} — ${esc(sightLine(x.s))}</span></span><span class="go">→</span></button>`).join('')}
+  <div class="muted small serif" style="font-style:italic;margin:6px 2px 10px">A sighting is never erased. Every keeper holds a copy, so the record can only add to it — withdrawn, and stood back up.</div>`:''}
+  ${!mine.length&&!reg.length&&!sg.length?`<div class="empty">Nothing is set down. Everything you have ever kept is still on the record.</div>`:''}
   ${mine.length?`<p class="note">Nothing above is counted, averaged, plotted or exported. It is simply held, in case you want it back.</p>
   <button class="btn btn-danger" onclick="openEraseAll()">Erase them for good</button>
   <div class="muted small serif" style="font-style:italic;margin:8px 2px 2px">The one act in CARTA with no door back. Everything else here is a correction.</div>`:''}`;
@@ -7727,9 +7841,9 @@ function mergeLedgers(loc,rem){
  * that name the same café from different devices (same name, different ids):
  * the newest-amended entry stands, blanks fill from the rest, the earliest
  * provenance is kept. Both sides run the same collapse, so they converge.
- * Sightings never race: they union by id across every copy, and a strike
- * (withdrawn/superseded) only ever adds — deterministic, no conflicts by
- * construction. The reach then recompiles from the merged record. */
+ * Sightings never race: they union by id across every copy, and every date on a
+ * line (withdrawn, restored, superseded) only ever adds — deterministic, no
+ * conflicts by construction. The reach then recompiles from the merged record. */
 /* The strikes merge like the sightings, for the same reason: both dates only
  * ever add, so max(at) and max(restoredAt) are order-free and both devices land
  * on the same answer. The body travels with the newer strike, so whichever
@@ -7746,12 +7860,20 @@ function mergeStruck(...lists){
   });
   return [...m.values()].sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||String(a.ref).localeCompare(String(b.ref)));
 }
+/* Withdrawal and restore take the MAX of their own date, independently — the
+ * construction mergeStruck uses, and for the same reason: liveness is
+ * withdrawnAt > restoredAt, so an earliest-strike-wins rule would let a stale
+ * withdrawal outrank the restore that undid it, and a re-strike could never
+ * take. Both dates only ever add, so max/max is order-free and both devices land
+ * on the same answer. supersededAt keeps the earliest — it has no undo, so once
+ * a line is answered it stays answered, whichever copy saw it first. */
 function mergeSightings(...lists){
   const m=new Map();
   lists.flat().filter(s=>s&&s.id).forEach(s=>{
     const p=m.get(s.id);
     if(!p){m.set(s.id,{...s});return}
-    if(s.withdrawnAt&&(!p.withdrawnAt||s.withdrawnAt<p.withdrawnAt))p.withdrawnAt=s.withdrawnAt;
+    if(String(s.withdrawnAt||'')>String(p.withdrawnAt||''))p.withdrawnAt=s.withdrawnAt;
+    if(String(s.restoredAt||'')>String(p.restoredAt||''))p.restoredAt=s.restoredAt;
     if(s.supersededAt&&(!p.supersededAt||s.supersededAt<p.supersededAt))p.supersededAt=s.supersededAt;
   });
   return [...m.values()].sort(bySight);

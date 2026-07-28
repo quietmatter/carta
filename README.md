@@ -152,6 +152,15 @@ skipped, which no path in the app could open before); a **coffee** (removable at
 last, not merely put away); and a **café entry** on the Register (struck by the
 hand that holds the pen, so a phantom minted by a typo is no longer permanent).
 
+And a **sighting** — the line you signed on the shared record, and the model the
+whole grammar was built from — now answers the same verbs. Its sheet states what
+you saw, what the bar reads, and *what falls with it*: each fact the line carries,
+named beside whatever stands in its place, or the plain sentence that nothing
+does. A withdrawn sighting waits in the same room and stands back up with one
+tap, for every keeper. It is the one thing there that can never be erased: every
+keeper holds a copy, the merge is a union of lines, and a line deleted here would
+simply return on the next sync. Struck is the strongest honest answer.
+
 The full grammar and why it is shaped this way: [docs/CORRECTIONS.md](docs/CORRECTIONS.md).
 
 ## Appearance
@@ -281,9 +290,12 @@ outranks another.
   the counter show?", three taps at most, one save) or the deliberate door on
   the café's page. Each is signed and dated, and joins the Register.
 - **Per fact, the newest sighting carries.** Older lines keep their ink. Amend
-  your own line (a new dated line; the old one struck *superseded*) or withdraw
-  it (struck, the fact falls to the next line standing). Nothing erases —
-  sightings merge in sync as a union by id, deterministic by construction.
+  your own line (a new dated line; the old one struck *superseded*) or set it
+  down (struck, the fact falls to the next line standing — the sheet names which
+  facts fall, and to what, before you tap). A line you set down waits under **the
+  Desk → What you set down** and stands back up with one tap, for every keeper.
+  Nothing erases — sightings merge in sync as a union by id, and every date on a
+  line only ever adds, so two devices converge in any order.
 - **Unread is a state, never a depth.** Where no one has read a café the badge
   says *unread*, dashed — never a default to the shallow end. The row itself is
   the door to reading it.
