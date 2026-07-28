@@ -18,6 +18,8 @@ alone. Cite the document, not a memory of it.
   frames, the lenses and facets
 - **SURFACES.md** — the surfaces and the graph under them: one door in, one
   reading out, and what to cut so the graph can fill
+- **READER.md** — the person who keeps nothing: what the founder publishes, what
+  a reader sees, and every write that is absent rather than locked
 - **LOT_IDENTITY.md** — what a lot is, and what it honestly is not
 - **CORRECTIONS.md** — how a record is amended and how it is set down: the
   strike, the cascade, the one irreversible door
@@ -38,6 +40,9 @@ alone. Cite the document, not a memory of it.
 - **redesign-concept/** — the Claude Design prototype (`CARTA Redesign.dc.html`),
   its handoff, its voice pass, and the local design-system copies. **The
   prototype is the reference file for the app's surfaces.**
+  - **redesign-concept/READER.html** — the reader's flow drawn: every surface in
+    `READER.md`, plus the founder's side of the same act, in the app's own token
+    and component layer. Reference file for `READER.md`.
   `STREAMLINED.html` is `SURFACES.md` built — the door, the road, the plate,
   in both themes, with a live parser and the data model on a toggle.
 - **design-system/** — the Carta design system: tokens, components, foundations
