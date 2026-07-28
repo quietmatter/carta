@@ -16,6 +16,9 @@ alone. Cite the document, not a memory of it.
 - **SCHEMA.md** — the catalog envelope and the shared documents
 - **CHARTS.md** — the atlas at more than one altitude: scenes, charts, the two
   frames, the lenses and facets
+- **MAPPING.md** — the map, unified: the marks of a scope are `scopeGreens`
+  pointed at coordinates, the walk is the zoom, and the published atlas is the
+  same map with the overlay off. Reads on top of `CHARTS.md` and `READER.md`
 - **SURFACES.md** — the surfaces and the graph under them: one door in, one
   reading out, and what to cut so the graph can fill
 - **READER.md** — the person who keeps nothing: what the founder publishes, what
@@ -43,6 +46,10 @@ alone. Cite the document, not a memory of it.
   - **redesign-concept/READER.html** — the reader's flow drawn: every surface in
     `READER.md`, plus the founder's side of the same act, in the app's own token
     and component layer. Reference file for `READER.md`.
+  - **redesign-concept/UNIFIED.html** — one page grammar built: every node kind
+    drawn by one renderer answering the same five questions, with the unified
+    map inside it and a keeper/reader switch on the Desk. Reference file for
+    `UNIFIED-HANDOFF.md` and `MAPPING.md`.
   `STREAMLINED.html` is `SURFACES.md` built — the door, the road, the plate,
   in both themes, with a live parser and the data model on a toggle.
 - **design-system/** — the Carta design system: tokens, components, foundations
