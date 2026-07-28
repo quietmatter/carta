@@ -237,7 +237,11 @@ server/
   walks, pour hands off to `openCafe` prefilled, noting lands a chart-less
   `authored` record and opens the lot page. `doorStampActors` is the origin-actor
   split: tags the producer node's `producerKind` and gives **processors** their
-  first write path (`lot.processorRefs`, blanks-only). The bind step also takes
+  first write path (`lot.processorRefs`, blanks-only). `doorStampAltitude` lands the
+  **height** on the green (`lotSetAltitude`) — the paste's altitude was always read
+  and always shown as a strikeable chip, but the bind used to spend it as a sentence
+  in `notes` where nothing could read it back; harvest still goes there, having no
+  column yet. The bind step also takes
   the **roast date** (`doorRoasted`) — the one fact a paste can never carry and
   the rest window can't read without; asked once, optional, never invented. The
   typed forms stay as the fallback and the edit surface.
@@ -257,6 +261,24 @@ server/
   station's label is terse by design (the region, not "region, country"; the
   process family sentence-cased via `sentence()`) and clamps to two lines with
   the whole text on the mark — the page states it in full a line below.
+- **the terrace** (`SURFACES.md` §2, the atlas's *second projection*) — the map is
+  a **plan** and answers where a coffee came from; it cannot answer how high, so
+  the terrace is a **section** and does. `terraceHTML({band,inner,others,label,draw})`
+  draws a scale (`terrScale` — a 200/400 m contour interval, a 600 m minimum span so
+  one green never fills the frame and implies a range it never stated) and places
+  marks on it; `altReading(band,others)` states the comparison the only honest way
+  two *ranges* can be compared — wholly below, wholly above, or overlapping, never a
+  midpoint standing in for a band — always with its denominator, and the greens that
+  state no height counted out loud beside it. `aggTerraceHTML(lotIds,heading,tail)`
+  is the set scope (the span, with each green's band inside it), on the plate, the
+  roaster and the grower; the lot page draws its own band against every other green
+  the atlas holds one for. Three ink weights carry the drawing: **dotted** is the
+  ground, a **hairline** is another green, the **sunk zone** is this one — *dashed
+  is deliberately unused here*, because in this app a dashed line means coarse (the
+  road's gap, a centroid pin) and a height another green actually stated is held.
+  A stated range draws as a band and a single figure as one rule (`.pt`): the
+  geometry never widens a point or narrows a range. Monochrome, never the ember,
+  and it never ranks. The datum is `lot.altitudeMasl` — see *the height*, below.
 - **brew flow** — `openBrew` → `saveBrew` → `openImpression` → `saveCup`.
 - **café** — logging café cups (`openCafe`/`saveCafeCup`, with optional
   structured traceability), the café passport (`shopAgg`, `vCafes`, favorites),
@@ -471,7 +493,22 @@ standing** (VISION step 5) — `caliber[]` (append-only records, each
 `{score,protocol,cupper,event,date,tier,src,by,at,withdrawnAt?}`) and blanks-only
 rarity fields (`sizeKg`/`sizeBags`/`auctionPrice`/`scarceVariety`) — additive
 beside identity, never touching `lotKeyOf`/the resolver/thresholds; see *the
-standing* above. Migration seeds the catalog
+standing* above. It also carries **the height** — `altitudeMasl:[min,max]` (min ===
+max when one figure was stated) with its provenance (`altitudeSrc`/`altitudeBy`/
+`altitudeAt`), plus `altitudeAlt[]`, the bands that *disagree*. `altValid` bounds it
+to the coffee belt (200–3,000 m); `altParse(text)` reads it off a paste as numbers —
+the door's chip is built from those, so display and record can never diverge, and a
+thousands separator is part of the figure (a bare `\b\d{3,4}` read "1,930 masl" as
+930, a number no page ever said). `lotSetAltitude` is blanks-only exactly like
+`lotSetRarity`: the first band stands and a second is *carried, not resolved* —
+appended with its author, surfaced on the lot page beside the standing one, and
+unioned across devices by `mergeById` in `mergeCatalog` as `hardIds` are. **Height
+is not identity and never becomes it**: outside `lotKeyOf`, outside the fingerprint,
+never a coordinate, and not a fourth standing axis — it is a growing condition, so
+nothing sorts or facets by it. The band the lot carries is what the *lot* was sold
+as; a producer's own range is a different fact for the producer's desk
+(`PLATFORM.md`'s scope table), and the two disagreeing is the divergence case, not
+an error to fix. Migration seeds the catalog
 from every readable ledger (`catSeed`/`catSeedGear`), re-points the ledger onto it
 (`catRepoint`/`gearRepoint`/`brewRepoint`/`cupPrepRepoint`, additive + reversible),
 then retires the flat text once a node stands (`catRetire`, the one irreversible
@@ -543,6 +580,13 @@ the brew corpus (step 6) and discovery (step 7) follow.
   supersede strike a line with a date, never delete it — and `unread` is a
   state, never a default to ○ Counter. Depth is a filter in Find, never a sort
   key. Badges stay monochrome: never the ember, never a fill.
+- **Height places, it never ranks.** `altitudeMasl` is additive beside identity and
+  stays there — never in `lotKeyOf`, never in the fingerprint, never a coordinate,
+  never a standing axis, and never a facet you can cut the atlas by (banding greens
+  by height *is* a ranking, whatever it is called). A stated range renders as a band
+  and a single figure as one rule; never widen a point or narrow a range to make a
+  drawing tidier. Two heights that disagree are carried, not resolved — the first
+  band stands and the later one is appended, never overwritten.
 - **A match score never travels without its reasons.** Anywhere a score or
   band shows, "Why this" (the `signals` from `matchOf`) must be reachable.
   Location is consent-gated and ephemeral (`myGeo`, in memory only — never
