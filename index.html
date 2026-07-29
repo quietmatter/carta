@@ -535,13 +535,6 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 .hero .origin{font-family:var(--serif);font-style:italic;color:var(--ink-3);font-size:15px;margin-top:8px}
 /* the café's own page — a gradient drawn from its derived hue (or a neutral roast
    tone, unread), never the app's ember: that signal stays reserved for the score. */
-.cafe-banner{position:relative;overflow:hidden;border:1px solid var(--line);margin:2px 0 4px}
-.cafe-banner .grad{width:100%;height:172px}
-.cafe-banner .fade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,14,10,0) 32%,rgba(18,14,10,.74) 100%)}
-.cafe-banner .bar{position:absolute;left:0;right:0;bottom:0;height:4px}
-.cafe-banner .txt{position:absolute;left:16px;right:16px;bottom:15px;color:#fff}
-.cafe-banner .txt h2{font-family:var(--serif);font-size:25px;font-weight:600;line-height:1.02;letter-spacing:-.02em;margin:0;color:#fff;text-transform:none;text-shadow:0 1px 14px rgba(0,0,0,.55)}
-.cafe-banner .txt .city{font-family:var(--sans);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-top:6px;opacity:.92;text-shadow:0 1px 10px rgba(0,0,0,.6)}
 /* the map — real lat/lon scaled to fit the box; a filled dot is a place you
    keep, a dashed one is not. The drawn plot is the floor: real streets (the
    street map section) fade in behind the pins when tiles can be fetched, and
@@ -977,7 +970,7 @@ function regSeed(){
  * Venue (a café). The catalog keeps the rest of the road as the SAME shape: a
  * set of Register-enveloped documents, one per entity kind, each
  * {version,rev,dirty,entries,deleted}. loadDoc/saveDoc/catUpsert/compile are
- * loadReg/saveReg/regUpsert/reachCompile, generalised — no new sync machinery,
+ * loadReg/saveReg/regUpsert and the reach's old compile, generalised — no new sync machinery,
  * the pattern is already proven in the café (see SCHEMA.md). Device-local until a
  * catalog-aware server exists: an old server 404s the endpoint and this stays
  * local, exactly as the Register degrades. Nothing renders it yet — this is the
@@ -1886,292 +1879,6 @@ function cupPrepRepoint(){
   D=load();
 }
 
-/* ============ the reach ============ */
-/* A classification of depth, not worth — four marks for how much of a coffee's
- * road reads from the customer's side of the counter. A Register fact, like the
- * pin and the palette: keepers attest FACTS (the bag, what the counter showed),
- * never depths — the reading is the deepest fact standing. Per fact the newest
- * standing sighting carries; older lines keep their ink. Nothing erases: a later
- * reading of your own supersedes your line, withdraw strikes it — both stay,
- * signed. Sightings live on the entry and merge in sync as a union by id. */
-const REACH=[null,
-  {glyph:'○',word:'Counter',name:'The counter',line:'good coffee, made fast and made right. Nobody narrates.'},
-  {glyph:'◎',word:'House',name:'The house',line:'the bag is named, the menu has intent. Ask, and they answer.'},
-  {glyph:'◉',word:'Roastery',name:'The roastery',line:'the roast in the room; the grind adjusted before your cup.'},
-  {glyph:'●',word:'Origin',name:'The origin',line:'the farm in the cup: producer, lot, process, freely told.'}];
-const BAG_FACTS={unnamed:{label:'unnamed',depth:1,why:'an honest, unnamed bag'},roaster:{label:'roaster named',depth:2,why:'the bag was named'},lot:{label:'lot named',depth:3,why:'the lot was named'},farm:{label:'farm named',depth:4,why:'the farm was named'}};
-const SEEN_FACTS={inhouse:{label:'roasts in-house',depth:3,why:'the roast in the room'},methods:{label:'more than one method',depth:3,why:'more than one method'},answers:{label:'answers at the counter',depth:2,why:'answers at the counter'},story:{label:'the story, freely told',depth:4,why:'the story, freely told'}};
-// (the sighting liveness primitives — sightStruck/sightStanding/sightStandingAt/
-// bySight — and fmtMY/fmtMDY live in the catalog section now: the spine reads them.)
-// Compile the reading. The bag is one fact with four readings — newest carries;
-// each counter fact stands while any standing sighting attests it (attest-only:
-// silence is not denial — a shallow sighting at a deep café changes nothing).
-function reachCompile(e,asOf){
-  const st=((e&&e.sightings)||[]).filter(s=>sightStandingAt(s,asOf)).sort(bySight);
-  const carry={};
-  st.forEach(s=>{if(s.bag&&BAG_FACTS[s.bag])carry.bag=s;(s.seen||[]).forEach(k=>{if(SEEN_FACTS[k])carry[k]=s})});
-  let depth=0;
-  if(carry.bag)depth=BAG_FACTS[carry.bag.bag].depth;
-  Object.keys(SEEN_FACTS).forEach(k=>{if(carry[k])depth=Math.max(depth,SEEN_FACTS[k].depth)});
-  return {depth,carry,standing:st};
-}
-const sightCarries=(e,s)=>Object.values(reachCompile(e).carry).some(x=>x.id===s.id);
-// the fact that carries the reading — the primer's why-line
-function reachWhy(e){
-  const r=reachCompile(e);if(!r.depth)return'';
-  if(r.carry.bag&&BAG_FACTS[r.carry.bag.bag].depth===r.depth)return BAG_FACTS[r.carry.bag.bag].why;
-  const k=Object.keys(SEEN_FACTS).find(k=>r.carry[k]&&SEEN_FACTS[k].depth===r.depth);
-  return k?SEEN_FACTS[k].why:'';
-}
-// Replay the record to find when the reading last moved — {depth,since,was}.
-function reachHistory(e){
-  const ss=(e&&e.sightings)||[];
-  const times=[...new Set(ss.flatMap(s=>[s.at,s.withdrawnAt,s.restoredAt,s.supersededAt]).filter(Boolean))].sort(); // a line standing back up moves the reading exactly as its withdrawal did
-  let depth=0,since=null,was=0;
-  times.forEach(t=>{const d=reachCompile(e,t).depth;if(d!==depth){was=depth;depth=d;since=t}});
-  return {depth,since,was};
-}
-// The whisper: the bag turning twice inside ninety days. It clears when a
-// reading holds the window out, or a second keeper attests the current value.
-// Never on the badge — newest still carries throughout.
-function reachContested(e){
-  const bags=((e&&e.sightings)||[]).filter(s=>sightStanding(s)&&s.bag).sort(bySight);
-  if(bags.length<3)return false;
-  const cut=new Date(Date.now()-90*864e5).toISOString();
-  let flips=0;
-  for(let i=1;i<bags.length;i++)if(bags[i].bag!==bags[i-1].bag&&bags[i].at>=cut)flips++;
-  if(flips<2)return false;
-  const cur=bags[bags.length-1].bag;
-  return new Set(bags.filter(s=>s.bag===cur).map(s=>s.by)).size<2;
-}
-// the earliest later standing sighting that re-read this line's facts
-function reReadAt(e,s){
-  const later=((e.sightings||[]).filter(x=>sightStanding(x)&&bySight(s,x)<0)).sort(bySight);
-  const hit=later.find(x=>(s.bag&&x.bag)||((s.seen||[]).some(k=>(x.seen||[]).includes(k))));
-  return (hit||later[0]||{}).at||null;
-}
-function sightLine(s){
-  const parts=[];
-  if(s.bag&&BAG_FACTS[s.bag])parts.push('The bag: '+BAG_FACTS[s.bag].label);
-  (s.seen||[]).forEach(k=>{if(SEEN_FACTS[k]){const l=SEEN_FACTS[k].label;parts.push(l[0].toUpperCase()+l.slice(1))}});
-  return parts.length?parts.join('. ')+'.':'—';
-}
-// Enter a sighting — facts only, signed and dated. {supersede} strikes the
-// keeper's own earlier line (the amend path); a fresh sighting leaves old
-// lines standing, merely no longer carrying.
-function regSight(name,facts,who,opts){
-  const e=regUpsert(name,{},who)||regByName(name);if(!e)return null;
-  const now=new Date().toISOString();
-  const s={id:uid(),by:who||'',at:now};
-  if(facts.bag&&BAG_FACTS[facts.bag])s.bag=facts.bag;
-  const seen=(facts.seen||[]).filter(k=>SEEN_FACTS[k]).sort();
-  if(seen.length)s.seen=seen;
-  if(!s.bag&&!s.seen)return null;
-  if(opts&&opts.supersede){const old=(e.sightings||[]).find(x=>x.id===opts.supersede);if(old&&old.by===s.by&&sightStanding(old))old.supersededAt=now}
-  (e.sightings=e.sightings||[]).push(s);
-  e.updatedAt=now;if(who)e.by=who;REG.dirty=true;saveReg();schedulePush();
-  return s;
-}
-// Withdrawing un-carries: the fact falls to the next line standing — to unread,
-// if none does. Set down, not erased: the line keeps its ink, its signature and
-// its date, and stands back up from the desk. Only your own line, and only while
-// nothing has superseded it — a superseded line is already answered, by yours.
-function reachWithdraw(shop,sid){
-  if(penGuard())return;
-  const e=regFind(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
-  if(!s||s.by!==activeName()||!sightStanding(s))return null;
-  // a re-strike must outrank the restore it undoes — a millisecond clock can
-  // otherwise stamp the pair identically, and the line would read as neither
-  s.withdrawnAt=afterIso(new Date().toISOString(),s.restoredAt);
-  e.updatedAt=s.withdrawnAt;e.by=activeName();REG.dirty=true;saveReg();schedulePush();
-  return s;
-}
-// The undo, in the same shape: a date that only ever adds. Restoring re-carries —
-// unless a later line has read past it, in which case the ink returns and the
-// reading does not move. The sheet says which before the tap.
-function reachRestore(shop,sid){
-  if(penGuard())return;
-  const e=regFind(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
-  if(!s||s.by!==activeName()||!sightStruck(s)||s.supersededAt)return null;
-  s.restoredAt=afterIso(new Date().toISOString(),s.withdrawnAt);
-  e.updatedAt=s.restoredAt;e.by=activeName();REG.dirty=true;saveReg();schedulePush();
-  return s;
-}
-// what the reading becomes with this one line taken out of the record — the
-// sighting's cascade: not other records, but the facts that fall to the next
-// line standing. Named in full before the tap, exactly as a strike names what
-// it carries.
-const reachWithout=(e,sid)=>reachCompile({...e,sightings:(e.sightings||[]).filter(x=>x.id!==sid)});
-const reachWith=(e,sid)=>reachCompile({...e,sightings:(e.sightings||[]).map(x=>x.id===sid?{...x,withdrawnAt:'',restoredAt:''}:x)});
-// per fact this line carries, what stands in its place — {to:''} where nothing
-// does, and a fact another standing line still attests never appears at all
-function reachFalls(e,s){
-  const now=reachCompile(e).carry,r=reachWithout(e,s.id).carry,out=[];
-  if(now.bag&&now.bag.id===s.id)out.push({label:'the bag: '+BAG_FACTS[s.bag].label,to:r.bag?BAG_FACTS[r.bag.bag].label+', '+(r.bag.by===activeName()?'your':(r.bag.by||'a keeper')+'’s')+' earlier line':''});
-  Object.keys(SEEN_FACTS).forEach(k=>{if(now[k]&&now[k].id===s.id&&!r[k])out.push({label:SEEN_FACTS[k].label,to:''})});
-  return out;
-}
-/* --- the mark. The tweak (Preferences) restyles depth badges only — state
- * chips (unread, re-read, held, withdrawn) keep their words and their dashes
- * in every mode. Monochrome always: never the ember, never a fill. --- */
-const reachMarkOf=d=>{const m=getPref('reachMark','gw'),x=REACH[d];return m==='w'?x.word:m==='g'?x.glyph:x.glyph+' '+x.word};
-function reachBadge(shop,opts){
-  opts=opts||{};
-  const e=regByName(shop);if(!e)return'';
-  const r=reachCompile(e);
-  if(!r.depth)return opts.unread?'<span class="badge dashed">unread</span>':'';
-  return `<span class="badge${opts.ghost?' ghost':''}" style="cursor:pointer" onclick="event.stopPropagation();openReachPrimer(${jsq(shop)})">${reachMarkOf(r.depth)}</span>`;
-}
-/* --- the primer — one tap from any badge. From a café's badge, its depth is
- * lit with one line of why; the sheet teaches the general either way. --- */
-function openReachPrimer(shop){
-  const e=shop?regByName(shop):null;
-  const r=e?reachCompile(e):null;
-  const lit=r?r.depth:0;
-  const h=lit?reachHistory(e):null;
-  const why=lit?reachWhy(e):'';
-  const rows=[1,2,3,4].map(d=>{const x=REACH[d],on=d===lit,dim=lit&&!on;
-    return `<div style="display:flex;gap:14px;align-items:baseline;padding:12px ${on?'11px':'2px'};border-top:1px solid var(--line)${on?';background:var(--paper-2);border-left:2px solid var(--ink)':''}${d===4?';border-bottom:1px solid var(--line)':''}">
-      <span class="sans" style="font-size:15px;flex:none;width:22px;text-align:center${dim?';color:var(--ink-3)':''}">${x.glyph}</span>
-      <span style="font-size:14px;line-height:1.5${dim?';color:var(--ink-3)':''}"><strong${dim?' style="color:var(--ink-2)"':''}>${x.name}</strong><span style="color:var(--ink-2)"> — ${x.line}</span>${on&&why?`<span class="sans" style="display:block;font-size:11px;color:var(--ink-3);margin-top:4px">where ${esc(shop)} reads · carried by “${why}”</span>`:''}</span>
-    </div>`}).join('');
-  openSheet(`
-  <h3>How to read the reach</h3>
-  <div class="sub">${lit?`From ${esc(shop)} — it reads ${REACH[lit].glyph} ${REACH[lit].word}${h&&h.since?`, since ${fmtMY(h.since)}`:''}, ${r.standing.length} sighting${r.standing.length>1?'s':''}.`:'Four depths, no ladder — a description of the counter, not a score for it.'}</div>
-  ${rows}
-  <div class="empty" style="padding:22px 20px">No depth outranks another. The cup decides.</div>
-  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
-}
-/* --- the sighting chips — the same eight facts behind both doors. The bag is
- * one pick of four; the counter facts toggle. Held (dashed) marks what the
- * record already carries; tapping a different chip is the dispute. --- */
-let sightBag=null,sightSeen=[],sightShop=null,sightHeld=false,amendFrom=null;
-function sightChipsHTML(){
-  const e=sightHeld&&sightShop?regByName(sightShop):null;
-  const c=e?reachCompile(e).carry:{};
-  const bag=Object.keys(BAG_FACTS).map(k=>{const on=sightBag===k,hold=!on&&c.bag&&c.bag.bag===k;
-    return `<button class="${on?'on':hold?'held':''}" onclick="sightBagPick('${k}')">${BAG_FACTS[k].label}${hold?' · held':''}</button>`}).join('');
-  const seen=Object.keys(SEEN_FACTS).map(k=>{const on=sightSeen.includes(k),hold=!on&&c[k];
-    return `<button class="${on?'on':hold?'held':''}" onclick="sightSeenPick('${k}')">${SEEN_FACTS[k].label}${hold?' · held':''}</button>`}).join('');
-  return {bag,seen};
-}
-function paintSightChips(){
-  const c=sightChipsHTML();
-  const b=document.getElementById('sightbag');if(b)b.innerHTML=c.bag;
-  const s=document.getElementById('sightseen');if(s)s.innerHTML=c.seen;
-  const p=document.getElementById('sightread');if(p)p.innerHTML=sightReadHTML();
-}
-function sightBagPick(k){sightBag=(sightBag===k?null:k);paintSightChips()}
-function sightSeenPick(k){const i=sightSeen.indexOf(k);if(i>=0)sightSeen.splice(i,1);else sightSeen.push(k);paintSightChips()}
-// what the record will read once this sighting lands — the carries plus yours
-function sightReadHTML(){
-  const e=sightShop?regByName(sightShop):null;
-  const r=e?reachCompile(e):{depth:0,carry:{},standing:[]};
-  let d=0;
-  const bag=sightBag||(r.carry.bag&&r.carry.bag.bag);
-  if(bag)d=BAG_FACTS[bag].depth;
-  Object.keys(SEEN_FACTS).forEach(k=>{if(sightSeen.includes(k)||r.carry[k])d=Math.max(d,SEEN_FACTS[k].depth)});
-  const note=d?((sightBag||sightSeen.length)?(r.standing.length?'— from your sighting, signed':'— the record’s first line, signed'):'— as the record stands'):'— say what you saw';
-  return `${d?`<span class="badge">${reachMarkOf(d)}</span>`:'<span class="badge dashed">unread</span>'} <span class="sans" style="font-size:11px;color:var(--ink-3)">${note}</span>`;
-}
-/* --- amend the reach — the deliberate door, from the café's page. Reading
- * first and reading again are the same act; only the header knows. --- */
-function openReachAmend(shop,fromId){
-  if(penGuard())return;
-  const e=regByName(shop);
-  const r=e?reachCompile(e):{depth:0,carry:{},standing:[]};
-  const h=e?reachHistory(e):{};
-  const from=fromId&&e?(e.sightings||[]).find(x=>x.id===fromId):null;
-  amendFrom=from&&from.by===activeName()?from.id:null;
-  sightBag=from?(from.bag||null):null;
-  sightSeen=from&&from.seen?from.seen.slice():[];
-  sightShop=shop;sightHeld=true;
-  const first=!r.standing.length;
-  const keepers=new Set(r.standing.map(s=>s.by).filter(Boolean)).size;
-  const carrier=r.carry.bag;
-  const sc=sightChipsHTML();
-  openSheet(`
-  <h3>${first?'Read the reach':'Amend the reach'}</h3>
-  <div class="sub">${first?'Say what you saw. Yours will be the first line in the record.':'Say what you saw. The reading recompiles — keepers attest facts, never depths.'}</div>
-  <div class="card" style="margin-bottom:14px"><div class="row" style="align-items:baseline">
-    <span class="muted" style="flex:none">${esc(shop)} reads</span>
-    <span style="text-align:right">${r.depth?`<span class="badge">${reachMarkOf(r.depth)}</span>`:'<span class="badge dashed">unread</span>'} <span class="sans" style="font-size:11px;color:var(--ink-3)">${first?'nothing read yet — no one has said':`since ${fmtMY(h.since)} · ${r.standing.length} sighting${r.standing.length>1?'s':''}, ${keepers} keeper${keepers>1?'s':''}`}</span></span></div></div>
-  <div class="f"><span class="l">The bag</span><div class="desc" id="sightbag">${sc.bag}</div></div>
-  ${first?'<div class="cafeback">There’s no record to hold you to. Say only what you saw — blanks are honest.</div>'
-    :carrier?`<div class="cafeback">${carrier.by===activeName()?'You':esc(carrier.by||'A keeper')} read this as <strong>${BAG_FACTS[carrier.bag].label}</strong>, ${fmtMY(carrier.at)}. Yours will carry; the line stays in the record.</div>`:''}
-  <div class="f"><span class="l">Seen at the counter</span><div class="desc" id="sightseen">${sc.seen}</div></div>
-  <div class="card" style="padding:10px 12px"><div class="row" style="align-items:center">
-    <span class="serif" style="font-style:italic;font-size:14px;color:var(--ink-3)">Will read</span>
-    <span id="sightread" style="text-align:right">${sightReadHTML()}</span></div></div>
-  ${first?'':'<div class="muted" style="font-family:var(--sans);font-size:11px;line-height:1.5;margin:8px 2px 6px">Dashed chips are what the record already holds. Tapping a different chip is the dispute — named in place, resolved by the record.</div>'}
-  <button class="btn btn-primary" style="margin-top:8px" onclick="enterSighting(${jsq(shop)})">${first?'Enter the first sighting':'Enter my sighting'}</button>
-  <button class="btn btn-quiet" onclick="closeSheet()">Cancel</button>`);
-}
-function enterSighting(shop){
-  if(guard())return;
-  if(!sightBag&&!sightSeen.length){toast('Say what you saw — one chip is enough');return}
-  regSight(shop,{bag:sightBag,seen:sightSeen},activeName(),amendFrom?{supersede:amendFrom}:null);
-  sightBag=null;sightSeen=[];amendFrom=null;
-  closeSheet();render();toast('Sighted — the reading recompiled');
-}
-/* --- the record of the reach — every sighting, signed and dated. Opens from
- * the Register line on the café's page; the history lives here, never on the
- * badge. --- */
-function openReachRecord(shop){
-  const e=regByName(shop);if(!e)return;
-  const ss=(e.sightings||[]).slice().sort(bySight).reverse();
-  const r=reachCompile(e),h=reachHistory(e),contested=reachContested(e);
-  const me=activeName();
-  const flag=contested?'<span class="badge dashed">the bag · read two ways</span>'
-    :(r.depth&&h.was>0&&h.since?`<span class="badge dashed">re-read ${fmtMY(h.since)} · was ${REACH[h.was].glyph} ${REACH[h.was].word.toLowerCase()}</span>`:'');
-  const rows=ss.map(s=>{
-    const down=sightStruck(s),sup=!!s.supersededAt,struck=down||sup;
-    const carries=!struck&&sightCarries(e,s);
-    const rr=struck?null:(!carries?reReadAt(e,s):null);
-    const chip=down?`<span class="badge dashed">withdrawn · ${fmtMY(s.withdrawnAt)}</span>`
-      :sup?`<span class="badge dashed">superseded · ${fmtMY(s.supersededAt)}</span>`
-      :carries?'<span class="badge">carries</span>'
-      :`<span class="badge dashed">read again${rr?` · ${fmtMY(rr)}`:''}</span>`;
-    // a line that went and came back says so — the record shows the seam, never tidies it away
-    const back=!struck&&s.restoredAt?` <span class="badge dashed">stood back up · ${fmtMY(s.restoredAt)}</span>`:'';
-    const own=isAdmin()&&s.by===me&&!sup;
-    return `<div style="padding:11px 0;border-top:1px solid var(--line)">
-      <div class="row"><span class="sans" style="font-size:13px;font-weight:500${carries?'':';color:var(--ink-3)'}${struck?';text-decoration:line-through':''}">${s.by===me?'You':esc(s.by||'a keeper')} <span class="num" style="color:var(--ink-3);font-weight:400">· ${fmtMDY(s.at)}</span></span><span style="flex:none">${chip}${back}</span></div>
-      <div style="font-size:14px;margin-top:4px;line-height:1.5;color:${carries?'var(--ink-2)':'var(--ink-3)'}${struck?';text-decoration:line-through':''}">${esc(sightLine(s))}</div>
-      ${own?`<div style="display:flex;gap:14px;margin-top:7px">
-        ${down?`<button class="text-action" onclick="sightRestoreNow(${jsq(shop)},'${s.id}')">stand it back up</button>`
-          :`<button class="text-action" onclick="openReachAmend(${jsq(shop)},'${s.id}')">amend</button>
-        <button class="text-action" onclick="openCorrectSighting(${jsq(shop)},'${s.id}')">set it down</button>`}</div>`:''}
-    </div>`}).join('');
-  openSheet(`
-  <h3>The record of the reach</h3>
-  <div class="sub">Every sighting, signed and dated. The newest carries each fact; nothing erases.</div>
-  <div class="row" style="align-items:baseline;padding:0 0 8px">
-    <span class="muted" style="flex:none">${esc(shop)} reads</span>
-    <span style="text-align:right">${r.depth?`<span class="badge" style="cursor:pointer" onclick="openReachPrimer(${jsq(shop)})">${reachMarkOf(r.depth)}</span>`:'<span class="badge dashed">unread</span>'}${flag?' '+flag:''}</span></div>
-  ${rows||'<div class="empty">No one has read it yet. Yours would be the first line.</div>'}
-  ${contested?'<div class="empty" style="padding:18px 20px;font-size:14px">The bag has turned twice this season. The newest carries, both readings stay in ink — perhaps the counter itself changes by the week.</div>':''}
-  ${isAdmin()?`<button class="btn btn-primary" onclick="openReachAmend(${jsq(shop)})">Say what you saw</button>`:''}
-  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
-}
-// your sightings, filed beside your cups in the Record — ghost weight, never a
-// number. The "carries" chip going ghost is how you learn someone read past you.
-function mySights(who){
-  const out=[];
-  regEntries().forEach(e=>(e.sightings||[]).forEach(s=>{if(s.by===who)out.push({e,s})}));
-  return out;
-}
-function sightRow(x){
-  const down=sightStruck(x.s),struck=down||!!x.s.supersededAt;
-  const carries=!struck&&sightCarries(x.e,x.s);
-  return `<div class="card tap" onclick="openReachRecord(${jsq(x.e.name)})">
-    <div class="row"><span class="small" style="color:var(--ink-2)"><strong style="color:var(--ink-2)">You read ${esc(x.e.name)}</strong> <span class="badge ghost">sighting</span></span>
-      <span class="badge${carries?'':' ghost'}"${struck?' style="text-decoration:line-through"':''}>${down?'withdrawn':x.s.supersededAt?'superseded':'carries'}</span></div>
-    <div class="muted small">${esc(sightLine(x.s))}</div>
-    <div class="muted" style="font-size:11px">${new Date(x.s.at).toLocaleDateString([],{month:'short',day:'numeric'})}</div>
-  </div>`;
-}
-
 /* ============ domain ============ */
 const ROAST_LEVELS=['','Light','Light-medium','Medium','Medium-dark','Dark'];
 // accent hue derived from roast level (Section 10: the only colour decision)
@@ -2324,16 +2031,6 @@ function paletteSwatches(pal){const c=cafeColors(pal);return c?[c.paper,c.card,c
 // The banner on a café's own page — its hue, drawn bold. Falls back to a neutral
 // roast gradient when no site has been read yet. Never the app's ember: that
 // signal stays reserved for the current action and the cup's score.
-function cafeBannerGrad(pal){
-  if(!pal||pal.h==null)return{grad:'linear-gradient(135deg,#3a2a20 0%,#6b4a34 55%,#a2643f 100%)',bar:'#a2643f'};
-  const h=pal.h,s=Math.max(Math.min(pal.s,70),34);
-  return{grad:`linear-gradient(135deg,hsl(${h},${s}%,16%) 0%,hsl(${h},${s}%,34%) 55%,hsl(${h},${s}%,50%) 100%)`,bar:pal.brand||`hsl(${h},${s}%,50%)`};
-}
-// The map — the drawn plot. Real lat/lon, scaled to fill the box
-// (equirectangular; fine at the scale of one city). A single point centers with
-// nothing to scale against, so it holds the middle alone. This plot is the
-// floor every map surface stands on: the street map section lays real streets
-// behind it when tiles can be fetched, and offline the plot simply stands.
 function mapProject(points,opts){
   opts=opts||{};
   const pts=points.filter(p=>p.lat!=null&&p.lon!=null);
@@ -2426,7 +2123,7 @@ function strikeCarried(ref){
 // the desk row counts only what the keeper can actually act on — a struck Register
 // entry and a struck sighting are the pen's to stand back up, so neither swells a
 // reader's count
-const strikeCount=()=>strikeList().length+(isAdmin()?regStruck().length+struckSights().length:0);
+const strikeCount=()=>strikeList().length+(isAdmin()?regStruck().length:0);
 /* The kinds a strike can hold, and how each one names itself. `form` reopens the
  * record's own form — amending is never a new surface to learn. */
 const STRIKE_KINDS={
@@ -3038,7 +2735,7 @@ function closePlace(){if(pageStack.length)return pageBack();placeView=null;rende
 // Rooms that became channels keep their old names answering — a saved flow
 // that says go('cafes') or go('today') lands where that work now lives.
 const TAB_ALIAS={field:'atlas',cafes:'atlas',circle:'atlas',today:'atlas'};
-function go(t){t=TAB_ALIAS[t]||t;tab=t;placeView=null;pageView=null;pageStack=[];discOn=false;curateOn=false;doorOn=false;deskOpen=null;discMatch=null;clearTimeout(_mt);if(t!=='atlas'){reachLens=0;reachTail={}}render()}
+function go(t){t=TAB_ALIAS[t]||t;tab=t;placeView=null;pageView=null;pageStack=[];discOn=false;curateOn=false;doorOn=false;deskOpen=null;discMatch=null;clearTimeout(_mt);render()}
 // which room a sub-view lights on the bar
 const TAB_FAMILY={bags:'atlas',shelf:'atlas',setups:'ledger'};
 /* The header's second line names the screen, not the app — the prototype's SUBS.
@@ -3069,7 +2766,7 @@ function render(){
   const m=document.getElementById('main');
   const screenKey=[tab,placeView||'',pageView?pageView.kind+':'+pageView.id:'',discOn?1:0,curateOn?1:0,doorOn?'door'+doorStep:0].join('|');
   const settle=screenKey!==_lastScreenKey&&!reducedMotion();_lastScreenKey=screenKey;
-  const body=(readOnly()?viewBanner():'')+(doorOn?vDoor():curateOn?vCurate():pageView?nodePage(pageView.kind,pageView.id):placeView?vPlace():discOn?vDiscover():(({atlas:vAtlas,bags:vBags,setups:vSetups,trace:vTrace,ledger:vDesk})[tab]||vAtlas)());
+  const body=(readOnly()?viewBanner():'')+(doorOn?vDoor():curateOn?vCurate():pageView?nodePage(pageView.kind,pageView.id):placeView?nodePage('place',placeView):discOn?vDiscover():(({atlas:vAtlas,bags:vBags,setups:vSetups,trace:vTrace,ledger:vDesk})[tab]||vAtlas)());
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=0;window.scrollTo(0,0);
   smapMount();
@@ -4342,7 +4039,7 @@ function deskManualHTML(ro){
 }
 // Preferences — presentation/input, not data. Two controls, phase-0 minimal.
 function vPrefsSection(){
-  const u=tempUnit(),hide=getPref('hideTimer',false),th=getPref('theme','paper'),rm=getPref('reachMark','gw');
+  const u=tempUnit(),hide=getPref('hideTimer',false),th=getPref('theme','paper');
   return `<h2>Preferences</h2>
   <div class="card">
     <div class="kv"><span class="k">Temperature</span><span class="v">
@@ -4353,13 +4050,8 @@ function vPrefsSection(){
       <span class="seg" style="margin:0;display:inline-flex;width:auto">
         <button class="${!hide?'on':''}" onclick="prefSet('hideTimer',false)">Show</button>
         <button class="${hide?'on':''}" onclick="prefSet('hideTimer',true)">Hide</button></span></span></div>
-    <div class="kv"><span class="k">The reach mark</span><span class="v">
-      <span class="seg" style="margin:0;display:inline-flex;width:auto">
-        <button class="${rm==='gw'?'on':''}" onclick="prefSet('reachMark','gw')">◉ Word</button>
-        <button class="${rm==='w'?'on':''}" onclick="prefSet('reachMark','w')">Word</button>
-        <button class="${rm==='g'?'on':''}" onclick="prefSet('reachMark','g')">◉</button></span></span></div>
   </div>
-  <div class="muted small">Switch °C/°F anytime — right on the Temp dial too. Hide the stopwatch if you time on your machine or scale; just type the time and weight in. Auto follows your device's own light/dark setting, and moves with it as the day turns. The reach mark styles how a café's depth is written — state chips keep their words and their dashes in every mode.</div>`;
+  <div class="muted small">Switch °C/°F anytime — right on the Temp dial too. Hide the stopwatch if you time on your machine or scale; just type the time and weight in. Auto follows your device's own light/dark setting, and moves with it as the day turns.</div>`;
 }
 function prefSet(k,v){setPref(k,v);render()}
 // Paper / dusk — "paper at night". A Day (or a brew) logged after sunset should not be a blinding rectangle.
@@ -5123,7 +4815,7 @@ function nodeHeightHTML(kind,gs,s){
 function nodePage(kind,id){
   const s=spec(kind,id);if(!s)return '<div class="empty">Nothing here any more.</div>';
   const gs=scopeGreens(kind,id);
-  const hands=handsIn(gs),bars=barsIn(gs),cups=cupsIn(gs),brews=brewsIn(gs);
+  const hands=handsIn(gs),bars=barsIn(gs),cups=s.cups||cupsIn(gs),brews=brewsIn(gs);
   const one=gs.length===1;
   const x=s.extras||{};
   /* ── 1 · what is it ── */
@@ -5163,6 +4855,13 @@ function nodePage(kind,id){
     <div class="muted small" style="margin:8px 2px 0">Each pour is a dated, signed sighting — the shelf may have moved since.</div>`
     :`<div class="section-head"><h2>${one?'Where it pours':'Bars pouring from here'}</h2></div>
     <div class="empty">No bar has poured ${one?'it':'one of these'} into the record yet. The branch opens with the first signed sighting.</div>`):'';
+  // a kind that draws its own green list — with the edge that put each one there — does
+  // not also get the generic one (OWN_GREENS): one section per question, never two
+  const barGreens=(kind==='place'&&gs.length)?`<div class="section-head"><h2>Greens poured here</h2><span class="n-note num">n=${gs.length}</span></div>
+    ${gs.map(l=>{const ps=poursIn([l]).filter(p=>normName(p.shop)===normName(id)).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+      const p0=ps[0]||{};const h=lotHands(l.id);
+      return rowlink('lot',l.id,esc(lotLabel(l)),esc([p0.roasterRef&&roasterName(p0.roasterRef),p0.at&&('seen '+fmtMDY(p0.at))].filter(regSubstance).join(' · ')),
+        h>1?esc(nPl(h,'hand')):'')}).join('')}`:'';
   const setupSec=(kind!=='setup'&&brews.length)?`<div class="section-head"><h2>How you brew it</h2><span class="n-note num">n=${brews.length}</span></div>
     ${[...new Set(brews.map(b=>b.setupId).filter(Boolean))].map(sid=>{const st=setupById(sid)||{};
       const mine=brews.filter(b=>b.setupId===sid),gr=mine.map(b=>b.grind).filter(v=>v!=null);
@@ -5186,8 +4885,7 @@ function nodePage(kind,id){
   :`<div class="empty">No reading of yours in this scope yet — a blank, not a verdict.</div>`}`;
   const act=readOnly()?'':`<div class="btnrow" style="margin-top:22px">
     <button class="btn btn-quiet" onclick="openDoor()">＋ A coffee</button>
-    ${kind==='place'?`<button class="btn btn-primary" onclick="openCafe({shop:${jsq(id)}})">Remember a cup here</button>`
-      :`<button class="btn btn-primary" onclick="go('atlas')">Back to the atlas</button>`}</div>`;
+    ${s.actPrimary||`<button class="btn btn-primary" onclick="go('atlas')">Back to the atlas</button>`}</div>`;
   return head+`
   ${road}
   ${res}
@@ -5198,7 +4896,7 @@ function nodePage(kind,id){
   ${nodeHeightHTML(kind,gs,s)}
   ${x.postHeight||''}
   ${up}${down}
-  ${greensSec}${handsSec}${barsSec}${setupSec}
+  ${greensSec}${barGreens}${handsSec}${barsSec}${setupSec}
   ${overlay}
   ${x.tail||''}
   ${act}
@@ -5229,8 +4927,82 @@ function spec(kind,id){
   case 'region':return specRegion(id);
   case 'country':return specCountry(id);
   case 'city':return specCity(id);
+  case 'place':return specPlace(id);
   }
   return null;
+}
+function specPlace(shop){
+  const e=regByName(shop);
+  const mine=cafeCups().filter(c=>normName(c.shop)===normName(shop)).sort(byNew);
+  const others=circleCups().filter(c=>normName(c.shop)===normName(shop)).sort(byNew);
+  if(!e&&!mine.length&&!others.length)return null;
+  const circleOn=circleSources().length>0;
+  const p=circleProfile(shop)||e;
+  const pal=palOf(p);
+  const gs=scopeGreens('place',shop);
+  const city=(e&&e.city)||modeOf([...mine,...others].map(c=>c.city).filter(Boolean))||'';
+  const nbhood=(p&&p.neighborhood)||'';
+  const theirAvg=avgHedonic(others);
+  const fav=isCafeFav(shop);
+  const d=depth();
+  // ── identity rows — the facts of the place, never the grab-bag ──
+  const rows=[
+    ['City',regSubstance(city)?esc(city):'<span class="unread">unread</span>'],
+    ['Neighbourhood',regSubstance(nbhood)?esc(nbhood):'<span class="unread">unread</span>'],
+    ['Greens poured',String(gs.length)],
+    ['Your cups here',mine.length?String(mine.length):'none yet'],
+    ['Hands poured',handsIn(gs).map(r=>esc(roasterName(r))).join(' · ')||'<span class="unread">unread</span>'],
+    theirAvg?[circleOn?'The circle says':'The register says',`${theirAvg} avg · ${esc(nPl(others.length,'cup'))}`]:null,
+    (p&&p.address)?['Address',`${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}`]:null,
+    (e&&e.firstBy)?['Register',`first entered by ${esc(e.firstBy)}${e.firstAt?` · ${fmtMY(e.firstAt)}`:''}`]:null
+  ].filter(Boolean);
+  const signedLine=e?`<div style="display:flex;align-items:center;gap:9px;margin:-6px 0 14px;flex-wrap:wrap">
+    ${entSigned('cafe',shop)?`${exBtn('signed','signed','badge')}<span class="muted" style="font-size:12px">first-party · ${esc(shop)} holds the pen</span>`
+      :`${exBtn('unclaimed','unclaimed','badge ghost')}<span class="muted" style="font-size:12px">compiled from sightings</span>`}</div>`:'';
+  // the matching, on the page — a score never travels without its signals. Not for
+  // a place that IS the signal: you keep it, or you named it.
+  const named=signalPicks().some(pk=>normName(pk.name)===normName(shop));
+  const mm=(!mine.length&&!named&&!coldNow())?matchOf(shop):null;
+  const sk=skipInfo(shop),lc=lowConf();
+  const skState=sk&&sk.active?`<div class="cafeback">Skipped — it steps back for two weeks, then fades on its own. Never a veto.${skipAsk&&normName(skipAsk.shop)===normName(shop)?`<div style="display:flex;gap:16px;margin:8px 0 2px;align-items:baseline;flex-wrap:wrap"><button class="text-action" onclick="resolveSkipAsk(false)">Just this place</button><button class="text-action" onclick="resolveSkipAsk(true)">Fewer ${esc(skipAsk.kind)} places</button></div>`:''} ${readOnly()?'':`<a class="link" onclick="discUnskip(${jsq(shop)})">undo</a>`}</div>`:'';
+  const whyHTML=mm&&!mm.thin?`
+  <div class="section-head"><h2>Why this</h2><span class="n-note num">${lc?`an early read — ${cafeCups().length} of 3 cups kept`:`${mm.score} / 100`}</span></div>
+  <div class="finding" style="margin:0 0 10px">${esc(mm.why)}</div>
+  ${mm.signals.length?`<div class="card">${mm.signals.map(sg=>`<div class="kv"><span class="k">${esc(sg.label)}</span><span class="v" style="font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-2)">${esc(sg.from||'')}</span></div>`).join('')}</div>`:''}
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">${lc
+    ?'Built from the three you named. Only kept cups end the early read — numbers arrive at your third.'
+    :`Built from the places you keep and ${cafeCups().length} cups out. Skips are remembered too, and fade.`}</div>`:'';
+  const roaster=modeOf(mine.map(cupRoaster).filter(Boolean));
+  const origin=modeOf(mine.map(c=>{const o=lotRead(c);return o.origin||o.country}).filter(Boolean));
+  const x=LEGACY_ON&&(roaster||origin)?crossContext({roaster,origin}):null;
+  const postHeight=`${skState}${whyHTML}
+  ${x&&x.home.n&&x.cafe.n?`<div class="cafeback">Same beans, two rooms: you average <strong>${x.home.avg}</strong> at home vs <strong>${x.cafe.avg}</strong> here${roaster?` on ${esc(roaster)}`:''}. The shape of a preference, not a verdict.</div>`:''}
+  ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
+  ${p&&p.tags&&p.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 10px">${p.tags.map(t=>`<span class="badge ghost">${esc(t)}</span>`).join('')}</div>`:''}`;
+  const tail=`${readOnly()?'':`
+  ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
+  ${!mine.length&&!(sk&&sk.active)?`<button class="btn btn-quiet" onclick="discSkip(${jsq(shop)})">Skip — it steps back for two weeks</button>`:''}
+  ${isAdmin()?`<button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.site||p.palette||p.accent||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
+  ${e?`<button class="btn btn-quiet" onclick="openCorrectPlace(${jsq(shop)})">Correct the Register entry</button>`:''}`:''}
+  ${mine.length?`<button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`:''}`}
+  ${mine.length?`<div class="section-head"><h2>Your cups here</h2></div>
+  ${mine.map(c=>cupRow(c)).join('')}`:''}
+  <div class="section-head"><h2>${circleOn?'The circle here':'The register here'}</h2></div>
+  ${others.length?others.map(feedRow).join('')
+    :`<div class="empty">${circleOn?'No one you read has kept a cup here yet. Yours would be the first.':'Nothing on the register here yet. Yours would be the first.'}</div>`}
+  ${claimBlock('cafe',shop,shop)}`;
+  return {
+    eyebrow:'Bar'+([nbhood,city].filter(regSubstance).length?' · '+esc([nbhood,city].filter(regSubstance).join(', ')):''),
+    title:esc(shop),qual:'',
+    lede:'The greens this counter has poured into the record, and how far the record follows each one.',
+    rows,cups:mine,
+    up:[{h:'Part of',items:[regSubstance(city)?rowlink('city',city,esc(city),'every bar and hand in it',esc(nPl(scopeGreens('city',city).length,'green'))):''].filter(Boolean)}],
+    down:[],
+    roadTail:'poured at this counter',
+    extras:{postRes:signedLine+(p&&p.lat!=null?placeMapHTML(shop,p,pal):''),postHeight,tail},
+    actPrimary:d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:'',
+    sealName:shop,seal:'A page that writes itself, cup by cup.'
+  };
 }
 // the grower row — shared by the country and region pages
 function prodRowlink(p){
@@ -6744,8 +6516,6 @@ function saveCup(kind,brewId,bagId,skip,editId){
     fields.variety=val('c_variety');fields.lot=val('c_lot');fields.process=val('c_process');
     const hids=readHardIds('c_hid',ex&&ex.hardIds); if(hids===false)return; fields.hardIds=hids; // a false-friend hard-ID — the reason is toasted, fix or clear it
     if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
-    if(fields.shop&&!ex&&(sightBag||sightSeen.length)&&isAdmin()){regSight(fields.shop,{bag:sightBag,seen:sightSeen},activeName())} // what the counter showed — one save, no second submit; the shared line rides only the founder's pen
-    sightBag=null;sightSeen=[];
     if(fields.shop&&D.cafeWants){const i=D.cafeWants.findIndex(x=>normName(x)===normName(fields.shop));if(i>=0)D.cafeWants.splice(i,1)} // been now — off the want list
   }
   const firstOut=kind==='cafe'&&!ex&&!cafeCups().length;
@@ -6782,8 +6552,6 @@ function openCafe(pre,editId){
   const cities=[...new Set(cafeCups().map(c=>c.city).filter(Boolean))];
   brandPalette=palOf(pre);brandAccent=(brandPalette&&brandPalette.brand)||null;cafeStyleState=pre.style||'Espresso';againState=(pre.again==null?null:pre.again);
   brandCtx={kicker:'This cup',title:'The beans, in their colours',cta:'Keep this cup'};
-  sightBag=null;sightSeen=[];sightShop=null;sightHeld=false;amendFrom=null; // the sighting rides the cup, fresh each time
-  const sc=sightChipsHTML();
   const o=lotRead(pre); // node-first, so editing a cup whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
   // The fold opens on edit only if the cup already carries something under it.
   const more=!!(pre.city||pre.roaster||cupRoaster(pre)||o.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.producer||o.variety||o.lot||o.process||(pre.hardIds&&pre.hardIds.length)||(pre.descriptors&&pre.descriptors.length)||pre.notes);
@@ -6804,12 +6572,6 @@ function openCafe(pre,editId){
       <button class="yes ${againState===true?'on':''}" onclick="pickAgain(true,this)">again</button>
       <button class="no ${againState===false?'on':''}" onclick="pickAgain(false,this)">pass</button>
     </div></label>
-  ${editId||!isAdmin()?'':`<details class="trace-more"><summary>What did the counter show? <span class="opt">optional, always</span></summary>
-    <div class="muted small serif" style="font-style:italic;margin:2px 0 12px;max-width:40ch;line-height:1.5">Three taps at most. These read the café, not your cup — they join the Register as a sighting, signed as yours.</div>
-    <div class="f"><span class="l">The bag</span><div class="desc" id="sightbag">${sc.bag}</div></div>
-    <div class="f"><span class="l">Seen at the counter</span><div class="desc" id="sightseen">${sc.seen}</div></div>
-    <div class="muted" style="font-family:var(--sans);font-size:11px;line-height:1.5;margin:-4px 2px 12px">A sighting fills blanks and corrects facts. It never erases — every reading stays in the record.</div>
-  </details>`}
   <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">the beans, the price, a line</span></summary>
     <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="c_city" list="citylist" value="${esc(pre.city||'')}" placeholder="Los Angeles">
       <datalist id="citylist">${cities.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
@@ -6950,7 +6712,7 @@ function shopCard(s){
   const p=s.profile,pal=palOf(p),vars=pal?cafeVars(pal):''; // each card previews its café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(s.shop)})">
     <div class="row">
-      <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}${s.profile&&s.profile.neighborhood?` · ${esc(s.profile.neighborhood)}`:''}</span>`:''} ${reachBadge(s.shop,{ghost:true})}</span>
+      <span class="small"><strong>${esc(s.shop)}</strong>${s.fav?' <span class="badge">favorite</span>':''}${s.city?`<span class="muted"> · ${esc(s.city)}${s.profile&&s.profile.neighborhood?` · ${esc(s.profile.neighborhood)}`:''}</span>`:''}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${s.avg??'—'}</span>
     </div>
     <div class="muted small">${s.visits} visit${s.visits>1?'s':''}${s.usual?` · your usual: <strong>${esc(s.usual)}</strong>`:''}${s.spend?` · ${money(s.spend)}`:''}</div>
@@ -6986,106 +6748,6 @@ function poursHere(shop,e){
   scan(D.pours);
   circleSources().forEach(s=>{const d=circleLedger(s);if(d)scan(d.pours)});
   return out.sort((a,b)=>lotHands(b.id)-lotHands(a.id)||String(a.lot.firstAt||'').localeCompare(String(b.lot.firstAt||'')));
-}
-function vPlace(){
-  const shop=placeView;
-  const e=regByName(shop);
-  const mine=cafeCups().filter(c=>normName(c.shop)===normName(shop)).sort(byNew);
-  const others=circleCups().filter(c=>normName(c.shop)===normName(shop)).sort(byNew);
-  const circleOn=circleSources().length>0;
-  const d=depth();
-  const p=circleProfile(shop)||e;
-  const pal=palOf(p),vars=pal?cafeVars(pal):'';
-  const city=(e&&e.city)||modeOf([...mine,...others].map(c=>c.city).filter(Boolean))||'';
-  const nbhood=(p&&p.neighborhood)||'';
-  const avg=avgHedonic(mine),usual=modeOf(mine.map(c=>c.drink).filter(Boolean));
-  const spend=mine.reduce((a,c)=>a+(c.price||0),0);
-  const theirAvg=avgHedonic(others);
-  const people=[...new Set(others.map(c=>c._who))];
-  const fav=isCafeFav(shop);
-  const roaster=modeOf(mine.map(cupRoaster).filter(Boolean));
-  const origin=modeOf(mine.map(c=>{const o=lotRead(c);return o.origin||o.country}).filter(Boolean));
-  const x=LEGACY_ON&&(roaster||origin)?crossContext({roaster,origin}):null;
-  const eyebrow=mine.length?'A place you keep':(others.length?(circleOn?'From the circle':'From the register'):'In the Register');
-  const place=[city,nbhood].filter(Boolean).join(' · ');
-  const subline=place?`${esc(place)}${p&&p.lat!=null?' · pinned':''}`:(mine.length||others.length?'city unwritten':'yours alone — no one else has kept it yet');
-  const banner=cafeBannerGrad(pal);
-  const head=`<div class="cafe-banner">
-      <div class="grad" style="background:${banner.grad}"></div>
-      <div class="fade"></div>
-      <div class="bar" style="background:${banner.bar}"></div>
-      <div class="txt"><h2>${esc(shop)}</h2>${place?`<div class="city">${esc(place)}</div>`:''}</div>
-    </div>
-    <div class="muted small serif" style="font-style:italic;margin:10px 2px 14px">${esc(eyebrow.charAt(0).toLowerCase()+eyebrow.slice(1))} · ${subline}</div>`;
-  const kvs=[];
-  if(mine.length){
-    if(avg)kvs.push(['Your average',`${avg} / 9`]);
-    kvs.push(['Visits',String(mine.length)]);
-    if(usual)kvs.push(['Your usual',esc(usual)]);
-    kvs.push(['Last time',mine[0].again===true?'again':mine[0].again===false?'pass':'—']);
-    if(spend)kvs.push(['Total spend',money(spend)]);
-  }
-  if(theirAvg)kvs.push([circleOn?'The circle says':'The register says',`${theirAvg} avg · ${others.length} cup${others.length>1?'s':''}`]);
-  if(p&&p.address)kvs.push(['Address',`${esc(p.address)}${p.lat!=null?` <a class="link" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">Open in Maps ↗</a>`:''}`]);
-  if(e){ // the reach — a Register fact, read beside the pin and the palette
-    const rr=reachCompile(e),rh=reachHistory(e);
-    // the re-read chip is personal and temporary: it rides only while the reach
-    // is newer than your last cup here, then retires to the record sheet
-    const reRead=rr.depth&&rh.was>0&&rh.since&&mine.length&&rh.since>mine[0].createdAt;
-    kvs.push(['The reach',rr.depth
-      ?`<span class="badge" style="cursor:pointer" onclick="openReachPrimer(${jsq(shop)})">${reachMarkOf(rr.depth)}</span>${reRead?` <span class="badge dashed" style="cursor:pointer" onclick="openReachRecord(${jsq(shop)})">re-read · was ${REACH[rh.was].glyph} ${REACH[rh.was].word.toLowerCase()}</span>`:''} <span class="link" onclick="openReachPrimer(${jsq(shop)})">what this means</span>`
-      :`<span class="badge dashed">unread</span>${isAdmin()?` <span class="link" onclick="openReachAmend(${jsq(shop)})">read it — say what you saw</span>`:''}`]);
-  }
-  if(e&&e.firstBy)kvs.push(['Register',`<span${e.sightings&&e.sightings.length?` class="link" onclick="openReachRecord(${jsq(shop)})"`:''}>first entered by ${esc(e.firstBy)}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</span>`]);
-  // the matching, on the page — a score is never shown without its signals.
-  // Not for a place that IS the signal: you keep it, or you named it.
-  const named=signalPicks().some(pk=>normName(pk.name)===normName(shop));
-  const mm=(!mine.length&&!named&&!coldNow())?matchOf(shop):null;
-  const sk=skipInfo(shop),lc=lowConf();
-  const skState=sk&&sk.active?`<div class="cafeback">Skipped — it steps back for two weeks, then fades on its own. Never a veto.${skipAsk&&normName(skipAsk.shop)===normName(shop)?`<div style="display:flex;gap:16px;margin:8px 0 2px;align-items:baseline;flex-wrap:wrap"><button class="text-action" onclick="resolveSkipAsk(false)">Just this place</button><button class="text-action" onclick="resolveSkipAsk(true)">Fewer ${esc(skipAsk.kind)} places</button></div>`:''} ${readOnly()?'':`<a class="link" onclick="discUnskip(${jsq(shop)})">undo</a>`}</div>`:'';
-  const whyHTML=mm&&!mm.thin?`
-  <div class="section-head"><h2>Why this</h2><span class="n-note num">${lc?`an early read — ${cafeCups().length} of 3 cups kept`:`${mm.score} / 100`}</span></div>
-  <div class="finding" style="margin:0 0 10px">${esc(mm.why)}</div>
-  ${mm.signals.length?`<div class="card">${mm.signals.map(sg=>`<div class="kv"><span class="k">${esc(sg.label)}</span><span class="v" style="font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-2)">${esc(sg.from||'')}</span></div>`).join('')}</div>`:''}
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 10px">${lc
-    ?'Built from the three you named. Only kept cups end the early read — numbers arrive at your third.'
-    :`Built from the places you keep and ${cafeCups().length} cups out. Skips are remembered too, and fade.`}</div>`:'';
-  const signedLine=e?`<div style="display:flex;align-items:center;gap:9px;margin:0 0 14px;flex-wrap:wrap">
-    ${entSigned('cafe',shop)?`${exBtn('signed','signed','badge')}<span class="muted" style="font-size:12px">first-party · ${esc(shop)} holds the pen</span>`
-      :`${exBtn('unclaimed','unclaimed','badge ghost')}<span class="muted" style="font-size:12px">compiled from sightings</span>`}
-  </div>`:'';
-  return `<div class="cafe-theme"${vars?` style="${vars}"`:''}>
-  <button class="back" onclick="closePlace()">← ${esc(pageStack.length?PAGE_BACK[pageStack[pageStack.length-1].kind]||'Back':'The atlas')}</button>
-  ${head}
-  ${signedLine}
-  ${p&&p.lat!=null?placeMapHTML(shop,p,pal):''}
-  ${skState}
-  ${kvs.length?`<div class="card">${kvs.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}</div>`:''}
-  ${!mine.length?`<div class="empty">${d>=2?'You haven’t been yet. The first cup you keep here starts the page.':'You haven’t been yet. Read what’s below, order what they ordered.'}</div>`:''}
-  ${whyHTML}
-  ${x&&x.home.n&&x.cafe.n?`<div class="cafeback">Same beans, two rooms: you average <strong>${x.home.avg}</strong> at home vs <strong>${x.cafe.avg}</strong> here${roaster?` on ${esc(roaster)}`:''}. The shape of a preference, not a verdict.</div>`:''}
-  ${p&&p.notes?`<div class="muted small serif" style="font-style:italic;margin:0 2px 10px">"${esc(p.notes)}"</div>`:''}
-  ${p&&p.tags&&p.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 10px">${p.tags.map(t=>`<span class="badge ghost">${esc(t)}</span>`).join('')}</div>`:''}
-  ${(()=>{const gp=poursHere(shop,e);return gp.length?`<div class="section-head"><h2>Greens poured here</h2></div>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The greens seen in a cup at this counter — the availability edge, each drilling to the same green in other hands.</div>
-  ${gp.length>=2?`${aggRoadHTML(gp.map(x=>x.id))}
-  ${aggRoadReading(gp.map(x=>x.id),'poured at this counter')}`:''}
-  ${gp.map(x=>{const h=lotHands(x.id);return `<button class="wc-item" onclick="openLotPage(${jsq(x.id)})"><span class="tx"><span class="tt">${esc(lotLabel(x.lot))}</span><span class="dd">${h>=2?`${h} hands · the same green`:'a green on the atlas'}</span></span><span class="go">→</span></button>`}).join('')}`:''})()}
-  ${readOnly()?'':`
-  ${d>=2?`<button class="btn btn-primary" onclick="cafeHere(${jsq(shop)},${jsq(city||'')})">Remember a cup here</button>`:''}
-  ${!mine.length?`<button class="btn btn-quiet" onclick="toggleWant(${jsq(shop)});render()">${isWant(shop)?'Saved — it waits under Want to go':'Save for later'}</button>`:''}
-  ${!mine.length&&!(sk&&sk.active)?`<button class="btn btn-quiet" onclick="discSkip(${jsq(shop)})">Skip — it steps back for two weeks</button>`:''}
-  ${isAdmin()?`<button class="btn btn-quiet" onclick="openCafeProfile(${jsq(shop)})">${p&&(p.site||p.palette||p.accent||p.address||p.notes)?'Amend the entry':'Add café branding'}</button>
-  ${e?`<button class="btn btn-quiet" onclick="openCorrectPlace(${jsq(shop)})">Correct the Register entry</button>`:''}`:''}
-  ${mine.length?`<button class="btn btn-quiet" onclick="toggleCafeFav(${jsq(shop)})">${fav?'Remove from favorites':'Add to favorites'}</button>`:''}`}
-  ${mine.length?`<div class="section-head"><h2>Your cups here</h2></div>
-  ${mine.map(c=>cupRow(c)).join('')}`:''}
-  <div class="section-head"><h2>${circleOn?'The circle here':'The register here'}</h2></div>
-  ${others.length?others.map(feedRow).join('')
-    :`<div class="empty">${circleOn?'No one you read has kept a cup here yet. Yours would be the first.':'Nothing on the register here yet. Yours would be the first.'}</div>`}
-  ${claimBlock('cafe',shop,shop)}
-  ${seal(shop,'A page that writes itself, cup by cup.')}
-  </div>`;
 }
 // The café's own screen: its identity, read from its website — a whole palette, a line, an address —
 // with as little retyping as the site will allow. City, address and note stay editable by hand.
@@ -7300,7 +6962,7 @@ function regCard(e){
   const pal=palOf(e),vars=pal?cafeVars(pal):''; // a Register entry carries the café's own palette
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(e.name)})">
     <div class="row">
-      <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}${e.neighborhood?` · ${esc(e.neighborhood)}`:''}</span>`:''} ${reachBadge(e.name,{ghost:true,unread:true})}</span>
+      <span class="small"><strong>${esc(e.name)}</strong>${e.city?`<span class="muted"> · ${esc(e.city)}${e.neighborhood?` · ${esc(e.neighborhood)}`:''}</span>`:''}</span>
       ${e.lat!=null?'<span class="badge ghost">pinned</span>':''}
     </div>
     <div class="muted small">${e.firstBy?`first entered by ${esc(e.firstBy)}`:'on the record'}${e.firstAt?` · ${new Date(e.firstAt).toLocaleDateString([],{month:'short',year:'numeric'})}`:''}</div>
@@ -7402,9 +7064,7 @@ function vTrace(){
     ${recordKeepingHTML()}
     ${bags.length?`<h2>At home · what changed</h2>${bags.map(traceCard).join('')}`:''}
     <details class="trace-more" style="margin-top:18px"><summary>Every reading — ${all.length} on the record</summary>
-    ${[...all.map(c=>({t:c.createdAt,html:cupRow(c,true)})),
-       ...mySights(readOnly()?viewingUser().name:activeName()).map(x=>({t:x.s.at,html:sightRow(x)}))]
-      .sort((a,b)=>(b.t||'').localeCompare(a.t||'')).map(x=>x.html).join('')}</details>
+    ${all.map(c=>cupRow(c,true)).join('')}</details>
     ${seal('Record','One preference, two rooms.')}`;
 }
 
@@ -7574,61 +7234,10 @@ function placeRestore(id){
  * difference stated out loud: a sighting is never erased. Every other keeper
  * holds a copy, the merge is a union by id, and a line deleted here would simply
  * return on the next sync. Struck is the strongest honest answer. */
-function openCorrectSighting(shop,sid){
-  if(penGuard())return;
-  const e=regFind(shop);const s=e&&(e.sightings||[]).find(x=>x.id===sid);
-  if(!s||s.by!==activeName()||s.supersededAt)return;
-  const down=sightStruck(s);
-  const r=reachCompile(e),after=down?reachWith(e,sid):reachWithout(e,sid);
-  const carries=!down&&sightCarries(e,s);
-  const falls=down?[]:reachFalls(e,s);
-  const mark=d=>d?`<span class="badge">${reachMarkOf(d)}</span>`:'<span class="badge dashed">unread</span>';
-  const moves=r.depth!==after.depth;
-  const followHTML=falls.length?`<h2>What falls with it</h2>
-  <div class="muted small" style="margin:0 2px 8px">Set this line down and these facts stop being attested by it. Nothing else about ${esc(e.name)} changes.</div>
-  ${falls.map(f=>`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(f.label)}</span><span class="dd">${f.to?'falls to '+esc(f.to):'no other line attests it — it goes unread'}</span></span></div>`).join('')}`:'';
-  openSheet(`
-  <h3>${esc(e.name)}</h3>
-  <div class="sub">${down?'Your line, set down. Nothing about it is lost — put it back and it carries again.':'The line you signed. Amend it, or set it down.'}</div>
-  <div class="card">
-    ${correctRow('What you saw',esc(sightLine(s)))}
-    ${correctRow('Signed',esc(`${s.by||'you'} · ${fmtMDY(s.at)}`))}
-    ${correctRow('Standing',down?`withdrawn ${esc(fmtMY(s.withdrawnAt))}`:carries?'it carries the reading':'<span class="unread">a later line reads past it — the ink stays</span>')}
-    ${correctRow('The bar reads',mark(r.depth))}
-  </div>
-  ${followHTML}
-  <div class="card" style="padding:10px 12px;margin-top:${falls.length?'12px':'0'}"><div class="row" style="align-items:center">
-    <span class="serif" style="font-style:italic;font-size:14px;color:var(--ink-3)">${down?'Put back, it will read':'Without it, it will read'}</span>
-    <span style="text-align:right">${mark(after.depth)}</span></div></div>
-  <div class="muted small" style="margin:8px 2px 12px">${moves?`The reading recompiles the moment you tap — ${esc(r.depth?reachMarkOf(r.depth):'unread')} becomes ${esc(after.depth?reachMarkOf(after.depth):'unread')}. Keepers attest facts; the depth follows.`:'No reading moves either way. This line and the record already agree — only the ink changes hands.'}</div>
-  ${down?`<button class="btn btn-primary" onclick="sightRestoreNow(${jsq(shop)},${jsq(sid)})">Put it back</button>`
-    :`<button class="btn btn-primary" onclick="closeSheet();openReachAmend(${jsq(shop)},${jsq(sid)})">Amend the record</button>
-  <button class="btn btn-quiet" onclick="sightWithdrawNow(${jsq(shop)},${jsq(sid)})">Set this sighting down</button>`}
-  <p class="note">${down?'Struck, never erased — and never erasable. Every keeper holds a copy of this line, so the record can only ever add to it: withdrawn, and stood back up, both signed and dated.':'Struck, never erased. It keeps its ink, its signature and its date, leaves the reading, and waits under <strong>what you have set down</strong> on the desk — one tap from standing back up, for every keeper.'}</p>
-  <button class="btn btn-quiet" onclick="openReachRecord(${jsq(shop)})">Back to the record of the reach</button>
-  <button class="btn btn-quiet" onclick="closeSheet()">Close</button>`);
-}
-// Both acts land in the record and show themselves there — the struck line in
-// place, still signed, with the door back.
-function sightWithdrawNow(shop,sid){
-  if(!reachWithdraw(shop,sid))return;
-  render();openReachRecord(shop);toast('Set down — the reading recompiled.');
-}
-function sightRestoreNow(shop,sid){
-  if(!reachRestore(shop,sid))return;
-  render();openReachRecord(shop);toast('Back in the record, signed as it was.');
-}
-// your own lines, set down — the desk's row reaches them, and only yours: a
-// keeper stands up their own line, never another's
-function struckSights(){
-  const me=activeName(),out=[];
-  regEntries().forEach(e=>(e.sightings||[]).forEach(s=>{if(s.by===me&&sightStruck(s)&&!s.supersededAt)out.push({e,s})}));
-  return out.sort((a,b)=>String(b.s.withdrawnAt||'').localeCompare(String(a.s.withdrawnAt||'')));
-}
 /* The room — everything set down, in one place, newest first. The only door in
  * the app where the word "permanently" is honest, and the only red button left. */
 function struckRoomHTML(){
-  const mine=strikeList(),reg=isAdmin()?regStruck():[],sg=isAdmin()?struckSights():[];
+  const mine=strikeList(),reg=isAdmin()?regStruck():[];
   const row=s=>{const n=strikeCarried(s.ref).length;
     return `<button class="rowlink" onclick="openStruckItem(${jsq(s.ref)})"><span><span class="t">${esc(strikeName(s.coll,s.rec))}</span><br><span class="m">${esc(strikeSub(s.coll,s.rec))} · set down ${esc(fmtAgo(s.at))}${n?` · carried ${n} with it`:''}</span></span><span class="go">→</span></button>`};
   return `
@@ -7639,11 +7248,7 @@ function struckRoomHTML(){
   ${reg.length?`<h2>On the Register</h2>
   <div class="muted small" style="margin:0 2px 8px">Entries struck from the shared record. Standing one back up returns it for every keeper.</div>
   ${reg.map(e=>`<button class="rowlink" onclick="placeRestore(${jsq(e.id)})"><span><span class="t">${esc(e.name)}</span><br><span class="m">café · struck ${esc(fmtAgo(e.withdrawnAt))}${e.by?` by ${esc(e.by)}`:''} — tap to stand it back up</span></span><span class="go">↺</span></button>`).join('')}`:''}
-  ${sg.length?`<h2>Your sightings</h2>
-  <div class="muted small" style="margin:0 2px 8px">Lines you signed and set down. They keep their ink; standing one back up returns it — and its reading — for every keeper.</div>
-  ${sg.map(x=>`<button class="rowlink" onclick="openCorrectSighting(${jsq(x.e.name)},${jsq(x.s.id)})"><span><span class="t">${esc(x.e.name)}</span><br><span class="m">sighting · withdrawn ${esc(fmtAgo(x.s.withdrawnAt))} — ${esc(sightLine(x.s))}</span></span><span class="go">→</span></button>`).join('')}
-  <div class="muted small serif" style="font-style:italic;margin:6px 2px 10px">A sighting is never erased. Every keeper holds a copy, so the record can only add to it — withdrawn, and stood back up.</div>`:''}
-  ${!mine.length&&!reg.length&&!sg.length?`<div class="empty">Nothing is set down. Everything you have ever kept is still on the record.</div>`:''}
+  ${!mine.length&&!reg.length?`<div class="empty">Nothing is set down. Everything you have ever kept is still on the record.</div>`:''}
   ${mine.length?`<p class="note">Nothing above is counted, averaged, plotted or exported. It is simply held, in case you want it back.</p>
   <button class="btn btn-danger" onclick="openEraseAll()">Erase them for good</button>
   <div class="muted small serif" style="font-style:italic;margin:8px 2px 2px">The one act in CARTA with no door back. Everything else here is a correction.</div>`:''}`;
@@ -8671,8 +8276,6 @@ function circlePlaces(cups){
 let myGeo=null,nearOn=false,cityLens=null,circleQuery='';
 // the depth lens and its unfolded tails — held for the visit, folded again on
 // leaving Find, so the unread never quietly become furniture.
-let reachLens=0,reachTail={};
-function setReachLens(d){reachLens=(reachLens===d?0:d);render()}
 function haversine(la1,lo1,la2,lo2){const R=6371,r=Math.PI/180;
   const dla=(la2-la1)*r,dlo=(lo2-lo1)*r;
   const a=Math.sin(dla/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dlo/2)**2;
@@ -8818,7 +8421,7 @@ function recCard(r,dim){ // dim: the unread tail under a depth lens — dashed t
   const want=readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="event.stopPropagation();toggleWant(${jsq(r.shop)});render()">${isWant(r.shop)?'Saved — it waits under Want to go':'Save for later'}</button>`;
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:dim?' style="border-style:dashed"':''} onclick="openPlace(${jsq(r.shop)})">
     <div class="row">
-      <span class="small"><strong${dim?' style="color:var(--ink-3)"':''}>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}${r.profile&&r.profile.neighborhood?` · ${esc(r.profile.neighborhood)}`:''}</span>`:''}${dist} ${reachBadge(r.shop,{ghost:true,unread:true})}</span>
+      <span class="small"><strong${dim?' style="color:var(--ink-3)"':''}>${esc(r.shop)}</strong>${r.city?`<span class="muted"> · ${esc(r.city)}${r.profile&&r.profile.neighborhood?` · ${esc(r.profile.neighborhood)}`:''}</span>`:''}${dist}</span>
       <span class="big"${vars?' style="color:var(--accent)"':dim?' style="color:var(--ink-3)"':''}>${r.avg??(r.reg?'·':'—')}</span>
     </div>
     <div class="muted small serif" style="font-style:italic">${why}</div>
@@ -8830,7 +8433,7 @@ function wantCard(name){
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   const city=pr&&pr.city?pr.city:'';
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(name)})">
-    <div class="row"><span class="small"><strong>${esc(name)}</strong>${city?`<span class="muted"> · ${esc(city)}</span>`:''}${dist} ${reachBadge(name,{ghost:true})}</span>
+    <div class="row"><span class="small"><strong>${esc(name)}</strong>${city?`<span class="muted"> · ${esc(city)}</span>`:''}${dist}</span>
       ${pr&&pr.address?'<span class="badge ghost">pinned</span>':''}</div>
     ${pr&&pr.address?`<div class="muted small">${esc(pr.address)}</div>`:''}
   </div>`;
@@ -8913,7 +8516,7 @@ function placeCard(p){
   const d=distTo(pr),dist=d!=null?` <span class="badge ghost">${fmtDist(d)}</span>`:'';
   return `<div class="card tap shopcard"${vars?` style="${vars};border-left:3px solid var(--accent)"`:''} onclick="openPlace(${jsq(p.shop)})">
     <div class="row">
-      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}${pr&&pr.neighborhood?` · ${esc(pr.neighborhood)}`:''}</span>`:''}${dist} ${reachBadge(p.shop,{ghost:true,unread:true})}</span>
+      <span class="small"><strong>${esc(p.shop)}</strong>${p.city?`<span class="muted"> · ${esc(p.city)}${pr&&pr.neighborhood?` · ${esc(pr.neighborhood)}`:''}</span>`:''}${dist}</span>
       <span class="big"${vars?' style="color:var(--accent)"':''}>${p.avg??'—'}</span>
     </div>
     <div class="muted small">${p.n} cup${p.n>1?'s':''} · ${p.people.length===1?esc(p.people[0]):p.people.length+' people'}${p.usual?` · they order <strong>${esc(p.usual)}</strong>`:''}${pr&&pr.address?' · pinned':''}</div>
@@ -8958,13 +8561,9 @@ const mCache=()=>_mCache||(_mCache={});
 function signalPicks(){const s=getPref('signal',null);return(s&&s.picks)||[]}
 const coldNow=()=>!readOnly()&&!signalPicks().length&&!shopAgg().length; // no cups out, nothing named — the matching has nothing to read
 const lowConf=()=>cafeCups().length<3;                                   // the early read — bands, not numbers
-// what a place argues for itself: its tags, plus the reach facts standing on it
-function candTraits(e){
-  if(!e)return[];
-  const out=[...(e.tags||[])],r=reachCompile(e);
-  Object.keys(SEEN_FACTS).forEach(k=>{if(r.carry[k])out.push(SEEN_FACTS[k].label)});
-  return out;
-}
+// what a place argues for itself: its tags. (The reach is set down — a graph-derived
+// read of the same signals, from pours and grain, can land here later.)
+function candTraits(e){return e?[...(e.tags||[])]:[]}
 // the signal — {tagNorm:{label,w,from}}; every trait remembers the place that argued it
 function signalTraits(){
   const c=mCache();if(c.sig)return c.sig;
