@@ -1304,6 +1304,14 @@ function actorKind(o){
   if(FARM_RE.test(p))return 'farm';
   return '';
 }
+// The SECOND origin actor — the person, family or co-op behind the head ("Finca Gascon —
+// Felipe Contreras"; the association behind a station lot). A grower NEVER buys a rung: a
+// person is not a parcel and a co-op is not a mill, so the grain still reads only the head
+// through actorKind above. Group words tested first (a co-op is an aggregation, not a
+// person); any other substantial name reads as a smallholder — the honest default for a
+// personal name, and SCHEMA's word for one grower without a named estate.
+const GROUP_RE=/\b(cooperative|co-?op|union|association|asociaci[oó]n|group|society|collective)\b/i;
+const growerKind=name=>!regSubstance(name)?'':GROUP_RE.test(name)?'group':'smallholder';
 // The lot's identity columns (SCHEMA's ladder, as fields), added ALONGSIDE the flat origin the
 // read/retirement paths still use — never replacing it (see the branch decision).
 // The GRAIN is a spatial ladder and nothing else rides on it (MODEL_QA A5): six rungs, each promoted
@@ -1525,7 +1533,7 @@ const recOrigin=r=>{const n=r&&r.lotRef&&catNode('lots',r.lotRef);
   const f=(fl,nk)=>{const v=(r&&r[fl])||'';return v||(n&&n[nk])||''};
   const o={originCountry:f('originCountry','country'),originRegion:f('originRegion','region'),originLocality:f('originLocality','locality'),producer:f('producer','producer'),
     variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin'),
-    harvest:f('harvest','harvest'),producerKind:f('producerKind','producerKind')};
+    harvest:f('harvest','harvest'),producerKind:f('producerKind','producerKind'),grower:f('grower','grower')};
   // the actor's kind and its station survive the flat text's retirement by reading the spine the door
   // already wrote — the producers node's tag, and the lot's own processorRefs edge
   if(!o.producerKind&&regSubstance(o.producer)){const p=catByKey('producers',catNorm(o.producer)+'|'+catNorm(o.originCountry));if(p&&p.producerKind)o.producerKind=p.producerKind}
@@ -1799,6 +1807,24 @@ function catStampProducer(o,who,at){
   if(!regSubstance(o.producer))return null;
   return catUpsert('producers',catNorm(o.producer)+'|'+catNorm(o.originCountry),{name:o.producer,country:o.originCountry,region:o.originRegion,locality:o.originLocality},who,{at:at||null});
 }
+// The grower's own node — same kind, same key shape as the head's, classified by its own
+// vocabulary and tagged at mint (blanks-only thereafter). A name that merely repeats the
+// head is not a second actor and stamps nothing.
+function catStampGrower(o,who,at){
+  if(!regSubstance(o.grower)||normPlace(o.grower)===normPlace(o.producer||''))return null;
+  return catUpsert('producers',catNorm(o.grower)+'|'+catNorm(o.originCountry),
+    {name:o.grower,country:o.originCountry,region:o.originRegion,locality:o.originLocality,producerKind:growerKind(o.grower)},who,{at:at||null});
+}
+// The lot → grower edge, APPENDED: producerRefs is already plural ("a station lot has
+// hundreds" — SCHEMA), and lotFields' blanks-only [pRef] must never be overwritten. Through
+// lotOwn, so the edge lands on the own node and never on a published-copy read (READER.md §8).
+function lotAddProducerRef(lot,pid){
+  if(!lot||!pid)return;
+  const w=lotOwn(lot);
+  w.producerRefs=w.producerRefs||[];
+  if(w.producerRefs.includes(pid))return;
+  w.producerRefs.push(pid);w.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots');
+}
 function catSeed(){
   const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
   remoteDirUsers().forEach(u=>{const c=readJSONLS(remoteKey(u.id));if(c&&c.ledger)srcs.push({who:u.name,led:c.ledger})});
@@ -1819,10 +1845,12 @@ function catSeed(){
     }
     else if(lotWorthy(r)){ // structured tokens, a loose free-text origin, OR a hard-ID (a bag printed with only an outturn is still a green)
       const p=catStampProducer(r,who,j.at);
+      const g=catStampGrower(r,who,j.at);                                 // the second actor, swept exactly as the save path stamps it
       const res=resolveLot(r,r.id);                                       // the ladder; a boot sweep only ever reaches the auto rung (no interactive propose)
       lot=catUpsert('lots',res.key,lotFields(r,p&&p.id),who,o);           // a shared hard-ID / fingerprint binds to the standing lot ahead of the floor fork
       lotAddHardIds(lot,recHardIds(r),who,j.at);                          // accumulate the token onto the node, append-only
       lotRederive(lot,r);                                                 // grain is a rule's output, not an attestation — a sweep re-reads it rather than inheriting the first guess
+      if(g&&lot)lotAddProducerRef(lot,g.id);                              // the grower's edge, appended beside the head's ref
       if(res.action==='auto'&&lot)lotBind(lot,r,'derived','fingerprint',{score:res.score,fields:res.fields},who,j.at); // record the inferred bind compile reads (decision #1)
     }
     else if(r.lotRef)lot=catNode('lots',r.lotRef); // flat origin gone legacy → resolve the lot via its standing ref, so the roasts key below stays identical to catRepoint's (mirror of the roaster fallback above)
@@ -2158,7 +2186,8 @@ const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
   const f=(flat,nk)=>{const v=(rec&&rec[flat])||'';return (n&&n[nk])||v};
   // origin is a café cup's loose free-text line — homed only on the cup's own singleton
   // lot (never a shared fp node), so node-first is safe: the node's origin is this cup's alone.
-  return {country:f('originCountry','country'),region:f('originRegion','region'),locality:f('originLocality','locality'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
+  return {country:f('originCountry','country'),region:f('originRegion','region'),locality:f('originLocality','locality'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin'),
+    grower:(rec&&rec.grower)||''}}; // the grower stays flat on the record (outside the key, so retirement buys nothing) — the node and the edge carry the shared fact
 // The circle reads a cup that belongs to ANOTHER keeper. It honours their exact words
 // FIRST — the circle's standing invariant, "what the keeper wrote" — and consults the
 // group-shared catalog node only as the floor beneath a field they've since retired.
@@ -2675,10 +2704,16 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.14.0';
+const APP_VERSION='6.15.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.15.0',date:'July 2026',title:'The farm and the hand behind it are two facts now.',items:[
+    'A second actor field — Grower / co-op. A bag that reads “Finca Gascon — Felipe Contreras” used to make you choose which name to keep. The farm stays the head; the person, family or association behind it has its own field, its own page on the atlas, and its own edge onto the green — beside the farm’s, never over it.',
+    'A grower buys no rung. A person is not a parcel and a co-op is not a mill, so the grain still reads only the head. The second name is a fact about hands, not about where the coffee grew — and it never enters the green’s identity, so nothing standing re-keys.',
+    'A co-op is told from a person by its own words — cooperative, union, association and kin read as a producer group; any other name reads as a grower. The producer’s page says which it holds, in those words.',
+    'The edges survive a sync. Two devices each adding a hand to one green now converge holding both — an appended actor was previously the newer edit’s to lose.',
+  ]},
   {v:'6.14.0',date:'July 2026',title:'The town has a page, and the pins moved closer to the truth.',items:[
     'A locality is a scope like any other. Tap Pitalito on a green’s crumb and its page opens — the greens traced to it, its growers, its stations, the region and country above it. Derived from the record, like a region: no stored entry, and never a polygon. A town is a point; drawing its boundary would be a guess, and this record does not guess.',
     'The walk lost its missing step. A green’s crumb reads country › region › town now; a region’s page lists its towns; a grower’s page names the town it works by. Every step is the same tap.',
@@ -3760,7 +3795,7 @@ function authorRoast(f,who){
   const rec={id:uid(),createdAt:new Date().toISOString(),curator:who, // no chart stamp — membership is derived at read time, never stored
 
     roaster:(f.roaster||'').trim(),roasterCity:(f.roasterCity||'').trim(),site:(f.site||'').trim(),name:(f.offering||'').trim(),
-    originCountry:(f.originCountry||'').trim(),originRegion:(f.originRegion||'').trim(),originLocality:(f.originLocality||'').trim(),producer:(f.producer||'').trim(),
+    originCountry:(f.originCountry||'').trim(),originRegion:(f.originRegion||'').trim(),originLocality:(f.originLocality||'').trim(),producer:(f.producer||'').trim(),grower:(f.grower||'').trim(),
     variety:(f.variety||'').trim(),process:(f.process||'').trim(),lot:(f.lot||'').trim(),harvest:(f.harvest||'').trim(),
     producerKind:f.producerKind||'',station:(f.station||'').trim(),
     hardIds:(f.hardIds||[]).slice(),roastLevel:f.roastLevel||0,roastDate:f.roastDate||''};
@@ -3797,7 +3832,7 @@ function saveAuthorRoast(){
   const o=readOriginFields('a_'); if(o===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
   const lvl=ROAST_LEVELS.indexOf(segState.a_roast||'');
   const f={roaster:val('a_roaster'),roasterCity:val('a_city'),offering:val('a_offering'),originCountry:o.originCountry,originRegion:o.originRegion,
-    originLocality:o.originLocality,producer:o.producer,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
+    originLocality:o.originLocality,producer:o.producer,grower:o.grower,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
     producerKind:o.producerKind,station:o.station,
     roastLevel:lvl<0?0:lvl,roastDate:val('a_roastDate'),hardIds:o.hardIds};
   if(!f.roaster){toast('Name the roaster — a roast is one roaster’s reading of a green');return}
@@ -6149,11 +6184,14 @@ function specPlace(shop){
     sealName:shop,seal:'A page that writes itself, cup by cup.'
   };
 }
+// the producer's kind, in words — the widened enum (SCHEMA: farm · station · smallholder · group;
+// estate folds into farm, FARM_RE already reads it). An untagged node stays the honest 'grower'.
+const prodKindLabel=k=>k==='station'?'washing station':k==='group'?'producer group':k==='farm'?'farm':'grower';
 // the grower row — shared by the country and region pages
 function prodRowlink(p){
   if(!p)return'';
   const n=scopeGreens('producer',p.id).length;
-  return rowlink('producer',p.id,esc(p.name),esc([(p.producerKind==='station'?'washing station':'grower'),p.region].filter(regSubstance).join(' · ')),esc(nPl(n,'green')));
+  return rowlink('producer',p.id,esc(p.name),esc([prodKindLabel(p.producerKind),p.region].filter(regSubstance).join(' · ')),esc(nPl(n,'green')));
 }
 // the same walk, pointed at the second origin actor — the station a green passed through
 const stationsOf=gs=>[...new Set(gs.flatMap(l=>l.processorRefs||[]))].map(i=>catNode('processors',i)).filter(Boolean);
@@ -6178,11 +6216,12 @@ function specProducer(pid){
   const region=p.region||modeOf(gs.map(l=>(l.fingerprint||{}).region).filter(regSubstance))||'';
   const country=p.country||modeOf(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))||'';
   return {
-    eyebrow:(stn?'Washing station':'Grower')+(regSubstance(country)?' · '+esc(country):''),
+    eyebrow:(stn?'Washing station':p.producerKind==='group'?'Producer group':'Grower')+(regSubstance(country)?' · '+esc(country):''),
     title:esc(p.name),qual:'',
     lede:stn?'A station gathers cherry from many hands. Its greens stand apart here — never one blurred farm.'
+      :p.producerKind==='group'?'A group pools many members’ cherry. Its greens stand apart here — the record never blurs them into one hand.'
       :`The greens the record traces to ${esc(p.name)}, each its own lot.`,
-    rows:[['Kind',stn?'washing station':'farm'],['Region',regSubstance(region)?esc(region):'<span class="unread">unread</span>'],
+    rows:[['Kind',prodKindLabel(p.producerKind)],['Region',regSubstance(region)?esc(region):'<span class="unread">unread</span>'],
       ['Country',regSubstance(country)?esc(country):'<span class="unread">unread</span>'],['Greens',String(gs.length)]],
     up:[{h:'Part of',items:[
       regSubstance(region)?rowlink('region',region,esc(region),'the region around it',esc(nPl(scopeGreens('region',region).length,'green'))):'',
@@ -7204,7 +7243,8 @@ function originFieldsHTML(p,o,h,extra){o=o||{};
     ${f('country','Country','Ethiopia',1)}
     ${f('region','Region','Bench Maji',1)}
     ${f('locality','Locality','Mizan Teferi',1)}
-    ${f('producer','Producer / station','free text',1)}
+    ${f('producer','Producer / farm / station','free text',1)}
+    ${f('grower','Grower / co-op','the hand behind it',0)}
     ${f('variety','Variety','Gesha 1931',1)}
     ${f('process','Process','washed',1)}
     ${f('lot','Lot no.','free text',0)}
@@ -7226,6 +7266,7 @@ function readOriginFields(p,existing){
     variety:val(p+'variety'),process:val(p+'process'),lot:val(p+'lot'),harvest:val(p+'harvest'),hardIds:hids};
   o.altitudeM=altParse(val(p+'altitude'));
   o.producerKind=actorKind(o);o.station=o.producerKind==='station'?o.producer:'';
+  o.grower=val(p+'grower'); // the second actor — a node and an edge, never a rung and never in the key
   return o;
 }
 // The two door-only columns, as a record holds them, in the words the field shows. The record's own
@@ -7340,7 +7381,7 @@ function saveBag(id){
   const o=readOriginFields('f_',b0&&b0.hardIds); if(o===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
   const roastLevel=ROAST_LEVELS.indexOf(segState.roast);
   const rec={roaster:val('f_roaster'),name:val('f_name'),originCountry:o.originCountry,originRegion:o.originRegion,
-    originLocality:o.originLocality,producer:o.producer,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
+    originLocality:o.originLocality,producer:o.producer,grower:o.grower,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
     producerKind:o.producerKind,station:o.station,roastDate:val('f_roastDate'),
     boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),hardIds:o.hardIds,
     site:(val('f_site')||'').trim(),palette:brandPalette};
@@ -7655,6 +7696,13 @@ function doorStampActors(rec,o){
     const pn=catUpsert('processors',catNorm(o.station)+'|'+catNorm(o.originCountry),{name:o.station,country:o.originCountry,region:o.originRegion,locality:o.originLocality},activeName());
     const lot=catNode('lots',rec.lotRef);
     if(pn&&lot&&!(lot.processorRefs||[]).length){const w=lotOwn(lot);w.processorRefs=[pn.id];w.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots')}
+  }
+  // the grower — the second actor's node and its edge onto the green, appended beside the
+  // head's ref, never over it. The same stamp whichever surface the record entered by.
+  if(regSubstance(o.grower)){
+    const g=catStampGrower(o,activeName());
+    const lot=g&&catNode('lots',lotFwd(rec.lotRef));
+    if(g&&lot)lotAddProducerRef(lot,g.id);
   }
 }
 // The height the paste stated, onto the green it describes. It was already read and already shown
@@ -7971,7 +8019,7 @@ function saveCup(kind,brewId,bagId,skip,editId){
     // reads its green node-first now (openCafe), exactly as the bag form has always done.
     cupOrigin=readOriginFields('c_',ex&&ex.hardIds); if(cupOrigin===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
     Object.assign(fields,{originCountry:cupOrigin.originCountry,originRegion:cupOrigin.originRegion,
-      originLocality:cupOrigin.originLocality,producer:cupOrigin.producer,variety:cupOrigin.variety,process:cupOrigin.process,lot:cupOrigin.lot,
+      originLocality:cupOrigin.originLocality,producer:cupOrigin.producer,grower:cupOrigin.grower,variety:cupOrigin.variety,process:cupOrigin.process,lot:cupOrigin.lot,
       harvest:cupOrigin.harvest,producerKind:cupOrigin.producerKind,station:cupOrigin.station,hardIds:cupOrigin.hardIds});
     if(cafeBound&&regSubstance(cafeBound.roaster)&&!regSubstance(fields.roaster))fields.roaster=cafeBound.roaster;
     if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
@@ -9529,6 +9577,10 @@ function mergeCatalog(loc,rem){
     if(l.sightings||r.sightings)w.sightings=mergeSightings(l.sightings||[],r.sightings||[]);
     if(l.hardIds||r.hardIds)w.hardIds=mergeHardIds(l.hardIds||[],r.hardIds||[]); // the identity set unions — a bind is never lost to the winner
     if(l.altitudeAlt||r.altitudeAlt)w.altitudeAlt=mergeById(l.altitudeAlt||[],r.altitudeAlt||[]); // a divergence recorded on one device is not lost to the other's copy — the seam is the point
+    // the actor edges union too — bare-id arrays a newer edit would otherwise silently drop:
+    // a grower ref appended on one device must survive the other device's later save
+    if(l.producerRefs||r.producerRefs)w.producerRefs=[...new Set([...(l.producerRefs||[]),...(r.producerRefs||[])])];
+    if(l.processorRefs||r.processorRefs)w.processorRefs=[...new Set([...(l.processorRefs||[]),...(r.processorRefs||[])])];
     m.set(l.id,w)});
   const groups={};
   [...m.values()].filter(e=>e&&e._key&&!dead.has(e.id)).forEach(e=>{(groups[e._key]=groups[e._key]||[]).push(e)});
@@ -9545,6 +9597,10 @@ function mergeCatalog(loc,rem){
     if(hg.length)w.hardIds=hg;
     const ag=mergeById(...g.map(e=>e.altitudeAlt||[]));
     if(ag.length)w.altitudeAlt=ag;
+    const pg=[...new Set(g.flatMap(e=>e.producerRefs||[]))]; // the collapse keeps every actor edge its members carried
+    if(pg.length)w.producerRefs=pg;
+    const xg=[...new Set(g.flatMap(e=>e.processorRefs||[]))];
+    if(xg.length)w.processorRefs=xg;
     return w;
   });
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
