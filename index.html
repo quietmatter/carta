@@ -357,8 +357,22 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
      dashed        coarser still, and admitting it
      a square      a street address; a circle, a centroid; a dashed square, a scene
      a ring        your overlay — added, never subtracted */
-.plot-box{border:1px solid var(--line);background:var(--paper);margin:4px 0 8px;position:relative}
-.plot-box svg{display:block;width:100%}
+.plot-box{border:1px solid var(--line);background:var(--paper);margin:4px 0 8px;position:relative;overflow:hidden}
+.plot-box svg{display:block;width:100%;position:relative;z-index:1}
+/* streets, as GROUND: the tiles sit UNDER the drawing, fitted to the frame the
+   plot already computed, held back a little so the ink stays the record and the
+   streets stay the paper. The drawing above them is unchanged — take the tiles
+   away and nothing about the plot moves. */
+.plot-box .smap-live{position:absolute;inset:0;z-index:0;opacity:0;transition:opacity .5s ease}
+.plot-box .smap-live.in{opacity:.86}
+/* a lens tap repaints the screen, but the ground under it did not move — so it
+   arrives already there rather than announcing itself again. Used more, moves less. */
+.plot-box .smap-live.now{transition:none}
+/* once there is ground under them, the frame's own labels take a paper halo so
+   they never have to compete with a street name for legibility */
+.plot-box.streets .mk-lbl{fill:var(--ink-2);paint-order:stroke;stroke:var(--paper);
+  stroke-width:2.6px;stroke-linejoin:round}
+.plot-box.streets .mk-n{paint-order:normal;stroke:none}
 .plot-box .ed{stroke:var(--ink-3);stroke-width:1;opacity:.55;stroke-dasharray:2 2}
 .plot-box g.mk{cursor:pointer}
 .plot-box g.mk:active .mk-lbl,.plot-box g.mk.sel .mk-lbl{fill:var(--ink)}
@@ -562,13 +576,15 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 /* the street layer — MapLibre over the plot; fades in only once tiles actually land */
 .cafe-map .smap-live{position:absolute;inset:0;opacity:0;transition:opacity .45s ease}
 .cafe-map .smap-live.in{opacity:1}
-.cafe-map .smap-live .maplibregl-map{width:100%;height:100%}
 .cafe-map .smap-live .lbl{text-shadow:0 0 2px var(--paper),0 1px 2px var(--paper),0 0 5px var(--paper)}
-.cafe-map .maplibregl-ctrl-attrib{font-family:var(--sans)!important;font-size:9px!important;letter-spacing:.02em;background:color-mix(in srgb,var(--paper-card) 82%,transparent)!important;color:var(--ink-3)!important;padding:1px 6px}
-.cafe-map .maplibregl-ctrl-attrib a{color:var(--ink-3)!important;text-decoration:none}
-.cafe-map .maplibregl-ctrl-attrib-button{display:none!important}
-.cafe-map .maplibregl-canvas{outline:none!important}
-.cafe-map .maplibregl-cooperative-gesture-screen{font-family:var(--sans)!important;font-size:13px}
+/* the library's own chrome, scoped to the live layer rather than to one container,
+   so a café map and a plot's ground wear the same paper without saying it twice */
+.smap-live .maplibregl-map{width:100%;height:100%}
+.smap-live .maplibregl-ctrl-attrib{font-family:var(--sans)!important;font-size:9px!important;letter-spacing:.02em;background:color-mix(in srgb,var(--paper-card) 82%,transparent)!important;color:var(--ink-3)!important;padding:1px 6px}
+.smap-live .maplibregl-ctrl-attrib a{color:var(--ink-3)!important;text-decoration:none}
+.smap-live .maplibregl-ctrl-attrib-button{display:none!important}
+.smap-live .maplibregl-canvas{outline:none!important}
+.smap-live .maplibregl-cooperative-gesture-screen{font-family:var(--sans)!important;font-size:13px}
 .cafe-map .pin.spot{width:13px;height:13px;background:var(--accent);box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent)}
 /* the atlas map — three monochrome marks, a lens never a fill: a coarse origin (hollow), a roaster's
    hand (filled dot), a bar (filled square). Ember stays reserved for the current action. */
@@ -599,7 +615,7 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 .hscroll{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 6px;margin:0 -2px;scrollbar-width:none}
 .hscroll::-webkit-scrollbar{display:none}
 .hscroll>*{flex:none;scroll-snap-align:start}
-@media (prefers-reduced-motion: reduce){.cafe-map .pin.nn{transition:none}.cafe-map .smap-live{transition:none}}
+@media (prefers-reduced-motion: reduce){.cafe-map .pin.nn{transition:none}.smap-live{transition:none!important}}
 .continuation{border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:15px 0;margin:2px 0 16px}
 .continuation .score{font-family:var(--sans);font-size:46px;line-height:.9;color:var(--accent);font-weight:550;letter-spacing:-.05em}
 .continuation .score small{font-size:12px;letter-spacing:.04em;color:var(--ink-3);font-weight:400}
@@ -2395,11 +2411,16 @@ function mergeHolds(...lists){
 // answers; until tiles actually land the drawn plot stays, pins live the whole
 // time, and offline — or if the fetch fails — the plot simply stands. Streets
 // slot in quietly whenever they arrive.
+// Two modes. On the café surfaces the live layer TAKES OVER: the drawn pins are
+// removed and real markers replace them, pannable. Under the unified map's chart
+// frame it is GROUND (`behind`): the tiles sit under the drawing, the SVG marks
+// stay exactly as they were, and the camera is fixed to the frame the plot
+// already computed — there is nothing to pan, because the walk is the zoom.
 const ML_JS='https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js';
 const ML_CSS='https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css';
 const ML_TILES='https://tiles.openfreemap.org/planet';
 const ML_GLYPHS='https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf';
-let _mlP=null,_mlDown=false,_smaps={},_smapCfg={},_smapCam={},_smapN=0,_smapMT=null;
+let _mlP=null,_mlDown=false,_smaps={},_smapCfg={},_smapCam={},_smapN=0,_smapMT=null,_smapGK=null;
 function mlLoad(){
   if(window.maplibregl)return Promise.resolve();
   if(_mlP)return _mlP;
@@ -2422,21 +2443,26 @@ function smapInk(){
 // water and parks, faint side streets, arterials in operational ink, one dashed
 // ember line for admin boundaries, tracked small-caps place labels. Boundary
 // near-opaque and labels at secondary — the map study's audited contrast baseline.
-function smapStyle(){
+// `quiet` is the GROUND variant, for tiles laid behind a drawn frame: no boundary
+// and no city labels. Two reasons, both from MAPPING.md — the frame's own marks
+// carry the names, and two sets of names in two voices fight; and the ember is
+// never spent on the map, where a strong dashed line would read as data.
+function smapStyle(quiet){
   const c=smapInk();
   const road=cls=>['match',['get','class'],cls,true,false];
-  return{version:8,glyphs:ML_GLYPHS,
-    sources:{osm:{type:'vector',url:ML_TILES}},
-    layers:[
+  const layers=[
       {id:'bg',type:'background',paint:{'background-color':c.page}},
       {id:'park',type:'fill',source:'osm','source-layer':'park',paint:{'fill-color':c.sunk,'fill-opacity':.5}},
       {id:'water',type:'fill',source:'osm','source-layer':'water',paint:{'fill-color':c.sunk}},
       {id:'road-minor',type:'line',source:'osm','source-layer':'transportation',filter:road(['minor','service','residential','living_street','unclassified']),layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':c.faint,'line-width':['interpolate',['linear'],['zoom'],11,.25,13,.5,15,.95,17,1.9],'line-opacity':.9}},
-      {id:'road-major',type:'line',source:'osm','source-layer':'transportation',filter:road(['motorway','trunk','primary','secondary','tertiary']),layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':c.ink2,'line-width':['interpolate',['linear'],['zoom'],9,.4,12,.85,14,1.5,16,2.8,18,4.8]}},
-      {id:'boundary',type:'line',source:'osm','source-layer':'boundary',filter:['all',['>=',['to-number',['get','admin_level']],4],['<=',['to-number',['get','admin_level']],10],['!=',['get','maritime'],1]],paint:{'line-color':c.ember,'line-opacity':.9,'line-dasharray':[3,2.2],'line-width':['interpolate',['linear'],['zoom'],8,.6,12,1.1,15,1.9]}},
-      {id:'lbl-neigh',type:'symbol',source:'osm','source-layer':'place',filter:['match',['get','class'],['neighbourhood','suburb','quarter'],true,false],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-transform':'uppercase','text-letter-spacing':.14,'text-size':['interpolate',['linear'],['zoom'],11,9.5,14,12.5],'text-max-width':7,'text-padding':6},paint:{'text-color':c.ink2,'text-halo-color':c.page,'text-halo-width':1.6,'text-halo-blur':.4}},
-      {id:'lbl-city',type:'symbol',source:'osm','source-layer':'place',filter:['match',['get','class'],['city','town'],true,false],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-letter-spacing':.04,'text-size':['interpolate',['linear'],['zoom'],9,12,13,17],'text-max-width':8},paint:{'text-color':c.ink2,'text-halo-color':c.page,'text-halo-width':1.4}}
-    ]};
+      {id:'road-major',type:'line',source:'osm','source-layer':'transportation',filter:road(['motorway','trunk','primary','secondary','tertiary']),layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':c.ink2,'line-width':['interpolate',['linear'],['zoom'],9,.4,12,.85,14,1.5,16,2.8,18,4.8]}}];
+  if(!quiet)layers.push(
+      {id:'boundary',type:'line',source:'osm','source-layer':'boundary',filter:['all',['>=',['to-number',['get','admin_level']],4],['<=',['to-number',['get','admin_level']],10],['!=',['get','maritime'],1]],paint:{'line-color':c.ember,'line-opacity':.9,'line-dasharray':[3,2.2],'line-width':['interpolate',['linear'],['zoom'],8,.6,12,1.1,15,1.9]}});
+  layers.push(
+      {id:'lbl-neigh',type:'symbol',source:'osm','source-layer':'place',filter:['match',['get','class'],['neighbourhood','suburb','quarter'],true,false],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-transform':'uppercase','text-letter-spacing':.14,'text-size':['interpolate',['linear'],['zoom'],11,9.5,14,12.5],'text-max-width':7,'text-padding':6},paint:{'text-color':c.ink2,'text-halo-color':c.page,'text-halo-width':1.6,'text-halo-blur':.4}});
+  if(!quiet)layers.push(
+      {id:'lbl-city',type:'symbol',source:'osm','source-layer':'place',filter:['match',['get','class'],['city','town'],true,false],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-letter-spacing':.04,'text-size':['interpolate',['linear'],['zoom'],9,12,13,17],'text-max-width':8},paint:{'text-color':c.ink2,'text-halo-color':c.page,'text-halo-width':1.4}});
+  return{version:8,glyphs:ML_GLYPHS,sources:{osm:{type:'vector',url:ML_TILES}},layers};
 }
 // A pin element for a live marker — the same .pin classes the drawn plot wears,
 // so both layers speak one language. Focusable when it acts: the canvas itself
@@ -2484,11 +2510,13 @@ function smapMount(){
 }
 function smapDestroy(){
   Object.keys(_smaps).forEach(k=>{const s=_smaps[k];
-    try{_smapCam[s.camKey]={center:s.map.getCenter(),zoom:s.map.getZoom()}}catch(e){}
+    // only a surface that ASKED to be remembered is remembered — a ground layer
+    // under a drawn frame has no camera to keep (MAPPING: the walk is the zoom)
+    if(s.camKey)try{_smapCam[s.camKey]={center:s.map.getCenter(),zoom:s.map.getZoom()}}catch(e){}
     try{s.map.remove()}catch(e){}});
   _smaps={};_smapCfg={};
 }
-function smapRestyle(){Object.keys(_smaps).forEach(k=>{const s=_smaps[k];try{s.map.setStyle(smapStyle());if(s.cfg&&s.cfg.edges&&s.cfg.edges.length)s.map.once('styledata',()=>smapEdges(s.map,s.cfg))}catch(e){}})}
+function smapRestyle(){Object.keys(_smaps).forEach(k=>{const s=_smaps[k];try{s.map.setStyle(smapStyle(s.cfg&&s.cfg.quiet));if(s.cfg&&s.cfg.edges&&s.cfg.edges.length)s.map.once('styledata',()=>smapEdges(s.map,s.cfg))}catch(e){}})}
 // The atlas edges — lot → roast → bar, drawn as a GeoJSON line layer over the tiles: monochrome, a
 // thin dashed lens under the HTML pins, never a fill, never the ember. The drawn-plot SVG is the floor;
 // this is the enhancement that tracks the live pan/zoom. Re-added on a theme restyle (setStyle drops it).
@@ -2507,13 +2535,17 @@ function smapBoot(el,cfg){
   if(!navigator.onLine||_mlDown){smapNote(el,cfg,true);return} // the plot stands; quiet about it
   mlLoad().then(()=>{
     if(!el.isConnected)return;
-    const live=document.createElement('div');live.className='smap-live';el.appendChild(live);
-    const camKey=cfg.camKey||id,cam=_smapCam[camKey];
-    const opts={container:live,style:smapStyle(),interactive:!!cfg.interactive,dragRotate:false,pitchWithRotate:false,
+    const live=document.createElement('div');live.className='smap-live';
+    // `behind` is the ground mode: the tiles slot UNDER the drawing rather than
+    // replacing it, so the SVG marks — the folds, the counts, the ring, the taps
+    // — stay exactly what they were with no tiles at all.
+    if(cfg.behind)el.insertBefore(live,el.firstChild);else el.appendChild(live);
+    const camKey=cfg.camKey,cam=camKey?_smapCam[camKey]:null;
+    const opts={container:live,style:smapStyle(cfg.quiet),interactive:!!cfg.interactive,dragRotate:false,pitchWithRotate:false,
       attributionControl:{compact:false,customAttribution:'© OpenMapTiles · © OpenStreetMap contributors'}};
     if(cam){opts.center=cam.center;opts.zoom=cam.zoom}
     else if(cfg.center){opts.center=cfg.center;opts.zoom=cfg.zoom}
-    else{opts.bounds=cfg.bounds;opts.fitBoundsOptions={padding:46,maxZoom:15}}
+    else{opts.bounds=cfg.bounds;opts.fitBoundsOptions=cfg.fitOpts||{padding:46,maxZoom:15}}
     if(cfg.minZoom!=null)opts.minZoom=cfg.minZoom;
     if(cfg.maxBounds)opts.maxBounds=cfg.maxBounds;
     if(cfg.interactive)opts.cooperativeGestures=true;
@@ -2525,15 +2557,22 @@ function smapBoot(el,cfg){
     map.on('load',()=>{
       clearTimeout(to);_mlDown=false;smapNote(el,cfg,false);
       try{map.getCanvas().setAttribute('tabindex','-1')}catch(e){}
-      el.querySelectorAll(':scope>.pin,:scope>svg,:scope>.ca-pin-layer').forEach(p=>p.remove()); // the drawn pins + edges (and the interlude's drawn layer) hand over to live markers + the line layer
+      // the drawn pins + edges (and the interlude's drawn layer) hand over to live markers + the
+      // line layer — except in ground mode, where the drawing is the record and nothing hands over
+      if(!cfg.behind)el.querySelectorAll(':scope>.pin,:scope>svg,:scope>.ca-pin-layer').forEach(p=>p.remove());
       smapEdges(map,cfg); // the lot → roast → bar lines, if this surface carries any
       (cfg.marks?cfg.marks():[]).forEach(mk=>{
         new maplibregl.Marker({element:mk.el,anchor:'center'}).setLngLat([mk.lon,mk.lat]).addTo(map);
         if(mk.id!=null)rec.pins[mk.id]=mk.el;
       });
+      // a repaint over the SAME ground does not fade in again — the streets did not
+      // move, and a lens tap should not make them re-announce themselves
+      if(cfg.gkey&&_smapGK===cfg.gkey)live.classList.add('now');
+      if(cfg.gkey)_smapGK=cfg.gkey;
       live.classList.add('in');
+      if(cfg.behind)el.classList.add('streets'); // the labels take a halo once there is ground under them
     });
-    map.on('moveend',()=>{try{_smapCam[camKey]={center:map.getCenter(),zoom:map.getZoom()}}catch(e){}});
+    if(camKey)map.on('moveend',()=>{try{_smapCam[camKey]={center:map.getCenter(),zoom:map.getZoom()}}catch(e){}});
   }).catch(()=>{if(el.isConnected)smapFail(el,cfg)});
 }
 function smapFail(el,cfg){_mlDown=true;smapNote(el,cfg,true)}
@@ -2557,10 +2596,16 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.7.0';
+const APP_VERSION='6.8.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.8.0',date:'July 2026',title:'The ground comes back — streets behind the chart, and nowhere else.',items:[
+    'Real streets sit behind the map again. When a scope is one ground you could cross in a morning, the chart frame — the hands and the bars — lays actual roads under its marks, so a bar is at a corner you recognise rather than a dot in an empty box. Wider than that and the frame says so and stays a drawing: at a span of a thousand kilometres there is no single ground to lay, only texture.',
+    'The streets are the paper; the drawing is still the record. Nothing hands over when tiles land — the same marks, the same folds, the same counts, the same taps, the same ring on what you keep. The plot draws first from saved positions and stands alone offline, and the frame the tiles are fitted to is the one the plot already computed, so a mark and the road under it can never disagree about where they are.',
+    'No streets ever go behind where it grew. An origin mark is a centroid — an area standing in for a point — and a centroid drawn over a named road reads as an address. That would round the grain up in ink, which is the one thing the map exists to refuse.',
+    'Still no zoom, still no camera. There is nothing to pan and nothing remembered between screens: the walk down is the zoom in, and the back button is the zoom out.',
+  ]},
   {v:'6.7.0',date:'July 2026',title:'The atlas is everyone’s — the published copy, and the reader.',items:[
     'The atlas can be published. A founder sends one copy of the shared record — the greens, the hands, the bars, and the dated sightings of what poured where — and anyone with the address can read it. No account, no install, one link. No ledger travels: no cups, no brews, no bags, and nothing about how anything tasted.',
     'A copy, not a switch. The published atlas carries a revision and a date, so it states its own age instead of impersonating a live feed. It changes when the keeper publishes again, and until then it says so. Before you publish, the counts state exactly what leaves, in the same units the reader will see them in.',
@@ -4987,6 +5032,12 @@ function nodeResHTML(kind,id,gs){
  * M4 a cluster of one is not a scene — one bar is a front door. ---- */
 const RUNG={'green-lot':3,farm:2,station:2,region:1,country:0}; // the grain's five rungs, deciding a coordinate
 const KMX=(lon,la0)=>lon*111.32*Math.cos(la0*Math.PI/180),KMY=la=>la*111.32;
+/* how wide a frame may be before streets stop meaning anything. Derived from
+   SCENE_KM rather than picked: a scene is what links within 40 km, so three of
+   those is a ground you could cross in a morning — the scale at which a street
+   is a street. Wider, and tiles are texture standing in for a ground that isn't
+   one, so the frame stays the drawing alone and says so. */
+const STREET_KM=SCENE_KM*3;
 /* THE RING (MAPPING.md step 5) — your overlay on the plan, and the single line
  * of design that makes the published atlas almost free. A mark you keep gets a
  * RING: added on top of a mark that was already complete without it. Not a fill,
@@ -5127,6 +5178,13 @@ function plotSVG(ms,edges,o){
   // ONE scale for both axes. Two would be a distortion baked into every reading.
   const s=Math.min((W-2*P)/(x1-x0),(H-2*P)/(y1-y0)),cx=(x0+x1)/2,cy=(y0+y1)/2;
   const X=m=>W/2+(px(m)-cx)*s,Y=m=>H/2-(py(m)-cy)*s;
+  /* the GROUND this frame is drawn over, read straight back out of the projection
+     that drew it: the box spans W/s km across and H/s down, so the corners invert
+     to real lat/lon. Streets can only sit under the marks if both agree about
+     where the paper is — so the tiles are fitted to this, never the other way. */
+  const cosla=Math.cos(la0*Math.PI/180)||1e-6,kmLon=111.32*cosla;
+  const gw=W/s,gh=H/s;
+  const ground={w:gw,h:gh,west:(cx-gw/2)/kmLon,east:(cx+gw/2)/kmLon,south:(cy-gh/2)/111.32,north:(cy+gh/2)/111.32};
   // M3: fold marks the plot cannot separate — and marks that READ the same, whatever
   // their distance: two centroids labelled alike are one mark, and drawing them
   // apart would claim a precision the grain never had.
@@ -5163,7 +5221,18 @@ function plotSVG(ms,edges,o){
   const g=out.map((m,i)=>`<g class="mk${mapSel&&mapSel.f===o.frame&&mapSel.i===i?' sel':''}${m.held?' mk-held':''}"
       onclick="${m.members.length>1?`mapPick(${jsq(o.frame)},${i})`:`nav(${jsq(m.k)},${jsq(m.id)})`}">
       ${shape(m)}${lbl(m)}</g>`).join('');
-  return {folds:out,html:`<div class="plot-box"><svg viewBox="0 0 ${W} ${H}" role="img"
+  /* the street layer, laid as GROUND under the drawing — an enhancement, never a
+     dependency. Everything above this line has already been decided: the marks,
+     the folds, the counts, the taps and the ring are the same drawing whether or
+     not a tile ever lands. The frame only asks when it is narrow enough for a
+     street to be a street; the caller decides whether it may ask at all, and the
+     origin frame never does. */
+  const streets=!!o.streets&&gw<=STREET_KM;
+  const sid=streets?smapReg({behind:true,quiet:true,
+    bounds:[[ground.west,ground.south],[ground.east,ground.north]],
+    gkey:[ground.west,ground.south,ground.east,ground.north].map(v=>v.toFixed(4)).join(','),
+    fitOpts:{padding:0,maxZoom:17}}):null;
+  return {folds:out,ground,streets,html:`<div class="plot-box"${sid?` data-smap="${sid}"`:''}><svg viewBox="0 0 ${W} ${H}" role="img"
     aria-label="${esc(o.label||'plot')}">${lines}${g}</svg></div>`};
 }
 /* the key — what each weight of ink means. Derived from WHAT WAS DRAWN, never
@@ -5226,8 +5295,12 @@ function mapHTML(kind,id,gs){
   const edges=mapLens.edges?chartEdges(gs):null;
   // a frame holding one mark gets a smaller box: the plot should claim no more paper
   // than the ground it is actually reporting on
+  // streets go behind the chart frame and NEVER behind the origin frame. An origin
+  // mark is a centroid — an area standing in for a point — and a centroid drawn
+  // over a named street reads as an address. That would round the grain up in ink,
+  // which is the one thing M1 exists to refuse.
   const op=plotSVG(oMs,null,{frame:'o',minKm:300,h:oMs.length<2?124:176,sep:22,label:'where the greens grew'});
-  const cp=plotSVG(chartMs,edges,{frame:'c',minKm:3,h:chartMs.length<2?124:196,label:'where they are carried'});
+  const cp=plotSVG(chartMs,edges,{frame:'c',minKm:3,h:chartMs.length<2?124:196,streets:true,label:'where they are carried'});
   const hid=(mapLens.growers?om.marks.length-oMs.length:om.marks.length)+(cm.marks.length-kinds.length);
   // the Yours chip is absent for a reader — the ring and the lens come off
   // together, and what is left is the published atlas: the same component, the
@@ -5244,7 +5317,7 @@ function mapHTML(kind,id,gs){
   ${listedHTML(om.listed,'A place the record names but cannot put on a map. It lists here rather than being guessed onto a nearby point.')}
   <div class="muted small" style="margin:-2px 2px 4px">${oRolled
     ?'Drawn at country grain, because this scope crosses more than one. Walk into a country and the same frame draws its regions — the walk is the zoom.'
-    :'Drawn at the finest grain this scope can prove.'} Every origin mark is coarse by design — a region, never a farm-precise pin. CARTA does not geocode a grower’s name.</div>`;
+    :'Drawn at the finest grain this scope can prove.'} Every origin mark is coarse by design — a region, never a farm-precise pin. CARTA does not geocode a grower’s name, and no street ever goes behind this frame: a centroid drawn over a named road reads as an address, and it is not one.</div>`;
   const cFrame=`<h2>${one?'Where it is carried':'Where they are carried'}</h2>
   ${cp?`${cp.html}${foldHTML('c',cp)}${keyFor(cp)}`
     :`<div class="empty">No hand or bar in this scope carries a coordinate yet.</div>`}
@@ -5253,7 +5326,10 @@ function mapHTML(kind,id,gs){
     ?`${esc(nPl(cl.filter(c=>c.length>1).length,'scene'))} here — a scene is an area, and the mark says so. A cluster of one is not a scene and stays its own mark. Tap a scene to stand inside it; the walk down is the zoom in.`
     :`One scene, drawn at its own grain. Walk back up for the wider read.`}${
     edges?' The dashed lines are pours — this hand, into that bar.':' The road is off in the lens.'}</div>
-  <div class="muted small" style="margin:6px 2px 0">The drawn plot is the floor — every mark, tap and count stands with no tiles at all.</div>`;
+  <div class="muted small" style="margin:6px 2px 0">${cp&&cp.streets
+    ?'Streets settle in behind this frame when they can be fetched — the ground, not the record; there is nothing to pan, because the walk is the zoom. '
+    :cp?'No streets behind this one: at this span there is no single ground to lay under it, only texture. ':''
+    }The drawn plot is the floor — every mark, tap and count stands with no tiles at all.</div>`;
   // the hand-off — the two frames joined in WORDS, and naming what is actually drawn
   const nm=oMs.slice(0,2).map(m=>m.label),more=oMs.length-nm.length;
   const handoff=(oMs.length&&chartMs.length)?`<div class="handoff">${esc(

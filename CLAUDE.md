@@ -389,23 +389,29 @@ server/
   lat/lon scaled to fit the box, filled dot for a place you keep, dashed for
   one you don't. The drawn plot is the floor; the **street map** section lays
   real streets behind it when tiles can be fetched (see below).
-- **street map** — the live tile layer, now only behind Find's café map, the
-  café-page locator (`placeMapHTML`) and the legacy discover map — the unified
-  map (below) is the drawn plot alone. MapLibre GL +
-  OpenFreeMap vector tiles (OpenStreetMap data), lazy-loaded from CDN only when
-  a `[data-smap]` surface is on screen and the network answers; the style
-  (`smapStyle`) repaints every OSM layer in CARTA's theme tokens (`smapInk`),
-  both paper and dusk. The drawn plot renders first and stands alone offline —
-  streets fade in (`.smap-live.in`) only once tiles land; a quiet note with
-  Retry appears on the tall discover map when they can't (`smapNote`). Surfaces
-  register configs via `smapReg`/`_smapCfg`; `render()` destroys live maps
-  (`smapDestroy`) before repainting and re-mounts after (`smapMount`); cameras
-  persist across repaints (`_smapCam`). Pins are HTML markers wearing the same
-  `.pin` classes as the drawn plot. The café-page locator (`placeMapHTML`)
-  tints only its pin to the café's hue (near-neutral floors to the ember);
-  the basemap never moves. Edges (lot → roast → bar) draw as a GeoJSON line
-  layer over the tiles (`smapEdges`, monochrome, re-added on restyle) with the
-  drawn-plot SVG (`svg.atlas-edges`) as the offline floor.
+- **street map** — the live tile layer. MapLibre GL + OpenFreeMap vector tiles
+  (OpenStreetMap data), lazy-loaded from CDN only when a `[data-smap]` surface is
+  on screen and the network answers; the style (`smapStyle`) repaints every OSM
+  layer in CARTA's theme tokens (`smapInk`), both paper and dusk. The drawn plot
+  renders first and stands alone offline — streets fade in (`.smap-live.in`) only
+  once tiles land; a quiet note with Retry appears on the tall discover map when
+  they can't (`smapNote`). Surfaces register configs via `smapReg`/`_smapCfg`;
+  `render()` destroys live maps (`smapDestroy`) before repainting and re-mounts
+  after (`smapMount`). **Two modes.** On the café surfaces — Find's café map, the
+  café-page locator (`placeMapHTML`), the legacy discover map — the live layer
+  **takes over**: the drawn pins are removed and HTML markers wearing the same
+  `.pin` classes replace them, pannable, the camera persisting across repaints
+  (`_smapCam`, written only by a surface that passes a `camKey`). Behind the
+  unified map's **chart frame** it is **ground** (`cfg.behind`, 6.8.0): the tiles
+  are inserted *under* the SVG, nothing hands over, no markers are added, the box
+  takes `.streets` so the frame's labels pick up a paper halo, and the style runs
+  its `quiet` variant (no admin boundary, no city labels — the marks carry the
+  names, and the ember is never spent on the map). See *the map* below for the
+  laws that gate it. The café-page locator tints only its pin to the café's hue
+  (near-neutral floors to the ember); the basemap never moves. Edges
+  (lot → roast → bar) draw as a GeoJSON line layer over the tiles (`smapEdges`,
+  monochrome, re-added on restyle) with the drawn-plot SVG (`svg.atlas-edges`) as
+  the offline floor.
 - **the map** (`docs/MAPPING.md` — one component, every scope) — the marks of
   a scope ARE `scopeGreens`, pointed at coordinates: `originMarks(gs)` /
   `chartMarks(gs)` take the green set and nothing else, so every page inherits
@@ -434,7 +440,15 @@ server/
   the *Yours* lens (default off, narrows before the scenes derive) are both
   absent under `reader()`. A **held** green draws faint (`markHeld`, `.mk-held`)
   and is counted in words below the frames — on the founder's map only, never in
-  red. The whole drawing is SVG — it stands with no tiles at all. Coordinates stay honest and additive
+  red. The whole drawing is SVG and stands with no tiles at all — and **the
+  street layer is laid under it, never instead of it** (6.8.0): `plotSVG` returns
+  the `ground` its own projection drew (the box's corners, inverted back to
+  lat/lon) and registers a `behind` tile surface fitted to exactly that, so a mark
+  and the road beneath it cannot disagree. Two gates, both refusals: **never
+  behind the origin frame** (a centroid over a named road reads as an address —
+  M1's lie in ink), and **never wider than `STREET_KM`** (`SCENE_KM*3`, one ground
+  you could cross in a morning; above it the frame says so and stays a drawing).
+  Non-interactive and camera-less — the walk is still the zoom. Coordinates stay honest and additive
   (producer pins at `geoGrain` region/country via `atlasGeoFill`, corrected
   through `openGeoFix`); `mapProject`/`mapMerge` survive for Find's café map.
 - **the standing** — a coffee's rarity and caliber, compiled from sourced facts
