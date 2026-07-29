@@ -373,6 +373,51 @@ proposals stand for every keeper again. A few pre-redesign surfaces (the
 matching's discover map and cold-start, the circle stream, taste affinity) are
 shuttered for the same season — hidden, not removed.
 
+## The published atlas, and the reader
+
+The atlas is everyone's; the record is yours. Until 6.7.0 only the second half
+of that sentence was true for someone who never signed in.
+
+**Publishing** (the Desk → The pen → Publish the atlas) sends one **copy** of the
+shared record to the server: the greens, the hands, the bars, and the dated
+sightings of what poured where. **No ledger travels** — no cups, no brews, no
+bags, and nothing about how anything tasted. The sheet states the counts before
+it sends, in the same units the reader will see them in, and afterwards it hands
+you the address: a single `#atlas=` link, no account, no install.
+
+A copy, **not a switch**. The snapshot carries a revision and a published date,
+so a reader's copy states its own age instead of impersonating a live feed. It
+changes when you publish again, and until then it says so.
+
+**Holding a green back** (a green's page → Corrections & identity → Hold this
+green back) keeps one green out of the published copy and only out of the copy.
+The record keeps it whole — every page, every count, every reading unchanged —
+and one tap releases it into the next copy. Its roasts and its pours are held
+with it, because a green whose roasts are public and whose identity is not is a
+broken road, not a redaction. Held greens draw **faint** on your own map: a hole
+in a place is a thing only a map can show, and consent should be visible in the
+units it will be read in. Never in red — a hold is reversible.
+
+**The reader** is whoever opens that link. They get the Atlas and the Desk, the
+whole graph to walk, and everything that writes is simply absent — there is
+nothing on their device for it to write to. Two things come off, and only two:
+
+- **the road's sixth station.** It is *Read*, and it is your own cups. A reader
+  has none, so their road draws five stations rather than six with one unread.
+- **the ring.** Your overlay on the map is a ring around a mark you keep, added
+  over a mark that was already complete. Take it off and the chart is whole.
+
+They can **carry it away**: *This copy → Download this atlas* writes one
+self-contained HTML page on CARTA paper stock with the machine-readable copy
+embedded as `carta.atlas/v1` — theirs, offline, forever.
+
+If a reader starts keeping, the published copy **stays**, read-only, underneath.
+Their own record lays over it; nothing is merged and nothing is lost, and the
+day they sign in the two fold together with no duplicate green.
+
+See **[docs/READER.md](docs/READER.md)** for the full spec and
+**[server/README.md](server/README.md)** for the three endpoints.
+
 ## Server Sync (optional)
 
 CARTA can synchronize ledgers through a tiny self-hosted server, so your record follows you across devices and everyone on the server can **view** (never edit) each other's ledgers — live, from **the Desk → Keepers on this device**.

@@ -310,18 +310,40 @@ its own), and `unread` is still drawn as `unread`.
 Ordered so each step is shippable alone. Steps 1–4 are the map; 5–7 are the
 published atlas over it.
 
-| # | change | touches |
-|---|---|---|
-| 1 | `originMarks` / `chartMarks` off the green set; `plotSVG` with an explicit bbox, one scale, a ground-sized box, the fold and the derived key | replaces `mapProject`/`mapHTML`'s per-surface shapes |
-| 2 | M1 and M2 — the grain decides the rung; the listed strip; the fall stated | reads the grain ladder that already exists |
-| 3 | `clusters`/`sceneMark`, and the walk-as-zoom rule. Delete `smapCamKey`, the camera store and the scenes lens | `atlasFrames`, `_smapCam`, `smapView` |
-| 4 | one `mapHTML(k,id,gs)` on every node page and the Atlas, in question 4, ahead of the terrace | `nodePage`, `vAtlas` |
-| 5 | the ring — `markKept`, and the *Yours* lens | new, small |
-| 6 | `reader()` and its predicates; the ring and the lens absent; the road's five stations | `READER.md` §5 |
-| 7 | the hold: faint marks and their count on the founder's map, beside the Desk's publish counts | `READER.md` F1–F3 |
+| # | change | touches | |
+|---|---|---|---|
+| 1 | `originMarks` / `chartMarks` off the green set; `plotSVG` with an explicit bbox, one scale, a ground-sized box, the fold and the derived key | replaces `mapProject`/`mapHTML`'s per-surface shapes | **built** (6.6.0) |
+| 2 | M1 and M2 — the grain decides the rung; the listed strip; the fall stated | reads the grain ladder that already exists | **built** (6.6.0) |
+| 3 | `clusters`/`sceneMark`, and the walk-as-zoom rule. Delete `smapCamKey`, the camera store and the scenes lens | `atlasFrames`, `_smapCam`, `smapView` | **built** (6.6.0) |
+| 4 | one `mapHTML(k,id,gs)` on every node page and the Atlas, in question 4, ahead of the terrace | `nodePage`, `vAtlas` | **built** (6.6.0) |
+| 5 | the ring — `markKept`, and the *Yours* lens | new, small | **built** (6.7.0) |
+| 6 | `reader()` and its predicates; the ring and the lens absent; the road's five stations | `READER.md` §5 | **built** (6.7.0) |
+| 7 | the hold: faint marks and their count on the founder's map, beside the Desk's publish counts | `READER.md` F1–F3 | **built** (6.7.0) |
 
 Steps 1–4 give every page in the app one honest map. 5–7 give a stranger the
 same map, and give the founder the ability to see what they are not sending.
+
+### As built (6.7.0)
+
+The ring is `markKept(greens)` — derived from the greens a mark already carries,
+so it arrives at every scope for free, exactly as the road and the terrace do.
+`keptLots()` is the keeper's own set (a bag or a cup on that green); a bar is
+also yours if you have drunk there or saved it. A fold wears the ring if **any**
+member is yours; a scene wears it if any node inside it is. The ring never
+replaces the mark's own geometry — `plotSVG` draws the body first and adds the
+ring over it, which is what makes taking it off leave the drawing whole.
+
+The *Yours* lens defaults **off**. A lens narrows, and a map that opens narrowed
+hides the atlas behind the overlay. It narrows before the scenes derive, like
+every other lens, and it says what it hid.
+
+The hold draws `.mk-held` (faint) when **every** green a mark carries is held —
+a mark carrying one held green and three standing ones is not a held mark — and
+the count is stated in words below the frames, with the door to release it.
+Both the ring and the lens are absent under `reader()`, which is the claim this
+document makes about the published atlas, now true in code: the walk asserts
+that a reader's map draws both frames, the folds, the listed strip and the
+derived key, and differs from a keeper's by exactly one ring and one chip.
 
 ---
 

@@ -2557,10 +2557,19 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.6.0';
+const APP_VERSION='6.7.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.7.0',date:'July 2026',title:'The atlas is everyone’s — the published copy, and the reader.',items:[
+    'The atlas can be published. A founder sends one copy of the shared record — the greens, the hands, the bars, and the dated sightings of what poured where — and anyone with the address can read it. No account, no install, one link. No ledger travels: no cups, no brews, no bags, and nothing about how anything tasted.',
+    'A copy, not a switch. The published atlas carries a revision and a date, so it states its own age instead of impersonating a live feed. It changes when the keeper publishes again, and until then it says so. Before you publish, the counts state exactly what leaves, in the same units the reader will see them in.',
+    'A green can be held back. A hold keeps one green out of the published copy and only out of the copy — the record keeps it whole, every page and every count unchanged — and one tap releases it into the next. Its roasts and its pours are held with it, because a green whose roasts are public and whose identity is not is a broken road, not a redaction. Held greens draw faint on your own map: a hole in a place is a thing only a map can show.',
+    'The reader. Someone who keeps nothing opens CARTA, reads the atlas as it was published, and never signs in. Everything that writes is not hidden from them so much as absent — there is nothing on their device for it to write to. Two rooms, the whole graph to walk, and one offer, once: a record of your own.',
+    'A reader’s road draws five stations, not six. The sixth is Read — your own cups — and a reader has none. That is not a gap in the record: the gap is the product, and an absent reader is not a gap. An empty Read drawn as unread would be the record telling a quiet lie about itself.',
+    'Your overlay on the map is a ring. A mark you keep gets a ring added on top of a mark that was already complete without it — never a fill, never a second colour. That is what lets the published atlas be this same map with one ring and one lens removed, rather than a second, poorer map: had kept-versus-not been the main distinction, a stranger’s atlas would draw entirely faint — an atlas of absences.',
+    'A reader who starts keeping keeps the copy. Their own record lays over it, one layer down; nothing is merged, nothing is lost, and the day they sign in the two fold together with no duplicate green.',
+  ]},
   {v:'6.6.0',date:'July 2026',title:'One page, every scope — the walk is the zoom.',items:[
     'A country, a region, a grower, a green, a roaster, a bar, a city, a Setup, a process, a variety — every one of them is now the same page, pointed at a different slice of one record. Each answers the same five questions in the same order: what is it, how far the record follows it, what it can prove, where it sits and what it holds, what you found. Only the nouns change.',
     'Drill down and up from anywhere. Every name is a door, the crumb above a page names the scopes over it, and the back button names where it returns. A country page lists every bar pouring from that country — a walk, not a feature. The city is a page of its own, so a bar and a roaster can finally be drilled up from. The grower opens as a page, not a sheet.',
@@ -4123,7 +4132,7 @@ function openPublish(){
     <div class="muted small serif" style="font-style:italic;margin:2px 2px 0">One link, no account, no install. Whoever opens it reads the atlas as you published it.</div>`:'';
   openSheet(`
   <h3>Publish the atlas</h3>
-  <div class="sub">The pen · a copy of the shared record, readable by anyone with the address</div>
+  <div class="sub">The pen · a copy of the shared record, readable by anyone with the address ${exBtn('published','what this is','badge ghost')}</div>
   <p class="primer-b" style="max-width:42ch">No ledger travels — no cups, no brews, no bags. What goes is the atlas: the greens, the hands, the bars, and the dated sightings of what poured where. The hands that attested are named.</p>
   ${publishable()?`
   <div class="card">
@@ -4165,7 +4174,7 @@ function openHeldList(){
   const hs=holdList();
   openSheet(`
   <h3>What you're holding back</h3>
-  <div class="sub">${hs.length?esc(nPl(hs.length,'green')):'Nothing'} kept out of the published copy</div>
+  <div class="sub">${hs.length?esc(nPl(hs.length,'green')):'Nothing'} kept out of the published copy ${exBtn('hold','a hold','badge ghost')}</div>
   ${hs.length?hs.map(h=>{const l=catNode('lots',h.ref);const rides=holdCarriesLine(h.ref);
     return `<div class="wc-item" style="cursor:default"><span class="tx">
       <span class="tt">${esc(l?lotLabel(l):'a green no longer on file')}</span>
@@ -4576,7 +4585,7 @@ function pubHeadHTML(){
   const where=modeOf(regEntries().map(e=>e.city).filter(regSubstance))||'';
   const title=n?`${where?esc(where)+', in':'The atlas, in'} <em>${esc(numWord(n))} green${n===1?'':'s'}</em>`:'A copy, <em>not yet filled</em>';
   return `
-  <p class="eyebrow">The published atlas</p>
+  <p class="eyebrow">The published atlas ${exBtn('published','what this is','badge ghost')}</p>
   <h2 class="display">${title}</h2>
   <p class="lede">${PUB&&PUB.publishedAt?`Published ${esc(fmtMDY(PUB.publishedAt))}${PUB.publishedBy?' by '+esc(PUB.publishedBy):''}. `:''}A copy, not a feed — it changes when the keeper publishes again.</p>
   <div class="btnrow" style="margin:0 0 22px">
@@ -5779,7 +5788,7 @@ function specLot(lotId){
     ${bindRows?`<h2>Bound here</h2><div class="muted small" style="margin-bottom:8px">Each record read onto this green, and how. Keep one apart to fork it back onto its own.</div>${bindRows}`:''}
     ${isAdmin()?`<button class="btn btn-quiet" onclick="openLotStanding(${jsq(lotId)})">${(cal.best||cal.claims.length||rar.facts.length)?'Add another reading':'Record the standing'}</button>`:''}
     ${isAdmin()?`<button class="btn btn-quiet" onclick="openHoldGreen(${jsq(lotId)})">${holdOn(lotId)?'Release it into the published copy':'Hold this green back'}</button>
-    <div class="muted small" style="margin:2px 2px 10px">${holdOn(lotId)
+    <div class="muted small" style="margin:2px 2px 10px">${exBtn('hold','a hold','badge ghost')} ${holdOn(lotId)
       ?`Held back since ${esc(fmtMDY(holdOn(lotId).at))} — absent from the published copy, whole here. ${esc(holdCarriesLine(lotId)||'Nothing rides with it yet')}.`
       :'It would leave the published copy at the next publish; the record keeps it whole, and readers simply never see it.'}</div>`:''}
     ${cands.length?`<button class="btn btn-quiet" onclick="openLotMerge(${jsq(lotId)})">Join to another green…</button><div class="muted small" style="margin:2px 2px 10px">${cands.length} green${cands.length===1?'':'s'} read${cands.length===1?'s':''} like this one. Join and every record on both follows here — undoable.</div>`:''}
@@ -6202,6 +6211,9 @@ const PR={
   rarity:{t:'Rarity',b:'How much of it exists — bags landed, an auction price, a scarce variety, how narrowly it is carried. Scarcity stated as a fact, never as a countdown.'},
   outturn:{t:'The outturn',b:'Kenya sews an identifier into the bag: one cherry delivery, milled and graded into sibling lots — AA, AB, PB — under one outturn. Two records naming this code are the same green, outright.'},
   hands:{t:'One green, many hands',b:'The same green lot, bought by more than one roaster — each a different reading of one coffee. The page nothing else can render.'},
+  published:{t:'The published atlas',b:'A copy of a shared record, taken on a date and stamped with a revision — not a live feed. It changes when the keeper publishes again, and until they do it says so rather than pretending to be current. What travels is the atlas: the greens, the hands, the bars, and the dated sightings of what poured where. No ledger travels — no cups, no brews, no bags. A pour publishes because it is a fact about the world; how it tasted never does.'},
+  hold:{t:'A hold',b:'A green kept out of the published copy, and only out of the copy. The record keeps it whole — every page, every count, every reading unchanged — and one tap releases it into the next copy. Its roasts and its pours are held with it, because a green whose roasts are public and whose identity is not is a broken road, not a redaction. It draws faint on the founder’s own map: consent should be visible in the units it will be read in.'},
+  ring:{t:'The ring',b:'Your overlay on the map — a ring around a mark you keep, added on top of a mark that was already complete without it. Never a fill and never a second colour: if kept-versus-not were the map’s main distinction, a stranger’s atlas would draw entirely faint, an atlas of absences. The ring comes off cleanly and what is left is the whole chart.'},
   shape:{t:'The shape of a preference',b:'Averages of your own 1–9 readings, split by where the cup was made — home against out, origin against origin. Enough readings and a through-line appears. It describes what you keep reaching for; it never tells you what to order.'},
   overlay:{t:'Your overlay',b:'The atlas is everyone’s: one shared page per coffee, compiled from sourced facts. Your scores, brews, and one honest line sit on top as a private wash — visible only to you, never averaged into the page. The spine stands without you.'},
   unread:{t:'Unread',b:'No admissible score exists yet, so no number prints. Unread is a state, never a verdict — and never a default to the low end. The row is the door to reading it.'},

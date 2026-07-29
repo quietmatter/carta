@@ -5,9 +5,10 @@ the founder published it, and never sign in. Everything that writes is not
 hidden from them so much as absent — there is nothing on their device for it to
 write to.*
 
-*This is a design document. Nothing here ships in `index.html` or `server/` yet.
-The prototype is `redesign-concept/READER.html` — a working surface, real
-tokens, every screen in this file drawn. Read it beside this.*
+*Built in 6.7.0 — all seven steps of §10. The prototype is
+`redesign-concept/READER.html` — a working surface, real tokens, every screen in
+this file drawn. Read it beside this, and see "As built" at the foot for the
+handful of places the code decided something this document left open.*
 
 ---
 
@@ -461,6 +462,53 @@ staleness stated rather than smoothed.
 
 Steps 1–4 are a readable atlas on a stranger's phone. 5–7 are what makes it a
 record rather than a brochure.
+
+---
+
+## 11 · As built (6.7.0)
+
+All seven steps landed. Where the code had to decide something this document
+left open, it decided as follows.
+
+**The hold lives in the ledger** (`D.holds`), merged by `mergeHolds` — the
+`mergeStruck` construction, max `at` against max `releasedAt`, independently.
+The pen is single, so the founder's ledger is the honest home for it; when group
+curation returns it moves with the pen.
+
+**The publish sheet does not print a pour count before it publishes.** Pours are
+gathered server-side from every keeper's ledger, so the founder's device cannot
+honestly know the number. The sheet says so in a line and the server states it
+the moment you publish. A count the device guessed would be exactly the invented
+precision this record refuses.
+
+**The published layer is a read layer, in two doors, not one.** `catNode`'s
+fallback (§8) is not enough on its own: the atlas is built by scanning entry
+lists, not by looking up ids, so `catAll(kind)` and `regAll()` are the read
+doors and every scan goes through them. Own first, published second. With no
+copy on the device `catAll` returns the own array **itself**, not a copy, so
+every existing mutation path keeps its object identity and a keeper's app does
+not change by one byte. Two sites stay deliberately own-only: a repoint mutates,
+and the publish counts must state what *this* pen sends.
+
+**`catWritable(kind,id)` is the write door.** A node standing only underneath is
+adopted as a thin own node carrying its id — §8's rule, made explicit — which is
+what stops the two from reading as two greens before the reader signs in.
+
+**Reader mode ends deliberately, not implicitly.** `prefs.keeping` is the flag
+R9 sets, because `reader()` is defined as "keeps nothing" and a first cup cannot
+be written while a prefs-only `save()` is in force. Signing in and an existing
+record end it too.
+
+**`counts` on the snapshot are `{greens, roasters, roasts, bars, pours, held}`.**
+F1's sketch counted sightings; the reach was set down in 6.6.0 and its sightings
+are deliberately unread, so counting them here would have re-rendered a reading
+this record retired. The counts state what the atlas actually holds.
+
+**One thing this document asked for that is deferred**: L5's obligation when
+group curation returns — *the publish act must ask each keeper before it carries
+their name*. The pen is single today, so publishing carries only the founder's
+own hand and the obligation does not yet bind. It stays written here, as
+intended, for whoever lifts the pen.
 
 ---
 
