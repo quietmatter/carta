@@ -206,7 +206,7 @@ header.app .sub{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(
   border:1px solid var(--line-strong);border-radius:var(--radius);background:none;color:var(--ink);
   font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em}
 .doorbtn:active{background:var(--paper-2)}
-main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 26px}
+main{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:20px 20px 26px}
 
 /* ===== section label ===== */
 /* the section rule — a label under a hairline, the prototype's h3.sect. Every
@@ -680,7 +680,7 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 /* ===== welcome (first-run home flow — the way in) ===== */
 .welcome{position:fixed;inset:0;z-index:120;background:var(--paper);display:none;flex-direction:column}
 .welcome.open{display:flex}
-.wc{flex:1;display:flex;flex-direction:column;width:100%;max-width:480px;margin:0 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+.wc{flex:1;display:flex;flex-direction:column;width:100%;max-width:480px;margin:0 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
   padding:calc(24px + env(safe-area-inset-top)) 28px calc(24px + env(safe-area-inset-bottom))}
 .wc-top{display:flex;justify-content:space-between;align-items:center}
 .wc-mark{font-family:var(--sans);font-size:12px;letter-spacing:.42em;font-weight:600;color:var(--ink)}
@@ -747,7 +747,7 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 .sheet{
   position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;
   background:var(--paper);border-radius:0;border-top:1px solid var(--line-strong);z-index:50;
-  max-height:92vh;max-height:92dvh;overflow-y:auto;display:none;
+  max-height:92vh;max-height:92dvh;overflow-y:auto;overflow-x:hidden;display:none;
   padding:8px 18px calc(22px + env(safe-area-inset-bottom));
   transition:transform var(--mo-base) var(--mo-ease);
 }
@@ -2655,10 +2655,13 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.11.1';
+const APP_VERSION='6.11.2';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.11.2',date:'July 2026',title:'The column holds still.',items:[
+    'The app is one bounded column — it never was meant to pan sideways. A stray wide row could nudge the page into a horizontal scroll that had nothing to read past its edge. The column is clipped to its own width now, so a stray-wide row is contained instead of dragging the whole screen with it.'
+  ]},
   {v:'6.11.1',date:'July 2026',title:'What you write on a copy is written on your record.',items:[
     'A green you read from someone else’s published atlas can be written on. Adding a height, a cupping, a printed code, a confirmed bind, or the washing station behind it used to land on the copy — which no save ever keeps — so the fact stood until you closed the app and was gone by morning. It lands on your own record now, and it stays there.',
     'A height that disagrees is still carried, never resolved. Where the copy already states a band and yours differs, the published figure keeps standing and yours is kept beside it with your name on it — the law the record has always kept for two heights that disagree, now kept across a copy as well.',
