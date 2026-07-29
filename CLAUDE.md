@@ -210,8 +210,8 @@ server/
   `vXxx()` view returning an HTML string. `screenSub()` names the screen in the
   masthead's second line (the prototype's `SUBS`). Overlays over the tab:
   `doorOn` (`vDoor`, a screen not a sheet), `placeView` (a café's page, kind
-  `place`), `pageView` (`{kind,id}`, kinds `lot`/`roaster`/`producer`/`region`/
-  `country`/`city`/`place`/`setup`/`process`/`variety` — every one rendered by
+  `place`), `pageView` (`{kind,id}`, kinds `lot`/`roaster`/`producer`/`processor`/
+  `region`/`country`/`city`/`place`/`setup`/`process`/`variety` — every one rendered by
   `nodePage(kind,id)`), `discOn` (`vDiscover`), `curateOn` (`vCurate`). The screen-settle animation
   (`.ca-screen`) plays only when the screen key changes, never on a repaint.
   Overlays walk into each other, so back is a shallow stack: `pageStack` +
@@ -244,8 +244,8 @@ server/
   see *the map*, below); the facets ("Cut the atlas"); the greens.
 - **the one page** (`UNIFIED.html`, the thesis in one function) —
   `scopeGreens(kind,id)` resolves every node kind to the set of greens it
-  holds, over the live catalog: `country`/`region`/`producer`/`lot`/`roaster`/
-  `place`/`city`/`setup`/`process`/`variety`. `nodePage(kind,id)` is the one
+  holds, over the live catalog: `country`/`region`/`producer`/`processor`/`lot`/
+  `roaster`/`place`/`city`/`setup`/`process`/`variety`. `nodePage(kind,id)` is the one
   renderer; `spec(kind,id)` supplies only the **nouns** (eyebrow, title, lede,
   identity rows, up/down sections, seal) plus an `extras` hook
   (`postRes`/`postHeight`/`tail`) that carries the app-only surfaces the
@@ -477,8 +477,37 @@ server/
   M1's lie in ink), and **never wider than `STREET_KM`** (`SCENE_KM*3`, one ground
   you could cross in a morning; above it the frame says so and stays a drawing).
   Non-interactive and camera-less — the walk is still the zoom. Coordinates stay honest and additive
-  (producer pins at `geoGrain` region/country via `atlasGeoFill`, corrected
-  through `openGeoFix`); `mapProject`/`mapMerge` survive for Find's café map.
+  (producer **and processor** pins at `geoGrain` region/country via `atlasGeoFill`,
+  corrected through `openGeoFix`); `mapProject`/`mapMerge` survive for Find's café map.
+  **The origin frame has a ground too, and it is drawn, not fetched** (6.10.0):
+  `LANDS` carries 65 country outlines (Natural Earth 1:110m, public domain,
+  simplified against each country's own span, quantised to a twentieth of a degree
+  and delta-encoded — under 9 KB), decoded by `landRings` and gathered per scope by
+  `landsOf`. `plotSVG` takes them as `o.lands`, **fits the box to hold them whole**
+  and draws them under everything as `.land` — paper, a hairline,
+  `pointer-events:none`. This is the answer to the street layer's one refusal: a
+  centroid may not sit over a named road, but it may sit inside the outline of the
+  country it is a centroid of. Consequences, all deliberate: the origin frame does
+  not zoom on the walk down (the marks narrow, the ground stays — there is nothing
+  finer under a centroid to walk closer to); the ground needs no network, so it
+  draws for a scope holding not one coordinate; a country the record names and
+  `LANDS` has no shape for is counted in words (`landsOf().unread`), never guessed;
+  the key names it as ground, and `openPrimer('ground')` says why. **Never a region
+  polygon** — coffee's regions are sometimes an admin-1 (Huila) and sometimes a
+  catchment nobody has drawn (Yirgacheffe), and matching a name to a shape is
+  exactly the guess the resolver refuses everywhere else.
+  **The highlands** (`LAND_TOPO`, `landTopo`) are the same ground read for its
+  *shape*: contours at 1,000 / 2,000 / 3,000 m, cut at build time from the
+  public-domain Terrarium elevation tiles at ~5 km, masked to each country's own
+  drawn outline, encoded exactly like `LANDS` (`landPts` reads both) — 48 countries
+  in ~20 KB. Drawn `.topo t1/t2/t3` over the land's fill and under everything else:
+  dotted, monochrome, `pointer-events:none`, weight rising with height because that
+  is how a contour is read and for no other reason. Withheld above `TOPO_KM` (4,500
+  km — STREET_KM's refusal one scale up: a contour that cannot be a line is texture
+  pretending to be information), and the frame says which case it is.
+  **It is a plan, the terrace is a section, and they answer different questions**:
+  the contour is *terrain*, never a green's stated `altitudeMasl`, never a grade,
+  never a facet — a mark inside the two-thousand line is not a finer coffee.
 - **the standing** — a coffee's rarity and caliber, compiled from sourced facts
   (VISION step 5), reborn from the old café reach onto the coffee it always
   belonged on. Three independent axes, never merged into one verdict:
@@ -782,6 +811,23 @@ the brew corpus (step 6) and discovery (step 7) follow.
   point or narrow a range to make a drawing tidier. Two heights that disagree are
   carried, not resolved — the first band stands and the later one is appended,
   never overwritten.
+- **The ground never reads finer than the mark above it.** Streets go behind the
+  chart frame only (a bar has a door); the origin frame gets the country outline
+  only (a centroid has none). Never lay a street under an origin mark, never add
+  a region or admin-1 polygon (a region name matched to a shape is a guess), and
+  never let anything on the land be tapped, counted, sorted or totalled — it is
+  paper, and the moment it enters a count it has become a record it never was.
+  A country `LANDS` has no outline for is named in words, never approximated by
+  a neighbour or a bounding box. The **contours are terrain, not a reading**: they
+  are drawn from an elevation model and never from `altitudeMasl`, they never
+  become a band, a facet, a sort or a fourth standing axis, and no copy may imply
+  a coffee is finer for sitting above a line. *Height places, it never ranks*
+  holds on the plan exactly as it holds on the terrace.
+- **A station is a processor, never a grower.** They are two actors, two catalog
+  kinds and two pages: `producerRefs` and `processorRefs` never stand in for one
+  another, `growersOf` refuses to count a station-tagged producer, and a station
+  page never reads as a farm — what leaves a washing station is as many lots as
+  arrived, never one blurred producer.
 - **Coverage counts, it never grades.** A station count is what the record holds —
   never a measure of the coffee, the grower or the roaster. Four of six is not a
   lesser green than six of six; it is a green the record has been told less about.

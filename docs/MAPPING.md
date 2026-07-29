@@ -304,6 +304,81 @@ only when a frame is on screen and the network answers, and a repaint over the
 same ground arrives already there rather than fading in again — *used more,
 moves less*.
 
+## The other ground — the country's outline, under the origin frame
+
+The refusal above left a hole, and it was worth naming rather than living with.
+Streets are refused behind the origin frame for a good reason, and the
+consequence was that half the map — the half about *where a coffee grew*, which
+is the half CARTA exists for — was a mark floating in white paper. A reader who
+knows the atlas can place 6.2° N, 38.5° E. Nobody else can, and the record is
+not for people who already know.
+
+So the origin frame gets a ground of its own, and the rule that decides it is
+the same rule M1 already states: **the ground may never read finer than the mark
+above it.** A centroid may not sit over a named road — but it may perfectly well
+sit inside the outline of the country it is a centroid of, because that outline
+claims nothing the mark does not already claim.
+
+- **The country's own outline, and nothing else.** No roads, no cities, no
+  admin-1 boundaries — a region page draws its *country's* shape with the
+  region's centroid on it, and says so. There is no region-level polygon here
+  and there should not be: coffee's regions are sometimes an admin-1 department
+  (Huila, Nariño) and sometimes a woreda or a catchment nobody has drawn
+  (Yirgacheffe), and matching a region name to a polygon would be exactly the
+  guess the resolver refuses everywhere else.
+- **Carried in the file.** Natural Earth 1:110m admin-0 (public domain),
+  simplified against each country's own span and quantised to a twentieth of a
+  degree, delta-encoded — 65 countries in under nine kilobytes. This is why the
+  origin frame can have ground where the chart frame cannot: it needs no
+  network, no key, no tile server, and there is nothing to be offline from.
+- **The frame opens to hold the whole of it.** That is the reading a coarse mark
+  can actually support — *where in the country*, not *what is near this point*,
+  which a centroid cannot answer. It also means the origin frame does not zoom
+  on the walk down: step from a country into one of its regions and the marks
+  narrow while the ground stays put. That is correct rather than a limitation.
+  There is nothing finer under a centroid to walk closer to, and closing in on
+  one would claim there was.
+- **It is never the record.** Nothing on the land taps, counts, sorts, ranks or
+  enters a total. It is paper — a fill and a hairline, monochrome, never the
+  ember — drawn under the marks and behind the edges, and the key names it as
+  ground so it cannot be read as a mark.
+- **A country with no outline is counted, not guessed.** The M2 grammar,
+  pointed at the ground instead of at a mark: the frame names the countries it
+  could not draw, in words, below the plot.
+
+The outline is a **drawing, not an adjudication**. CARTA keeps coffee's record,
+not the world's borders, and the primer says so on the page.
+
+### The highlands — the same ground, read for its shape
+
+An outline says *where* a country is. It says nothing about **why coffee is grown
+in one part of it and not another**, which is the question the origin frame is
+actually standing in front of. The answer is terrain, and `VISION`'s terrace has
+argued for versions that altitude is the fact about a growing region — but the
+terrace is a *section*, and a section cannot say where on the map the high
+ground lies. So the plan says it: contours at **1,000 / 2,000 / 3,000 m**, cut
+at build time from the public-domain Terrarium elevation tiles (~5 km samples),
+masked to each country's own drawn outline and carried in the file exactly as the
+outlines are — 48 countries in about 20 KB, no tile, no fetch.
+
+Three things keep it honest, and each is a line already drawn elsewhere:
+
+- **It is terrain, and it is never a reading.** The contour comes from an
+  elevation model, never from `altitudeMasl`. A green's stated band is the
+  terrace's business and stays there. Two surfaces, two questions, no crossing.
+- **It never ranks.** *Height places, it never ranks* is an invariant, and the
+  plan does not get an exemption. A mark inside the two-thousand line is not a
+  finer coffee than a mark outside it; nothing sorts, cuts, facets or scores by
+  it, and the copy says so where it could possibly be misread. Line weight rises
+  with height because that is how a contour map is read, and for no other reason.
+- **It is withheld when it cannot be read.** `TOPO_KM` (4,500 km) is `STREET_KM`'s
+  refusal one scale up: below it a thousand-metre interval is a line; above it,
+  a smudge standing in for terrain. The frame states which case it is rather than
+  quietly drawing nothing.
+
+Drawn in the terrace's own grammar — **dotted is the ground** — monochrome, never
+the ember, quieter than every mark laid over it.
+
 ## What this answers in `CHARTS.md`, and what it retires
 
 | `CHARTS.md` asked for | here |
@@ -334,7 +409,9 @@ no server change stands, unchanged, for the day that happens.
 
 No new catalog kind, no new endpoint, no new synced document, no dependency, no
 build step. Clustering, bounding boxes and folds are local math over local
-entries.
+entries. The country outlines and their contours are data in the file, not a
+fetch and not a package — the same standing as `PLACE_ALIASES`: curated, closed,
+and readable.
 
 **The street layer stays an enhancement, never a dependency.** The drawn plot
 renders first from stored coordinates, stands alone offline, and every mark,
@@ -347,7 +424,10 @@ offline state rather than a property of the prototype alone.
 **Height still places and never ranks.** `scopeGreens` has no altitude branch and
 neither does any mark: nothing on the map is positioned, sized, ordered or
 shaded by how high it grew. The terrace remains the only surface that reads a
-band, and it is a section, not a plan.
+*green's* band, and it is a section, not a plan. The contours added in 6.10.0 do
+not touch that: they are the land's own shape from an elevation model, drawn as
+ground under the marks, and no mark is placed, sized, ordered or shaded by
+them — a coffee is not graded by which side of a line it grew on.
 
 **Coordinates stay honest and additive** — a venue's real point, a roaster's city
 point, a producer's region or country centroid, each with its grain, never a
@@ -373,10 +453,13 @@ published atlas over it.
 | 6 | `reader()` and its predicates; the ring and the lens absent; the road's five stations | `READER.md` §5 | **built** (6.7.0) |
 | 7 | the hold: faint marks and their count on the founder's map, beside the Desk's publish counts | `READER.md` F1–F3 | **built** (6.7.0) |
 | 8 | the street layer as **ground**: tiles under the chart frame at scene scale, fitted to the plot's own box; never under the origin frame; no camera | `smapBoot` gains `behind`, `plotSVG` returns its ground | **built** (6.8.0) |
+| 9 | the **country outlines** under the origin frame — carried in the file, the frame fitted to them, the undrawn countries counted in words | `LANDS`/`landRings`/`landsOf`, `plotSVG` gains `o.lands` | **built** (6.10.0) |
+| 9b | the **highlands** inside them — contours at 1,000/2,000/3,000 m, terrain and never a reading, withheld above `TOPO_KM` | `LAND_TOPO`/`landTopo`, `.topo t1–t3` | **built** (6.10.0) |
 
 Steps 1–4 give every page in the app one honest map. 5–7 give a stranger the
 same map, and give the founder the ability to see what they are not sending.
-8 puts real ground under the half of it that has a ground to stand on.
+8 puts real ground under the half of it that has a ground to stand on, and 9
+puts the *other* ground under the half that does not — the half about coffee.
 
 ### As built (6.7.0)
 
