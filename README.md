@@ -50,13 +50,16 @@ account, no network — shows what it found as facts you can strike, says how
 finely the green resolves and whether two records could ever meet on it, and
 binds it with one tap: on my shelf, poured at a bar, brewed just now, or just
 noting it. The room shapes the bind — open the door from a bar's page and it
-offers *Poured here*, the venue already bound; the café cup has no origin form
-of its own, because everything about the coffee was settled here first. It
-asks once for the roast date — the one fact a page never states and the rest
-window can't do without — and never invents one. The typed form stays one tap
-away, and every origin field carries a **rail** of what the record already
-holds — counts, one tap to fill, narrowing to what you've already chosen on
-the same screen. Never type a country twice.
+offers *Poured here*, the venue already bound; open it from a **green's page**
+and there is nothing to paste at all, because the green already stands: the
+door opens on its last step with the coffee named, and the bind says, in ink,
+that this is the same one. It asks once for the roast date — the one fact a
+page never states and the rest window can't do without — and never invents
+one, and it keeps a **printed lot code** when the paste carries one. The typed
+form stays one tap away and asks for exactly the same things, and every origin
+field carries a **rail** of what the record already holds — counts, one tap to
+fill, narrowing to what you've already chosen on the same screen. Never type a
+country twice.
 
 **A plate** is the atlas, cut — a country, a process, a variety, read as one
 page with the aggregate road: how many of the facet's greens reach each
@@ -73,7 +76,8 @@ range draws as a band and a single figure as one line, because a lot sold as
 nothing sorts by it, no plate cuts by it, and it is never part of a coffee's
 identity or a pin on a map. Two heights that disagree are **carried, not
 resolved** — the first stands, the other is kept beside it with its author.
-Heights arrive through the door, which has always read them off a paste.
+Heights arrive through the door, off a paste, or typed straight into a bag or
+a cup — read the same way either way, so *1,930 masl* lands as 1,930.
 
 **One page, every scope.** A country, a region, a grower, a green, a roaster,
 a bar, a city, a Setup, a process, a variety — every one of them is the same
@@ -241,7 +245,9 @@ Your cafés live as pages off the Atlas — a passport of every shop you log —
 - **The neighborhood, named.** The map lookup names a neighborhood along with the pin — filled in automatically when it knows one, blanks only, typed always wins. It rides next to the city everywhere a café is shown.
 - **Tag a place your own way.** A short list of tags — however you'd describe it to a friend — rides on the café's page and joins the pooled search in Find, so "patio" or "quiet" turns up every place you've marked that way.
 - **The beans, read from the roaster.** Give a café cup the roaster's website and CARTA reads its brand the same way a café or a bag does — the roaster it states and a line fill what's blank, and the cup carries the colours it read. Less to type at the counter.
-- **Traceability, aligned to your bags.** A café cup can carry the same fields a bag does — country, region, producer, variety, lot, process — tucked behind one optional tap. Bags gained a lot number too, so a café cup and the bag on your shelf finally line up. The loose origin line — the quick "Ethiopia / blend" you jot when there's no lot to spell out — rests on the green behind the cup as well, so a café cup reads its origin from one place, exactly as typed.
+- **Traceability, aligned to your bags.** A café cup asks for exactly the fields a bag asks for — country, region, producer, variety, process, lot, the harvest, the height, a printed code — behind one optional tap, from the same block of fields, with the same rails and the same threshold said out loud: two of the six, and this green can meet another keeper's record. Fill what you have; the rest can wait, or never come.
+- **A cup you can come back to.** Amend a café cup — the drink, the price, a line, the coffee — and it stays on the green it was on. It reads its green first, the way the shelf form always has, so a record you return to a week later is the same record.
+- **Find it on the atlas.** Name a green already on your record and the cup binds to it outright — signed and dated, the strongest thing short of a printed code. Two keepers at one bar drinking the same coffee can say so, instead of leaving two greens the words alone will never join.
 - **A printed lot code, when there is one.** A bag or a café cup can also carry a hard identifier some coffees print — a Kenya outturn, a competition-auction lot, an ICO mark. When two records carry the same code, they land on one green outright, even where the words alone read a little differently — the surest way to say "the same green, in another hand." A code that isn't an identity — a bare grade, a warehouse reference, a per-sale lot number — is turned away with a word on why, and whatever you enter only ever adds to the green, never erased.
 - **Joined or set apart by hand.** A green's page can be corrected. Two greens you've learned are one — join them, and every roast, pour and record on both follows onto the kept green, nothing lost. A conflation you've learned is two — split it back apart, and both greens stand. A string that merely reads alike never joins on its own; a join needs a shared code or a matching origin, and every correction can be undone.
 - **Kenya's outturn, as it works.** One cherry, graded into sibling export lots: AA and AB of a single outturn stand as siblings under one processing batch. A bag that names only the outturn rests on the batch until its grade surfaces, then splits to its sibling — without re-entering the code.
