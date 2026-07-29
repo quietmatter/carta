@@ -424,7 +424,7 @@ offline state rather than a property of the prototype alone.
 **Height still places and never ranks.** `scopeGreens` has no altitude branch and
 neither does any mark: nothing on the map is positioned, sized, ordered or
 shaded by how high it grew. The terrace remains the only surface that reads a
-*green's* band, and it is a section, not a plan. The contours added in 6.9.0 do
+*green's* band, and it is a section, not a plan. The contours added in 6.10.0 do
 not touch that: they are the land's own shape from an elevation model, drawn as
 ground under the marks, and no mark is placed, sized, ordered or shaded by
 them — a coffee is not graded by which side of a line it grew on.
@@ -453,8 +453,8 @@ published atlas over it.
 | 6 | `reader()` and its predicates; the ring and the lens absent; the road's five stations | `READER.md` §5 | **built** (6.7.0) |
 | 7 | the hold: faint marks and their count on the founder's map, beside the Desk's publish counts | `READER.md` F1–F3 | **built** (6.7.0) |
 | 8 | the street layer as **ground**: tiles under the chart frame at scene scale, fitted to the plot's own box; never under the origin frame; no camera | `smapBoot` gains `behind`, `plotSVG` returns its ground | **built** (6.8.0) |
-| 9 | the **country outlines** under the origin frame — carried in the file, the frame fitted to them, the undrawn countries counted in words | `LANDS`/`landRings`/`landsOf`, `plotSVG` gains `o.lands` | **built** (6.9.0) |
-| 9b | the **highlands** inside them — contours at 1,000/2,000/3,000 m, terrain and never a reading, withheld above `TOPO_KM` | `LAND_TOPO`/`landTopo`, `.topo t1–t3` | **built** (6.9.0) |
+| 9 | the **country outlines** under the origin frame — carried in the file, the frame fitted to them, the undrawn countries counted in words | `LANDS`/`landRings`/`landsOf`, `plotSVG` gains `o.lands` | **built** (6.10.0) |
+| 9b | the **highlands** inside them — contours at 1,000/2,000/3,000 m, terrain and never a reading, withheld above `TOPO_KM` | `LAND_TOPO`/`landTopo`, `.topo t1–t3` | **built** (6.10.0) |
 
 Steps 1–4 give every page in the app one honest map. 5–7 give a stranger the
 same map, and give the founder the ability to see what they are not sending.

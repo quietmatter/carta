@@ -263,6 +263,19 @@ server/
   says *unread* — it never drops the question and never reorders them.
   `openBatchPage` keeps its sheet; `openSetupForm` stays the Setup's edit
   surface.
+- **the green picker** — `greenPickHTML(prefix)`/`repaintGreenPick`/`pickGreen`/
+  `bindPicked`, on the bag form and the café cup. Every other entry surface
+  *derives* its green from what was typed; this one lets the keeper **name** one
+  that already stands, which is the only way two keepers at one bar can land on
+  one green when the words differ. It searches `catAll('lots')`, not
+  `atlasLots()` — `atlasLotIds` returns only *anchored* greens, and a picker
+  offering fewer than `bestCandidate` already considers would misstate the
+  atlas. A pick writes a **confirmed** sighting through `bindRecordTo`, i.e.
+  rung 1, so no later amend can re-key the record off it; it resolves through
+  `catWritable` first, because `lotBind` writes onto the object it is handed and
+  a published-layer node is not ours to write (READER.md §8). A named green has
+  already answered the "same green?" question, so `bindPicked` returns
+  `{action:'auto'}` and the propose never follows it.
 - **the primers** — the `PR` map (term → `{t,b}`) and `openPrimer(key)`, a
   second sheet layer (`#primer`, stacks above any open sheet). Every new
   badge/chip/term ships its primer in voice the same pass; `exBtn()` renders
@@ -327,7 +340,14 @@ server/
   column yet. The bind step also takes
   the **roast date** (`doorRoasted`) — the one fact a paste can never carry and
   the rest window can't read without; asked once, optional, never invented. The
-  typed forms stay as the fallback and the edit surface.
+  typed forms stay as the fallback and the edit surface — and no longer a poorer
+  one: they ask for the harvest, the height and the hard ID too, and stamp them
+  through the same `doorStampActors`/`doorStampAltitude`. The door also **keeps**
+  the printed code it reads (`hardIdRow('d_hid')`, `readHardIds` in `doorBind`),
+  and **pre-binds from a green's page**: `openDoor('lot',id)` seeds `doorParsed`
+  via `doorFromLot`, opens at step 2, and `doorBind` calls `bindRecordTo` rather
+  than trusting the key — `doorFields` drops the lot name, so the key alone could
+  land the record on a neighbouring green. `doorRepaste()` is the way out.
 - **the road + the plate** (`SURFACES.md` §2) — one reading, aggregated:
   `lotRoadStations`/`road6HTML` draw the six honest stations (grown → processed →
   milled → roasted → poured → read; hollow marks, dashed connectors — the gap is
@@ -370,9 +390,17 @@ server/
   geometry never widens a point or narrows a range. Monochrome, never the ember,
   and it never ranks. The datum is `lot.altitudeMasl` — see *the height*, below.
 - **brew flow** — `openBrew` → `saveBrew` → `openImpression` → `saveCup`.
-- **café** — logging café cups (`openCafe`/`saveCafeCup` — the READING only:
-  shop, style, drink, the 1–9; the coffee's facts enter at the door and ride in
-  via `cafeBound`, never a parallel origin form), the café passport
+- **café** — logging café cups (`openCafe`/`saveCafeCup` — the reading *and*
+  the coffee, through the **shared origin block** the bag form uses:
+  `originFieldsHTML(prefix,o,hardId,extra)` / `readOriginFields(prefix)` emit and
+  read the six tokens, the harvest, the height and the hard-ID row for `f_` and
+  `c_` alike, so there is one vocabulary and one place to fix a parse bug.
+  `cafeBound` is now a *prefill* — the door's facts land in the fields, editable
+  — not a banner over a form that had none. `openCafe` prefills node-first
+  (`lotRead` + `originExtras`), which is what stops an amend re-keying the cup:
+  `saveCup` retires the flat origin once a green stands, and a form that did not
+  read it back wrote blanks, fell through `lotKeyOf` to `lot:<cupId>` and forked
+  the cup off its green), the café passport
   (`shopAgg`, `vCafes`, favorites),
   and per-café profiles (`openCafeProfile`: a signature colour — pulled from the
   café's website via `siteLookup` (`paletteFromColors`) — from which
@@ -451,7 +479,7 @@ server/
   Non-interactive and camera-less — the walk is still the zoom. Coordinates stay honest and additive
   (producer **and processor** pins at `geoGrain` region/country via `atlasGeoFill`,
   corrected through `openGeoFix`); `mapProject`/`mapMerge` survive for Find's café map.
-  **The origin frame has a ground too, and it is drawn, not fetched** (6.9.0):
+  **The origin frame has a ground too, and it is drawn, not fetched** (6.10.0):
   `LANDS` carries 65 country outlines (Natural Earth 1:110m, public domain,
   simplified against each country's own span, quantised to a twentieth of a degree
   and delta-encoded — under 9 KB), decoded by `landRings` and gathered per scope by
@@ -736,6 +764,11 @@ the brew corpus (step 6) and discovery (step 7) follow.
   aggregate grind across Setups.
 - **Existing single-user data migrates automatically** to the per-user key on
   first boot — don't break that migration path.
+- **An amend is a first-class write.** Every stamp a create runs, an amend runs
+  too — `catStampLot`, the actor/height stamps, and the inline propose
+  (`openLotPropose`). A form that reads its own record back node-first is what
+  makes that safe; one that does not will silently re-key on the second save.
+  `bindApart` records a rejection, so a pair is never re-proposed.
 - **Nothing is erased by an ordinary act.** Removal is two-stage: *set down*
   (instant, reversible, in reach of the record itself) then *erase* (deliberate,
   gathered, one room). Never add a delete that skips the first stage. A struck
