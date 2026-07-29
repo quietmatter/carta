@@ -861,7 +861,12 @@ let USERS=loadUsers();
 let viewingUserId=USERS.activeId;   // whose ledger is on screen; ≠ activeId means read-only
 let D=load();
 function load(){try{const r=localStorage.getItem(dataKey(viewingUserId));const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};return d}catch(e){return clone(blank)}}
-function save(){if(readOnly())return;localStorage.setItem(dataKey(viewingUserId),JSON.stringify(D));markDirty()}
+// A reader's save writes PREFERENCES and nothing else — a theme and a °C/°F
+// choice are how the page is drawn, not what it says. There is no affordance
+// that would call it with a record, and this is the belt in case one ever slips.
+function save(){if(readOnly())return;
+  if(reader()){try{localStorage.setItem(dataKey(viewingUserId),JSON.stringify({...clone(blank),createdAt:D.createdAt||new Date().toISOString(),prefs:D.prefs||{}}))}catch(e){}return}
+  keptBust();localStorage.setItem(dataKey(viewingUserId),JSON.stringify(D));markDirty()}
 // per-user presentation/input preferences (temp unit, timer visibility) — part of the ledger, so they export and sync
 const getPref=(k,dflt)=>{const p=D.prefs||{};return p[k]==null?dflt:p[k]};
 function setPref(k,v){if(readOnly())return;D.prefs=D.prefs||{};D.prefs[k]=v;save()}
@@ -881,13 +886,78 @@ const PEN_KEY='carta.pen.v1';
 let PEN=readJSONLS(PEN_KEY);            // {userId,at} | null — the device-local claim
 function savePen(){if(PEN)localStorage.setItem(PEN_KEY,JSON.stringify(PEN));else localStorage.removeItem(PEN_KEY)}
 function isAdmin(){
-  if(readOnly())return false;
+  if(readOnly()||reader())return false;   // explicit, even though no path could reach true from a published copy
   if(typeof SYNC!=='undefined'&&SYNC&&syncedHere()&&SYNC.founder!==undefined)return !!SYNC.founder;
   return !!(PEN&&PEN.userId===USERS.activeId);
 }
 function penGuard(){if(guard())return true;if(!isAdmin()){toast('The shared record is read-only for now — the founder holds the pen');return true}return false}
 function takePen(){if(guard())return;PEN={userId:USERS.activeId,at:new Date().toISOString()};savePen();closeSheet();render();toast('The pen is yours on this device')}
 function setDownPen(){PEN=null;savePen();closeSheet();render();toast('The pen is set down')}
+/* ---- the reader (docs/READER.md). The person who keeps nothing: they open
+ * CARTA, read the atlas as the founder published it, and never sign in.
+ * Everything that writes is not hidden from them so much as ABSENT — there is
+ * nothing on their device for it to write to.
+ *
+ * The welcome already named them and we never noticed: the first door is
+ * "I read, mostly — the atlas opens. Keep nothing, ever." A keeper keeps a
+ * record; a reader reads one. The only difference is whether anything is
+ * written down. The app never labels the person on screen at all — it names
+ * THE COPY (the published atlas, this copy) and lets them infer the rest.
+ *
+ * "Keeps nothing" means no RECORD — no cups, brews, bags, Setups. It does not
+ * mean no state: a theme and a °C/°F choice are how the page is drawn, not
+ * what it says, and the model already draws that line (D.prefs is
+ * presentation, the collections are the record). ---- */
+const PUB_KEY='carta.public.v1';
+// Empty in the repo, set for a deployed build — with it, "I read, mostly" on
+// the welcome just works, with no link to paste and no account to make.
+const PUBLIC_ATLAS='';
+let PUB=readJSONLS(PUB_KEY);  // {url,rev,publishedAt,publishedBy,fetchedAt,counts,atlas:{catalog,register,pours}}
+let pubBusy=false,pubState='idle',pubArrived=false;   // idle|checking|offline|missing
+function savePub(){try{if(PUB)localStorage.setItem(PUB_KEY,JSON.stringify(PUB));else localStorage.removeItem(PUB_KEY)}catch(e){}}
+// Has this device written anything down about coffee? Read across every keeper
+// on it, because a second keeper's record is still a record on this device.
+// Cached: reader() is asked on every paint, and this walks localStorage.
+let _kept=null;
+const keptBust=()=>{_kept=null};
+function keptSomething(){
+  if(_kept!==null)return _kept;
+  return _kept=USERS.users.some(u=>{const d=(u.id===viewingUserId?D:readJSONLS(dataKey(u.id)));
+    return !!d&&['cups','brews','bags','setups','authored'].some(k=>(d[k]||[]).length)});
+}
+/* True when the device holds a published atlas, holds no record of its own, and
+ * is not signed in. Signing in ends it. Keeping a first cup ends it — and so
+ * does the deliberate act of taking the door out (prefs.keeping), which is what
+ * makes that first cup writable at all. Nothing else does, and nothing about it
+ * is a mode the reader has to manage. */
+const reader=()=>!!(PUB&&PUB.atlas&&!getPref('keeping',false)&&!keptSomething()&&!(typeof SYNC!=='undefined'&&SYNC&&SYNC.token));
+/* The belt beside the braces. It should never fire — no affordance that calls a
+ * write is rendered for a reader — and it exists for exactly that reason. */
+function readerGuard(){
+  if(!reader())return false;
+  toast('You’re reading a published copy — start keeping to make a record of your own');
+  return true;
+}
+// The door out (R9). Ends reader mode and leaves the published copy exactly
+// where it is: their own record lays OVER it, one layer down.
+function startKeeping(d){
+  setPref('keeping',true);
+  setPref('depth',Math.max(2,d||2));
+  setPref('onboarded',true);
+  keptBust();closeSheet();go('atlas');
+  toast('Your record is open. The atlas stays as it is; your cups lay over it.');
+}
+/* ---- the published layer (READER.md §8). PUB is stored under its own key and
+ * is NEVER merged into CAT/REG: if it merged, the day the reader started
+ * keeping, their own record and the founder's would be indistinguishable, and
+ * their device would try to push a record it does not hold the pen on. So it
+ * layers at READ time — own first, published second — and the ordinary keeper,
+ * who holds no published copy, gets the own array back verbatim, so nothing
+ * about an existing record changes shape by one byte. ---- */
+const pubCat=kind=>{const c=PUB&&PUB.atlas&&PUB.atlas.catalog;const d=c&&c[kind];
+  return (d&&Array.isArray(d.entries))?d.entries:[]};
+const pubReg=()=>{const r=PUB&&PUB.atlas&&PUB.atlas.register;return (r&&Array.isArray(r.entries))?r.entries:[]};
+const pubPours=()=>{const p=PUB&&PUB.atlas&&PUB.atlas.pours;return Array.isArray(p)?p:[]};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>new Date().toISOString().slice(0,10);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -917,9 +987,22 @@ function saveReg(){try{localStorage.setItem(REG_KEY,JSON.stringify(REG))}catch(e
  * the identity door — regUpsert and the restore need to reach a struck entry so a
  * later sighting reuses its id instead of minting a twin. */
 const regLive=e=>!!e&&!(String(e.withdrawnAt||'')>String(e.restoredAt||''));
-const regFind=name=>REG.entries.find(e=>normName(e.name)===normName(name))||null;
+// The Register layers exactly as the catalog does — own first, the published
+// copy second, never merged into REG (READER.md L6). No published copy on the
+// device and this is REG.entries itself, unchanged.
+function regAll(){
+  const own=REG.entries,ps=pubReg();
+  if(!ps.length)return own;
+  if(!own.length)return ps;
+  const pm=new Map();ps.forEach(e=>{if(e&&e.id)pm.set(e.id,e)});
+  const seen=new Set();
+  const out=own.map(e=>{if(!e||!e.id)return e;seen.add(e.id);const p=pm.get(e.id);return p?catLayer(e,p):e});
+  ps.forEach(e=>{if(e&&e.id&&!seen.has(e.id))out.push(e)});
+  return out;
+}
+const regFind=name=>regAll().find(e=>e&&normName(e.name)===normName(name))||null;
 const regByName=name=>{const e=regFind(name);return e&&regLive(e)?e:null};
-const regEntries=()=>REG.entries.filter(regLive);
+const regEntries=()=>regAll().filter(regLive);
 const regStruck=()=>REG.entries.filter(e=>e&&!regLive(e));
 function regWithdraw(name){
   if(penGuard())return;
@@ -944,6 +1027,9 @@ function regUpsert(name,fields,who,opts){
   opts=opts||{};
   const now=new Date().toISOString(),at=opts.at||now;
   let e=regFind(name),changed=false; // a struck entry is still the entry — fill it, never mint a twin beside it
+  // an entry standing only in the published layer is adopted as a thin own one
+  // carrying its id, so the write lands somewhere writable (READER.md §8)
+  if(e&&!REG.entries.includes(e)){e={id:e.id,name:e.name,createdAt:at,firstBy:e.firstBy||who||'',firstAt:e.firstAt||at};REG.entries.push(e);changed=true}
   if(!e){e={id:uid(),name,createdAt:at,firstBy:who||'',firstAt:at};REG.entries.push(e);changed=true}
   else if(at<(e.firstAt||e.createdAt||'')){e.firstAt=at;if(who)e.firstBy=who;changed=true}
   Object.keys(fields||{}).forEach(k=>{const v=fields[k];
@@ -985,15 +1071,54 @@ function loadDoc(kind){
   }catch(e){}
   return{version:1,rev:0,dirty:false,entries:[],deleted:[]};
 }
-function saveDoc(kind){try{localStorage.setItem(catKey(kind),JSON.stringify(CAT[kind]))}catch(e){}}
+// CAT[kind] holds the OWN document and only ever that — the published layer is
+// read over it (catAll), never written into it (READER.md L6).
+function saveDoc(kind){catBust();try{localStorage.setItem(catKey(kind),JSON.stringify(CAT[kind]))}catch(e){}}
 CAT_KINDS.forEach(k=>{CAT[k]=loadDoc(k)});
+/* ---- the layered read. Own fields win; blanks fill from the published copy
+ * underneath — the same blanks-filling id-union law the shared merge already
+ * keeps, so the day a reader signs in their own node folds into the real one
+ * with no conflict and no duplicate green. With no published copy on the device
+ * this returns the own array itself (not a copy), so every existing mutation
+ * path keeps its object identity and nothing about a keeper's app changes. ---- */
+let _catL=null;
+const catBust=()=>{_catL=null};
+const catLayer=(own,pub)=>{const w={...pub};Object.keys(own).forEach(k=>{if(regSubstance(own[k]))w[k]=own[k]});w._pubUnder=1;return w};
+function catAll(kind){
+  const own=(CAT[kind]&&CAT[kind].entries)||[];
+  const ps=pubCat(kind);
+  if(!ps.length)return own;                       // the ordinary keeper — nothing underneath
+  if(!own.length)return ps;                       // the reader — nothing over it
+  _catL=_catL||{};
+  if(_catL[kind])return _catL[kind];
+  const pm=new Map();ps.forEach(e=>{if(e&&e.id)pm.set(e.id,e)});
+  const seen=new Set();
+  const out=own.map(e=>{if(!e||!e.id)return e;seen.add(e.id);const p=pm.get(e.id);return p?catLayer(e,p):e});
+  ps.forEach(e=>{if(e&&e.id&&!seen.has(e.id))out.push(e)});
+  return _catL[kind]=out;
+}
+/* The write door. A mutation must land on the OWN object, never on a layered
+ * read or on the published copy — so a node that exists only underneath gets a
+ * thin own node CARRYING ITS ID (READER.md §8), which is what stops the two
+ * from ever reading as two greens. */
+function catWritable(kind,id){
+  const own=(CAT[kind]&&CAT[kind].entries)||[];
+  let e=own.find(x=>x&&x.id===id);
+  if(e)return e;
+  const p=pubCat(kind).find(x=>x&&x.id===id);
+  if(!p)return null;
+  e={id:p.id,kind:p.kind||catSingular[kind],_key:p._key,createdAt:new Date().toISOString(),
+     firstBy:p.firstBy||'',firstAt:p.firstAt||p.createdAt||'',sightings:[]};
+  own.push(e);CAT[kind].dirty=true;saveDoc(kind);
+  return e;
+}
 // Find-or-create by a caller-supplied collapse key. The key is NOT identity — it
 // is how THIS caller chose to dedup (the seed's timid fingerprint below; a lot's
 // real identity is the resolver, a later pass). Sparse by default, the café's law
 // one kind up: a write fills blanks, never erases; {full:true} overwrites; {at}
 // backdates provenance so the earliest record to name a node holds it.
-const catByKey=(kind,key)=>CAT[kind].entries.find(e=>e._key===String(key))||null;
-const catNode=(kind,id)=>id&&CAT[kind]?CAT[kind].entries.find(e=>e.id===id)||null:null;
+const catByKey=(kind,key)=>CAT[kind]?catAll(kind).find(e=>e&&e._key===String(key))||null:null;
+const catNode=(kind,id)=>id&&CAT[kind]?catAll(kind).find(e=>e&&e.id===id)||null:null;
 // A lot merged into another is a TOMBSTONE: it carries lineage.mergedInto (the keep it became) and is
 // struck-not-deleted — kept for provenance and reversal, never browsed, never matched. A role:'batch' node
 // is the synthetic processing-batch parent (RESOLVER §5): it groups grade-split siblings, never shows as a
@@ -1011,7 +1136,11 @@ function catUpsert(kind,key,fields,who,opts){
   key=String(key||'').trim(); if(!key||!CAT[kind])return null;
   opts=opts||{};
   const now=new Date().toISOString(),at=opts.at||now;
+  // a node that stands only in the published layer is adopted as a thin OWN node
+  // carrying its id, so the write lands somewhere writable and the two never read
+  // as two nodes (READER.md §8)
   let e=catByKey(kind,key),changed=false;
+  if(e&&!CAT[kind].entries.includes(e))e=catWritable(kind,e.id)||e;   // a layered or published-only node
   if(!e){e={id:uid(),kind:catSingular[kind],_key:key,createdAt:at,firstBy:who||'',firstAt:at,sightings:[],status:'proposed'};CAT[kind].entries.push(e);changed=true}
   else if(at<(e.firstAt||e.createdAt||'')){e.firstAt=at;if(who)e.firstBy=who;changed=true}
   Object.keys(fields||{}).forEach(k=>{const v=fields[k];
@@ -1233,7 +1362,7 @@ const lotWorthy=r=>[r.originCountry,r.originRegion,r.producer,r.variety,r.proces
 // hard-ID collision across nodes is a merge the keeper adjudicates, RESOLVER §5; here we bind stably).
 function lotByHardId(hids){
   if(!hids||!hids.length)return null;
-  const hit=CAT.lots.entries.filter(l=>l&&!lotTomb(l)&&(l.hardIds||[]).some(h=>!h.withdrawnAt&&hids.some(x=>x.scheme===h.scheme&&x.value===h.value)));
+  const hit=catAll('lots').filter(l=>l&&!lotTomb(l)&&(l.hardIds||[]).some(h=>!h.withdrawnAt&&hids.some(x=>x.scheme===h.scheme&&x.value===h.value)));
   return hit.sort((a,b)=>String(a.firstAt||a.createdAt||'').localeCompare(String(b.firstAt||b.createdAt||''))||String(a.id).localeCompare(String(b.id)))[0]||null;
 }
 // The lot collapse key — the full ladder (resolveLot, below): a standing judged bind, then a shared
@@ -1387,7 +1516,7 @@ const recKind=r=>r&&r.kind?'cup':'bag';
 // a struck bind falls through, so a reversal re-forks.
 function lotOfBind(recId){
   let best=null;
-  CAT.lots.entries.forEach(l=>{if(!lotLive(l))return;
+  catAll('lots').forEach(l=>{if(!lotLive(l))return;
     (l.sightings||[]).forEach(s=>{if(s&&s.bind&&s.bind.ref===recId&&sightStanding(s)){
       const rank=s.rung==='confirmed'?2:1;
       if(!best||rank>best.rank||(rank===best.rank&&bySight(best.s,s)<0))best={lot:l,s,rank}}})});
@@ -1398,7 +1527,7 @@ function lotOfBind(recId){
 function bestCandidate(rec,fallbackId){
   const floorKey=lotKeyOf(rec,fallbackId||rec.id), apart=new Set(rec.lotApart||[]);
   let best=null,band=0;
-  CAT.lots.entries.forEach(l=>{if(!lotLive(l)||l._key===floorKey||l.id===rec.lotRef||apart.has(l.id))return;
+  catAll('lots').forEach(l=>{if(!lotLive(l)||l._key===floorKey||l.id===rec.lotRef||apart.has(l.id))return;
     const s=scoreLot(rec,l);if(s.score<=0)return;
     if(s.score>=TAU_PROP)band++;
     if(!best||s.score>best.score||(s.score===best.score&&String(l.firstAt||'')<String(best.lot.firstAt||'')))best={lot:l,score:s.score,fields:s.fields}});
@@ -1837,7 +1966,7 @@ function brewRepoint(){
 const pourRoast=c=>{if(c.roastRef)return c.roastRef;
   if(!c.roasterRef||!c.lotRef)return null;
   const lid=lotFwd(c.lotRef);
-  const hits=CAT.roasts.entries.filter(r=>r&&r.roasterRef===c.roasterRef&&r.lotRef===lid);
+  const hits=catAll('roasts').filter(r=>r&&r.roasterRef===c.roasterRef&&r.lotRef===lid);
   return hits.length===1?hits[0].id:null};
 function pourFor(c,who){
   const e=regByName(c.shop);
@@ -2223,7 +2352,7 @@ const heldRefs=()=>holdList().map(h=>h.ref);
 // stated in the units it will be read in
 function holdCarries(ref){
   const lot=catNode('lots',ref);
-  return {roasts:lot?CAT.roasts.entries.filter(r=>r&&r.lotRef&&lotFwd(r.lotRef)===ref).length:0,
+  return {roasts:lot?catAll('roasts').filter(r=>r&&r.lotRef&&lotFwd(r.lotRef)===ref).length:0,
           pours:lot?poursIn([lot]).length:0};
 }
 function holdCarriesLine(ref){
@@ -2758,6 +2887,7 @@ const markVersionSeen=()=>{try{localStorage.setItem(SEEN_KEY,APP_VERSION)}catch(
 const DEPTH_NAMES=['Reading','Remembering','Making','Keeping'];
 function depth(){
   if(readOnly())return 4;                        // a record being read shows all its rooms
+  if(reader())return 1;                          // a published copy is a reading, and only that
   const d=getPref('depth',null);
   if(d)return Math.min(4,Math.max(1,d));
   // ledgers from before the ladder — anyone with a record, or already welcomed — start fully open
@@ -2771,6 +2901,11 @@ function depth(){
  * ladder survives as the record of how deep you've stepped — read on the Desk,
  * never a gate on the bar. Nothing is ever taken away. */
 function tabsFor(d){
+  // A reader gets two rooms. The Record is their overlay over the atlas — their
+  // cups, their plates, their leans — and for a reader it is empty by
+  // definition. A room whose whole content is "you have nothing" is a nag with a
+  // tab of its own; the offer to start keeping belongs on the Desk, once.
+  if(reader())return [{id:'atlas',label:'Atlas'},{id:'ledger',label:'Desk'}];
   return [{id:'atlas',label:'Atlas'},{id:'trace',label:'Record'},{id:'ledger',label:'Desk'}];
 }
 const defaultTab=d=>'atlas';
@@ -2804,7 +2939,9 @@ function closePlace(){if(pageStack.length)return pageBack();placeView=null;rende
 // Rooms that became channels keep their old names answering — a saved flow
 // that says go('cafes') or go('today') lands where that work now lives.
 const TAB_ALIAS={field:'atlas',cafes:'atlas',circle:'atlas',today:'atlas'};
-function go(t){t=TAB_ALIAS[t]||t;tab=t;placeView=null;pageView=null;pageStack=[];discOn=false;curateOn=false;doorOn=false;deskOpen=null;discMatch=null;clearTimeout(_mt);render()}
+// A reader has no Record room, so a saved link or an old flow that says go('trace')
+// lands on the Atlas rather than on a tab that is not on the bar.
+function go(t){t=TAB_ALIAS[t]||t;if(reader()&&t==='trace')t='atlas';tab=t;placeView=null;pageView=null;pageStack=[];discOn=false;curateOn=false;doorOn=false;deskOpen=null;discMatch=null;clearTimeout(_mt);render()}
 // which room a sub-view lights on the bar
 const TAB_FAMILY={bags:'atlas',shelf:'atlas',setups:'ledger'};
 /* The header's second line names the screen, not the app — the prototype's SUBS.
@@ -2825,10 +2962,13 @@ function screenSub(){
 function render(){
   _affCache=null; // affinity is recomputed once per paint, from the current record
   _mCache=null;   // so is the matching — signal, circle, candidates
+  catBust();      // and the layered catalog read, in case a copy landed mid-paint
   smapDestroy();  // live maps die with the DOM they sit in — give the contexts back first
   document.getElementById('who').textContent=screenSub();
   const db=document.getElementById('doorbtn');
-  if(db)db.style.display=(readOnly()||doorOn)?'none':''; // the door never offers itself inside itself, or over someone else's record
+  // the door never offers itself inside itself, over someone else's record, or
+  // on a published copy — a reader has nothing on this device for it to write to
+  if(db)db.style.display=(readOnly()||reader()||doorOn)?'none':'';
   const lit=TAB_FAMILY[tab]||((placeView||pageView||doorOn)?'atlas':tab);
   document.getElementById('tabs').innerHTML=tabsFor(depth()).map(t=>
     `<button class="${lit===t.id?'on':''}" onclick="go('${t.id}')">${t.label}</button>`).join('');
@@ -2926,7 +3066,7 @@ const roasterName=ref=>{const n=catNode('roasters',ref);return (n&&n.name)||'a r
 const lotLabel=n=>{if(!n)return 'a lot';const place=[n.region,n.country].filter(Boolean).join(', ');const parts=[n.producer||n.lotName,place,n.variety].filter(Boolean);return parts.length?parts.join(' · '):'a lot'};
 // How many roasters' hands a green has passed through — the shared-spine fold (CAT.roasts by lotRef), the
 // "same green, in N hands" count the atlas exists to show. Read by the lot, producer, roaster and venue pages.
-const lotHands=id=>new Set(CAT.roasts.entries.filter(r=>r&&r.lotRef===id&&r.roasterRef).map(r=>r.roasterRef)).size;
+const lotHands=id=>new Set(catAll('roasts').filter(r=>r&&r.lotRef===id&&r.roasterRef).map(r=>r.roasterRef)).size;
 // The resolution grain, read honestly (RESOLVER §6, LOT_IDENTITY): the level identity actually reached.
 // Five rungs, coarsest first, each named for what it PROVES and nothing finer. A station is a terminal
 // node, not a half-filled lot — it is where most of the world's coffee honestly stops. Monochrome — a
@@ -3070,7 +3210,7 @@ function openLotUndoMerge(lotId,absorbId){
 function openBatchPage(batchId){
   const bat=catNode('lots',batchId);if(!bat||bat.role!=='batch'){toast('Not a processing batch.');return}
   const ko=(bat.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt);
-  const sibs=CAT.lots.entries.filter(l=>lotLive(l)&&l.processingBatchRef===batchId);
+  const sibs=catAll('lots').filter(l=>lotLive(l)&&l.processingBatchRef===batchId);
   const sibRows=sibs.map(s=>`<button class="wc-item" onclick="closeSheet();openLotPage(${jsq(s.id)})"><span class="tx"><span class="tt">${esc(lotLabel(s))}</span><span class="dd">${esc(((s.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt)||{}).value||'graded')}</span></span><span class="go">→</span></button>`).join('');
   // bare-outturn records — a bag/café cup whose lot is the batch itself, awaiting a grade
   const bare=readOnly()?[]:[...(D.bags||[]),...(D.cups||[]).filter(c=>c&&c.kind==='cafe')].filter(r=>r&&r.lotRef===batchId);
@@ -3181,7 +3321,7 @@ function lotRepointOwn(fromId,keep,via,who,at,why){
   (D.bags||[]).forEach(move);
   (D.cups||[]).forEach(c=>{if(c&&c.kind==='cafe')move(c)});
   (D.pours||[]).forEach(p=>{if(p&&p.lotRef===fromId){p.lotRef=keep.id;p.updatedAt=new Date().toISOString()}});
-  CAT.roasts.entries.forEach(rr=>{if(rr&&rr.lotRef===fromId)roastRepointNode(rr,keep.id)}); // orphan catalog roasts (no bag in this ledger)
+  CAT.roasts.entries.forEach(rr=>{if(rr&&rr.lotRef===fromId)roastRepointNode(rr,keep.id)}); // orphan catalog roasts (no bag in this ledger) — the OWN document, because a repoint mutates
   return moved;
 }
 // The over-merge guard (RESOLVER §5): two greens may be joined only if they share a standing hard-ID or the
@@ -3200,7 +3340,7 @@ const mergeAllowed=(keep,absorb)=>!mergeReason(keep,absorb);
 // The standing greens a keeper could merge this one into — those that clear the guard, strongest first.
 function mergeCandidates(lotId){
   const lot=catNode('lots',lotId);if(!lot)return [];
-  return CAT.lots.entries.filter(l=>lotLive(l)&&l.id!==lotId&&mergeAllowed(l,lot))
+  return catAll('lots').filter(l=>lotLive(l)&&l.id!==lotId&&mergeAllowed(l,lot))
     .map(l=>({lot:l,score:lotScore(l,lot).score,fields:lotScore(l,lot).fields}))
     .sort((a,b)=>b.score-a.score);
 }
@@ -3450,7 +3590,7 @@ function authorRoast(f,who){
 // The roast authoring form — the curator's fast, repeatable path. Optional roaster prefill (from the roster).
 function openAuthorRoast(prefRoaster){
   if(penGuard())return;
-  const roasters=CAT.roasters.entries.filter(r=>r&&regSubstance(r.name)).map(r=>r.name).sort((a,b)=>a.localeCompare(b));
+  const roasters=catAll('roasters').filter(r=>r&&regSubstance(r.name)).map(r=>r.name).sort((a,b)=>a.localeCompare(b));
   openSheet(`
   <h3>Author a roast</h3>
   <div class="sub">A roaster's reading of one green — straight onto the atlas, no cup logged. It runs the resolver a bag does: a sure green folds, a look-alike waits to be settled.</div>
@@ -3517,9 +3657,9 @@ function saveAuthorRoaster(){
 function queueCandidates(rec){
   if(!rec||!lotWorthy(rec)||readOnly())return [];
   const floorKey=lotKeyOf(rec,rec.id),apart=new Set(rec.lotApart||[]),boundId=rec.lotRef?lotFwd(rec.lotRef):null;
-  const anchored=new Set();CAT.roasts.entries.forEach(r=>{if(r&&r.lotRef)anchored.add(r.lotRef)});(D.pours||[]).forEach(p=>{if(p&&p.lotRef)anchored.add(p.lotRef)});
+  const anchored=new Set();catAll('roasts').forEach(r=>{if(r&&r.lotRef)anchored.add(r.lotRef)});(D.pours||[]).forEach(p=>{if(p&&p.lotRef)anchored.add(p.lotRef)});
   const out=[];
-  CAT.lots.entries.forEach(l=>{if(!lotLive(l)||l._key===floorKey||l.id===boundId||apart.has(l.id)||!anchored.has(l.id))return;
+  catAll('lots').forEach(l=>{if(!lotLive(l)||l._key===floorKey||l.id===boundId||apart.has(l.id)||!anchored.has(l.id))return;
     const s=scoreLot(rec,l);if(s.score>=TAU_PROP)out.push({lot:l,score:s.score,fields:s.fields})});
   return out.sort((a,b)=>b.score-a.score||String(a.lot.firstAt||'').localeCompare(String(b.lot.firstAt||'')));
 }
@@ -3587,8 +3727,9 @@ function queueApart(recId){
 function atlasLotIds(){
   const ids=new Set();
   const add=ref=>{if(!ref)return;const id=lotFwd(ref);if(lotLive(catNode('lots',id)))ids.add(id)};
-  CAT.roasts.entries.forEach(r=>{if(r)add(r.lotRef)});
+  catAll('roasts').forEach(r=>{if(r)add(r.lotRef)});
   (D.pours||[]).forEach(p=>{if(p)add(p.lotRef)});
+  pubPours().forEach(p=>{if(p)add(p.lotRef)});   // a published copy anchors its greens by its pours too
   (D.bags||[]).forEach(b=>{if(b)add(b.lotRef)});
   (D.authored||[]).forEach(a=>{if(a)add(a.lotRef)});
   return [...ids];
@@ -3924,9 +4065,9 @@ function openTakePen(){
 function openDesk(){
   if(penGuard())return;
   const qn=reviewQueue().length;
-  const nRoasters=CAT.roasters.entries.filter(e=>e&&regSubstance(e.name)).length;
-  const nLots=CAT.lots.entries.filter(lotLive).length;
-  const nRoasts=CAT.roasts.entries.length;
+  const nRoasters=catAll('roasters').filter(e=>e&&regSubstance(e.name)).length;
+  const nLots=catAll('lots').filter(lotLive).length;
+  const nRoasts=catAll('roasts').length;
   const synced=typeof SYNC!=='undefined'&&SYNC&&syncedHere();
   const row=(call,tt,dd,go)=>`<button class="wc-item" onclick="${call}"><span class="tx"><span class="tt">${tt}</span><span class="dd">${dd}</span></span><span class="go">${go||'→'}</span></button>`;
   openSheet(`
@@ -3955,7 +4096,7 @@ function openDesk(){
  * The ember is spent on Publish, and nowhere else on this surface. ---- */
 const publishable=()=>!!(typeof SYNC!=='undefined'&&SYNC&&syncedHere()&&SYNC.token);
 const atlasLink=()=>publishable()?location.origin+location.pathname+'#atlas='+encodeURIComponent(SYNC.url):'';
-let pubState=null;   // {rev,publishedAt,counts} — what the server answered, this session
+let publishResult=null;   // {rev,publishedAt,counts} — what the server answered, this session
 // What leaves, counted from the shared documents this device holds canonically —
 // the founder holds the pen, so this copy IS the record. Pours are the one count
 // the device cannot know: they are gathered from every keeper's ledger on the
@@ -3963,8 +4104,8 @@ let pubState=null;   // {rev,publishedAt,counts} — what the server answered, t
 function publishCounts(){
   const held=new Set(heldRefs());
   return {
-    greens:CAT.lots.entries.filter(e=>e&&!held.has(e.id)).length,
-    roasters:CAT.roasters.entries.filter(e=>e&&regSubstance(e.name)).length,
+    greens:CAT.lots.entries.filter(e=>e&&!held.has(e.id)).length,          // the OWN documents — what this
+    roasters:CAT.roasters.entries.filter(e=>e&&regSubstance(e.name)).length, // pen actually sends to the server
     roasts:CAT.roasts.entries.filter(e=>e&&!held.has(e.lotRef)).length,
     bars:regEntries().length,
     held:held.size,
@@ -3973,8 +4114,8 @@ function publishCounts(){
 function openPublish(){
   if(penGuard())return;
   const c=publishCounts(),n=(v,l)=>`<strong class="num">${v}</strong> ${esc(l)}`;
-  const done=pubState?`<div class="card" style="margin-top:14px">
-    <div class="kv"><span class="k">Published</span><span class="v num">revision ${pubState.rev}</span></div>
+  const done=publishResult?`<div class="card" style="margin-top:14px">
+    <div class="kv"><span class="k">Published</span><span class="v num">revision ${publishResult.rev}</span></div>
     <div class="kv"><span class="k">The address</span><span class="v" style="font-family:var(--mono);font-size:11.5px;word-break:break-all;text-align:right">${esc(atlasLink())}</span></div>
     </div>
     <button class="btn btn-quiet" onclick="copyAtlasLink()">Copy the address</button>
@@ -4005,7 +4146,7 @@ async function publishAtlas(){
     const r=await api('/api/publish','POST',{held:heldRefs()});
     if(r.status===403){penRefused(r);toast('The pen is held elsewhere — nothing published');return}
     if(r.status!==200){toast((r.body&&r.body.message)||'The server refused the copy');return}
-    pubState={rev:r.body.rev,publishedAt:r.body.publishedAt,counts:r.body.counts};
+    publishResult={rev:r.body.rev,publishedAt:r.body.publishedAt,counts:r.body.counts};
     openPublish();
     const p=r.body.counts||{};
     toast(`Published. Revision ${r.body.rev} — ${nPl(p.pours||0,'pour')} carried.`);
@@ -4246,10 +4387,10 @@ function atlasSearchIndex(){
     ix.push({name:lotLabel(l),kind:'lot',sub:sub||'a green on the atlas',
       k:[lotLabel(l),fp.country,fp.region,fp.producer,l.variety,fp.process&&fp.process.family,(l.hardIds||[]).map(h=>h.value).join(' ')].filter(Boolean).join(' ').toLowerCase(),
       go:`openLotPage(${jsq(id)})`})});
-  CAT.roasters.entries.forEach(r=>{if(!r||!regSubstance(r.name))return;
+  catAll('roasters').forEach(r=>{if(!r||!regSubstance(r.name))return;
     ix.push({name:r.name,kind:'roaster',sub:[r.city,r.country].filter(regSubstance).join(', ')||'a roaster on the atlas',
       k:[r.name,r.city].filter(Boolean).join(' ').toLowerCase(),go:`openRoasterPage(${jsq(r.id)})`})});
-  CAT.producers.entries.forEach(p=>{if(!p||!regSubstance(p.name))return;
+  catAll('producers').forEach(p=>{if(!p||!regSubstance(p.name))return;
     ix.push({name:p.name,kind:'grower',sub:[p.region,p.country].filter(regSubstance).join(', ')||'a grower on the atlas',
       k:[p.name,p.region,p.country].filter(Boolean).join(' ').toLowerCase(),go:`openProducerPage(${jsq(p.id)})`})});
   regEntries().forEach(e=>{if(!e||!regSubstance(e.name))return;
@@ -4457,8 +4598,8 @@ function lotRoadStations(lotId){
   const fp=lot.fingerprint||{};
   const growers=(lot.producerRefs||[]).map(id=>catNode('producers',id)).filter(Boolean);
   const procs=(lot.processorRefs||[]).map(id=>catNode('processors',id)).filter(Boolean);
-  const hands=[...new Set(CAT.roasts.entries.filter(r=>r&&r.lotRef===lotId&&r.roasterRef).map(r=>r.roasterRef))];
-  const shops=[...new Set((D.pours||[]).filter(p=>p&&p.lotRef&&lotFwd(p.lotRef)===lotId&&regSubstance(p.shop)).map(p=>p.shop))];
+  const hands=[...new Set(catAll('roasts').filter(r=>r&&r.lotRef===lotId&&r.roasterRef).map(r=>r.roasterRef))];
+  const shops=[...new Set(poursIn([lot]).map(p=>p.shop))];   // every pour the device can read — own, the circle's, and the published copy's
   const bat=lot.processingBatchRef&&catNode('lots',lot.processingBatchRef);
   const ko=(lot.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt)||(bat&&(bat.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt));
   const cups=lotOwnCups(lotId).length;
@@ -4625,13 +4766,13 @@ function scopeGreens(kind,id){
     case 'region':  return A.filter(l=>eq((l.fingerprint||{}).region,id));
     case 'producer':return A.filter(l=>(l.producerRefs||[]).includes(id));
     case 'lot':     {const fid=lotFwd(id);return A.filter(l=>l.id===fid)}
-    case 'roaster': return A.filter(l=>CAT.roasts.entries.some(r=>r&&r.roasterRef===id&&r.lotRef&&lotFwd(r.lotRef)===l.id));
+    case 'roaster': return A.filter(l=>catAll('roasts').some(r=>r&&r.roasterRef===id&&r.lotRef&&lotFwd(r.lotRef)===l.id));
     case 'place':   {const ids=new Set(poursHere(id,regByName(id)).map(x=>x.id));return A.filter(l=>ids.has(l.id))}
     case 'city':{   // a city is a scope like any other — what pours there, and what is roasted there. The scene, derived, never stored
-      const rs=new Set(CAT.roasters.entries.filter(r=>r&&eq(r.city,id)).map(r=>r.id));
+      const rs=new Set(catAll('roasters').filter(r=>r&&eq(r.city,id)).map(r=>r.id));
       const poured=new Set();
       regEntries().filter(e=>eq(e.city,id)).forEach(e=>poursHere(e.name,e).forEach(x=>poured.add(x.id)));
-      return A.filter(l=>poured.has(l.id)||CAT.roasts.entries.some(r=>r&&r.lotRef&&lotFwd(r.lotRef)===l.id&&rs.has(r.roasterRef)));}
+      return A.filter(l=>poured.has(l.id)||catAll('roasts').some(r=>r&&r.lotRef&&lotFwd(r.lotRef)===l.id&&rs.has(r.roasterRef)));}
     case 'setup':   {const ids=new Set(brewsIn(A,id).map(b=>b._lotId));return A.filter(l=>ids.has(l.id))}
     case 'process': return A.filter(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'&&eq(f.family,id)});
     case 'variety': return A.filter(l=>eq(l.variety,id));
@@ -4640,14 +4781,18 @@ function scopeGreens(kind,id){
 }
 /* the edges out of a green set — the same questions every page asks of its scope */
 const handsIn=gs=>{const ids=new Set(gs.map(l=>l.id));
-  return [...new Set(CAT.roasts.entries.filter(r=>r&&r.roasterRef&&r.lotRef&&ids.has(lotFwd(r.lotRef))).map(r=>r.roasterRef))]};
+  return [...new Set(catAll('roasts').filter(r=>r&&r.roasterRef&&r.lotRef&&ids.has(lotFwd(r.lotRef))).map(r=>r.roasterRef))]};
 // every pour the device can read — the walk poursHere makes, pointed the other way:
 // from a green set to its bars. Own ledger first, then the circle's.
 function poursIn(gs){
-  const ids=new Set(gs.map(l=>l.id)),out=[];
-  const scan=list=>(list||[]).forEach(p=>{if(p&&p.lotRef&&regSubstance(p.shop)&&ids.has(lotFwd(p.lotRef)))out.push(p)});
+  const ids=new Set(gs.map(l=>l.id)),out=[],seen=new Set();
+  const scan=list=>(list||[]).forEach(p=>{if(p&&p.lotRef&&regSubstance(p.shop)&&ids.has(lotFwd(p.lotRef))&&!seen.has(p.id)){seen.add(p.id);out.push(p)}});
   scan(D.pours);
   circleSources().forEach(s=>{const d=circleLedger(s);if(d)scan(d.pours)});
+  // the published copy's pours — a pour is a fact about the world, the one
+  // ledger record that publishes (READER.md L2), and without it a reader's road
+  // goes dark at Poured. Own copies win: the id is deterministic on both sides.
+  scan(pubPours());
   return out;
 }
 // the bars, one row per venue: the display name, the last dated sighting, the greens it has poured
@@ -4766,7 +4911,7 @@ function originMarks(gs){
 function chartMarks(gs){
   const marks=[],listed=[];
   handsIn(gs).forEach(rid=>{const r=catNode('roasters',rid);if(!r)return;
-    const mine=gs.filter(l=>CAT.roasts.entries.some(x=>x&&x.roasterRef===rid&&x.lotRef&&lotFwd(x.lotRef)===l.id));
+    const mine=gs.filter(l=>catAll('roasts').some(x=>x&&x.roasterRef===rid&&x.lotRef&&lotFwd(x.lotRef)===l.id));
     const m={k:'roaster',id:rid,label:r.name,sub:r.city||'city unread',cls:'roaster',city:r.city||'',
       lat:r.lat,lon:r.lon,n:mine.length,greens:mine.map(l=>l.id)};
     (r.lat!=null?marks:listed).push(m)});
@@ -5013,7 +5158,7 @@ function nodePage(kind,id){
       return rowlink('lot',l.id,esc(lotLabel(l)),esc([fp.region,fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):'',l.variety].filter(regSubstance).join(' · ')||'unread'),h?esc(nPl(h,'hand')):'unroasted')}).join('')}`:'';
   const handsSec=(kind!=='roaster'&&!covers.includes('hands')&&hands.length)?`<div class="section-head"><h2>${one?'Who roasts it':'The hands that roast from here'}</h2><span class="n-note num">n=${hands.length}</span></div>
     ${hands.map(ref=>{const r=catNode('roasters',ref)||{};
-      const n=gs.filter(l=>CAT.roasts.entries.some(rr=>rr&&rr.roasterRef===ref&&rr.lotRef&&lotFwd(rr.lotRef)===l.id)).length;
+      const n=gs.filter(l=>catAll('roasts').some(rr=>rr&&rr.roasterRef===ref&&rr.lotRef&&lotFwd(rr.lotRef)===l.id)).length;
       return rowlink('roaster',ref,esc(roasterName(ref)),esc([r.city,r.country].filter(regSubstance).join(', ')),esc(nPl(n,'green')))}).join('')}`:'';
   const barsSec=(kind!=='place'&&!covers.includes('bars'))?(bars.length?`<div class="section-head"><h2>${one?'Where it pours':'Bars pouring from here'}</h2><span class="n-note num">n=${bars.length}</span></div>
     ${bars.map(b=>{const e=regByName(b.shop);
@@ -5275,7 +5420,7 @@ function specCity(id){
   const eq=v=>regSubstance(v)&&normPlace(String(v))===normPlace(String(id));
   const gs=scopeGreens('city',id);
   const barsHere=regEntries().filter(e=>eq(e.city));
-  const handsHere=CAT.roasters.entries.filter(r=>r&&eq(r.city));
+  const handsHere=catAll('roasters').filter(r=>r&&eq(r.city));
   if(!gs.length&&!barsHere.length&&!handsHere.length)return null;
   return {
     eyebrow:'City',title:esc(id),qual:'',
@@ -5303,7 +5448,7 @@ function specRoaster(rid){
     :'This page is compiled from sightings. When '+esc(r.name)+' signs it, they hold the pen on their own link — the record stays the reader’s.';
   // on offer — each green named the way the bag named it, newest roast first
   const byLot=new Map();
-  CAT.roasts.entries.forEach(x=>{if(!x||x.roasterRef!==rid||!x.lotRef)return;
+  catAll('roasts').forEach(x=>{if(!x||x.roasterRef!==rid||!x.lotRef)return;
     const lid=lotFwd(x.lotRef),l=catNode('lots',lid);if(!l||!lotLive(l))return;
     let e=byLot.get(lid);if(!e){e={id:lid,lot:l,roasts:[]};byLot.set(lid,e)}
     e.roasts.push(x)});
@@ -5354,7 +5499,7 @@ function specLot(lotId){
   const lot=catNode('lots',lotId);if(!lot)return null;
   const fp=lot.fingerprint||{};
   const gr=grainRead(lot.grain);
-  const roasts=CAT.roasts.entries.filter(r=>r&&r.lotRef===lotId)
+  const roasts=catAll('roasts').filter(r=>r&&r.lotRef===lotId)
     .sort((a,b)=>(b.roastDate||'').localeCompare(a.roastDate||'')||(b.createdAt||'').localeCompare(a.createdAt||''));
   const growers=(lot.producerRefs||[]).map(i=>catNode('producers',i)).filter(Boolean);
   const bat=lot.processingBatchRef&&catNode('lots',lot.processingBatchRef);
@@ -5443,7 +5588,7 @@ function specLot(lotId){
   const bindRows=binds.map(b=>{const rec=findRec(b.bind.ref),label=rec.kind?([rec.shop,rec.drink].filter(Boolean).join(' · ')||'a café cup'):bagName(rec);
     const how=b.via==='merge'?'joined by a keeper':b.via==='split'?'set apart by a keeper':b.rung==='confirmed'?'confirmed by a keeper':'matched by fingerprint';
     return `<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(label)}</span><span class="dd">${how}${(b.evidence&&(b.evidence.fields||[]).length)?' · '+esc(b.evidence.fields.join(' · ')):''}</span></span><button class="btn btn-quiet" style="width:auto;padding:4px 10px;margin:0" onclick="reverseBind(${jsq(lotId)},${jsq(b.bind.ref)})">Keep apart</button></div>`}).join('');
-  const sibs=bat?CAT.lots.entries.filter(l=>lotLive(l)&&l.processingBatchRef===bat.id&&l.id!==lotId):[];
+  const sibs=bat?catAll('lots').filter(l=>lotLive(l)&&l.processingBatchRef===bat.id&&l.id!==lotId):[];
   const batchLine=bat?`<div class="muted small" style="margin:0 2px 12px">Part of a processing batch — <button class="text-action" onclick="openBatchPage(${jsq(bat.id)})">the outturn</button>${sibs.length?', beside '+sibs.map(sb=>`<button class="text-action" onclick="openLotPage(${jsq(sb.id)})">${esc(lotLabel(sb))}</button>`).join(', '):''}. Same cherry, a different screen.</div>`:'';
   const cands=isAdmin()?mergeCandidates(lotId):[];
   const undoable=!isAdmin()||!lot.lineage?[]:(lot.lineage.mergedFrom||[]).map(i=>catNode('lots',i)).filter(t=>t&&lotTomb(t)===lotId);
@@ -5495,7 +5640,7 @@ function plateFacets(){
   // each facet reads its own counts — greens, and the hands that carry them. The row says what is
   // behind the door before the tap, rather than repeating what every row on the list is.
   return [...tally('country').slice(0,4),...tally('process').slice(0,3),...tally('variety').slice(0,3)]
-    .map(f=>{const h=new Set();f.ids.forEach(id=>CAT.roasts.entries.forEach(r=>{if(r&&r.lotRef===id&&r.roasterRef)h.add(r.roasterRef)}));
+    .map(f=>{const h=new Set();f.ids.forEach(id=>catAll('roasts').forEach(r=>{if(r&&r.lotRef===id&&r.roasterRef)h.add(r.roasterRef)}));
       return {...f,hands:h.size}});
 }
 /* ============ Act III — the signed page: the claim ceremony + the pen ============ */
@@ -5525,7 +5670,7 @@ function penRows(entity,key){
       {field:'pin',k:'The pin',v:[e.neighborhood,e.city].filter(Boolean).join(' · ')||'—'}];
   }else{
     const r=catNode('roasters',key)||{};
-    const latest=CAT.roasts.entries.filter(x=>x&&x.roasterRef===key&&x.roastDate).sort((a,b)=>(b.roastDate||'').localeCompare(a.roastDate||''))[0];
+    const latest=catAll('roasts').filter(x=>x&&x.roasterRef===key&&x.roastDate).sort((a,b)=>(b.roastDate||'').localeCompare(a.roastDate||''))[0];
     rows=[latest&&{field:'roast',k:'Roast date · '+(latest.offeringName||'latest'),v:fmtMDY(latest.roastDate)},
       {field:'door',k:'Where to buy',v:r.site||r.city||'—'},
       {field:'city',k:'City',v:r.city||'—'}].filter(Boolean);
@@ -5599,7 +5744,7 @@ function renderClaim(){
     :['Origin facts — stated, like anyone','Any venue’s menu but your own'];
   const summary=isCafe
     ?[['The bar',name],['Where',[e.neighborhood,e.city].filter(Boolean).join(' · ')||'city unwritten'],['Pours',String((D.pours||[]).filter(p=>p&&normName(p.shop)===normName(c.key)).length)||'0'],['Compiled from','sightings · unsigned']]
-    :[['The roaster',name],['On the chart',[e.city,e.country].filter(regSubstance).join(', ')||'city unwritten'],['On offer',String(CAT.roasts.entries.filter(x=>x&&x.roasterRef===c.key).length)+' roasts on the record'],['Compiled from','sightings · unsigned']];
+    :[['The roaster',name],['On the chart',[e.city,e.country].filter(regSubstance).join(', ')||'city unwritten'],['On offer',String(catAll('roasts').filter(x=>x&&x.roasterRef===c.key).length)+' roasts on the record'],['Compiled from','sightings · unsigned']];
   let head,body,primary,primaryCall,stepLabel;
   if(c.step===0){
     stepLabel='1 / 3 · the record as it stands';
@@ -5700,7 +5845,7 @@ function proposeLook(){
   const tok=psNormTok(idText);
   let m=null;
   if(tok){
-    for(const L of CAT.lots.entries){
+    for(const L of catAll('lots')){
       if(!lotLive(L))continue;
       const hit=(L.hardIds||[]).some(h=>h&&!h.withdrawnAt&&tok.includes(psNormTok(h.value)));
       if(hit){m={kind:'hardid',lot:L,shared:[{k:'Shared id',v:idText}]};break}
@@ -5713,7 +5858,7 @@ function proposeLook(){
     // that is what "as the bag says it" names; the scorer weighs the cluster
     const rec={id:'sighting',name,originCountry:s.originCountry,originRegion:s.originRegion,producer:name,variety:'',process,lot:''};
     let best=null,bs=0;
-    CAT.lots.entries.forEach(L=>{if(!lotLive(L))return;
+    catAll('lots').forEach(L=>{if(!lotLive(L))return;
       const fam=(L.fingerprint||{}).process&&L.fingerprint.process.family;
       if(process&&fam&&fam!=='unspecified'&&fam.toLowerCase()!==process.toLowerCase())return; // a process conflict never fingerprints — the guard reads it
       const sc=scoreLot(rec,L);if(sc.score>bs){bs=sc.score;best={kind:'fingerprint',lot:L,score:sc.score,shared:(sc.fields||[]).map(f=>({k:f,v:''}))}}});
@@ -5725,7 +5870,7 @@ function proposeLook(){
   if(!m&&name&&name.trim().length>=3){
     const nn=name.trim().toLowerCase();
     const reg=(s.originRegion||'').toLowerCase(),ctry=(s.originCountry||'').toLowerCase();
-    for(const L of CAT.lots.entries){
+    for(const L of catAll('lots')){
       if(!lotLive(L))continue;
       const fp=L.fingerprint||{};const fam=fp.process&&fp.process.family;
       if(process&&fam&&fam!=='unspecified'&&fam.toLowerCase()!==process.toLowerCase())continue;
@@ -5741,7 +5886,7 @@ function proposeLook(){
   // the guard — a shared name with a different process never merges on the string
   if(!m&&name&&process){
     const nn=name.toLowerCase();
-    for(const L of CAT.lots.entries){
+    for(const L of catAll('lots')){
       if(!lotLive(L))continue;
       const fp=L.fingerprint||{};const fam=fp.process&&fp.process.family;
       const prod=(fp.producer||'').toLowerCase();
@@ -6341,7 +6486,7 @@ function doorParse(text){
   const yr=text.match(/\b(20[12]\d)\b/);      if(yr)f.harvest=yr[1];
   const rst=text.match(/\b(light-medium|medium-dark|light|medium|dark)\s+roast\b/i);
   if(rst)f.roastLevel=rst[1].charAt(0).toUpperCase()+rst[1].slice(1).toLowerCase();
-  const rhit=doorFindAll(text,CAT.roasters.entries.filter(x=>x&&regSubstance(x.name)).map(x=>x.name)); // a hand the atlas already knows
+  const rhit=doorFindAll(text,catAll('roasters').filter(x=>x&&regSubstance(x.name)).map(x=>x.name)); // a hand the atlas already knows
   if(rhit.length)f.roaster=rhit[0];
   const first=(text.split(/\n/).map(s=>s.trim()).filter(Boolean)[0]||'').replace(/\s*[–—-]\s*$/,'');
   if(first.length>=2&&first.length<=60)f.nameGuess=first; // a suggestion for the offering's name — yours to overwrite
@@ -6562,7 +6707,7 @@ function known(field,ctx){
   if(regSubstance(key))ls=ls.filter(l=>normPlace(String(fv(l,by)||''))===normPlace(String(key)));
   if(!ls.length&&regSubstance(key))ls=all; // nothing recorded under it yet — offer the wider list rather than nothing
   const m=new Map();
-  if(field==='roaster')CAT.roasters.entries.forEach(r=>{if(r&&regSubstance(r.name)){const n=scopeGreens('roaster',r.id).length;if(n)m.set(r.name,n)}});
+  if(field==='roaster')catAll('roasters').forEach(r=>{if(r&&regSubstance(r.name)){const n=scopeGreens('roaster',r.id).length;if(n)m.set(r.name,n)}});
   else ls.forEach(l=>{const v=fv(l,field);if(regSubstance(v))m.set(v,(m.get(v)||0)+1)});
   const rows=[...m.entries()].sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0]))).slice(0,6);
   return {rows,narrowedBy:regSubstance(key)&&ls.length<all.length?key:''};
@@ -7705,7 +7850,7 @@ function ledgerData(){
   regEntries().forEach(e=>{if(e&&e.signed&&e.signed.at&&e.signed.by===me){
     const corr=Object.entries(e.penFacts||{}).map(([f,c])=>({field:f,value:c.v}));
     signedPages.push({page:e.name,kind:'cafe',corrections:corr})}});
-  CAT.roasters.entries.forEach(r=>{if(r&&r.signed&&r.signed.at&&r.signed.by===me){
+  CAT.roasters.entries.forEach(r=>{if(r&&r.signed&&r.signed.at&&r.signed.by===me){   // pages YOU signed — your own document
     const corr=Object.entries(r.penFacts||{}).map(([f,c])=>({field:f,value:c.v}));
     signedPages.push({page:r.name,kind:'roaster',corrections:corr})}});
   const firstAt=[...D.cups,...D.brews,...D.bags].map(x=>x&&x.createdAt).filter(Boolean).sort()[0];
@@ -8350,6 +8495,70 @@ async function syncNow(manual){
   }catch(e){
     if(!(e&&e.auth)){syncState='offline';if(manual)toast('Server unreachable — working locally')}
   }finally{syncBusy=false;saveSync();paintSync()}
+}
+
+/* ============ the reader's copy — how it arrives, and how it stays honest ============ */
+/* The same three moments as sync — boot, `online`, and `visibilitychange` to
+ * visible — one UNAUTHENTICATED ?meta=1 read, and a full pull only when the rev
+ * moved. A reader who never reconnects reads the copy they have, forever, and
+ * the Desk says how old it is. Offline-first is unchanged: the stored copy
+ * stands whole with the network off, the fetch is never blocking, and there is
+ * never a spinner in front of the record. */
+const pubBase=u=>String(u||'').replace(/\/+$/,'');
+// No headers at all: a bodyless GET that sets Content-Type turns every read of
+// a stranger's atlas into a CORS preflight round-trip, for nothing.
+async function pubGet(url,path){
+  const r=await fetch(pubBase(url)+path);
+  return {status:r.status,body:await r.json().catch(()=>null)};
+}
+async function pubSync(manual,url){
+  url=url||(PUB&&PUB.url)||PUBLIC_ATLAS;
+  if(!url||pubBusy)return false;
+  pubBusy=true;pubState='checking';if(manual)render();
+  try{
+    const meta=await pubGet(url,'/api/public?meta=1');
+    if(meta.status===404){pubState='missing';if(manual)toast('Nothing is published from that address yet');return false}
+    if(meta.status!==200){pubState='offline';if(manual)toast('That address did not answer with an atlas');return false}
+    const same=PUB&&PUB.url===pubBase(url)&&PUB.rev===meta.body.rev&&PUB.atlas;
+    if(same){PUB.fetchedAt=new Date().toISOString();PUB.counts=meta.body.counts||PUB.counts;savePub();pubState='idle';
+      if(manual)toast('This is the newest copy');return true}
+    const full=await pubGet(url,'/api/public');
+    if(full.status!==200||!full.body||!full.body.atlas){pubState='offline';if(manual)toast('The copy could not be read');return false}
+    PUB={url:pubBase(url),rev:full.body.rev,publishedAt:full.body.publishedAt,publishedBy:full.body.publishedBy,
+      counts:meta.body.counts||null,fetchedAt:new Date().toISOString(),atlas:full.body.atlas};
+    savePub();catBust();pubState='idle';
+    if(manual)toast(`The atlas is here — revision ${PUB.rev}`);
+    return true;
+  }catch(e){pubState='offline';if(manual)toast('Offline — this copy stands');return false}
+  finally{pubBusy=false;if(manual)render()}
+}
+// How a founder shares the atlas: one link, no account, no install. It lands
+// straight in reader mode, skipping the welcome.
+function pubFromHash(){
+  const m=/[#&]atlas=([^&]+)/.exec(location.hash||'');
+  if(!m)return null;
+  let u='';try{u=decodeURIComponent(m[1])}catch(e){u=m[1]}
+  return u?pubBase(u):null;
+}
+// Named by hand on the Desk, when neither the link nor the build constant answers.
+function openNameAtlas(){
+  openSheet(`
+  <h3>Read a published atlas</h3>
+  <div class="sub">The address a keeper published from</div>
+  <label class="f"><span class="l">Server</span><input type="text" id="pb_url" value="${esc((PUB&&PUB.url)||'')}" placeholder="https://sync.example.com" inputmode="url" autocapitalize="off" autocorrect="off"></label>
+  <div class="muted small" style="margin-bottom:10px">No account, nothing to sign. What comes down is the atlas as that keeper published it — a copy, with its own date on it.</div>
+  <button class="btn btn-primary" onclick="nameAtlasGo()">Fetch the copy</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
+}
+async function nameAtlasGo(){
+  let u=val('pb_url').trim();if(!u){toast('Name the address');return}
+  if(!/^https?:\/\//.test(u))u='https://'+u;
+  const okd=await pubSync(true,u);
+  if(okd){closeSheet();go('atlas')}
+}
+function pubForget(){
+  PUB=null;savePub();catBust();closeSheet();render();
+  toast('The copy is set down — your own record stands alone');
 }
 
 /* --- sync UI --- */
@@ -9426,7 +9635,9 @@ function openWhatsNew(auto){
  * The answer sets depth: Reading, Remembering, or Making. Nothing is locked;
  * the ladder on the Desk opens the rest. Gated on firstRun() so returning users
  * never see it; replayable from More (a replay never closes an open room). */
-function needsWelcome(){return !readOnly()&&!getPref('onboarded',false)&&firstRun()}
+// A device that arrived by an #atlas= link was handed a copy to read — it does
+// not need to be asked how it takes its coffee before it can read one.
+function needsWelcome(){return !readOnly()&&!pubArrived&&!getPref('onboarded',false)&&firstRun()}
 function openWelcome(){renderWelcome();
   const w=document.getElementById('welcome');w.classList.add('open');w.scrollTop=0}
 function closeWelcome(){document.getElementById('welcome').classList.remove('open')}
@@ -9463,6 +9674,11 @@ function finishWelcome(d,t,msg){
 
 /* ============ boot ============ */
 applyTheme();
+// The copy arrives before anything reads the atlas: an #atlas= link, else the
+// stored copy, else the build constant. Only the LINK skips the welcome — a
+// device handed a copy to read was not asked how it takes its coffee.
+const _hashAtlas=pubFromHash();
+if(_hashAtlas){pubArrived=true;if(!PUB||PUB.url!==_hashAtlas)PUB={url:_hashAtlas,rev:0,publishedAt:null,publishedBy:'',fetchedAt:null,counts:null,atlas:(PUB&&PUB.url===_hashAtlas&&PUB.atlas)||null};savePub()}
 regSeed(); // the Register meets every ledger already on this device
 catSeed(); // and the catalog spine is normalised from the same ledgers (device-local, unrendered — step 1)
 catSeedGear(); // Gear too — grinder/brewer models swept from every Setup
@@ -9487,6 +9703,9 @@ if(needsWelcome()){
 // Sync: on boot, when the network returns, and when the app comes back to the
 // foreground (iOS PWAs get no background time — this is the sync heartbeat).
 if(SYNC)setTimeout(()=>syncNow(false),400);
+// The reader's heartbeat rides the same three moments, unauthenticated and
+// never blocking: the stored copy is already on screen before this fires.
+if((PUB&&PUB.url)||PUBLIC_ATLAS)setTimeout(()=>pubSync(false).then(got=>{if(got)render()}),400);
 // Demo hook for the lot page — window.devSeed() from the console, or open with #seed-lot.
 window.devSeed=devSeed;
 window.devSeedOutturn=devSeedOutturn;
@@ -9501,8 +9720,8 @@ if(location.hash==='#seed-merge')setTimeout(devSeedMerge,200);
 if(location.hash==='#seed-batch')setTimeout(devSeedBatch,200);
 if(location.hash==='#seed-chart')setTimeout(devSeedChart,200);
 if(location.hash==='#chart')setTimeout(openCurate,200);
-window.addEventListener('online',()=>{syncNow(false);_mlDown=false;smapMount()});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyTheme();syncNow(false)}});
+window.addEventListener('online',()=>{syncNow(false);pubSync(false).then(got=>{if(got)render()});_mlDown=false;smapMount()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyTheme();syncNow(false);pubSync(false).then(got=>{if(got)render()})}});
 </script>
 </body>
 </html>
