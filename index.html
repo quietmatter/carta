@@ -2655,10 +2655,15 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.11.1';
+const APP_VERSION='6.12.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.12.0',date:'July 2026',title:'Authoring asks the same questions.',items:[
+    'The authoring form speaks the shared origin block now. It had its own smaller grid — no harvest, no height, no printed code, no rails — so a green authored straight onto the atlas arrived knowing less than a green a bag carried in. One vocabulary, every surface: what the shelf form asks, the author’s desk asks.',
+    'The two columns land. A harvest and a height typed while authoring go where a bag’s go — the year to its own column, the band onto the green — instead of being dropped at the door.',
+    'The rails came with it. Country, region, producer, variety, process — what the record already holds, with counts, one tap to fill.',
+  ]},
   {v:'6.11.1',date:'July 2026',title:'What you write on a copy is written on your record.',items:[
     'A green you read from someone else’s published atlas can be written on. Adding a height, a cupping, a printed code, a confirmed bind, or the washing station behind it used to land on the copy — which no save ever keeps — so the fact stood until you closed the app and was gone by morning. It lands on your own record now, and it stays there.',
     'A height that disagrees is still carried, never resolved. Where the copy already states a band and yours differs, the published figure keeps standing and yours is kept beside it with your name on it — the law the record has always kept for two heights that disagree, now kept across a copy as well.',
@@ -3723,7 +3728,8 @@ function authorRoast(f,who){
 
     roaster:(f.roaster||'').trim(),roasterCity:(f.roasterCity||'').trim(),site:(f.site||'').trim(),name:(f.offering||'').trim(),
     originCountry:(f.originCountry||'').trim(),originRegion:(f.originRegion||'').trim(),producer:(f.producer||'').trim(),
-    variety:(f.variety||'').trim(),process:(f.process||'').trim(),lot:(f.lot||'').trim(),
+    variety:(f.variety||'').trim(),process:(f.process||'').trim(),lot:(f.lot||'').trim(),harvest:(f.harvest||'').trim(),
+    producerKind:f.producerKind||'',station:(f.station||'').trim(),
     hardIds:(f.hardIds||[]).slice(),roastLevel:f.roastLevel||0,roastDate:f.roastDate||''};
   D.authored=D.authored||[];D.authored.push(rec);
   catStampRoaster(rec);
@@ -3747,29 +3753,24 @@ function openAuthorRoast(prefRoaster){
   <label class="f"><span class="l">Roaster city <span class="opt">optional</span></span><input type="text" id="a_city" placeholder="Los Angeles"></label>
   <div class="muted small" style="margin:6px 2px 0">Places the roaster on the map — a city point, no finer. Online only; offline it lists.</div>
   <label class="f"><span class="l">Roast level</span>${seg('a_roast',ROAST_LEVELS.slice(1),'Light')}</label>
-  <div class="grid2">
-    <label class="f"><span class="l">Country</span><input type="text" id="a_country" placeholder="Ethiopia"></label>
-    <label class="f"><span class="l">Region / zone</span><input type="text" id="a_region" placeholder="Yirgacheffe"></label>
-    <label class="f"><span class="l">Producer / station</span><input type="text" id="a_producer" placeholder="Konga washing station"></label>
-    <label class="f"><span class="l">Variety</span><input type="text" id="a_variety" placeholder="mixed heirloom"></label>
-    <label class="f"><span class="l">Process</span><input type="text" id="a_process" placeholder="washed"></label>
-    <label class="f"><span class="l">Lot no.</span><input type="text" id="a_lot" placeholder="free text"></label>
-    <label class="f"><span class="l">Roast date</span><input type="date" id="a_roastDate"></label>
-  </div>
-  ${hardIdRow('a_hid')}
+  ${originFieldsHTML('a_',{},null,
+    `<label class="f"><span class="l">Roast date</span><input type="date" id="a_roastDate"></label>`)}
   <button class="btn btn-primary" onclick="saveAuthorRoast()">Author it</button>
   <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
+  repaintSug(); // a sheet never passes through render() — paint the rails once its inputs exist
 }
 function saveAuthorRoast(){
   if(penGuard())return;
-  const hids=readHardIds('a_hid'); if(hids===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
+  const o=readOriginFields('a_'); if(o===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
   const lvl=ROAST_LEVELS.indexOf(segState.a_roast||'');
-  const f={roaster:val('a_roaster'),roasterCity:val('a_city'),offering:val('a_offering'),originCountry:val('a_country'),originRegion:val('a_region'),
-    producer:val('a_producer'),variety:val('a_variety'),process:val('a_process'),lot:val('a_lot'),
-    roastLevel:lvl<0?0:lvl,roastDate:val('a_roastDate'),hardIds:hids};
+  const f={roaster:val('a_roaster'),roasterCity:val('a_city'),offering:val('a_offering'),originCountry:o.originCountry,originRegion:o.originRegion,
+    producer:o.producer,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
+    producerKind:o.producerKind,station:o.station,
+    roastLevel:lvl<0?0:lvl,roastDate:val('a_roastDate'),hardIds:o.hardIds};
   if(!f.roaster){toast('Name the roaster — a roast is one roaster’s reading of a green');return}
   if(!lotWorthy({...f,origin:''})){toast('Give the green an origin — a country at least, or a printed code');return}
   const {rec,res}=authorRoast(f);
+  doorStampActors(rec,o);doorStampAltitude(rec,o);save(); // the authored green keeps the same two columns a bag's does
   atlasGeoFill(rec); // the optional, keyless fill — locates the roaster's city and the origin's region on the map
   closeSheet();
   if(res&&res.action==='propose'&&res.propose){openLotPropose(rec.id,res.propose.lot.id,res.propose.fields);toast('Authored — one green reads close; settle it')}
@@ -7656,7 +7657,7 @@ function doorBind(kind){
  * miss the values on its own screen. ---- */
 const NARROW={region:'country',producer:'region',variety:'country',process:'country'};
 // every prefixed id the origin block can emit — one row per surface, so adding a surface is one line
-const SUG_FIELDS=['f_','c_'].flatMap(p=>[[p+'country','country'],[p+'region','region'],[p+'producer','producer'],[p+'variety','variety'],[p+'process','process'],[p+'roaster','roaster']])
+const SUG_FIELDS=['f_','c_','a_'].flatMap(p=>[[p+'country','country'],[p+'region','region'],[p+'producer','producer'],[p+'variety','variety'],[p+'process','process'],[p+'roaster','roaster']])
   .concat([['d_roaster','roaster']]);
 function known(field,ctx){
   ctx=ctx||{};
