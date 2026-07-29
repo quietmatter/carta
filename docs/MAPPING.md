@@ -254,6 +254,56 @@ founder who holds a green back should be able to *see the hole they are making*
 
 Never in red. A hold is reversible, and red is spent once.
 
+## The ground returns — streets behind the chart frame, and nowhere else
+
+Steps 1–7 left the unified map a drawing and nothing else. That was the right
+order — a map that cannot draw itself has no business fetching tiles — but it
+left a real thing missing. A bar is a **front door**, and a front door in an
+empty box is a dot; on a street you recognise it is a place you have walked
+past. The chart frame was always specified with *street tiles behind when they
+can be had*, and this is that clause, built.
+
+**The streets are the paper. The drawing is still the record.** Nothing hands
+over when tiles land. This is the one line that separates it from the café
+maps, where the live layer takes over and replaces the drawn pins with real
+markers: here the tiles slot **under** the SVG and the SVG is untouched — the
+same marks, the same folds, the same counts, the same taps, the same ring. Take
+the tiles away and not one thing about the plot moves. That is what makes it an
+enhancement in fact and not only in intention.
+
+**The tiles are fitted to the frame the plot already computed.** `plotSVG` reads
+its own ground back out of the projection that drew it — the box spans `W/s` km
+across, so its corners invert to real lat/lon — and the camera is set from that,
+never the other way around. A mark and the road beneath it cannot disagree about
+where they are, because only one of them decided. Measured, every drawn mark
+lands within a metre or two of its own coordinate on the tile layer.
+
+**Three refusals hold.**
+
+- **Never behind the origin frame.** An origin mark is a centroid — an area
+  standing in for a point. A centroid drawn over a named road reads as an
+  address. That is M1's lie told in ink instead of in words, and it is the exact
+  failure the origin frame exists to avoid. No span, no scope, no exception.
+- **Never wider than a ground.** Streets go behind a frame only while it is
+  narrow enough for a street to be a street — `STREET_KM`, derived as three
+  scene-links (120 km) rather than picked, so it moves with `SCENE_KM` if that
+  ever does. Above it there is no single ground to lay, only texture, and the
+  frame says so in its own line rather than quietly drawing nothing.
+- **Still no camera.** The layer is not interactive: there is nothing to pan,
+  nothing to pinch, and nothing remembered between screens. The walk is still
+  the zoom. `_smapCam` is only written by a surface that asked to be remembered,
+  and a ground layer never asks.
+
+The basemap runs a **quiet** variant behind a frame: no admin boundary, no city
+labels. Two reasons, and both are already law here — the frame's own marks carry
+the names, and two sets of names in two typefaces fight; and the ember is never
+spent on the map, where a strong dashed line reads as data.
+
+Everything else is unchanged. The layer is keyless and accountless, lazy-loaded
+only when a frame is on screen and the network answers, and a repaint over the
+same ground arrives already there rather than fading in again — *used more,
+moves less*.
+
 ## What this answers in `CHARTS.md`, and what it retires
 
 | `CHARTS.md` asked for | here |
@@ -290,6 +340,9 @@ entries.
 renders first from stored coordinates, stands alone offline, and every mark,
 tap, fold and count works with zero tiles. The prototype ships no tiles at all
 and says so — which is the honest demonstration that nothing requires them.
+This survived the layer being built (6.8.0, above): the tiles go *under* the
+drawing rather than replacing it, so the demonstration is now the app's own
+offline state rather than a property of the prototype alone.
 
 **Height still places and never ranks.** `scopeGreens` has no altitude branch and
 neither does any mark: nothing on the map is positioned, sized, ordered or
@@ -319,9 +372,11 @@ published atlas over it.
 | 5 | the ring — `markKept`, and the *Yours* lens | new, small | **built** (6.7.0) |
 | 6 | `reader()` and its predicates; the ring and the lens absent; the road's five stations | `READER.md` §5 | **built** (6.7.0) |
 | 7 | the hold: faint marks and their count on the founder's map, beside the Desk's publish counts | `READER.md` F1–F3 | **built** (6.7.0) |
+| 8 | the street layer as **ground**: tiles under the chart frame at scene scale, fitted to the plot's own box; never under the origin frame; no camera | `smapBoot` gains `behind`, `plotSVG` returns its ground | **built** (6.8.0) |
 
 Steps 1–4 give every page in the app one honest map. 5–7 give a stranger the
 same map, and give the founder the ability to see what they are not sending.
+8 puts real ground under the half of it that has a ground to stand on.
 
 ### As built (6.7.0)
 
@@ -344,6 +399,29 @@ Both the ring and the lens are absent under `reader()`, which is the claim this
 document makes about the published atlas, now true in code: the walk asserts
 that a reader's map draws both frames, the folds, the listed strip and the
 derived key, and differs from a keeper's by exactly one ring and one chip.
+
+### As built (6.8.0)
+
+`plotSVG` now returns its `ground` — the box's corners in real lat/lon, inverted
+from the same projection that placed the marks — and, when the caller allows it
+and the ground is under `STREET_KM`, registers a tile surface on the box itself.
+`mapHTML` passes `streets:true` to the chart frame and never to the origin one,
+which is the whole of the asymmetry: one flag, one call site, and the refusal is
+stated on the page beneath the frame that makes it.
+
+`smapBoot` gained one mode, `behind`. The live layer is inserted as the box's
+first child instead of appended, the hand-over that removes the drawn pins is
+skipped, no markers are added, and the box takes a `.streets` class so the
+frame's own labels pick up a paper halo rather than competing with a street
+name. `smapStyle(quiet)` drops the boundary and the city labels. A ground layer
+passes no `camKey`, so nothing is written to `_smapCam` — a repaint refits from
+the marks, which is the only source that was ever allowed to decide.
+
+Both states are verified against the real library: online, every drawn mark
+sits within two metres of its own coordinate on the tiles, the SVG survives the
+mount with every mark intact, and no camera is retained; offline, the plot draws
+alone, nothing is removed, and no note is shown — there is nothing missing to
+report, because the drawing was always the map.
 
 ---
 
