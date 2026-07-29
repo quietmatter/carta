@@ -468,6 +468,18 @@ server/
   polygon** — coffee's regions are sometimes an admin-1 (Huila) and sometimes a
   catchment nobody has drawn (Yirgacheffe), and matching a name to a shape is
   exactly the guess the resolver refuses everywhere else.
+  **The highlands** (`LAND_TOPO`, `landTopo`) are the same ground read for its
+  *shape*: contours at 1,000 / 2,000 / 3,000 m, cut at build time from the
+  public-domain Terrarium elevation tiles at ~5 km, masked to each country's own
+  drawn outline, encoded exactly like `LANDS` (`landPts` reads both) — 48 countries
+  in ~20 KB. Drawn `.topo t1/t2/t3` over the land's fill and under everything else:
+  dotted, monochrome, `pointer-events:none`, weight rising with height because that
+  is how a contour is read and for no other reason. Withheld above `TOPO_KM` (4,500
+  km — STREET_KM's refusal one scale up: a contour that cannot be a line is texture
+  pretending to be information), and the frame says which case it is.
+  **It is a plan, the terrace is a section, and they answer different questions**:
+  the contour is *terrain*, never a green's stated `altitudeMasl`, never a grade,
+  never a facet — a mark inside the two-thousand line is not a finer coffee.
 - **the standing** — a coffee's rarity and caliber, compiled from sourced facts
   (VISION step 5), reborn from the old café reach onto the coffee it always
   belonged on. Three independent axes, never merged into one verdict:
@@ -773,7 +785,11 @@ the brew corpus (step 6) and discovery (step 7) follow.
   never let anything on the land be tapped, counted, sorted or totalled — it is
   paper, and the moment it enters a count it has become a record it never was.
   A country `LANDS` has no outline for is named in words, never approximated by
-  a neighbour or a bounding box.
+  a neighbour or a bounding box. The **contours are terrain, not a reading**: they
+  are drawn from an elevation model and never from `altitudeMasl`, they never
+  become a band, a facet, a sort or a fourth standing axis, and no copy may imply
+  a coffee is finer for sitting above a line. *Height places, it never ranks*
+  holds on the plan exactly as it holds on the terrace.
 - **A station is a processor, never a grower.** They are two actors, two catalog
   kinds and two pages: `producerRefs` and `processorRefs` never stand in for one
   another, `growersOf` refuses to count a station-tagged producer, and a station

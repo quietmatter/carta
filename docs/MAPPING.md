@@ -349,6 +349,36 @@ claims nothing the mark does not already claim.
 The outline is a **drawing, not an adjudication**. CARTA keeps coffee's record,
 not the world's borders, and the primer says so on the page.
 
+### The highlands — the same ground, read for its shape
+
+An outline says *where* a country is. It says nothing about **why coffee is grown
+in one part of it and not another**, which is the question the origin frame is
+actually standing in front of. The answer is terrain, and `VISION`'s terrace has
+argued for versions that altitude is the fact about a growing region — but the
+terrace is a *section*, and a section cannot say where on the map the high
+ground lies. So the plan says it: contours at **1,000 / 2,000 / 3,000 m**, cut
+at build time from the public-domain Terrarium elevation tiles (~5 km samples),
+masked to each country's own drawn outline and carried in the file exactly as the
+outlines are — 48 countries in about 20 KB, no tile, no fetch.
+
+Three things keep it honest, and each is a line already drawn elsewhere:
+
+- **It is terrain, and it is never a reading.** The contour comes from an
+  elevation model, never from `altitudeMasl`. A green's stated band is the
+  terrace's business and stays there. Two surfaces, two questions, no crossing.
+- **It never ranks.** *Height places, it never ranks* is an invariant, and the
+  plan does not get an exemption. A mark inside the two-thousand line is not a
+  finer coffee than a mark outside it; nothing sorts, cuts, facets or scores by
+  it, and the copy says so where it could possibly be misread. Line weight rises
+  with height because that is how a contour map is read, and for no other reason.
+- **It is withheld when it cannot be read.** `TOPO_KM` (4,500 km) is `STREET_KM`'s
+  refusal one scale up: below it a thousand-metre interval is a line; above it,
+  a smudge standing in for terrain. The frame states which case it is rather than
+  quietly drawing nothing.
+
+Drawn in the terrace's own grammar — **dotted is the ground** — monochrome, never
+the ember, quieter than every mark laid over it.
+
 ## What this answers in `CHARTS.md`, and what it retires
 
 | `CHARTS.md` asked for | here |
@@ -379,8 +409,9 @@ no server change stands, unchanged, for the day that happens.
 
 No new catalog kind, no new endpoint, no new synced document, no dependency, no
 build step. Clustering, bounding boxes and folds are local math over local
-entries. The country outlines are data in the file, not a fetch and not a
-package — the same standing as `PLACE_ALIASES`: curated, closed, and readable.
+entries. The country outlines and their contours are data in the file, not a
+fetch and not a package — the same standing as `PLACE_ALIASES`: curated, closed,
+and readable.
 
 **The street layer stays an enhancement, never a dependency.** The drawn plot
 renders first from stored coordinates, stands alone offline, and every mark,
@@ -393,7 +424,10 @@ offline state rather than a property of the prototype alone.
 **Height still places and never ranks.** `scopeGreens` has no altitude branch and
 neither does any mark: nothing on the map is positioned, sized, ordered or
 shaded by how high it grew. The terrace remains the only surface that reads a
-band, and it is a section, not a plan.
+*green's* band, and it is a section, not a plan. The contours added in 6.9.0 do
+not touch that: they are the land's own shape from an elevation model, drawn as
+ground under the marks, and no mark is placed, sized, ordered or shaded by
+them — a coffee is not graded by which side of a line it grew on.
 
 **Coordinates stay honest and additive** — a venue's real point, a roaster's city
 point, a producer's region or country centroid, each with its grain, never a
@@ -420,6 +454,7 @@ published atlas over it.
 | 7 | the hold: faint marks and their count on the founder's map, beside the Desk's publish counts | `READER.md` F1–F3 | **built** (6.7.0) |
 | 8 | the street layer as **ground**: tiles under the chart frame at scene scale, fitted to the plot's own box; never under the origin frame; no camera | `smapBoot` gains `behind`, `plotSVG` returns its ground | **built** (6.8.0) |
 | 9 | the **country outlines** under the origin frame — carried in the file, the frame fitted to them, the undrawn countries counted in words | `LANDS`/`landRings`/`landsOf`, `plotSVG` gains `o.lands` | **built** (6.9.0) |
+| 9b | the **highlands** inside them — contours at 1,000/2,000/3,000 m, terrain and never a reading, withheld above `TOPO_KM` | `LAND_TOPO`/`landTopo`, `.topo t1–t3` | **built** (6.9.0) |
 
 Steps 1–4 give every page in the app one honest map. 5–7 give a stranger the
 same map, and give the founder the ability to see what they are not sending.
