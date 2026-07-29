@@ -141,9 +141,7 @@ server/
   appearing only once filled), `openStruckItem`, `openEraseAll`, `openBrewList`
   (a coffee's brews — the surface that did not exist), `openCorrectPlace` +
   `regWithdraw`/`regRestore` (the Register entry, pen-gated and struck on the
-  shared document), `openCorrectSighting` + `reachWithdraw`/`reachRestore` (a
-  signed sighting — see *the reach*, the one thing in the room that cannot be
-  erased). `mergeStruck` in the sync; `regLive`/`regEntries` are the
+  shared document). `mergeStruck` in the sync; `regLive`/`regEntries` are the
   Register's read door (`regFind` is the identity door — `regUpsert` must reach
   a struck entry so a later sighting reuses its id).
   **No browser dialogs.** `confirm()` is gone from the app entirely.
@@ -155,27 +153,18 @@ server/
   erase; `{full:true}` for the café editor); `regSeed` sweeps every readable
   ledger into it at boot/import/refresh. Entries carry provenance
   (`firstBy`/`firstAt`, `by`/`updatedAt`).
-- **the reach** — a café classification of depth (○ Counter · ◎ House ·
-  ◉ Roastery · ● Origin) compiled from signed `sightings` on Register entries.
-  Keepers attest *facts* (`bag`: unnamed/roaster/lot/farm; `seen`: inhouse/
-  methods/answers/story), never depths; `reachCompile` derives the reading (the
-  deepest fact standing; per fact the newest standing sighting carries).
-  `regSight` enters a line, amend supersedes your own line via `{supersede}`.
-  A sighting is **set down and stood back up** exactly as a record is
-  (`docs/CORRECTIONS.md`): `reachWithdraw`/`reachRestore` are dated *additions*,
-  liveness derives as `sightStruck` (`withdrawnAt > restoredAt`), and
-  `sightStanding`/`sightStandingAt` are the one rule every sighting in the app
-  compiles through — the reach's lines and the catalog's bind lines, at now or
-  at any past moment. `openCorrectSighting` is the one door (own line only,
-  never a superseded one): what you saw, what the bar reads, and **what falls
-  with it** — `reachFalls`/`reachWithout`/`reachWith` name each carried fact and
-  whatever stands in its place, so the recompile is read before it is caused. A
-  struck line waits in `struckSights()` under Desk → *What you set down* and
-  stands back up for every keeper. **A sighting is never erased** — every keeper
-  holds a copy and the merge is a union by id, so a deletion here would return
-  on the next sync; the room's red button does not reach it. UI: `reachBadge`
-  (mark pref `reachMark`), `openReachPrimer`/`openReachAmend`/`openReachRecord`
-  sheets, a depth lens in Find, sighting rows in the Record tab.
+- **the reach, set down (6.6.0)** — the old café depth classification
+  (○ Counter · ◎ House · ◉ Roastery · ● Origin) is removed: it was a second,
+  parallel classification that applied to one node kind, was attested rather
+  than derived from the graph, and the road answers the same question on every
+  page from the record itself. Its *record* is untouched: reach `sightings`
+  stay on Register entries — signed, dated, append-only, merged by id in sync
+  (`mergeSightings`), seeded by `catUpsert` — unread and unrendered for one
+  version; erasure, if ever, is a later, deliberate step. The liveness
+  primitives the reach taught the app (`sightStruck`/`sightStanding`/
+  `sightStandingAt`/`bySight`) live in the catalog section now — `compile()`
+  and the bind lines read them. Do not re-render the reach without a design
+  pass; do not delete the sightings data.
 - **domain** — pure helpers: roast levels + accent color, rest-window math
   (`restWindow`/`restState`/`daysOff`), temperature conversion (`c2f`/`f2c`),
   time parse/format (`parseTime`/`fmtTime`), descriptor/café constants, small
@@ -190,13 +179,15 @@ server/
   answering, all pointing at the Atlas. `go()`, `render()`; each tab has a
   `vXxx()` view returning an HTML string. `screenSub()` names the screen in the
   masthead's second line (the prototype's `SUBS`). Overlays over the tab:
-  `doorOn` (`vDoor`, a screen not a sheet), `placeView` (a café's page),
-  `pageView` (`{kind:'lot'|'roaster'|'plate',id}` → `vLotPage`/`vRoasterPage`/
-  `vPlatePage`), `discOn` (`vDiscover`), `curateOn` (`vCurate`). The screen-settle animation
+  `doorOn` (`vDoor`, a screen not a sheet), `placeView` (a café's page, kind
+  `place`), `pageView` (`{kind,id}`, kinds `lot`/`roaster`/`producer`/`region`/
+  `country`/`city`/`place`/`setup`/`process`/`variety` — every one rendered by
+  `nodePage(kind,id)`), `discOn` (`vDiscover`), `curateOn` (`vCurate`). The screen-settle animation
   (`.ca-screen`) plays only when the screen key changes, never on a repaint.
   Overlays walk into each other, so back is a shallow stack: `pageStack` +
-  `pagePush()` (called by `openLotPage`/`openRoasterPage`/`openPlate`/
-  `openPlace`) and `pageBack()`, which restores a page, a place or the chart.
+  `pagePush()` (called through `nav(kind,id)` — the one navigation dispatcher;
+  `openLotPage`/`openRoasterPage`/`openPlace` remain the doors with their own
+  guards) and `pageBack()`, which restores a page, a place or the chart.
   `go()` clears it — a room chosen from the bar is a fresh walk.
 - **the coffee in hand + the matching** — `inHandHTML()` heads the Atlas (the
   coffee in your hands, its road, *Open the green* / *Brew it*, *or start from
@@ -216,25 +207,32 @@ server/
   it" leans (`prefs.traitLeans`) tip a kind down on the same curve, capped in
   effect at three.
 - **the Atlas tab** — the reading room (`vAtlas`): search over lots, roasters,
-  growers and the Register (`atlasSearchIndex`); the chart hero; the two-frame
-  map over the whole anchored scene (`atlasLotIds` → `atlasFrames`); the
-  **interlude** (`readSeason`/`seasonState` — "Read the season for me"
-  composes once on a tap, the season line drawn through taste-ranked pins,
-  reasons via `seasonReasons()`, instant under reduced motion, never
-  auto-played); the season's lots with standing chips (`atlasLotCard`); the
-  hands; the matching's worth-the-walk; the stream; *Propose a sighting*; the
-  Chart No. 1 curator door.
-- **the pages** — `openLotPage`/`openRoasterPage` set `pageView` and render
-  full screens (`vLotPage`/`vRoasterPage`), not sheets. The lot page: the
-  road (grown → processed → milled → roasted → poured, only stages the record
-  holds), identity columns with primer taps, the standing (three axes, unread
-  until their own evidence stands), availability (pours), the roasts by hand,
-  the corpus (own brews — grind shown only within one Setup), your overlay,
-  and a Corrections & identity fold (binds, merge/split, the standing entry).
-  Its `pageHero` title names the green and its variety only — the origin line
-  under it already carries the place. The roaster page carries the same
-  reading at its own scope (the aggregate road across its greens, the origin
-  plot). `openBatchPage` keeps its sheet.
+  growers and the Register (`atlasSearchIndex`); the **interlude**
+  (`readSeason`/`seasonState` — "Read the season for me" composes once on a
+  tap, reasons via `seasonReasons()`, instant under reduced motion, never
+  auto-played); the unified map at atlas scope (`mapHTML('atlas','',lots)` —
+  see *the map*, below); the facets ("Cut the atlas"); the greens.
+- **the one page** (`UNIFIED.html`, the thesis in one function) —
+  `scopeGreens(kind,id)` resolves every node kind to the set of greens it
+  holds, over the live catalog: `country`/`region`/`producer`/`lot`/`roaster`/
+  `place`/`city`/`setup`/`process`/`variety`. `nodePage(kind,id)` is the one
+  renderer; `spec(kind,id)` supplies only the **nouns** (eyebrow, title, lede,
+  identity rows, up/down sections, seal) plus an `extras` hook
+  (`postRes`/`postHeight`/`tail`) that carries the app-only surfaces the
+  prototype's demo graph never held — the standing, the corpus, the
+  corrections fold, the claim block, the matching's why-this. The five
+  questions, in order, always: what is it (back · crumb · eyebrow · display ·
+  lede) · the road · the readout (`nodeResHTML`) · identity · the map · the
+  terrace · up/down + the cross-cuts (the greens, the hands, the bars, how
+  you brew it — derived from the scope alone, `OWN_GREENS` + `spec.covers`
+  stop a question being answered twice) · your overlay · the act row · seal.
+  `rowlink(kind,id,t,m,right)` is the one navigation primitive (t/m arrive
+  pre-escaped); `crumbHTML` states the walk up for the administrative kinds,
+  derived from the node, never the stack. Edge helpers: `handsIn`/`barsIn`/
+  `poursIn`/`cupsIn`/`brewsIn`. A kind with nothing to say for a question
+  says *unread* — it never drops the question and never reorders them.
+  `openBatchPage` keeps its sheet; `openSetupForm` stays the Setup's edit
+  surface.
 - **the primers** — the `PR` map (term → `{t,b}`) and `openPrimer(key)`, a
   second sheet layer (`#primer`, stacks above any open sheet). Every new
   badge/chip/term ships its primer in voice the same pass; `exBtn()` renders
@@ -252,7 +250,7 @@ server/
   nothing-like-it forks a new lot. The sighting lands as an authored line
   (`proposeRec`) bound via `bindRecordTo` or forked onto its own green.
 - **views** — `vAtlas`, `vBags` (the shelf — the Coffee step of the home-cup
-  arc, with put-away/restore), `vSetups` (live Setups, then the retired), `vTrace`
+  arc, with put-away/restore), `vSetups` (rowlinks into the Setup pages — live, then the retired), `vTrace`
   (Record), `vDesk` + its `deskSection(k)` panels (`deskAtlasHTML`/
   `deskRecordHTML`/`struckRoomHTML`/`deskPrefsHTML`/`deskManualHTML`, plus
   `vAdminSection`/`vSyncSection`/`vUsersSection`),
@@ -270,8 +268,19 @@ server/
   are per-Setup scaled; temp dial has a °C/°F corner toggle.
 - **segmented / hedonic / descriptors** — selection-control state.
 - **forms** — `openBagForm`/`saveBag`, `openSetupForm`/`saveSetup`.
-- **the door** (`SURFACES.md` §1) — the paste-first way in: `openDoor` → paste →
-  confirm → bind, one sheet. `doorParse` reads the text on the device against
+- **the door** (`SURFACES.md` §1) — the paste-first way in, from any room:
+  `openDoor(fromKind,fromId)` → paste → confirm → bind, a screen. The room
+  shapes the bind, never constrains it (`doorFrom`): from a bar's page the
+  targets read *Poured here · On my shelf · Just noting it* with the venue
+  already bound; elsewhere the four. The pour bind settles everything about
+  the coffee upstream and hands it whole to the cup form via `cafeBound` —
+  `saveCup` stamps the same spine a bag walks (`catStamp*`,
+  `doorStampActors`, `doorStampAltitude`), so a cup out keeps every fact a
+  bag keeps. Every origin field in the door and the bag form carries a
+  **prefill rail** (`NARROW`/`known`/`sugField`/`repaintSug` — what the record
+  already holds, with counts, one tap to fill; narrows to what's chosen on
+  the same screen, suggests never constrains, widens rather than vanishing;
+  painted only after the inputs exist). `doorParse` reads the text on the device against
   vocabularies the build already carries (`DOOR_COUNTRIES`/`DOOR_REGIONS`/
   `DOOR_VARIETIES` fold in `PLACE_ALIASES`; farm vs station split by
   `DOOR_FARM_RE`/`DOOR_STATION_RE`, never guessed); `doorResolve` says
@@ -301,15 +310,14 @@ server/
   **lopsided** (half the set resting on `grain==='country'` or unread; asked of the
   grain, *never* of the road's Grown mark, which a bare country already fills, so a
   station-based test would have fired essentially never) and **thin** (`n<3`) —
-  and says nothing when a set earns neither. A plate is `pageView={kind:'plate',fk,fv}` →
-  `vPlatePage` (`openPlate`, facets from `plateFacets` under Atlas → "Cut the
-  atlas") — a query over lots, never a stored collection, and one law: unread on
-  a facet is counted, never silently hidden. **One reading, five scopes**: the
-  road counts at lot, facet (`vPlatePage`), roaster (`vRoasterPage`), grower
-  (`openProducerPage`) and venue (`vPlace`, over `poursHere`) scope, and the plot
-  is `originFrameHTML(atlasGraph(ids),{heading,minMarks})` — the origin frame
-  factored out of `atlasFrames` and pointed at any slice. `minMarks:2` keeps a
-  one-dot box off the narrow scopes; the hand-off sentence says it better. Each
+  and says nothing when a set earns neither. A plate is a page kind now —
+  `process` and `variety` are scopes like any other (`specFacet`; `openPlate`
+  shims the old facet keys, a country facet is the country page), facets from
+  `plateFacets` under Atlas → "Cut the atlas" — a query over lots, never a
+  stored collection, and one law: unread on a facet is counted, never silently
+  hidden (`specFacet` states it in `extras.postRes`). **One reading, every
+  scope**: the road, the map and the terrace count at whatever scope
+  `scopeGreens` resolves. Each
   station's label is terse by design (the region, not "region, country"; the
   process family sentence-cased via `sentence()`) and clamps to two lines with
   the whole text on the mark — the page states it in full a line below.
@@ -332,8 +340,10 @@ server/
   geometry never widens a point or narrows a range. Monochrome, never the ember,
   and it never ranks. The datum is `lot.altitudeMasl` — see *the height*, below.
 - **brew flow** — `openBrew` → `saveBrew` → `openImpression` → `saveCup`.
-- **café** — logging café cups (`openCafe`/`saveCafeCup`, with optional
-  structured traceability), the café passport (`shopAgg`, `vCafes`, favorites),
+- **café** — logging café cups (`openCafe`/`saveCafeCup` — the READING only:
+  shop, style, drink, the 1–9; the coffee's facts enter at the door and ride in
+  via `cafeBound`, never a parallel origin form), the café passport
+  (`shopAgg`, `vCafes`, favorites),
   and per-café profiles (`openCafeProfile`: a signature colour — pulled from the
   café's website via `siteLookup` (`paletteFromColors`) — from which
   `cafeColors`/`cafeVars` build a whole themed surface — the café's detail page
@@ -342,14 +352,16 @@ server/
   café's note, the name it states (`siteName`) is surfaced, and it chains
   `geoLookup` (OpenStreetMap Nominatim) so the address surfaces too — filling
   blanks only, never overwriting typed values). The home-vs-café comparison is
-  `crossContext`. A café's own page opens on a banner (`cafeBannerGrad`) — a
-  gradient drawn from its derived hue, or a neutral roast tone unread — never
-  the app's ember, which stays reserved for the current action and the score.
-  Find's search plots pinned results on a map (`mapProject`/`mapHTML`): real
+  `crossContext`. A café's own page is `nodePage('place',shop)` — the banner
+  hero and the kvs grab-bag are gone; the palette survives only on the street
+  locator's pin (`placeMapHTML`).
+  Find's search plots pinned results on a map (`mapProject`/`findMapHTML`): real
   lat/lon scaled to fit the box, filled dot for a place you keep, dashed for
   one you don't. The drawn plot is the floor; the **street map** section lays
   real streets behind it when tiles can be fetched (see below).
-- **street map** — the live layer behind every map surface. MapLibre GL +
+- **street map** — the live tile layer, now only behind Find's café map, the
+  café-page locator (`placeMapHTML`) and the legacy discover map — the unified
+  map (below) is the drawn plot alone. MapLibre GL +
   OpenFreeMap vector tiles (OpenStreetMap data), lazy-loaded from CDN only when
   a `[data-smap]` surface is on screen and the network answers; the style
   (`smapStyle`) repaints every OSM layer in CARTA's theme tokens (`smapInk`),
@@ -364,44 +376,30 @@ server/
   the basemap never moves. Edges (lot → roast → bar) draw as a GeoJSON line
   layer over the tiles (`smapEdges`, monochrome, re-added on restyle) with the
   drawn-plot SVG (`svg.atlas-edges`) as the offline floor.
-- **the atlas map** — the lot-keyed graph drawn geographically (VISION step 4),
-  in **two frames** (`CHARTS.md`: one projection cannot hold a front door and a
-  country). `atlasGraph` walks the greens into nodes — producers at a coarse
-  origin, roasters in their cities, venues on their streets — and edges (each
-  grower→roaster, each pour's roaster→venue), carrying `city`, `grain`, and
-  `listed` (the coordinate-less, **by name**). **Scenes and charts are derived,
-  never stored**: `scenesOf` single-link-clusters located roasters+venues under
-  `SCENE_KM` (~40 km); `chartsOf` groups scenes under keeper-given names
-  (`prefs.charts`, `openChartName` — every ungrouped scene is its own chart);
-  the old `chart:'la'` stamp is retired unread, `CHART1` surviving only as the
-  LA roster guide. `atlasState` is the one resolution both layers read;
-  `atlasFrames` renders: the **chart frame** (`atlasCls` pins, street tiles,
-  roaster→venue edges only, the altitude ladder — region altitude draws scene
-  marks carrying counts, tap to drill; scene altitude draws pins at their own
-  grain) and the **origin frame** (producers at region/country grain, drawn
-  plot only — no street layer — coarse marks hollow+dashed via `grainCoarse`,
-  the hand-off to the chart stated in words, never a line across the sea).
-  Lenses (`atlasLens`/`atlasLensSet` — scenes, kinds, the road, kept) narrow,
-  never sort, and say what they hid. `mapProject` takes an explicit bbox;
-  `mapMerge` folds pins the plot can't separate into one counted mark — and,
-  given a `sameKey`, marks that *read* the same too (two region centroids
-  labelled alike are one coarse mark; drawing them apart claims a precision the
-  grain never had). An actor already drawn as a located producer is not also
-  listed for want of a coordinate;
-  `smapView` derives a `minZoom` camera floor; the camera keys on the chart
-  (`atlas|<chart>|<scene>`), not the pins. Every mark taps its 4a page
-  (`openProducerPage`/`openRoasterPage`/`openPlace`), so map and pages are one
-  walk. Coordinates are honest and additive: a venue's real Register point, a
-  roaster's `city` point, a producer's `region`/`country` centroid, each with a
-  `geoGrain` — **never a farm-precise pin**; a node with no coordinate lists
-  rather than lies. Filled from the optional keyless lookup (`geoOne` — which
-  refuses an ambiguous name rather than taking `list[0]` blindly) at author
-  time through `atlasGeoFill` (blanks-only, online-only, offline-degrading —
-  the demo `devSeedChart` stamps demo coordinates directly, never the network);
-  corrected through `openGeoFix` (pen-gated, on roaster/producer pages —
-  candidates offered, unpin allowed, `{full:true}` overwrite). Renders
-  read-only for a stranger; the drawn plot is the floor, the street tiles the
-  enhancement. `vCurate` keeps its **Map / List** toggle (`atlasView`).
+- **the map** (`docs/MAPPING.md` — one component, every scope) — the marks of
+  a scope ARE `scopeGreens`, pointed at coordinates: `originMarks(gs)` /
+  `chartMarks(gs)` take the green set and nothing else, so every page inherits
+  the plan the way it inherits the road, and a mark is a `.rowlink` that
+  happens to have a position (tap → `nav`, same as any name). **The map has no
+  zoom — the walk is the zoom**: `clusters` (single-link, `SCENE_KM`) derives
+  scenes at read time, a frame holding more than one scene draws scenes
+  (`sceneMark`, tap → the city page), a frame holding one draws its nodes, and
+  the back button is the zoom-out — no camera, no scene chips, no stored
+  charts. Four laws (M1–M4): a mark is never finer than what it rests on (the
+  `RUNG` ladder gates the claim — a country-grain green draws at country grain
+  even when a region pin is at hand); what cannot be placed lists rather than
+  lies, the fall stated (`listedHTML`); folds are counted, and marks that
+  *read* the same fold however far apart (`plotSVG`, `mapPick`/`foldHTML` keep
+  every fold member reachable as a rowlink); a cluster of one is not a scene.
+  `originRollup` climbs the administrative ladder (regions roll to countries
+  when the scope crosses more than one); `chartEdges` draws the pours; the key
+  (`keyFor`) is derived from what was drawn, never what the frame could draw;
+  one scale on both axes and the box follows the ground; the two frames are
+  joined in words (`.handoff`), never a line across the sea. `mapLens`
+  narrows before scenes derive and says what it hid. The whole drawing is
+  SVG — it stands with no tiles at all. Coordinates stay honest and additive
+  (producer pins at `geoGrain` region/country via `atlasGeoFill`, corrected
+  through `openGeoFix`); `mapProject`/`mapMerge` survive for Find's café map.
 - **the standing** — a coffee's rarity and caliber, compiled from sourced facts
   (VISION step 5), reborn from the old café reach onto the coffee it always
   belonged on. Three independent axes, never merged into one verdict:
@@ -674,15 +672,12 @@ the brew corpus (step 6) and discovery (step 7) follow.
   don't let a sparse write strip a rich entry. New Register **reads** go through
   `regEntries()`/`regByName`, never raw `REG.entries` — only the identity door
   (`regFind`) and the merge see struck entries.
-- **The reach is compiled, never picked.** Keepers attest facts; the depth
-  follows from `reachCompile`. Reach sightings are append-only — withdraw,
-  restore and supersede each add a date to a line, never delete it, and a
-  sighting is the one struck thing in the app with **no erase at all** (every
-  keeper holds a copy; a deletion would return on the next sync). A keeper
-  strikes only their own line, never another keeper's, and a superseded line
-  has no strike and no restore — it was already answered by the line written
-  next. `unread` is a state, never a default to ○ Counter. Depth is a filter in Find, never a sort
-  key. Badges stay monochrome: never the ember, never a fill.
+- **The reach is set down; its record is not.** The depth tiers and every
+  reach surface are removed (6.6.0), but reach `sightings` on Register entries
+  are append-only, merged by id in sync, and stay on file — unread and
+  unrendered. Never delete them in a merge, never strip them from an entry,
+  and never re-render the reading without a design pass. Erasing the record,
+  if ever, is its own deliberate version.
 - **The grain is never rounded up.** A green rests on the coarsest rung it can
   prove. A rung is promoted by evidence, never by a field merely being non-empty,
   and never by a name the record cannot classify. If a new rung is added, its

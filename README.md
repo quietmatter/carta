@@ -49,9 +49,14 @@ page or the back of the bag; CARTA reads it on the device — no key, no
 account, no network — shows what it found as facts you can strike, says how
 finely the green resolves and whether two records could ever meet on it, and
 binds it with one tap: on my shelf, poured at a bar, brewed just now, or just
-noting it. It asks once for the roast date — the one fact a page never states
-and the rest window can't do without — and never invents one. The typed form
-stays one tap away.
+noting it. The room shapes the bind — open the door from a bar's page and it
+offers *Poured here*, the venue already bound; the café cup has no origin form
+of its own, because everything about the coffee was settled here first. It
+asks once for the roast date — the one fact a page never states and the rest
+window can't do without — and never invents one. The typed form stays one tap
+away, and every origin field carries a **rail** of what the record already
+holds — counts, one tap to fill, narrowing to what you've already chosen on
+the same screen. Never type a country twice.
 
 **A plate** is the atlas, cut — a country, a process, a variety, read as one
 page with the aggregate road: how many of the facet's greens reach each
@@ -70,12 +75,19 @@ identity or a pin on a map. Two heights that disagree are **carried, not
 resolved** — the first stands, the other is kept beside it with its author.
 Heights arrive through the door, which has always read them off a paste.
 
-**One reading, five scopes.** The road, the plot, the terrace and the hands
-are one component pointed at a different slice of one graph — a green, a
-plate, a roaster, a grower, a bar. A roaster's page counts the road across
-every green that hand has roasted and draws the heights it buys at; a bar's
-counts it across what it pours. Back always means the page you came from: a
-green opened from a plate returns to that plate.
+**One page, every scope.** A country, a region, a grower, a green, a roaster,
+a bar, a city, a Setup, a process, a variety — every one of them is the same
+page pointed at a different slice of one record, answering the same five
+questions in the same order: what is it, how far the record follows it (the
+road), what it can prove (the readout), where it sits and what it holds (the
+map, the terrace, the scopes above and below, the greens, the hands, the
+bars), and what you found (your overlay). Every name anywhere is a row that
+walks; the crumb above a page names the scopes over it; back always names the
+page it returns to, and a room chosen from the bar clears the walk. **The map
+has no zoom — the walk is the zoom**: two frames on every page, where it grew
+and where it is carried, drawn from the record itself. A mark is never finer
+than the grain it rests on, what cannot be placed lists rather than lies, and
+one bar is never dressed up as a scene.
 
 See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the product thesis and restraint standard.
 
@@ -142,7 +154,7 @@ that will go with it if it goes, and offers both.
   one thing wearing the red button.
 
 A strike is itself a record: signed, dated, and carrying the withdrawn body
-whole — exactly as a reach sighting is struck rather than deleted. It syncs like
+whole — struck rather than deleted, never erased by an ordinary act. It syncs like
 one, so a record set down on one device leaves every device, and putting it back
 puts it back everywhere, from either side, in any order.
 
@@ -195,7 +207,7 @@ Below it, the Atlas is the reading room, and the matching lives there now:
   match asks; a same-name-different-process refuses to merge on the string.
 
 **The matching** reads three things, and says so: the *traits* of the places you
-keep (their tags and reach facts, weighed heavier where you scored well); the
+keep (their tags, weighed heavier where you scored well); the
 *distance*, only once you tap "Near you" — your location is held in memory,
 never stored; and the *circle's cups* there, weighted toward the people whose
 taste sits closest to yours. Every score opens into its signals on the café's
@@ -274,39 +286,16 @@ record, and the tags you've given it.
 
 Cups stay personal, per ledger. Only the place is common knowledge.
 
-### The reach — four depths, no ladder
+### The reach, set down
 
-Every café can be read for **depth**: how much of a coffee's road — farm, roast,
-grind — is legible from the customer's side of the counter. Four marks, carried
-by type, never colour: **○ Counter · ◎ House · ◉ Roastery · ● Origin**. A
-description of the café, never a score — the 1–9 stays yours, and no depth
-outranks another.
-
-- **Keepers attest facts, never depths.** The marks never appear as a picker.
-  You say what you saw — the bag unnamed / roaster / lot / farm named; roasts
-  in-house, more than one method, answers at the counter, the story freely
-  told — and the reading follows from the record: the deepest fact standing.
-- **Two doors.** A sighting rides the café cup form (collapsed behind "What did
-  the counter show?", three taps at most, one save) or the deliberate door on
-  the café's page. Each is signed and dated, and joins the Register.
-- **Per fact, the newest sighting carries.** Older lines keep their ink. Amend
-  your own line (a new dated line; the old one struck *superseded*) or set it
-  down (struck, the fact falls to the next line standing — the sheet names which
-  facts fall, and to what, before you tap). A line you set down waits under **the
-  Desk → What you set down** and stands back up with one tap, for every keeper.
-  Nothing erases — sightings merge in sync as a union by id, and every date on a
-  line only ever adds, so two devices converge in any order.
-- **Unread is a state, never a depth.** Where no one has read a café the badge
-  says *unread*, dashed — never a default to the shallow end. The row itself is
-  the door to reading it.
-- **A lens, never a sort.** In Find, depth filters *Worth the walk* to a mood;
-  the unread wait in a counted tail, one tap from joining ghosted. Ranking
-  stays by taste.
-- **Every badge explains itself.** One tap opens the primer — *How to read the
-  reach* — with the tapped café's depth lit and one line of why. The record of
-  the reach (every sighting, signed) opens from the Register line on the café's
-  page. A mark preference on the Desk writes badges as glyph + word, word, or glyph
-  alone; state chips keep their words and dashes in every mode.
+Older versions carried a second classification of café depth — ○ Counter ·
+◎ House · ◉ Roastery · ● Origin, compiled from signed sightings. It is set
+down: it applied to one kind of page, was attested rather than read from the
+record, and the road now answers the same question everywhere — the Roasted
+station names the hand, the Grown station names the grower, and a road that
+runs short says so. **The sightings themselves are not gone**: every line a
+keeper signed stays on its Register entry, signed and dated, carried through
+sync — unread and unrendered for now, never erased.
 
 Not everyone wants to keep a record. Some people just want to know where to go
 and what to order. The **Find** tab is for them — the room every record starts
@@ -368,8 +357,8 @@ While the atlas settles, the **shared** record — the atlas (roasters, greens,
 roasts) and the café Register — is written by one hand: the founder's. What
 this means in practice:
 
-- **Everyone reads everything.** The chart, every page, the Register, the
-  reach — all of it stays open to every keeper.
+- **Everyone reads everything.** The chart, every page, the Register — all of
+  it stays open to every keeper.
 - **Everyone writes their own ledger, always.** Bags, brews, cups, setups,
   cafés you've been to, your preferences — none of that is gated.
 - **Only the founder writes the shared page.** On a sync server, the first
