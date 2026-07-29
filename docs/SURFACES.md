@@ -163,15 +163,26 @@ estate · smallholder · group`), **Processor**, **Aggregator** — because one 
 station gathers cherry from hundreds of growers, which is why a lot can carry
 hundreds of producers.
 
-In the build, a producer node is written as `{name, country, region}` with no `kind`;
-`processors` has no write path; and the single input is labelled *"Producer /
-station"*. `devSeedChart` files `Konga washing station` as a grower (3325).
-
 The parser splits them at the door, by vocabulary — *finca · hacienda · fazenda ·
 estate · farm* against *washing station · wet mill · beneficio · cooperative* — and
 an unmatched name stays unclassified rather than being guessed into a tier. Nothing
 is forced: at the counter a bag often gives one name and does not say which actor it
 is, and demanding that call is the invented precision the record refuses.
+
+**Built (6.15.0), to this level:** the head input stays one field — *"Producer /
+farm / station"*, its key slot untouched — and an optional second input, *"Grower /
+co-op"*, carries the other name a bag prints ("Finca Gascon — Felipe Contreras";
+the association behind a station lot). The grower buys no rung and never enters
+`lotKeyOf`: `growerKind` classifies it by its own vocabulary (`GROUP_RE` →
+`'group'`, else `'smallholder'`), `catStampGrower` mints the second producers node,
+and `lotAddProducerRef` appends the lot → grower edge beside the head's ref —
+`producerRefs` was always plural, and the multi-ref *is* the producer ⟷ farm link
+at the record's honesty level. `producerKind` now spans `farm · station ·
+smallholder · group` (SCHEMA's `estate` folds into `farm`; the sync merge unions
+the actor-edge arrays so an appended hand survives the other device's later save).
+A farm as a *separate node kind* with role-typed links remains future work — a
+ninth catalog kind is a second synced document and a second double-node seam, for
+a fact a keeper can state in the grower field today.
 
 ## Sequence
 
@@ -181,6 +192,7 @@ is, and demanding that call is the invented precision the record refuses.
 3. **The reading, as one component.** Then the plate is nearly free.
 4. **Delete the 51 fields** the door replaced, and the surfaces around them.
 5. **The origin actors** — `kind` on the producer, a write path for `processors`.
+   *Closed to the grower-split level in 6.15.0 (above); the farm-as-node remains open.*
 6. **Decide on `aggregators` and `blends`:** build them or drop them from
    `CAT_KINDS`. A whitelisted, synced, never-written collection is debt in two
    servers and two test suites.

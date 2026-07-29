@@ -94,8 +94,8 @@ frame holding one draws its nodes.
 
 A scene is a **catchment** — derived by distance, because that is what "close
 enough to visit in one outing" means. Origin grain is **administrative** —
-country, region — because that is the ladder the record actually proves things
-on (`the grain`, five rungs).
+country, region, locality — because that is the ladder the record actually
+proves things on (`the grain`, six rungs since 6.13.0).
 
 So the origin frame rolls up the ladder it already has: **the Atlas draws
 countries; walk into a country and the same frame draws its regions.** Same
@@ -142,6 +142,14 @@ is the same lie as rounding the grain up — told in ink instead of in words.
 
 This is `CHARTS.md`'s third defect closed. Grain was computed and thrown away;
 here it is the geometry.
+
+The town rung (6.14.0) obeys the same law one step finer: a locality-grain-or-
+finer green whose record names the town *and* whose actor pin was geocoded at
+`geoGrain:'locality'` sits at the town's centroid; missing either, it falls to
+the region's claim — a coarser draw, never a lie. A locality is still a
+**point**: like a region it has no honest shape, so no polygon is ever drawn
+for one, and `atlasGeoFill` still never geocodes the farm's or station's own
+name — the town in its region and country is the finest place it will ask for.
 
 **M2 · What cannot be placed lists rather than lies — and the fall is stated.**
 Every frame carries its *listed, not drawn*: named, counted, tappable. A region

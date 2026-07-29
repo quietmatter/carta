@@ -252,8 +252,25 @@ at three tiers (`LOT_IDENTITY.md`). Before scoring, the head-string is tagged wi
 its tier so the scorer compares like with like:
 
 ```
-headTier ∈ 'farm' | 'producer' | 'station' | 'region'   // already a fingerprint column (SCHEMA)
+headTier ∈ 'lot' | 'producer' | 'station' | 'region'   // already a fingerprint column (SCHEMA)
+// 'lot' (6.13.0) is the printed-lot-name head, formerly mis-tagged 'farm' — it
+// collided with the grain's farm rung; the legacy value stays readable and
+// lotRederive writes the tier through on the next sweep.
 ```
+
+The **locality** column (6.13.0) scores at `FP_W.locality = 0.12`, and —
+deliberately unlike region — **both-present-only**: a green minted before the
+column exists is *silent* about its town, never disagreeing, so a one-sided
+blank is excluded from the denominator entirely. Region's one-sided
+fails-to-confirm construction would drop a pure enrichment amend (adding the
+town to an otherwise perfect match) below `τ_auto` and fork it. The weight is
+sized so two otherwise-full matches naming **different** towns fall out of
+auto-bind into the propose band (0.888 with every other column matching) —
+Pitalito and Planadas under one Huila fingerprint are different greens, and the
+keeper is asked, not overruled. In the floor key the locality is **appended
+after the year with its own marker** (`…|@pitalito`), never inserted, and does
+not count toward the ≥2 threshold — the year's construction exactly, so no
+standing key moves.
 
 - **Shape:** `reconcileTier(fp)` reads the head-string against the structured
   columns already present (`producer`, `region`, `country`) and the alias table's

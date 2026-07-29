@@ -79,10 +79,21 @@ resolved** — the first stands, the other is kept beside it with its author.
 Heights arrive through the door, off a paste, or typed straight into a bag or
 a cup — read the same way either way, so *1,930 masl* lands as 1,930.
 
-**One page, every scope.** A country, a region, a grower, a green, a roaster,
-a bar, a city, a Setup, a process, a variety — every one of them is the same
-page pointed at a different slice of one record, answering the same five
-questions in the same order: what is it, how far the record follows it (the
+**The town, and the hand behind the farm.** Every origin block asks for the
+locality — Pitalito under Huila, Dipilto under Nueva Segovia — one step finer
+than the region, with its own rung on the grain ladder (a named mill still
+outranks it: naming the station proves at least the town it stands in), its own
+page, and its own place in the crumb: country › region › town. And a second
+actor field, *Grower / co-op*, keeps the other name a bag prints — "Finca
+Gascon — Felipe Contreras" no longer makes you choose. The farm stays the head;
+the person, family or association behind it gets its own page and its own edge
+onto the green. A grower buys no rung, and a name the record cannot classify
+still buys nothing.
+
+**One page, every scope.** A country, a region, a locality, a grower, a green,
+a roaster, a bar, a city, a Setup, a process, a variety — every one of them is
+the same page pointed at a different slice of one record, answering the same
+five questions in the same order: what is it, how far the record follows it (the
 road), what it can prove (the readout), where it sits and what it holds (the
 map, the terrace, the scopes above and below, the greens, the hands, the
 bars), and what you found (your overlay). Every name anywhere is a row that
