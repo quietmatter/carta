@@ -3201,26 +3201,10 @@ function openLotKin(ref){
 // The grower node — the producer/station behind a green, opening onto the greens traced to it. Honest about
 // grain (LOT_IDENTITY): a washing station gathers cherry from many growers, so its greens are distinct lots,
 // each a legitimate terminal node — never one blurred, half-filled farm. Reached from any lot page's grower link.
+// A page now, like everything else — the grower was the graph's one modal (UNIFIED §4).
 function openProducerPage(producerId){
-  const p=catNode('producers',producerId); if(!p){toast('That grower isn’t on the atlas yet');return}
-  const lots=CAT.lots.entries.filter(l=>lotLive(l)&&(l.producerRefs||[]).includes(producerId))
-    .sort((a,b)=>lotHands(b.id)-lotHands(a.id)||String(a.firstAt||a.createdAt||'').localeCompare(String(b.firstAt||b.createdAt||'')));
-  const place=[p.region,p.country].filter(regSubstance).map(esc).join(', ');
-  const row=l=>{const h=lotHands(l.id),gr=grainRead(l.grain);
-    const dd=[h?`${h} hand${h===1?'':'s'}${h>=2?' · the same green':''}`:'',gr?gr[0]:''].filter(Boolean).join(' · ');
-    return `<button class="wc-item" onclick="closeSheet();openLotPage(${jsq(l.id)})"><span class="tx"><span class="tt">${esc(lotLabel(l))}</span><span class="dd">${esc(dd)||'a green on the atlas'}</span></span><span class="go">→</span></button>`};
-  openSheet(`
-  <h3>${esc(p.name)}</h3>
-  <div class="sub">A grower on the atlas${place?` · ${place}`:''}.</div>
-  <div class="muted small serif" style="font-style:italic;margin:2px 2px 12px">${lots.length
-    ?`${lots.length} green${lots.length===1?'':'s'} traced to this grower, each its own lot. A washing station gathers cherry from many hands — its greens stand apart, never one blurred farm.`
-    :'No green traces to this grower yet.'}</div>
-  ${lots.length>=2?`<h2>How far the road runs</h2>${aggRoadHTML(lots.map(l=>l.id))}
-  ${aggRoadReading(lots.map(l=>l.id),'traced to this grower')}`:''}
-  ${aggTerraceHTML(lots.map(l=>l.id),'The heights it grows at','as each green was stated')}
-  ${lots.length?lots.map(row).join(''):'<div class="empty">No green on the atlas names this grower.</div>'}
-  ${isAdmin()?`<button class="btn btn-quiet" style="margin-top:10px" onclick="openGeoFix('producers',${jsq(p.id)})">Correct the pin${p.lat!=null?'':' — unplaced'}</button>`:''}
-  <button class="btn btn-quiet" style="margin-top:${isAdmin()?'6':'10'}px" onclick="closeSheet()">Close</button>`);
+  if(!catNode('producers',producerId)){toast('That grower isn’t on the atlas yet');return}
+  nav('producer',producerId);
 }
 // The roaster node — every green this roaster has touched, folded from CAT.roasts by roasterRef, each drilling
 // to its lot page with the offering name + level the roaster gave it. "Every lot this roaster has touched" —
@@ -5247,8 +5231,98 @@ function spec(kind,id){
   case 'lot':return specLot(id);
   case 'roaster':return specRoaster(id);
   case 'process':case 'variety':return specFacet(kind,id);
+  case 'producer':return specProducer(id);
+  case 'region':return specRegion(id);
+  case 'country':return specCountry(id);
+  case 'city':return specCity(id);
   }
   return null;
+}
+// the grower row — shared by the country and region pages
+function prodRowlink(p){
+  if(!p)return'';
+  const n=scopeGreens('producer',p.id).length;
+  return rowlink('producer',p.id,esc(p.name),esc([(p.producerKind==='station'?'washing station':'grower'),p.region].filter(regSubstance).join(' · ')),esc(nPl(n,'green')));
+}
+const growersOf=gs=>[...new Set(gs.flatMap(l=>l.producerRefs||[]))].map(i=>catNode('producers',i)).filter(Boolean);
+function specProducer(pid){
+  const p=catNode('producers',pid);if(!p)return null;
+  const gs=scopeGreens('producer',pid);
+  const stn=p.producerKind==='station';
+  const region=p.region||modeOf(gs.map(l=>(l.fingerprint||{}).region).filter(regSubstance))||'';
+  const country=p.country||modeOf(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))||'';
+  return {
+    eyebrow:(stn?'Washing station':'Grower')+(regSubstance(country)?' · '+esc(country):''),
+    title:esc(p.name),qual:'',
+    lede:stn?'A station gathers cherry from many hands. Its greens stand apart here — never one blurred farm.'
+      :`The greens the record traces to ${esc(p.name)}, each its own lot.`,
+    rows:[['Kind',stn?'washing station':'farm'],['Region',regSubstance(region)?esc(region):'<span class="unread">unread</span>'],
+      ['Country',regSubstance(country)?esc(country):'<span class="unread">unread</span>'],['Greens',String(gs.length)]],
+    up:[{h:'Part of',items:[
+      regSubstance(region)?rowlink('region',region,esc(region),'the region around it',esc(nPl(scopeGreens('region',region).length,'green'))):'',
+      regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''
+    ].filter(Boolean)}],
+    down:[],
+    roadTail:'traced to this grower',terrHeading:'The heights it grows at',terrTail:'as each green was stated',
+    extras:{tail:isAdmin()?`<button class="text-action" style="margin-top:8px" onclick="openGeoFix('producers',${jsq(pid)})">Correct the pin${p.lat!=null?'':' — unplaced'}</button>`:''},
+    sealName:p.name,seal:'The grower owns the farm, never the roast.'
+  };
+}
+function specRegion(id){
+  const gs=scopeGreens('region',id);
+  if(!gs.length)return null;
+  const country=modeOf(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))||'';
+  const growers=growersOf(gs);
+  const procs=[...new Set(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}).filter(Boolean))];
+  return {
+    eyebrow:'Region'+(regSubstance(country)?' · '+esc(country):''),title:esc(id),qual:'',
+    lede:`The greens the record traces to ${esc(id)}, and how far it follows each one.`,
+    rows:[['Country',regSubstance(country)?esc(country):'<span class="unread">unread</span>'],['Greens',String(gs.length)],
+      ['Growers',String(growers.length)],
+      ['Processes',procs.map(esc).join(' · ')||'<span class="unread">unread</span>']],
+    up:[{h:'Part of',items:[regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''].filter(Boolean)}],
+    down:[{h:'Its growers',items:growers.map(prodRowlink)}],
+    roadTail:'traced to '+id,
+    sealName:id,seal:'A region is a scope, not a stamp.'
+  };
+}
+function specCountry(id){
+  const gs=scopeGreens('country',id);
+  if(!gs.length)return null;
+  const regs=[...new Set(gs.map(l=>(l.fingerprint||{}).region).filter(regSubstance))];
+  const growers=growersOf(gs);
+  const vars=[...new Set(gs.map(l=>l.variety).filter(regSubstance))];
+  return {
+    eyebrow:'Country',title:esc(id),qual:'',
+    lede:`Every green the record traces to ${esc(id)} — and everyone who has carried one.`,
+    rows:[['Regions',regs.map(esc).join(' · ')||'<span class="unread">unread</span>'],['Greens',String(gs.length)],
+      ['Growers',String(growers.length)],
+      ['Varieties',vars.map(esc).join(' · ')||'<span class="unread">unread</span>']],
+    up:[],
+    down:[{h:'Its regions',items:regs.map(r=>rowlink('region',r,esc(r),esc(id),esc(nPl(scopeGreens('region',r).length,'green'))))},
+      {h:'Its growers',items:growers.map(prodRowlink)}],
+    roadTail:'traced to '+id,
+    sealName:id,seal:'One country, read as one scope.'
+  };
+}
+function specCity(id){
+  const eq=v=>regSubstance(v)&&normPlace(String(v))===normPlace(String(id));
+  const gs=scopeGreens('city',id);
+  const barsHere=regEntries().filter(e=>eq(e.city));
+  const handsHere=CAT.roasters.entries.filter(r=>r&&eq(r.city));
+  if(!gs.length&&!barsHere.length&&!handsHere.length)return null;
+  return {
+    eyebrow:'City',title:esc(id),qual:'',
+    lede:`What is poured and what is roasted in ${esc(id)} — the scene, read as one scope.`,
+    rows:[['Bars',String(barsHere.length)],['Hands',String(handsHere.length)],['Greens',String(gs.length)],
+      ['Countries',[...new Set(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))].map(esc).join(' · ')||'<span class="unread">unread</span>']],
+    up:[],
+    down:[{h:'Its bars',items:barsHere.map(e=>rowlink('place',e.name,esc(e.name),esc(e.neighborhood||id),esc(nPl(poursHere(e.name,e).length,'green'))))},
+      {h:'Its hands',items:handsHere.map(r=>rowlink('roaster',r.id,esc(r.name),'roasting here',esc(nPl(scopeGreens('roaster',r.id).length,'green'))))}],
+    covers:['hands','bars'], // named above, at this scope — the cross-cut would only repeat them
+    roadTail:'in this scene',
+    sealName:id,seal:'A scene is derived, never stored.'
+  };
 }
 function specRoaster(rid){
   const r=catNode('roasters',rid);if(!r)return null;
