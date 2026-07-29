@@ -496,6 +496,28 @@ server/
   polygon** — coffee's regions are sometimes an admin-1 (Huila) and sometimes a
   catchment nobody has drawn (Yirgacheffe), and matching a name to a shape is
   exactly the guess the resolver refuses everywhere else.
+  **A region is not a small country** (6.11.0) — they are inverse facts, so each is
+  drawn by what the record actually holds. A country **has** a shape and no meaningful
+  point (its centre is a place no coffee is), so where a country is a *mark of the
+  scope* its own outline **is** the mark: `landAnchor` places the label, `originMarks`
+  /`originRollup` emit `cls:'land'`, and `plotSVG` draws `.mk-land` in the ground's
+  layer (so the contours stay legible over it) with the name written across it, a tap,
+  its count, and the ring as the **line doubled** (`.mk-land-ring`). The dashed
+  centroid (`.mk-origin.coarse`) survives only as the fall for a country `LANDS` has
+  no shape for. A region **has** a point and no honest shape, so it stays a point —
+  which is why the plot now *draws* the grain rather than describing it: the shape is
+  the coarser claim and the point the finer one, and `openPrimer('regions')` says so.
+  **The siblings** (`siblingMarks`, `.mk-sib`) — when the ground is one country, every
+  other region of it the atlas can place draws as a hairline, so the walk into a region
+  *adds* instead of subtracting (it used to be the country page with marks removed).
+  This is `aggTerraceHTML`'s construction pointed at the plan: dotted is the ground, a
+  hairline is another, the firm mark is this one. For scale, never for count — outside
+  the scope's tally, never ringed, never faint for a hold, still tappable; the ones
+  dropped for sitting off-frame or under a mark are counted in words, and a hairline
+  never writes its name over a mark's. It degenerates with no special case: a country
+  page's own marks already are its regions, and across more than one country there is
+  no single ground to compare on. The frame still does not zoom on the walk down, now
+  because **the country is what the comparison is made on**.
   **The highlands** (`LAND_TOPO`, `landTopo`) are the same ground read for its
   *shape*: contours at 1,000 / 2,000 / 3,000 m, cut at build time from the
   public-domain Terrarium elevation tiles at ~5 km, masked to each country's own
@@ -817,6 +839,13 @@ the brew corpus (step 6) and discovery (step 7) follow.
   a region or admin-1 polygon (a region name matched to a shape is a guess), and
   never let anything on the land be tapped, counted, sorted or totalled — it is
   paper, and the moment it enters a count it has become a record it never was.
+  **Ground and mark are two states of one shape, and only the record moves a
+  country between them.** An outline drawn for context is ground: `pointer-events:
+  none`, in no count, in no key but the ground's. An outline the *scope marks* — a
+  country-grain green, or the Atlas's rollup — is a mark, and taps and counts like
+  any other, because it was always going to be a mark and was merely being drawn as
+  a dot in the country's middle. That promotion is decided in `originMarks`, never in
+  `plotSVG`: the day a drawing decides what counts, the invariant is gone.
   A country `LANDS` has no outline for is named in words, never approximated by
   a neighbour or a bounding box. The **contours are terrain, not a reading**: they
   are drawn from an elevation model and never from `altitudeMasl`, they never
