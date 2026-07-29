@@ -112,6 +112,36 @@ server/
   `.card` is `--surface-page` and reads sunk into it. Buttons speak in sentence
   case. Screens open in one order — back · eyebrow · display · lede · the
   reading · the sections · the note.
+- **the reader + the published atlas** (`docs/READER.md`) — the person who keeps
+  nothing opens CARTA, reads the atlas as the founder published it, and never
+  signs in. `reader()` is true when the device holds a published copy
+  (`carta.public.v1`, `PUB`), holds no record of its own (`keptSomething`), and
+  is not signed in; signing in, keeping a first cup, or taking the door out
+  (`startKeeping` → `prefs.keeping`) all end it. Predicates that learned it:
+  `depth()` → 1, `tabsFor` (Atlas · Desk — the Record is a reader's own overlay
+  and would be a nag with a tab), `isAdmin()` → false, `save()` (prefs only),
+  `needsWelcome()` (an `#atlas=` arrival skips it), `go('trace')` → the Atlas,
+  the masthead door, and `readerGuard()` — which should never fire, and exists
+  for exactly that reason. The copy arrives by an `#atlas=` link, the
+  `PUBLIC_ATLAS` build constant, or `openNameAtlas`; `pubSync` rides sync's
+  three moments unauthenticated (`?meta=1`, full pull only when the rev moved).
+  Surfaces: `pubHeadHTML` (the Atlas head — the copy stating itself),
+  `deskCopyHTML` (*This copy*), `openStartKeeping`, `atlasData`/
+  `renderAtlasHtml`/`downloadAtlas` (`carta.atlas/v1`, the reader's copy to
+  carry away, sharing `EXPORT_CSS` with the ledger export).
+  **The published layer is a READ layer, never a merge** (L6): `CAT`/`REG` hold
+  the own documents and only those; `catAll(kind)`/`regAll()` lay the copy
+  underneath at read time, own first. With no copy on the device `catAll`
+  returns the own array *itself*, so a keeper's app is unchanged;
+  `catWritable(kind,id)` is the write door, adopting an underneath-only node as
+  a thin own node **carrying its id** so the two never read as two greens.
+- **the hold** (`docs/READER.md` L4, F1–F3) — the strike's grammar pointed
+  outward: `{id:'hold:<ref>', ref, kind, at, by, releasedAt?}` in `D.holds`,
+  liveness `at > releasedAt`, merged by `mergeHolds` (the `mergeStruck`
+  construction). It changes nothing locally — the subtraction happens to the
+  *snapshot*, at publish time, on the server — which is why releasing is free.
+  `holdGreen`/`releaseHold`/`heldRefs`/`holdCarries`; `openPublish` (the counts
+  as consent), `openHeldList`, `openHoldGreen`. In ink, never in red.
 - **the shutter** — `LEGACY_ON=false` (router section) temporarily hides
   pre-redesign surfaces the prototype (`docs/redesign-concept/`) does not
   carry: the matching's cold-start, worth-the-walk and discover-map door on
@@ -396,8 +426,15 @@ server/
   (`keyFor`) is derived from what was drawn, never what the frame could draw;
   one scale on both axes and the box follows the ground; the two frames are
   joined in words (`.handoff`), never a line across the sea. `mapLens`
-  narrows before scenes derive and says what it hid. The whole drawing is
-  SVG — it stands with no tiles at all. Coordinates stay honest and additive
+  narrows before scenes derive and says what it hid. **Your overlay is a ring**
+  (`markKept`/`keptLots`/`keptShop`) — added on top of a mark that was already
+  complete, never a fill and never a filled-vs-dashed kept/unkept split, because
+  that would draw a stranger's atlas entirely faint. That one decision is what
+  makes the published atlas *this map minus one ring and one chip*: the ring and
+  the *Yours* lens (default off, narrows before the scenes derive) are both
+  absent under `reader()`. A **held** green draws faint (`markHeld`, `.mk-held`)
+  and is counted in words below the frames — on the founder's map only, never in
+  red. The whole drawing is SVG — it stands with no tiles at all. Coordinates stay honest and additive
   (producer pins at `geoGrain` region/country via `atlasGeoFill`, corrected
   through `openGeoFix`); `mapProject`/`mapMerge` survive for Find's café map.
 - **the standing** — a coffee's rarity and caliber, compiled from sourced facts
@@ -529,6 +566,10 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   catalog nodes through the same `catStamp*` machinery and runs `resolveLot`
   exactly as a bag's origin does, so the atlas fills pre-adjudicated. Swept by
   `catSeed`/`catRepoint` like a bag; merged in sync like any collection.
+- **holds** — the greens kept out of the published copy (see *the hold* above):
+  `{id:'hold:<ref>', ref, kind, at, by, releasedAt?}`, merged by `mergeHolds`
+  (max `at`, max `releasedAt`, independently). Subtracts nothing locally — the
+  server applies it to the snapshot at publish time.
 - **struck** — the strikes (see *the strike* above): one entry per set-down
   record, carrying the withdrawn body whole. Merged by `mergeStruck` (max `at`,
   max `restoredAt`, independently); `mergeLedgers` then subtracts every actively
@@ -709,6 +750,28 @@ the brew corpus (step 6) and discovery (step 7) follow.
   age, never let a date move a score, an axis or an order. The trade's habit of
   fading old evidence to keep a number looking current is the precise thing CARTA
   refuses, and it refuses it in the open, on the page.
+- **Publishing is a copy, not a switch.** Never open the shared documents to
+  unauthenticated GET — it is one line in the router and it is wrong: every
+  keystroke would become public the instant it was written, with no act, no date
+  and no way to hold anything back. A snapshot carries a revision and a
+  published date so the reader's copy states its own age. `GET /api/public` is
+  the **only** unauthenticated data endpoint; both suites assert every other one
+  still 401s, and that assertion must survive any future endpoint.
+- **A pour publishes; its cup never does.** The one exception to "the published
+  atlas is the shared documents and nothing else", and it earns it: a pour is a
+  fact about the world, a reading is not. It travels with `cupRef` cut. No
+  endpoint carries a cup, so no read path can leak one by forgetting a filter.
+- **A hold subtracts from the copy, never from the record.** It is additive and
+  reversible like a strike, it never becomes a flag a read path must remember to
+  check, and it carries the green's roasts and pours with it. Never in red.
+- **The published copy is never merged and never pushed.** `PUB` lives under its
+  own key; `CAT`/`REG` hold the own documents only; `catUpsert`/`regUpsert`
+  always write own. If it merged, the day a reader started keeping their record
+  and the founder's would be indistinguishable.
+- **A reader's road is five stations, and their map has no ring.** The sixth
+  station is the keeper's own cups and the ring is the keeper's own overlay —
+  both come off cleanly, and what is left is whole. An absent reader is not a
+  gap in the record, so never render one as `unread`.
 - **A match score never travels without its reasons.** Anywhere a score or
   band shows, "Why this" (the `signals` from `matchOf`) must be reachable.
   Location is consent-gated and ephemeral (`myGeo`, in memory only — never
@@ -738,6 +801,12 @@ the brew corpus (step 6) and discovery (step 7) follow.
   server rev is newer; pushes `PUT {baseRev, ledger}`. A `baseRev` mismatch
   returns **409** carrying the server's copy — the client merges and retries.
   Revisions only increment.
+- **The published atlas** — `GET /api/public[?meta=1]`, **unauthenticated**, and
+  `POST /api/publish`, founder-only. The snapshot is minted server-side from the
+  shared documents the server already holds (the device sends only `{held}`),
+  with pours gathered from every ledger and `cupRef` cut. Nothing published yet
+  answers `404 not-published`, never an empty atlas. The full read carries a
+  strong `ETag` on the rev. See `docs/READER.md` §4.
 - **The café Register** — one shared document at `GET/PUT /api/cafes` (the
   `/api/register` path was taken by sign-up), same rev/409 protocol, readable
   by every authenticated user but **written only by the founder for now** (the

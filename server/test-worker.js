@@ -47,16 +47,19 @@ const LEDGER = who => ({
     let instance = null;
     const env = { ...vars, STORE: { idFromName: () => 'carta', get: () => ({ fetch: r => instance.fetch(r) }) } };
     instance = new CartaStore({ storage }, env);
-    const req = (method, p, { token, body } = {}) =>
+    // raw() hands back the Response itself — the ETag cases need the headers.
+    const raw = (method, p, { token, body, headers } = {}) =>
       worker.fetch(new Request('https://carta.test' + p, {
         method,
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}), ...headers },
         body: body === undefined ? undefined : JSON.stringify(body),
-      }), env).then(async r => ({ status: r.status, body: await r.json().catch(() => null) }));
-    return { req, storage };
+      }), env);
+    const req = (method, p, opts = {}) =>
+      raw(method, p, opts).then(async r => ({ status: r.status, body: await r.json().catch(() => null) }));
+    return { req, raw, storage };
   }
 
-  const { req, storage } = makeApp({ CARTA_MAX_BODY: String(64 * 1024) });
+  const { req, raw: rawReq, storage } = makeApp({ CARTA_MAX_BODY: String(64 * 1024) });
 
   // health probe (unauthenticated)
   let r = await req('GET', '/health');
@@ -266,6 +269,105 @@ const LEDGER = who => ({
   r = await req('GET', '/api/catalog/wombats', { token: alice.token });
   assert.equal(r.status, 404);
   ok('an unknown catalog kind is 404 (whitelisted — old clients degrade cleanly)');
+
+  // ---- the published atlas: a copy, not a switch (docs/READER.md) ----
+  // The record the snapshot will be minted from: two greens, two roasts, a
+  // café, and two pours — one of each pointing at the green we later hold back.
+  r = await req('PUT', '/api/catalog/lots', {
+    token: alice.token, body: { baseRev: 2, catalog: { version: 1, deleted: [], entries: [
+      { id: 'lot-1', _key: 'fp:ethiopia|guji', country: 'Ethiopia' },
+      { id: 'lot-2', _key: 'fp:colombia|huila', country: 'Colombia' }] } },
+  });
+  assert.equal(r.status, 200);
+  r = await req('PUT', '/api/catalog/roasts', {
+    token: alice.token, body: { baseRev: 0, catalog: { version: 1, deleted: [], entries: [
+      { id: 'roast-1', lotRef: 'lot-1', roasterRef: 'r-1' },
+      { id: 'roast-2', lotRef: 'lot-2', roasterRef: 'r-1' }] } },
+  });
+  assert.equal(r.status, 200);
+  const withPours = LEDGER('alice3');
+  withPours.pours = [
+    { id: 'pour:cup-1', lotRef: 'lot-1', roasterRef: 'r-1', shop: 'Kumquat', at: '2026-06-01T00:00:00Z', by: 'Alice', cupRef: 'cup-1' },
+    { id: 'pour:cup-2', lotRef: 'lot-2', roasterRef: 'r-1', shop: 'Kumquat', at: '2026-06-02T00:00:00Z', by: 'Alice', cupRef: 'cup-2' },
+  ];
+  r = await req('PUT', `/api/ledgers/${alice.userId}`, { token: alice.token, body: { baseRev: 2, ledger: withPours } });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 3);
+
+  r = await req('GET', '/api/public');
+  assert.equal(r.status, 404); assert.equal(r.body.error, 'not-published');
+  ok('nothing published yet answers 404 not-published — never an empty atlas');
+
+  r = await req('POST', '/api/publish', { body: { held: [] } });
+  assert.equal(r.status, 401);
+  ok('publish requires auth');
+
+  r = await req('POST', '/api/publish', { token: bob.token, body: { held: [] } });
+  assert.equal(r.status, 403); assert.equal(r.body.error, 'pen-held');
+  ok('a non-founder CANNOT publish (403 pen-held)');
+
+  r = await req('POST', '/api/publish', { token: alice.token, body: { held: 'lot-1' } });
+  assert.equal(r.status, 400);
+  ok('a held list that is not an array of refs is rejected with 400');
+
+  r = await req('POST', '/api/publish', { token: alice.token, body: {} });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 1);
+  assert.deepEqual(r.body.counts, { greens: 2, roasters: 0, roasts: 2, bars: 1, pours: 2, held: 0 });
+  ok('the founder publishes: rev 1, and the counts state what left');
+
+  r = await req('GET', '/api/public?meta=1');
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 1); assert.equal(r.body.atlas, undefined);
+  assert.equal(r.body.counts.greens, 2); assert.ok(r.body.publishedAt);
+  ok('a reader polls ?meta=1 unauthenticated — rev, date and counts, no atlas');
+
+  r = await req('GET', '/api/public');
+  assert.equal(r.status, 200); assert.equal(r.body.publishedBy, 'Alice');
+  assert.equal(r.body.atlas.catalog.lots.entries.length, 2);
+  assert.equal(r.body.atlas.register.entries[0].name, 'Kumquat');
+  assert.equal(r.body.atlas.pours.length, 2);
+  ok('a reader reads the whole atlas unauthenticated, and it names the hand that published it');
+
+  // L1/L2: the shared documents and the pours, and nothing else — no ledger,
+  // no cup, and every pour with its link to a private reading cut.
+  assert.deepEqual(Object.keys(r.body.atlas).sort(), ['catalog', 'pours', 'register']);
+  assert.ok(r.body.atlas.pours.every(p => p.cupRef === undefined));
+  assert.ok(r.body.atlas.pours.every(p => p.shop && p.at && p.by));
+  ok('a pour publishes and its cup never does — cupRef cut, the sighting whole');
+
+  // the ETag: a reader who holds this revision already never pulls it twice
+  let rawRes = await rawReq('GET', '/api/public');
+  const etag = rawRes.headers.get('etag');
+  assert.ok(etag && /carta-atlas-1/.test(etag));
+  rawRes = await rawReq('GET', '/api/public', { headers: { 'If-None-Match': etag } });
+  assert.equal(rawRes.status, 304);
+  ok('the full read carries an ETag on the rev; a repeat read is a 304');
+
+  // L4: holding a green holds its roasts and its pours with it
+  r = await req('POST', '/api/publish', { token: alice.token, body: { held: ['lot-1'] } });
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 2);
+  assert.deepEqual(r.body.counts, { greens: 1, roasters: 0, roasts: 1, bars: 1, pours: 1, held: 1 });
+  assert.deepEqual(r.body.held, ['lot-1']);
+  ok('a hold subtracts the green at publish time, and its roasts and pours with it');
+
+  r = await req('GET', '/api/public');
+  assert.equal(r.status, 200); assert.equal(r.body.rev, 2);
+  assert.deepEqual(r.body.atlas.catalog.lots.entries.map(e => e.id), ['lot-2']);
+  assert.deepEqual(r.body.atlas.catalog.roasts.entries.map(e => e.id), ['roast-2']);
+  assert.deepEqual(r.body.atlas.pours.map(p => p.lotRef), ['lot-2']);
+  ok('the held green, its roast and its pour are absent from the published copy');
+
+  // the record itself is untouched — a hold is a subtraction from the SNAPSHOT
+  r = await req('GET', '/api/catalog/lots', { token: alice.token });
+  assert.equal(r.body.catalog.entries.length, 2);
+  ok('the shared record still holds the green — a hold subtracts from the copy, never the record');
+
+  // L8: adding the reader loosened nothing. Every other endpoint still 401s.
+  for (const [method, p] of [['GET', '/api/users'], ['GET', `/api/ledgers/${alice.userId}`],
+    ['GET', '/api/cafes'], ['GET', '/api/catalog/lots'], ['PUT', '/api/cafes'],
+    ['PUT', '/api/catalog/lots'], ['PUT', `/api/ledgers/${alice.userId}`], ['POST', '/api/publish']]) {
+    const u = await req(method, p, { body: method === 'GET' ? undefined : {} });
+    assert.equal(u.status, 401, `${method} ${p} should still require auth`);
+  }
+  ok('GET /api/public is the ONLY unauthenticated data endpoint — every other one still 401s');
 
   // ---- chunked storage: photo-heavy ledgers span multiple storage values ----
   const big = makeApp(); // default 20 MB body cap

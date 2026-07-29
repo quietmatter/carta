@@ -16,6 +16,7 @@
  *   L:<id>:<n>       ledger JSON, sliced into chunks (see CHUNK below)
  *   R:meta / R:<n>   the shared café Register, same layout
  *   C:<kind>:meta / C:<kind>:<n>   the catalog (the spine), one doc per kind
+ *   P:meta / P:<n>   the published atlas — the snapshot, same chunked layout
  *
  * Ledgers embed photos as base64 and run to many MB; the storage API caps
  * key+value at 2 MB, so document JSON is stored as string chunks and joined
@@ -31,6 +32,10 @@
  * now — written only by the founder (the first account registered; existing
  * stores promote their earliest account on first use), while the atlas settles.
  * Not a hardened public service.
+ *
+ * The one unauthenticated data endpoint is GET /api/public — the published
+ * atlas (docs/READER.md L8). It is a COPY minted by POST /api/publish, never
+ * a switch that opens the shared documents to the world.
  * ============================================================ */
 
 import { scrypt, randomBytes, timingSafeEqual, createHash } from 'node:crypto';
@@ -46,12 +51,12 @@ const BATCH = 128;
 const CATALOG_KINDS = ['producers', 'processors', 'aggregators', 'lots', 'blends', 'roasters', 'roasts', 'gear'];
 
 const HEADERS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-const json = (status, body) => new Response(JSON.stringify(body), { status, headers: HEADERS });
+const json = (status, body, extra) => new Response(JSON.stringify(body), { status, headers: { ...HEADERS, ...extra } });
 const err = (status, code, message) => json(status, { error: code, message });
 // Splice a pre-serialized document into a small meta object without
 // re-parsing megabytes of JSON: {"rev":1,...} -> {"rev":1,...,"ledger":<raw>}.
-const jsonWith = (status, meta, key, raw) =>
-  new Response(JSON.stringify(meta).slice(0, -1) + `,"${key}":${raw ?? 'null'}}`, { status, headers: HEADERS });
+const jsonWith = (status, meta, key, raw, extra) =>
+  new Response(JSON.stringify(meta).slice(0, -1) + `,"${key}":${raw ?? 'null'}}`, { status, headers: { ...HEADERS, ...extra } });
 
 const iso = () => new Date().toISOString();
 const randHex = n => randomBytes(n).toString('hex');
@@ -284,6 +289,89 @@ export class CartaStore {
     return json(200, { rev: next.rev, updatedAt: next.updatedAt });
   }
 
+  /* ---------- the published atlas (docs/READER.md) ----------
+   * L1: the published atlas is the shared documents and nothing else. L2 is the
+   * one exception and it earns it: a POUR publishes, its cup never does — a
+   * pour is a fact about the world, not a reading of one, and without it the
+   * reader's road goes dark at Poured. It travels with cupRef cut. L3: the
+   * snapshot is minted HERE, from the documents this store already holds, so a
+   * publish can never disagree with the record; the device sends only the holds.
+   * The snapshot chunks exactly as the shared documents already do — no new
+   * storage shape under the 2 MB value cap. */
+  async readDoc(prefix) {
+    const meta = await this.getMeta(prefix);
+    const raw = await this.readRaw(prefix, meta);
+    try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  // L4's cascade, applied at publish time: holding a green holds its roasts and
+  // its pours with it. A green whose roasts are public and whose identity is
+  // not is a broken road, not a redaction.
+  async mintAtlas(held) {
+    const dead = new Set((held || []).filter(x => typeof x === 'string'));
+    const catalog = {};
+    for (const kind of CATALOG_KINDS) {
+      const doc = await this.readDoc('C:' + kind);
+      if (!doc || !Array.isArray(doc.entries)) continue;
+      const entries = kind === 'lots' ? doc.entries.filter(e => e && !dead.has(e.id))
+        : kind === 'roasts' ? doc.entries.filter(e => e && !dead.has(e.lotRef))
+        : doc.entries;
+      catalog[kind] = { ...doc, entries };
+    }
+    const register = await this.readDoc('R');
+    // The only place this store reads a ledger for a purpose other than serving
+    // it to its owner — and it reads nothing from it but the pours.
+    const pours = [];
+    for (const u of await this.users()) {
+      const led = await this.readDoc('L:' + u.id);
+      if (!led || !Array.isArray(led.pours)) continue;
+      for (const p of led.pours) {
+        if (!p || !p.id || dead.has(p.lotRef)) continue;
+        const { cupRef, ...rest } = p; // the link to a private reading is the private part
+        pours.push(rest);
+      }
+    }
+    const regEntries = (register && Array.isArray(register.entries)) ? register.entries : [];
+    const n = kind => (catalog[kind] ? catalog[kind].entries.length : 0);
+    return {
+      atlas: { catalog, register, pours },
+      counts: { greens: n('lots'), roasters: n('roasters'), roasts: n('roasts'), bars: regEntries.length, pours: pours.length, held: dead.size },
+    };
+  }
+
+  /* The reader's two doors. Unauthenticated by design and by design ONLY these:
+   * adding the reader must not loosen a byte of the existing auth surface (L8).
+   * A store with nothing published answers 404 not-published — never an empty
+   * atlas, which would be a claim that the record is empty, and it is not. */
+  async handleGetPublic(request, metaOnly) {
+    const meta = await this.s.get('P:meta');
+    if (!meta) return err(404, 'not-published', 'Nothing has been published from this server yet');
+    if (metaOnly) return json(200, { rev: meta.rev, publishedAt: meta.publishedAt, counts: meta.counts });
+    const tag = `"carta-atlas-${meta.rev}"`;
+    // The rev is the whole identity of a snapshot, so a repeat read is a 304.
+    const hdr = { ETag: tag, 'Cache-Control': 'no-cache', 'Access-Control-Expose-Headers': 'ETag' };
+    if ((request.headers.get('if-none-match') || '').split(/,\s*/).includes(tag))
+      return new Response(null, { status: 304, headers: { 'Access-Control-Allow-Origin': '*', ...hdr } });
+    return jsonWith(200, { rev: meta.rev, publishedAt: meta.publishedAt, publishedBy: meta.publishedBy },
+      'atlas', await this.readRaw('P', meta), hdr);
+  }
+
+  // The founder's hand. The device sends only {held} — the atlas itself is read
+  // here, from the documents this store already holds.
+  async handlePublish(request, auth) {
+    const heldRes = this.penHeld(auth);
+    if (heldRes) return heldRes;
+    const body = await this.body(request);
+    if (body instanceof Response) return body;
+    const held = body.held === undefined ? [] : body.held;
+    if (!Array.isArray(held) || held.some(x => typeof x !== 'string'))
+      return err(400, 'bad-input', 'Expected {held} — an array of held refs');
+    const prev = (await this.s.get('P:meta')) || { rev: 0, chunks: 0 };
+    const { atlas, counts: c } = await this.mintAtlas(held);
+    const next = { rev: prev.rev + 1, publishedAt: iso(), publishedBy: auth.name, held, counts: c };
+    await this.writeDoc('P', next, JSON.stringify(atlas), prev.chunks || 0);
+    return json(200, { rev: next.rev, publishedAt: next.publishedAt, counts: c, held });
+  }
+
   /* ---------- router ---------- */
   async fetch(request) {
     const url = new URL(request.url);
@@ -310,11 +398,18 @@ export class CartaStore {
     if (request.method === 'POST' && p === '/api/register') return this.handleRegister(request, ip);
     if (request.method === 'POST' && p === '/api/login') return this.handleLogin(request, ip);
 
+    // The published atlas — the ONE unauthenticated data endpoint (READER.md L8).
+    if (request.method === 'GET' && p === '/api/public')
+      return this.handleGetPublic(request, url.searchParams.get('meta') === '1');
+
     // Everything below requires auth.
     const auth = await this.auth(request);
     if (!auth) return err(401, 'unauthorized', 'Missing or invalid token');
 
     if (request.method === 'GET' && p === '/api/users') return this.handleUsers();
+
+    // Minting the copy is the founder's act, and the only write here.
+    if (request.method === 'POST' && p === '/api/publish') return this.handlePublish(request, auth);
 
     // /api/cafes is the café Register ("register" was taken by sign-up).
     if (p === '/api/cafes') {

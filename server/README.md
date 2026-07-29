@@ -121,6 +121,9 @@ data/
   users.json           accounts (scrypt-hashed passcodes) + session tokens
   ledgers/<id>.json    one file per user: {rev, updatedAt, ledger}
   register.json        the shared café Register: {rev, updatedAt, register}
+  catalog-<kind>.json  one per spine kind: {rev, updatedAt, catalog}
+  public.json          the published atlas: {rev, publishedAt, publishedBy, held, counts, atlas}
+  public-meta.json     the same without the atlas, so a reader polls bytes
 ```
 
 Everything is plain JSON. **Back up the data directory** — copying it while the server is idle is a complete backup. Writes are atomic (temp file + rename), so a crash never leaves a half-written ledger.
@@ -131,6 +134,7 @@ Everything is plain JSON. **Back up the data directory** — copying it while th
 - Every authenticated user can **read** every ledger — seeing each other's records is the point.
 - Only the owner can **write** their own ledger.
 - The **café Register** (`/api/cafes`) and the **catalog** (`/api/catalog/:kind` — the spine of producers, lots, roasters, roasts and the rest, upstream of the café) are the shared documents: every authenticated user can **read** them, but — for now, while the atlas settles — only the **founder** may write them. The founder is the first account registered on the server (servers from before the role promote their earliest account automatically); a non-founder PUT gets `403 pen-held` and the client quietly keeps its copy device-local. Group-writable curation returns when the moderation ceremony ships.
+- The **published atlas** (`GET /api/public`) is the one unauthenticated door, and it reads a snapshot the founder minted deliberately — never the live shared documents. See [The published atlas](#the-published-atlas).
 - Tokens don't expire. To revoke a device, delete its token from `users.json` (server restart not required for ledgers, but token changes are read from memory — restart after editing the file).
 
 This is deliberately simple, built for a household or a group of friends — not a hardened public service. Don't run it on the open internet for strangers.
@@ -164,8 +168,24 @@ All bodies are JSON. Errors are `{error: "<code>", message}`. Authenticated endp
 | GET | `/api/catalog/:kind` | ✓ | — | 200 `{rev, updatedAt, catalog}` — a shared spine document (rev 0, catalog null if never pushed) | 401, 404 unknown kind |
 | GET | `/api/catalog/:kind?meta=1` | ✓ | — | 200 `{rev, updatedAt}` — cheap change poll | 401, 404 |
 | PUT | `/api/catalog/:kind` | founder only | `{baseRev, catalog}` (`catalog.entries` array required) | 200 `{rev, updatedAt}` | 401, 403 pen-held, 400, 409 conflict (carries current `{rev, updatedAt, catalog}`), 413 |
+| GET | `/api/public?meta=1` | **none** | — | 200 `{rev, publishedAt, counts}` — sixty bytes, so a reader polls cheaply | 404 not-published |
+| GET | `/api/public` | **none** | — | 200 `{rev, publishedAt, publishedBy, atlas}` — the published atlas; carries a strong `ETag` on the rev, so a repeat read is a **304** | 404 not-published |
+| POST | `/api/publish` | founder only | `{held?}` — an array of held refs | 200 `{rev, publishedAt, counts, held}` | 401, 403 pen-held, 400 |
 
 `:kind` is one of `producers`, `processors`, `aggregators`, `lots`, `blends`, `roasters`, `roasts`, `gear` — the entity spine upstream of the café. Each kind is an independent document with its own revision; any other kind is **404**.
+
+### The published atlas
+
+`GET /api/public` is the **only unauthenticated data endpoint**, and adding it loosened nothing else — both test suites assert that every other route still answers 401 without a token.
+
+Publishing is **a copy, not a switch**. `POST /api/publish` mints a snapshot from the shared documents the server already holds — the eight catalog kinds and the café Register — and stamps it with a revision, a date and the founder's name, so the reader's copy can state its own age instead of impersonating a live feed. The founder's device sends only `{held}`; shipping the atlas back up would invite a publish that disagrees with the record.
+
+- **No ledger travels.** No cups, no brews, no bags, no Setups. There is no endpoint here that would carry one.
+- **A pour publishes; its cup never does.** A pour — *this green was poured at this bar on this date, attested by this hand* — is a fact about the world, not a reading of one, and without it the reader's road goes dark at *Poured*. Pours are gathered from every ledger at publish time with `cupRef` cut. This is the only place the server reads a ledger for a purpose other than serving it to its owner, and it reads nothing else from it.
+- **A hold is a subtraction from the copy, never from the record.** A green in `held` leaves the snapshot along with its roasts and its pours — a green whose roasts are public and whose identity is not is a broken road, not a redaction. The shared documents keep it whole; release it and the next publish carries it again.
+- **A server with nothing published answers `404 not-published`** — never an empty atlas, which would be a claim that the record is empty.
+
+Counts (`{greens, roasters, roasts, bars, pours, held}`) come back from `POST /api/publish` and ride on `?meta=1`: the founder sees exactly what leaves before it leaves, in the same units the reader will see it in.
 
 ### Sync protocol
 
