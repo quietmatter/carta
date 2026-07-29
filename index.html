@@ -1272,11 +1272,13 @@ const harvestYear=o=>{const m=String((o&&o.harvest)||'').match(/\b(?:19|20)\d{2}
 // gets to rule on: two harvests of one farm would collide here and merge silently, whatever the score
 // said. The year is APPENDED, never inserted, so a record that names no year keys exactly as it always
 // did and nothing standing has to be re-keyed. It does not count toward the ≥2 threshold — it discriminates
-// between greens, it does not make a thin record substantial.
+// between greens, it does not make a thin record substantial. The locality (6.13.0) follows the year's
+// construction exactly, appended after it with its own marker: Pitalito and Planadas under one Huila
+// fingerprint are different greens, but a town named does not make a thin record substantial either.
 const lotKeyOf=(o,fallbackId)=>{
   const parts=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].map(catNorm);
-  const y=harvestYear(o);
-  return parts.filter(Boolean).length>=2 ? 'fp:'+parts.join('|')+(y?'|'+y:'') : 'lot:'+fallbackId;   // too thin to trust → fork
+  const y=harvestYear(o),loc=catNorm(o.originLocality);
+  return parts.filter(Boolean).length>=2 ? 'fp:'+parts.join('|')+(y?'|'+y:'')+(loc?'|@'+loc:'') : 'lot:'+fallbackId;   // too thin to trust → fork
 };
 // The lot's process family, mapped conservatively from the roaster's free-text process.
 // A recognised word carries; anything unclear reads 'unspecified' — the honest default,
@@ -1304,22 +1306,26 @@ function actorKind(o){
 }
 // The lot's identity columns (SCHEMA's ladder, as fields), added ALONGSIDE the flat origin the
 // read/retirement paths still use — never replacing it (see the branch decision).
-// The GRAIN is a spatial ladder and nothing else rides on it (MODEL_QA A5): five rungs, each promoted
+// The GRAIN is a spatial ladder and nothing else rides on it (MODEL_QA A5): six rungs, each promoted
 // only by evidence that actually proves it. It reads coarsest-up, so a record binds at the coarsest node
 // it can prove and no finer:
 //   country      a country named
 //   region       a region named
+//   locality     a town or municipality named — administrative, one step finer than the region
 //   station      a processor named — a mill's catchment, many growers pooled
 //   farm         one grower's parcel named
 //   green-lot    a lot identity — a printed lot name, or a hard-ID the trade minted
+// The station outranks the locality: a named mill had custody of the cherry, and naming it proves at
+// least the town it stands in — never the reverse. Locality is presence-granted like region and country
+// (it is geography, not an actor), so the actor rungs still pass through actorKind and nothing else.
 // A bare producer NAME no longer buys green-lot: a name is not an identity the trade bought and sold
 // under, and until it is classified it is not a farm either. Season is NOT a rung — the harvest is its
 // own column, below, exactly as A5 required. scope and intermediary stay unread: both are Import Desk
 // facts, born a link upstream of anything a keeper can paste (see VISION, "where each fact is born").
-// Blanks-only through catUpsert; grain and the year are re-derived through lotRederive.
+// Blanks-only through catUpsert; grain, the head's tier and the year are re-derived through lotRederive.
 function lotIdentity(o){
   const head=regSubstance(o.producer)?{headName:o.producer,headTier:'producer'}
-    :regSubstance(o.lot)?{headName:o.lot,headTier:'farm'}
+    :regSubstance(o.lot)?{headName:o.lot,headTier:'lot'}   // a printed lot NAME — was mis-tagged 'farm' pre-6.13, colliding with the grain's farm rung
     :regSubstance(o.originRegion)?{headName:o.originRegion,headTier:'region'}
     :regSubstance(o.originCountry)?{headName:o.originCountry,headTier:null}
     :regSubstance(o.origin)?{headName:o.origin,headTier:null}:{headName:null,headTier:null};
@@ -1327,10 +1333,12 @@ function lotIdentity(o){
   const grain=(regSubstance(o.lot)||((o.hardIds||[]).length))?'green-lot'
     :ak==='farm'?'farm'
     :ak==='station'?'station'
+    :regSubstance(o.originLocality)?'locality'
     :regSubstance(o.originRegion)?'region'
     :regSubstance(o.originCountry)?'country':null;
   return {grain,hardIds:[],
     fingerprint:{headName:head.headName,headTier:head.headTier,country:o.originCountry||null,region:o.originRegion||null,
+      locality:o.originLocality||null,
       varieties:regSubstance(o.variety)?[o.variety]:[],
       process:{family:procFamily(o.process),stages:[]},
       harvest:{crop:null,year:harvestYear(o),hemisphere:null},intermediary:null},
@@ -1344,18 +1352,24 @@ function lotIdentity(o){
 function lotRederive(n,o){
   if(!n||n.role)return n;
   let hit=false;
-  const g=lotIdentity(o).grain;
+  const id=lotIdentity(o),g=id.grain,fp=n.fingerprint;
   if(g&&n.grain!==g){n.grain=g;hit=true}
   const y=harvestYear(o);
-  if(y&&n.fingerprint&&n.fingerprint.harvest&&!n.fingerprint.harvest.year){n.fingerprint.harvest.year=y;hit=true}
+  if(y&&fp&&fp.harvest&&!fp.harvest.year){fp.harvest.year=y;hit=true}
+  // the head's TIER is derived exactly as grain is — written through, but only when the head itself
+  // still matches, so one record's re-read never re-tags a head another record named
+  if(fp&&fp.headName&&id.fingerprint.headName&&normPlace(fp.headName)===normPlace(id.fingerprint.headName)
+    &&id.fingerprint.headTier&&fp.headTier!==id.fingerprint.headTier){fp.headTier=id.fingerprint.headTier;hit=true}
+  // the locality fills blanks only, the year's pattern: a town, once known, is a fact the green keeps
+  if(regSubstance(o.originLocality)&&fp&&!regSubstance(fp.locality)){fp.locality=o.originLocality;hit=true}
   if(hit){n.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots')}
   return n;
 }
 // The whole field object a lot upsert carries — the flat origin (the read surface) plus the
 // identity columns above — so catSeed, catStampLot and any later writer stamp one shape. A loose
 // free-text origin (no structured fields) keeps only `origin`; structured records keep the six.
-const lotFields=(o,pRef)=>{const struct=[o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].some(regSubstance);
-  const f=Object.assign({country:o.originCountry,region:o.originRegion,producer:o.producer,variety:o.variety,process:o.process,lotName:o.lot,
+const lotFields=(o,pRef)=>{const struct=[o.originCountry,o.originRegion,o.originLocality,o.producer,o.variety,o.process,o.lot].some(regSubstance);
+  const f=Object.assign({country:o.originCountry,region:o.originRegion,locality:o.originLocality,producer:o.producer,variety:o.variety,process:o.process,lotName:o.lot,
     harvest:o.harvest,producerKind:o.producerKind,origin:struct?undefined:o.origin},lotIdentity(o));
   if(pRef)f.producerRefs=[pRef];   // the spine edge lot → producer, set once (blanks-only)
   return f};
@@ -1419,7 +1433,7 @@ const normHardIds=list=>{const out=[],seen={};
 const recHardIds=r=>normHardIds(r&&r.hardIds);
 // A record is worth a lot node when it carries any origin OR a hard-ID — a bag printed with only an
 // outturn is still a green. The seed/stamp/repoint sites all gate on this one predicate.
-const lotWorthy=r=>[r.originCountry,r.originRegion,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin)||!!recHardIds(r).length;
+const lotWorthy=r=>[r.originCountry,r.originRegion,r.originLocality,r.producer,r.variety,r.process,r.lot].some(regSubstance)||regSubstance(r.origin)||!!recHardIds(r).length;
 // The standing lot bound to any of these tokens — the deterministic rung. Matching is EXACT on
 // {scheme,value}, and that alone routes the Kenya batch (RESOLVER §5): a batch parent carries the BARE
 // outturn (17KF0001), each graded sibling carries OUTTURN/GRADE (17KF0001/AA) — so a graded token lands on
@@ -1509,7 +1523,7 @@ function reconcileTier(fp){
 // the read the scorer and the re-point paths share, so scoring survives the flat text's retirement.
 const recOrigin=r=>{const n=r&&r.lotRef&&catNode('lots',r.lotRef);
   const f=(fl,nk)=>{const v=(r&&r[fl])||'';return v||(n&&n[nk])||''};
-  const o={originCountry:f('originCountry','country'),originRegion:f('originRegion','region'),producer:f('producer','producer'),
+  const o={originCountry:f('originCountry','country'),originRegion:f('originRegion','region'),originLocality:f('originLocality','locality'),producer:f('producer','producer'),
     variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin'),
     harvest:f('harvest','harvest'),producerKind:f('producerKind','producerKind')};
   // the actor's kind and its station survive the flat text's retirement by reading the spine the door
@@ -1529,10 +1543,10 @@ const recOrigin=r=>{const n=r&&r.lotRef&&catNode('lots',r.lotRef);
  * toward propose-over-auto and fork-over-merge (decision #3) — POSTURES to tune against real records once
  * enough lots stand to measure a false-merge rate, not fabricated precision. ---- */
 let TAU_AUTO=0.90, TAU_PROP=0.55;                 // tunable postures (decision #3) — the threshold sits where the recoverable error lives
-const FP_W={head:0.30,region:0.20,year:0.18,varieties:0.15,process:0.12,intermediary:0.05};
+const FP_W={head:0.30,region:0.20,year:0.18,varieties:0.15,process:0.12,locality:0.12,intermediary:0.05}; // locality ≥0.11: two full matches naming DIFFERENT towns must fall out of auto-bind into the propose band
 const VAR_UNKNOWN=/^(unknown|mixed|various|blend|mixed heirloom|assorted|n a|na)$/;
 const varSet=list=>[...new Set((list||[]).map(genFold).filter(v=>v&&!VAR_UNKNOWN.test(v)).map(normPlace))];
-const tierLabel=t=>t==='farm'?'farm':t==='producer'?'producer':t==='station'?'station':t==='region'?'region':'name';
+const tierLabel=t=>t==='farm'?'farm':t==='lot'?'lot name':t==='producer'?'producer':t==='station'?'station':t==='region'?'region':'name'; // 'farm' kept: a pre-6.13 fingerprint still carries it for a lot-name head
 // the record's fingerprint, node-first (retirement-safe), tier reconciled — the scorer's `a` side.
 function fpOf(rec){const fp=lotIdentity(recOrigin(rec)).fingerprint;fp.headTier=reconcileTier(fp)||fp.headTier;return fp}
 function scoreLot(rec,lot){return scoreFP(fpOf(rec),lot.fingerprint||{})}
@@ -1554,6 +1568,12 @@ function scoreFP(a,b){
   // a plain present-on-both exact-match field: absent-on-both is excluded (neutral), one-sided fails to confirm
   const fld=(w,va,vb,label)=>{const A=normPlace(va),B=normPlace(vb);if(!A&&!B)return;den+=w;if(A&&B&&A===B){num+=w;push(label)}};
   fld(FP_W.region,a.region,b.region,'region');
+  // locality — BOTH-present only, deliberately unlike region: every green minted before 6.13 predates
+  // the column, so for years a one-sided blank means the node's age, never evidence of difference —
+  // and region's construction would drop a pure enrichment amend below auto-bind and fork it.
+  // Revisit once the column has coverage to measure.
+  const la=normPlace(a.locality),lb=normPlace(b.locality);
+  if(la&&lb){den+=FP_W.locality;if(la===lb){num+=FP_W.locality;push('locality')}}
   // year — ±1 crop-year partial; flat text carries none, so usually excluded (both blank)
   const ya=a.harvest&&a.harvest.year, yb=b.harvest&&b.harvest.year;
   if(ya||yb){den+=FP_W.year;if(ya&&yb){const d=Math.abs(Number(ya)-Number(yb));if(d===0){num+=FP_W.year;push('year')}else if(d===1)num+=FP_W.year*0.6}}
@@ -1884,7 +1904,7 @@ function catRetire(){
   const strike=r=>{if(!r)return false;let hit=false;
     if(r.roasterRef&&catNode('roasters',r.roasterRef)&&regSubstance(r.roaster)){r.roaster='';hit=true} // roaster node stands → the text retires
     const lotN=r.lotRef&&catNode('lots',r.lotRef);
-    if(lotN){['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>{if(regSubstance(r[k])){r[k]='';hit=true}}); // lot node stands → the six structured origin fields retire
+    if(lotN){['originCountry','originRegion','originLocality','producer','variety','process','lot'].forEach(k=>{if(regSubstance(r[k])){r[k]='';hit=true}}); // lot node stands → the six structured origin fields retire
       if(regSubstance(r.origin)&&regSubstance(lotN.origin)){r.origin='';hit=true}} // the loose free-text origin retires only when its own singleton lot carries it — homed on lot:<id>, so lotN.origin is this record's alone, never a co-keyed sibling's
     if(r.roastRef&&catNode('roasts',r.roastRef)){ // roast node stands → the flat roast level (index 0 is unset) + roast date retire; a café cup carries no roastRef, so this fires on bags alone
       if(regSubstance(ROAST_LEVELS[r.roastLevel])){r.roastLevel=0;hit=true}
@@ -2138,7 +2158,7 @@ const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
   const f=(flat,nk)=>{const v=(rec&&rec[flat])||'';return (n&&n[nk])||v};
   // origin is a café cup's loose free-text line — homed only on the cup's own singleton
   // lot (never a shared fp node), so node-first is safe: the node's origin is this cup's alone.
-  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
+  return {country:f('originCountry','country'),region:f('originRegion','region'),locality:f('originLocality','locality'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
 // The circle reads a cup that belongs to ANOTHER keeper. It honours their exact words
 // FIRST — the circle's standing invariant, "what the keeper wrote" — and consults the
 // group-shared catalog node only as the floor beneath a field they've since retired.
@@ -2151,7 +2171,7 @@ const lotRead=rec=>{const n=rec&&rec.lotRef&&catNode('lots',rec.lotRef);
 const circleRoaster=c=>{if(!c)return '';const n=c.roasterRef&&catNode('roasters',c.roasterRef);return c.roaster||(n&&n.name)||''};
 const circleLot=c=>{const n=c&&c.lotRef&&catNode('lots',c.lotRef);
   const f=(flat,nk)=>{const v=(c&&c[flat])||'';return v||(n&&n[nk])||''};
-  return {country:f('originCountry','country'),region:f('originRegion','region'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
+  return {country:f('originCountry','country'),region:f('originRegion','region'),locality:f('originLocality','locality'),producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process'),lot:f('lot','lotName'),origin:f('origin','origin')}};
 const setupById=id=>D.setups.find(s=>s.id===id);
 const bagById=id=>D.bags.find(b=>b.id===id);
 const cupById=id=>D.cups.find(c=>c.id===id);
@@ -2655,10 +2675,16 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.12.0';
+const APP_VERSION='6.13.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.13.0',date:'July 2026',title:'The town has a column.',items:[
+    'The locality — Pitalito under Huila, Dipilto under Nueva Segovia. The region was the finest place the record could hold, and a bag that named the town had nowhere to put it. It is its own field now, on every origin block, one step finer than the region and short of any one farm or mill.',
+    'A rung of its own. The grain ladder reads six now — country, region, locality, washing station, farm, green lot. The station still outranks the town: a named mill had custody of the cherry, and naming it proves at least the town it stands in, never the reverse.',
+    'Nothing standing moved. Every green keeps its key and its identity; a coffee learns its town only when you state one, and a green already yours stays yours when you do — the scorer treats a record that names no town as silent about it, never as disagreeing.',
+    'The door does not guess it. Towns and regions share names everywhere coffee grows, and a name the record cannot classify buys no rung — the locality is typed, with the rail offering what the record already holds.',
+  ]},
   {v:'6.12.0',date:'July 2026',title:'Authoring asks the same questions.',items:[
     'The authoring form speaks the shared origin block now. It had its own smaller grid — no harvest, no height, no printed code, no rails — so a green authored straight onto the atlas arrived knowing less than a green a bag carried in. One vocabulary, every surface: what the shelf form asks, the author’s desk asks.',
     'The two columns land. A harvest and a height typed while authoring go where a bag’s go — the year to its own column, the band onto the green — instead of being dropped at the door.',
@@ -3213,13 +3239,14 @@ const lotLabel=n=>{if(!n)return 'a lot';const place=[n.region,n.country].filter(
 // "same green, in N hands" count the atlas exists to show. Read by the lot, producer, roaster and venue pages.
 const lotHands=id=>new Set(catAll('roasts').filter(r=>r&&r.lotRef===id&&r.roasterRef).map(r=>r.roasterRef)).size;
 // The resolution grain, read honestly (RESOLVER §6, LOT_IDENTITY): the level identity actually reached.
-// Five rungs, coarsest first, each named for what it PROVES and nothing finer. A station is a terminal
+// Six rungs, coarsest first, each named for what it PROVES and nothing finer. A station is a terminal
 // node, not a half-filled lot — it is where most of the world's coffee honestly stops. Monochrome — a
 // lens, never a rank. The two pre-6.1 values are kept so an unswept record still reads; the sweep
 // (lotRederive) re-reads every green onto the ladder above.
 const GRAIN_READ={'green-lot':['green lot','the finest grain — one parcel under one identity the trade bought and sold it under'],
   'farm':['farm','one grower’s parcel named — finer than the mill, short of a lot identity'],
   'station':['washing station','a named mill — many growers’ cherry, honestly indistinguishable past it'],
+  'locality':['locality','a town or municipality named — finer than the region, short of any one farm or mill'],
   'region':['region','a region and its country. Not a gap; the record refusing to invent what the bag never carried'],
   'country':['country','the coarsest honest grain — a country, and nothing under it yet'],
   'processing-batch':['processing batch','one cherry, graded into sibling export lots'],
@@ -3646,7 +3673,7 @@ function devSeedFingerprint(){
   if(had&&had.lotRef)return openLotPage(had.lotRef);
   const mk=(roaster,name,origin)=>{const b={id:uid(),createdAt:new Date().toISOString(),name,roaster,...origin,roastLevel:1,roastDate:today()};
     D.bags.push(b);catStampRoaster(b);catStampLot(b);catStampRoast(b);
-    if(b.roasterRef)b.roaster='';if(b.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>b[k]='');if(b.roastRef){b.roastLevel=0;b.roastDate=''}return b};
+    if(b.roasterRef)b.roaster='';if(b.lotRef)['originCountry','originRegion','originLocality','producer','variety','process','lot'].forEach(k=>b[k]='');if(b.roastRef){b.roastLevel=0;b.roastDate=''}return b};
   const b1=mk('Boma Coffee','Worka washed — Boma',{originCountry:'Ethiopia',originRegion:'Yirgacheffe',producer:'Worka Sakaro',variety:'Heirloom',process:'Washed'});
   mk('Sey','Ethiopia Worka',{originCountry:'Ethiopia',originRegion:'Yirgachefe',producer:'Worka Sakaro',variety:'Heirloom',process:'Washed'}); // region transliterated — lotKeyOf forks, the fingerprint binds
   save();
@@ -3727,7 +3754,7 @@ function authorRoast(f,who){
   const rec={id:uid(),createdAt:new Date().toISOString(),curator:who, // no chart stamp — membership is derived at read time, never stored
 
     roaster:(f.roaster||'').trim(),roasterCity:(f.roasterCity||'').trim(),site:(f.site||'').trim(),name:(f.offering||'').trim(),
-    originCountry:(f.originCountry||'').trim(),originRegion:(f.originRegion||'').trim(),producer:(f.producer||'').trim(),
+    originCountry:(f.originCountry||'').trim(),originRegion:(f.originRegion||'').trim(),originLocality:(f.originLocality||'').trim(),producer:(f.producer||'').trim(),
     variety:(f.variety||'').trim(),process:(f.process||'').trim(),lot:(f.lot||'').trim(),harvest:(f.harvest||'').trim(),
     producerKind:f.producerKind||'',station:(f.station||'').trim(),
     hardIds:(f.hardIds||[]).slice(),roastLevel:f.roastLevel||0,roastDate:f.roastDate||''};
@@ -3764,7 +3791,7 @@ function saveAuthorRoast(){
   const o=readOriginFields('a_'); if(o===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
   const lvl=ROAST_LEVELS.indexOf(segState.a_roast||'');
   const f={roaster:val('a_roaster'),roasterCity:val('a_city'),offering:val('a_offering'),originCountry:o.originCountry,originRegion:o.originRegion,
-    producer:o.producer,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
+    originLocality:o.originLocality,producer:o.producer,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
     producerKind:o.producerKind,station:o.station,
     roastLevel:lvl<0?0:lvl,roastDate:val('a_roastDate'),hardIds:o.hardIds};
   if(!f.roaster){toast('Name the roaster — a roast is one roaster’s reading of a green');return}
@@ -4606,7 +4633,7 @@ function atlasSearchIndex(){
   atlasLotIds().forEach(id=>{const l=catNode('lots',id);if(!l)return;const fp=l.fingerprint||{};
     const sub=[fp.region,fp.country,fp.process&&fp.process.family,l.variety].filter(regSubstance).join(' · ');
     ix.push({name:lotLabel(l),kind:'lot',sub:sub||'a green on the atlas',
-      k:[lotLabel(l),fp.country,fp.region,fp.producer,l.variety,fp.process&&fp.process.family,(l.hardIds||[]).map(h=>h.value).join(' ')].filter(Boolean).join(' ').toLowerCase(),
+      k:[lotLabel(l),fp.country,fp.region,fp.locality,fp.producer,l.variety,fp.process&&fp.process.family,(l.hardIds||[]).map(h=>h.value).join(' ')].filter(Boolean).join(' ').toLowerCase(),
       go:`openLotPage(${jsq(id)})`})});
   catAll('roasters').forEach(r=>{if(!r||!regSubstance(r.name))return;
     ix.push({name:r.name,kind:'roaster',sub:[r.city,r.country].filter(regSubstance).join(', ')||'a roaster on the atlas',
@@ -4665,7 +4692,7 @@ function atlasLots(){
 }
 // every rung reaches its own primer — before 6.1 the map keyed 'region' against a ladder that only ever
 // emitted 'region-grade', so PR.region was unreachable and a region lot opened the station's primer
-const grainPrimerKey=g=>({'green-lot':'greenlot','farm':'farm','station':'station','region':'region','country':'country',
+const grainPrimerKey=g=>({'green-lot':'greenlot','farm':'farm','station':'station','locality':'locality','region':'region','country':'country',
   'processing-batch':'outturn','station-season':'station','region-grade':'region'})[g]||'resolution';
 /* The season's lots read as row-links now (STREAMLINED.html): the standing —
  * caliber, rarity, traceability — is stated in full on the green's own page,
@@ -5129,7 +5156,7 @@ function nodeResHTML(kind,id,gs){
  * M2 what cannot be placed lists rather than lies, and the fall is stated;
  * M3 folds are counted, and marks that READ the same fold however far apart;
  * M4 a cluster of one is not a scene — one bar is a front door. ---- */
-const RUNG={'green-lot':3,farm:2,station:2,region:1,country:0}; // the grain's five rungs, deciding a coordinate
+const RUNG={'green-lot':4,farm:3,station:3,locality:2,region:1,country:0}; // the grain's six rungs, deciding a coordinate
 const KMX=(lon,la0)=>lon*111.32*Math.cos(la0*Math.PI/180),KMY=la=>la*111.32;
 /* how wide a frame may be before streets stop meaning anything. Derived from
    SCENE_KM rather than picked: a scene is what links within 40 km, so three of
@@ -6814,7 +6841,8 @@ function closeSheet(){document.getElementById('sheet').classList.remove('open');
  * sheet is its own layer so it stacks above any open sheet and closes back to
  * it. Add a term here and every ex(...) tap of it is wired for free. */
 const PR={
-  resolution:{t:'The grain',b:'How finely a coffee’s origin is proven — one spatial ladder, five rungs: country, region, washing station, farm, green lot. A record rests on the coarsest rung it can prove and no finer. The grain is stated, never rounded up. Season is not a rung; the harvest is its own column.'},
+  resolution:{t:'The grain',b:'How finely a coffee’s origin is proven — one spatial ladder, six rungs: country, region, locality, washing station, farm, green lot. A record rests on the coarsest rung it can prove and no finer. The grain is stated, never rounded up. Season is not a rung; the harvest is its own column.'},
+  locality:{t:'Locality',b:'A town or municipality named — Pitalito under Huila, Gedeb town under Gedeb. One step finer than the region, short of any one farm or mill. It is geography, not an actor: a named mill still outranks it, because naming the mill proves at least the town it stands in. Typed, never parsed off a paste — a name the record cannot classify buys no rung.'},
   greenlot:{t:'Green lot',b:'Proven to the exact green lot — one parcel, one identity the trade bought and sold it under, printed as a lot name or a code the trade minted. The finest grain the ladder reaches.'},
   farm:{t:'Farm',b:'The trail proves to one grower’s parcel — a finca, an estate, a named farm. Finer than the mill it delivered to, short of a lot identity: the farm is named, the parcel it was sold under is not.'},
   station:{t:'Washing station',b:'The trail proves to a named mill and stops there. Many growers’ cherry, pooled and honestly indistinguishable past the wet mill — one station can stand for thousands of households. A legitimate terminal record, not a half-filled lot.'},
@@ -7126,6 +7154,7 @@ function originFieldsHTML(p,o,h,extra){o=o||{};
   return `<div class="grid2">
     ${f('country','Country','Ethiopia',1)}
     ${f('region','Region','Bench Maji',1)}
+    ${f('locality','Locality','Mizan Teferi',1)}
     ${f('producer','Producer / station','free text',1)}
     ${f('variety','Variety','Gesha 1931',1)}
     ${f('process','Process','washed',1)}
@@ -7144,7 +7173,7 @@ function originFieldsHTML(p,o,h,extra){o=o||{};
 // cannot classify buys no rung here either.
 function readOriginFields(p,existing){
   const hids=readHardIds(p+'hid',existing); if(hids===false)return false;
-  const o={originCountry:val(p+'country'),originRegion:val(p+'region'),producer:val(p+'producer'),
+  const o={originCountry:val(p+'country'),originRegion:val(p+'region'),originLocality:val(p+'locality'),producer:val(p+'producer'),
     variety:val(p+'variety'),process:val(p+'process'),lot:val(p+'lot'),harvest:val(p+'harvest'),hardIds:hids};
   o.altitudeM=altParse(val(p+'altitude'));
   o.producerKind=actorKind(o);o.station=o.producerKind==='station'?o.producer:'';
@@ -7158,7 +7187,7 @@ const originExtras=rec=>{const n=rec&&rec.lotRef&&catNode('lots',lotFwd(rec.lotR
 // The door's settled coffee, in the shape the origin block reads — so what the paste found lands in
 // the fields themselves, correctable, rather than only in a banner the keeper cannot argue with.
 // Blanks are dropped, never assigned: the door fills what it read and says nothing about the rest.
-const doorOrigin=b=>{const o={country:b.originCountry,region:b.originRegion,producer:b.producer,
+const doorOrigin=b=>{const o={country:b.originCountry,region:b.originRegion,locality:b.originLocality,producer:b.producer,
   variety:b.variety,process:b.process,lot:b.lot,harvest:b.harvest,altitude:altLabel(b.altitudeM)};
   Object.keys(o).forEach(k=>{if(!regSubstance(o[k]))delete o[k]});return o};
 
@@ -7173,7 +7202,7 @@ const doorOrigin=b=>{const o={country:b.originCountry,region:b.originRegion,prod
 let _picked={};
 const pickedLot=p=>{const l=_picked[p]&&catNode('lots',_picked[p]);return lotLive(l)?l:null};
 const greenKey=l=>{const fp=l.fingerprint||{};
-  return [lotLabel(l),l.country||fp.country,l.region||fp.region,l.producer||fp.producer,l.variety,
+  return [lotLabel(l),l.country||fp.country,l.region||fp.region,l.locality||fp.locality,l.producer||fp.producer,l.variety,
     l.process,fp.process&&fp.process.family,l.lotName,(l.hardIds||[]).map(h=>h.value).join(' ')]
     .filter(regSubstance).join(' ').toLowerCase()};
 function greenPickHTML(p){
@@ -7197,6 +7226,7 @@ function pickGreen(p,id){
   _picked[p]=id;
   const fp=l.fingerprint||{},set=(k,v)=>{const el=document.getElementById(p+k);if(el&&regSubstance(v))el.value=v};
   set('country',l.country||fp.country);set('region',l.region||fp.region);
+  set('locality',l.locality||fp.locality);
   set('producer',l.producer||fp.producer);set('variety',l.variety);
   set('process',l.process||(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):''));
   set('lot',l.lotName);set('harvest',fp.harvest&&fp.harvest.year?String(fp.harvest.year):'');
@@ -7224,7 +7254,7 @@ function openBagForm(id){
   brandCtx={kicker:'On the shelf',title:'The bag, in its own colours',cta:'Brew this'};
   const o=Object.assign(lotRead(b),originExtras(b)); // node-first, so a bag whose flat origin has gone legacy still prefills from its lot node (and re-saves without striking the ref)
   const rr=roastRead(b); // likewise for the roast — a retired level/date prefills from its roast node, so an edit re-populates the flat fields instead of silently blanking them
-  const more=!!(o.country||o.region||o.producer||o.variety||o.process||o.lot||o.harvest||o.altitude||(b.hardIds&&b.hardIds.length)||rr.roastDate||b.boughtAt||b.price!=null||b.notes);
+  const more=!!(o.country||o.region||o.locality||o.producer||o.variety||o.process||o.lot||o.harvest||o.altitude||(b.hardIds&&b.hardIds.length)||rr.roastDate||b.boughtAt||b.price!=null||b.notes);
   openSheet(`
   <h3>${id?'Edit the coffee':'Put a coffee on the shelf'}</h3>
   <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'The bag in your hand — two lines is plenty. Or give its website and CARTA reads the rest.'}</div>
@@ -7261,7 +7291,7 @@ function saveBag(id){
   const o=readOriginFields('f_',b0&&b0.hardIds); if(o===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
   const roastLevel=ROAST_LEVELS.indexOf(segState.roast);
   const rec={roaster:val('f_roaster'),name:val('f_name'),originCountry:o.originCountry,originRegion:o.originRegion,
-    producer:o.producer,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
+    originLocality:o.originLocality,producer:o.producer,variety:o.variety,process:o.process,lot:o.lot,harvest:o.harvest,
     producerKind:o.producerKind,station:o.station,roastDate:val('f_roastDate'),
     boughtAt:val('f_boughtAt'),price:numv('f_price'),roastLevel,notes:val('f_notes'),hardIds:o.hardIds,
     site:(val('f_site')||'').trim(),palette:brandPalette};
@@ -7278,7 +7308,7 @@ function saveBag(id){
   if(pickedLot('f_'))lotRes=bindPicked(nb,'f_');
   doorStampActors(nb,o);doorStampAltitude(nb,o);
   if(nb.roasterRef)nb.roaster=''; // flat roaster retired on new bags — the node authored above carries it (bagRoaster reads through), and a bag never surfaces to another keeper's circle
-  if(nb.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>nb[k]=''); // flat origin retired on new bags — the lot node authored above carries it (lotRead reads through, node-first). Bags only: a café cup's circle surfaces read flat origin by design, so cup origin stays
+  if(nb.lotRef)['originCountry','originRegion','originLocality','producer','variety','process','lot'].forEach(k=>nb[k]=''); // flat origin retired on new bags — the lot node authored above carries it (lotRead reads through, node-first). Bags only: a café cup's circle surfaces read flat origin by design, so cup origin stays
   if(nb.roastRef){nb.roastLevel=0;nb.roastDate=''} // flat roast level + date retired on new bags — the roast node authored above carries them (roastRead reads through, flat-first-node-floor)
   _picked['f_']=null;save();setAccent(roastLevel);closeSheet();
   go(depth()>=3?'field':'bags');toast('On the shelf. The first brew starts whenever you do.');
@@ -7428,6 +7458,7 @@ function doorFields(){
   const f=doorParsed||{},s=doorStruck;
   const farm=(!s.producer&&f.producer)||'',stn=(!s.processor&&f.processor)||'';
   return {originCountry:(!s.country&&f.country)||'',originRegion:(!s.region&&f.region)||'',
+    originLocality:(!s.locality&&f.locality)||'', // never parsed off a paste — carried only from a pre-bound green (doorFromLot)
     producer:farm||stn,producerKind:farm?'farm':stn?'station':'',station:stn,
     variety:(!s.variety&&(f.varieties||[])[0])||'',process:(!s.process&&f.process)||'',lot:'',
     altitude:(!s.altitude&&f.altitude)||'',altitudeM:(!s.altitude&&f.altitudeM)||null,harvest:(!s.harvest&&f.harvest)||'',
@@ -7442,6 +7473,7 @@ function doorResolve(){
 const DOOR_GRAIN={'green-lot':['Green lot','The finest grain the trade can prove — one parcel, under one identity.'],
   'farm':['Farm','One grower’s parcel named. Short of a lot identity, and said so.'],
   'station':['Washing station','A legitimate terminal record, not a half-filled lot.'],
+  'locality':['Locality','A town named. Finer than the region, short of any one farm or mill.'],
   'region':['Region','A region and its country. Named as such, never rounded up.'],
   'country':['Country','The honest floor. A name we can’t classify buys nothing above it.']};
 let doorStep=0,doorText='',doorParsed=null,doorStruck={},doorRoasted='',doorFrom=null,doorHid=null,doorLot=null;
@@ -7463,7 +7495,7 @@ function openDoor(fromKind,fromId){
 }
 // a standing green, in the shape doorParse emits — so step 2 and doorFields read it with no branch
 const doorFromLot=l=>{const fp=l.fingerprint||{},who=l.producer||fp.producer||'',stn=l.producerKind==='station';
-  return {country:l.country||fp.country||'',region:l.region||fp.region||'',
+  return {country:l.country||fp.country||'',region:l.region||fp.region||'',locality:l.locality||fp.locality||'',
     producer:stn?'':who,processor:stn?who:'',
     varieties:regSubstance(l.variety)?[l.variety]:[],
     process:l.process||(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):'')||'',
@@ -7597,7 +7629,7 @@ function doorBind(kind){
     // by the same vocabulary, the same readout and the same threshold that settle it for a bag.
     // The cup form takes it as a PREFILL now, not a banner: the facts land in the fields themselves,
     // where the keeper can correct them and where an amend can read them back.
-    cafeBound={roaster,name,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,
+    cafeBound={roaster,name,originCountry:o.originCountry,originRegion:o.originRegion,originLocality:o.originLocality,producer:o.producer,
       producerKind:o.producerKind,station:o.station,harvest:o.harvest,variety:o.variety,process:o.process,
       lot:'',altitudeM:o.altitudeM,hardIds:hids,lotId:preBound};
     doorOn=false;
@@ -7609,7 +7641,7 @@ function doorBind(kind){
   // the record could not keep: the harvest (its own column, the scorer's third-heaviest — one crop
   // is not the next) and the height (doorStampAltitude, below). Both are columns; neither is a
   // sentence. The actor's kind rides on the record too — it is what the grain reads.
-  const base={roaster,name,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,
+  const base={roaster,name,originCountry:o.originCountry,originRegion:o.originRegion,originLocality:o.originLocality,producer:o.producer,
     producerKind:o.producerKind,station:o.station,harvest:o.harvest,
     variety:o.variety,process:o.process,lot:'',roastDate:doorRoasted,roastLevel:lvl<0?0:lvl,hardIds:hids,notes:''};
   // A green walked to, not derived: bind it outright. doorFields drops the lot name, so the key alone
@@ -7635,7 +7667,7 @@ function doorBind(kind){
   if(preBound)lotRes=preBind(nb);
   doorStampActors(nb,o);doorStampAltitude(nb,o);
   if(nb.roasterRef)nb.roaster=''; // flat fields retire under a standing node, exactly as saveBag
-  if(nb.lotRef)['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>nb[k]='');
+  if(nb.lotRef)['originCountry','originRegion','originLocality','producer','variety','process','lot'].forEach(k=>nb[k]='');
   if(nb.roastRef){nb.roastLevel=0;nb.roastDate=''}
   save();setAccent(lvl<0?0:lvl);atlasGeoFill(nb);doorOn=false;
   if(kind==='brew'){go('atlas');openBrew(nb.id)}
@@ -7655,15 +7687,15 @@ function doorBind(kind){
  * Rails are painted after the inputs exist (repaintSug), never while the
  * template is being built — a rail that read the DOM mid-build would always
  * miss the values on its own screen. ---- */
-const NARROW={region:'country',producer:'region',variety:'country',process:'country'};
+const NARROW={region:'country',locality:'region',producer:'region',variety:'country',process:'country'};
 // every prefixed id the origin block can emit — one row per surface, so adding a surface is one line
-const SUG_FIELDS=['f_','c_','a_'].flatMap(p=>[[p+'country','country'],[p+'region','region'],[p+'producer','producer'],[p+'variety','variety'],[p+'process','process'],[p+'roaster','roaster']])
+const SUG_FIELDS=['f_','c_','a_'].flatMap(p=>[[p+'country','country'],[p+'region','region'],[p+'locality','locality'],[p+'producer','producer'],[p+'variety','variety'],[p+'process','process'],[p+'roaster','roaster']])
   .concat([['d_roaster','roaster']]);
 function known(field,ctx){
   ctx=ctx||{};
   const all=atlasLots().map(x=>x.lot);
   const fv=(l,f)=>{const fp=l.fingerprint||{};
-    return f==='country'?fp.country:f==='region'?fp.region
+    return f==='country'?fp.country:f==='region'?fp.region:f==='locality'?fp.locality
       :f==='producer'?(fp.producer||((l.producerRefs||[])[0]&&(catNode('producers',l.producerRefs[0])||{}).name)||'')
       :f==='variety'?l.variety
       :f==='process'?(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):''):''};
@@ -7677,7 +7709,7 @@ function known(field,ctx){
   const rows=[...m.entries()].sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0]))).slice(0,6);
   return {rows,narrowedBy:regSubstance(key)&&ls.length<all.length?key:''};
 }
-const sugCtx=prefix=>({country:val(prefix+'country'),region:val(prefix+'region')});
+const sugCtx=prefix=>({country:val(prefix+'country'),region:val(prefix+'region'),locality:val(prefix+'locality')});
 function sugHTML(inputId,field,ctx){
   const k=known(field,ctx);
   if(!k.rows.length)return'';
@@ -7890,7 +7922,7 @@ function saveCup(kind,brewId,bagId,skip,editId){
     // reads its green node-first now (openCafe), exactly as the bag form has always done.
     cupOrigin=readOriginFields('c_',ex&&ex.hardIds); if(cupOrigin===false)return; // a false-friend hard-ID — the reason is toasted, fix or clear it
     Object.assign(fields,{originCountry:cupOrigin.originCountry,originRegion:cupOrigin.originRegion,
-      producer:cupOrigin.producer,variety:cupOrigin.variety,process:cupOrigin.process,lot:cupOrigin.lot,
+      originLocality:cupOrigin.originLocality,producer:cupOrigin.producer,variety:cupOrigin.variety,process:cupOrigin.process,lot:cupOrigin.lot,
       harvest:cupOrigin.harvest,producerKind:cupOrigin.producerKind,station:cupOrigin.station,hardIds:cupOrigin.hardIds});
     if(cafeBound&&regSubstance(cafeBound.roaster)&&!regSubstance(fields.roaster))fields.roaster=cafeBound.roaster;
     if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
@@ -7911,7 +7943,7 @@ function saveCup(kind,brewId,bagId,skip,editId){
     if(!ex){ // new cups only — retire the flat text once a node stands to carry it (edit path untouched, so the retirement proves out on fresh saves first)
       if(cup.roasterRef)cup.roaster=''; // own surfaces read cupRoaster (node-first), the circle reads circleRoaster (flat-first-node-floor) — a friend still sees it through the group catalog
       if(cup.lotRef){const ln=catNode('lots',cup.lotRef);
-        ['originCountry','originRegion','producer','variety','process','lot'].forEach(k=>cup[k]=''); // the lot node carries the structured origin (lotRead/circleLot read through)
+        ['originCountry','originRegion','originLocality','producer','variety','process','lot'].forEach(k=>cup[k]=''); // the lot node carries the structured origin (lotRead/circleLot read through)
         if(ln&&regSubstance(ln.origin))cup.origin=''; // a loose free-text origin (no structured fields) was homed on this cup's own singleton lot → retire the flat copy too
       }
     }
@@ -7943,7 +7975,7 @@ function openCafe(pre,editId){
   // blanks on the next edit, lotKeyOf fell through to lot:<cupId>, and the cup silently left its green.
   const o=Object.assign(lotRead(pre),originExtras(pre),cafeBound?doorOrigin(cafeBound):{});
   // The fold opens on edit only if the cup already carries something under it.
-  const more=!!(pre.city||pre.roaster||cupRoaster(pre)||o.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.producer||o.variety||o.lot||o.process||o.harvest||o.altitude||(pre.hardIds&&pre.hardIds.length)||(pre.descriptors&&pre.descriptors.length)||pre.notes);
+  const more=!!(pre.city||pre.roaster||cupRoaster(pre)||o.origin||pre.price!=null||pre.again!=null||pre.site||pre.palette||o.country||o.region||o.locality||o.producer||o.variety||o.lot||o.process||o.harvest||o.altitude||(pre.hardIds&&pre.hardIds.length)||(pre.descriptors&&pre.descriptors.length)||pre.notes);
   openSheet(`
   <h3>${editId?'Edit the cup':'Remember a cup'}</h3>
   <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and one tap is plenty. The rest can wait.'}</div>
@@ -9020,7 +9052,7 @@ function renderAtlasHtml(d){
     kind:'published-atlas',
     note:'A published copy of a shared record, carried away. It holds no reading of anyone — no cups, no brews, no bags. A pour is a dated sighting of what poured where, never how it tasted.',
     copy:{source:d.source,revision:d.rev,published:d.publishedAt,published_by:d.publishedBy,fetched:d.fetchedAt},
-    resolution:{ladder:['country','region','station','farm','green-lot'],rule:'a record rests on the coarsest rung it can prove'},
+    resolution:{ladder:['country','region','locality','station','farm','green-lot'],rule:'a record rests on the coarsest rung it can prove'},
     road:{stations:['Grown','Processed','Milled','Roasted','Poured'],
       note:'Five stations. The sixth is Read — the keeper’s own cups — and a published copy carries none, so it draws five rather than six with one unread.'},
     greens:d.greens,hands:d.hands,bars:d.bars,
