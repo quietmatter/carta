@@ -4883,7 +4883,7 @@ function nodePage(kind,id){
   <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">Your highest here${scored.length>1?` — ${nPl(scored.length,'reading')}, ${avg} average`:''}. The spine stands without you; this wash is yours.</div>`
   :`<div class="empty">No reading of yours in this scope yet — a blank, not a verdict.</div>`}`;
   const act=readOnly()?'':`<div class="btnrow" style="margin-top:22px">
-    <button class="btn btn-quiet" onclick="openDoor()">＋ A coffee</button>
+    <button class="btn btn-quiet" onclick="openDoor(${jsq(kind)},${jsq(id)})">＋ A coffee from here</button>
     ${s.actPrimary||`<button class="btn btn-primary" onclick="go('atlas')">Back to the atlas</button>`}</div>`;
   return head+`
   ${road}
@@ -6188,14 +6188,16 @@ const DOOR_GRAIN={'green-lot':['Green lot','The finest grain the trade can prove
   'station':['Washing station','A legitimate terminal record, not a half-filled lot.'],
   'region':['Region','A region and its country. Named as such, never rounded up.'],
   'country':['Country','The honest floor. A name we can’t classify buys nothing above it.']};
-let doorStep=0,doorText='',doorParsed=null,doorStruck={},doorRoasted='';
+let doorStep=0,doorText='',doorParsed=null,doorStruck={},doorRoasted='',doorFrom=null;
+let cafeBound=null; // the door-settled coffee, riding whole into the cup form — never retyped
 /* The door is a SCREEN, not a sheet (STREAMLINED.html). It is the one way a
  * coffee enters the record, so it takes the whole leaf: three steps, stepdots,
  * a back that walks the steps rather than dismissing them. The masthead's
  * ＋ A coffee opens it from any room. */
-function openDoor(){
+function openDoor(fromKind,fromId){
   if(guard())return;
   doorStep=0;doorText='';doorParsed=null;doorStruck={};doorRoasted='';
+  doorFrom=fromKind?{kind:fromKind,id:fromId}:null; // the room prefills the bind — it never constrains it
   closeSheet();doorOn=true;render();
 }
 function doorClose(){doorOn=false;render()}
@@ -6215,7 +6217,7 @@ function vDoor(){
     <button class="back" onclick="doorClose()">← Close</button>
     ${doorStepDots('What does it say?')}
     <h2 class="display">Paste <em>the coffee</em></h2>
-    <p class="lede">The roaster’s page, the back of the bag, an auction line — whatever you have. CARTA reads it and asks about the rest.</p>
+    <p class="lede">${doorFrom&&doorFrom.kind==='place'?`The bag on the counter at ${esc(doorFrom.id)} — its page, its label, whatever you have. CARTA reads it and asks about the rest.`:'The roaster’s page, the back of the bag, an auction line — whatever you have. CARTA reads it and asks about the rest.'}</p>
     <textarea id="d_text" oninput="doorText=this.value" placeholder="Paste anything about this coffee…" style="min-height:132px;border:1px solid var(--line);background:var(--paper);padding:12px;font-size:13px">${esc(doorText)}</textarea>
     <div class="btnrow" style="margin-top:12px">
       <button class="btn btn-quiet" onclick="doorClose();openBagForm()">Type it instead</button>
@@ -6265,10 +6267,14 @@ function vDoor(){
   <label class="f"><span class="l">Roasted <span class="opt">optional</span></span><input type="date" id="d_roasted" value="${esc(doorRoasted)}" max="${today()}"></label>
   <div class="muted small" style="margin:-6px 2px 14px">The one fact a bag carries and a roaster’s page never states. Without it the rest window stays unread.</div>
   <datalist id="d_roasterlist">${roasterList().map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
-  ${[['On my shelf','it waits on the shelf','bag'],
-     ['Poured at a bar','a cup out, at that bar','pour'],
-     ['Brewed it just now','the dials open next','brew'],
-     ['Just noting it','on the atlas, nothing kept','note']].map(b=>
+  ${(doorFrom&&doorFrom.kind==='place'
+    ?[['Poured here','a cup at '+doorFrom.id,'pour'],
+      ['On my shelf','it waits on the shelf','bag'],
+      ['Just noting it','on the atlas, nothing kept','note']]
+    :[['On my shelf','it waits on the shelf','bag'],
+      ['Poured at a bar','a cup out, at that bar','pour'],
+      ['Brewed it just now','the dials open next','brew'],
+      ['Just noting it','on the atlas, nothing kept','note']]).map(b=>
     `<button class="rowlink" onclick="doorBind(${jsq(b[2])})"><span class="t">${esc(b[0])}</span><span class="m">${esc(b[1])}</span></button>`).join('')}
   <p class="note">${r2.shared
     ?'One paste mints a green, a roaster and a roast. The tap adds exactly one edge.'
@@ -6305,9 +6311,14 @@ function doorBind(kind){
   const worthy=[o.originCountry,o.originRegion,o.producer,o.variety,o.process].some(regSubstance);
   if(!roaster&&!name&&!worthy){toast('Nothing to bind — a name or one fact, at least');return}
   if(kind==='note'&&!roaster&&!worthy){toast('A note needs a hand or a fact — a roaster, or one origin token');return} // a bare name reaches no atlas
-  if(kind==='pour'){ // the cup-out flow already knows this law — hand it the facts
+  if(kind==='pour'){ // one edge and a reading over it — everything about the COFFEE was settled here,
+    // by the same vocabulary, the same readout and the same threshold that settle it for a bag.
+    // The cup form asks only for the reading; saveCup stamps the same spine a bag walks.
+    cafeBound={roaster,name,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,
+      producerKind:o.producerKind,station:o.station,harvest:o.harvest,variety:o.variety,process:o.process,
+      altitudeM:o.altitudeM};
     doorOn=false;
-    openCafe({roaster,originCountry:o.originCountry,originRegion:o.originRegion,producer:o.producer,variety:o.variety,process:o.process});
+    openCafe({_door:1,shop:doorFrom&&doorFrom.kind==='place'?doorFrom.id:'',roaster});
     return;
   }
   const lvl=ROAST_LEVELS.indexOf(o.roastLevel);
@@ -6535,9 +6546,17 @@ function saveCup(kind,brewId,bagId,skip,editId){
     fields.city=val('c_city');fields.style=cafeStyleState;fields.roaster=val('c_roaster');
     fields.origin=val('c_origin');fields.price=numv('c_price');fields.again=againState;
     fields.site=(val('c_beansite')||'').trim();fields.palette=brandPalette; // the beans' brand, read from the roaster's site
-    // structured traceability, aligned to the bag schema — the café's aspiration toward the exact coffee
-    fields.originCountry=val('c_country');fields.originRegion=val('c_region');fields.producer=val('c_producer');
-    fields.variety=val('c_variety');fields.lot=val('c_lot');fields.process=val('c_process');
+    // structured traceability rides in from the door (paste → confirm → bind) — the cup
+    // no longer carries a parallel origin form. An edit keeps what the record holds.
+    const b=cafeBound||{};
+    fields.originCountry=b.originCountry||(ex?ex.originCountry:'')||'';
+    fields.originRegion=b.originRegion||(ex?ex.originRegion:'')||'';
+    fields.producer=b.producer||(ex?ex.producer:'')||'';
+    fields.variety=b.variety||(ex?ex.variety:'')||'';
+    fields.lot=(ex?ex.lot:'')||'';
+    fields.process=b.process||(ex?ex.process:'')||'';
+    if(regSubstance(b.harvest))fields.harvest=b.harvest;
+    if(regSubstance(b.roaster)&&!regSubstance(fields.roaster))fields.roaster=b.roaster;
     const hids=readHardIds('c_hid',ex&&ex.hardIds); if(hids===false)return; fields.hardIds=hids; // a false-friend hard-ID — the reason is toasted, fix or clear it
     if(fields.shop)regUpsert(fields.shop,{city:fields.city},activeName()); // a sighting — the café enters the Register
     if(fields.shop&&D.cafeWants){const i=D.cafeWants.findIndex(x=>normName(x)===normName(fields.shop));if(i>=0)D.cafeWants.splice(i,1)} // been now — off the want list
@@ -6549,6 +6568,11 @@ function saveCup(kind,brewId,bagId,skip,editId){
   else{cup={id:uid(),createdAt:new Date().toISOString(),...fields};D.cups.push(cup)}
   let lotRes=null;
   if(kind==='cafe'){catStampRoaster(cup);lotRes=catStampLot(cup); // author its roaster + lot nodes at save time, not next boot
+    if(cafeBound){ // the door's other four facts land too — the pour path keeps everything the shelf path keeps
+      doorStampActors(cup,{producer:cafeBound.producer,producerKind:cafeBound.producerKind,station:cafeBound.station,
+        originCountry:cafeBound.originCountry,originRegion:cafeBound.originRegion});
+      doorStampAltitude(cup,{altitudeM:cafeBound.altitudeM});
+      cafeBound=null;}
     if(!ex){ // new cups only — retire the flat text once a node stands to carry it (edit path untouched, so the retirement proves out on fresh saves first)
       if(cup.roasterRef)cup.roaster=''; // own surfaces read cupRoaster (node-first), the circle reads circleRoaster (flat-first-node-floor) — a friend still sees it through the group catalog
       if(cup.lotRef){const ln=catNode('lots',cup.lotRef);
@@ -6569,6 +6593,7 @@ function saveCup(kind,brewId,bagId,skip,editId){
 function openCafe(pre,editId){
   if(guard())return;
   pre=pre||{};
+  if(!pre._door)cafeBound=null; // the hand-off rides one open, from the door only
   editingCupId=editId||null;
   if(editId){const c=cupById(editId);if(c)pre=c;} // revising an existing cup — prefill from the record
   // the shop field looks up the Register too — every café anyone has named
@@ -6582,6 +6607,7 @@ function openCafe(pre,editId){
   openSheet(`
   <h3>${editId?'Edit the cup':'Remember a cup'}</h3>
   <div class="sub">${editId?'Add what the cup deserves — it keeps its place and hour.':'A shop and one tap is plenty. The rest can wait.'}</div>
+  ${cafeBound?`<div class="cafeback">The coffee, settled at the door — ${esc([cafeBound.roaster,cafeBound.producer||cafeBound.originRegion||cafeBound.originCountry,cafeBound.variety].filter(regSubstance).join(' · ')||'thin, and the record will say so')}. Nothing to retype; the cup asks only for the reading.</div>`:''}
   <div id="cafehint"></div>
   <label class="f"><span class="l">The place</span><input type="text" id="c_shop" list="shoplist" value="${esc(pre.shop||'')}" placeholder="Halfpence" oninput="cafeShopHint()">
     <datalist id="shoplist">${shops.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
@@ -6610,14 +6636,7 @@ function openCafe(pre,editId){
     <div class="muted small" style="margin:6px 2px 0">Reads the roaster’s colours and the line it states — filling only what’s still blank. The cup carries that brand. Offline, fill it in by hand.</div>
     <div id="beansiteresults"></div>
     <div id="brandpreview" style="margin-top:12px">${brandPalette?brandPreviewHTML(brandPalette):''}</div>
-    <div class="grid2">
-      <label class="f"><span class="l">Country</span><input type="text" id="c_country" value="${esc(pre.originCountry||o.country)}" placeholder="Ethiopia"></label>
-      <label class="f"><span class="l">Region</span><input type="text" id="c_region" value="${esc(pre.originRegion||o.region)}" placeholder="Bench Maji"></label>
-      <label class="f"><span class="l">Producer / station</span><input type="text" id="c_producer" value="${esc(pre.producer||o.producer)}" placeholder="free text"></label>
-      <label class="f"><span class="l">Variety</span><input type="text" id="c_variety" value="${esc(pre.variety||o.variety)}" placeholder="Gesha 1931"></label>
-      <label class="f"><span class="l">Lot no.</span><input type="text" id="c_lot" value="${esc(pre.lot||o.lot)}" placeholder="free text"></label>
-      <label class="f"><span class="l">Process</span><input type="text" id="c_process" value="${esc(pre.process||o.process)}" placeholder="washed"></label>
-    </div>
+    ${o.country||o.region||o.producer||o.variety||o.process?`<div class="muted small" style="margin:2px 2px 10px">On record — ${esc([o.producer,o.region,o.country,o.variety,o.process].filter(regSubstance).join(' · '))}. The coffee's facts enter at the door now — paste, confirm, bind — never typed twice.</div>`:''}
     ${hardIdRow('c_hid',(pre.hardIds||[])[0])}
     <label class="f"><span class="l">Price <span class="opt">optional</span></span><input type="number" id="c_price" inputmode="decimal" value="${pre.price??''}" placeholder="$"></label>
     <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow(pre.descriptors)}</label>
