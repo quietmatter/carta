@@ -4212,6 +4212,10 @@ let deskOpen=null;
 function deskGo(k){if(k==='shelf')return go('bags');if(k==='setups')return go('setups');deskOpen=k;render()}
 function deskBack(){deskOpen=null;render()}
 const DESK_ROWS=[
+  // the reader's three, first — this copy, and the two doors out of reading
+  {k:'copy',   t:'This copy',              d:'where it came from, its revision, and how old it is'},
+  {k:'keeping',t:'Start keeping',          d:'your own record, on this device — the atlas stays as it is'},
+  {k:'signin', t:'Sign in',                d:'you have an account on this server — the pen stays where it is'},
   {k:'shelf',  t:'The shelf',              d:'every bag — on it, and put away'},
   {k:'setups', t:'Setups',                 d:'your grinder and brewer; grind is only comparable within one'},
   {k:'atlas',  t:'Add to the atlas',       d:'the door, a proposed sighting, the chart'},
@@ -4223,23 +4227,91 @@ const DESK_ROWS=[
   {k:'prefs',  t:'Preferences',            d:'appearance, units, marks, how deep you go'},
   {k:'manual', t:'The manual',             d:'how to read a cup, what changed, the doors ahead'},
 ];
+const READER_ROWS=['copy','keeping','signin','prefs','manual'];
 function vDesk(){
-  const ro=readOnly();
+  const ro=readOnly(),rd=reader();
   if(deskOpen)return `<button class="back" onclick="deskBack()">← The desk</button>${deskSection(deskOpen,ro)}`;
   const sn=ro?0:strikeCount();
-  // the room appears only once there is something in it — an empty drawer is not a row
-  const rows=DESK_ROWS.filter(r=>!(ro&&['atlas','record','pen','sync','keepers','prefs'].includes(r.k))).filter(r=>r.k!=='struck'||sn);
+  // the room appears only once there is something in it — an empty drawer is not a row.
+  // A reader gets five rows and no others: sync setup, the users room, the pen, what
+  // you set down, export, the shelf and the tools all describe a record they do not
+  // keep. DESK_ROWS was already filtered per state, so this is a filter, not a fork.
+  const rows=rd?DESK_ROWS.filter(r=>READER_ROWS.includes(r.k))
+    :DESK_ROWS.filter(r=>!['copy','keeping','signin'].includes(r.k))
+      .filter(r=>!(ro&&['atlas','record','pen','sync','keepers','prefs'].includes(r.k))).filter(r=>r.k!=='struck'||sn);
   const qn=ro?0:reviewQueue().length;
   return `
   <p class="eyebrow">The desk</p>
-  <h2 class="display">Everything that <em>is not a cup</em></h2>
-  <p class="lede">${rows.length} rows, not ${rows.length} screens. The desk is where administration lives so no other surface has to carry it.</p>
+  <h2 class="display">${rd?'The copy, and <em>the way out of reading</em>':'Everything that <em>is not a cup</em>'}</h2>
+  <p class="lede">${rd?'A published atlas is a copy. This is where it says whose it is, how old it is, and how to start a record of your own.'
+    :`${rows.length} rows, not ${rows.length} screens. The desk is where administration lives so no other surface has to carry it.`}</p>
   ${rows.map(r=>`<button class="rowlink" onclick="deskGo(${jsq(r.k)})"><span><span class="t">${esc(r.t)}</span><br><span class="m">${esc(r.d)}</span></span><span class="go">${r.k==='atlas'&&qn?qn:r.k==='struck'?sn:'→'}</span></button>`).join('')}
-  <p class="note">Your ledger is yours to write, always. The shared record is kept by one hand for now — every page of it is still yours to read.</p>
+  <p class="note">${rd?'The atlas is everyone’s; the record is yours. Nothing here is written down until you decide to write it.'
+    :'Your ledger is yours to write, always. The shared record is kept by one hand for now — every page of it is still yours to read.'}</p>
   <div class="qm-seal">Quiet Matter<span class="em">We do not sell coffee. We keep the record.</span></div>
   <div class="muted small serif" style="font-style:italic;text-align:center;margin:8px 2px 2px">CARTA v${APP_VERSION}</div>`;
 }
+/* R8 · This copy — the provenance surface, and the one that keeps the app honest
+ * about staleness. A published copy is a copy: what the keeper has written since
+ * is not here, and nothing the reader does can change what is. */
+function deskCopyHTML(){
+  const c=(PUB&&PUB.counts)||{};
+  const rows=[
+    ['From',PUB&&PUB.url?`<span style="font-family:var(--mono);font-size:11.5px;word-break:break-all">${esc(PUB.url)}</span>`:'<span class="unread">unread</span>'],
+    ['Revision',PUB&&PUB.rev?String(PUB.rev):'<span class="unread">unread</span>'],
+    ['Published',PUB&&PUB.publishedAt?esc(fmtMDY(PUB.publishedAt))+(PUB.publishedBy?', by '+esc(PUB.publishedBy):''):'<span class="unread">unread</span>'],
+    ['Fetched',PUB&&PUB.fetchedAt?esc(fmtAgo(PUB.fetchedAt)):'<span class="unread">never</span>'],
+    ['Holds',[c.greens&&nPl(c.greens,'green'),c.roasters&&nPl(c.roasters,'roaster'),c.bars&&nPl(c.bars,'bar')].filter(Boolean).map(esc).join(' · ')||`${esc(nPl(atlasLotIds().length,'green'))} on this copy`],
+  ];
+  const off=typeof navigator!=='undefined'&&navigator.onLine===false;
+  return `
+  <p class="eyebrow">This copy</p>
+  <h2 class="display">The atlas, <em>as it stood</em></h2>
+  <p class="lede">A published copy is a copy. What the keeper has written since is not here, and nothing you do can change what is.</p>
+  <div class="card">${rows.map(r=>`<div class="kv"><span class="k">${esc(r[0])}</span><span class="v">${r[1]}</span></div>`).join('')}</div>
+  <div class="btnrow" style="margin-top:16px">
+    <button class="btn btn-quiet" onclick="${off?'toast(\'Offline — this copy stands\')':'pubSync(true)'}">${off?'Offline — this copy stands':(pubState==='checking'?'Checking…':'Check for a newer copy')}</button>
+    <button class="btn btn-quiet" onclick="downloadAtlas()">Download this atlas</button>
+  </div>
+  ${exportedFile?`<div style="margin-top:12px;padding:12px 13px;border:1px solid var(--line-strong);background:var(--paper-2)">
+    <div class="eyebrow" style="margin-bottom:6px">Your copy is ready</div>
+    <div style="font-family:var(--mono);font-size:12px;color:var(--ink-2);word-break:break-all">${esc(exportedFile.filename)}</div>
+    <div style="display:flex;gap:16px;align-items:center;margin-top:11px;flex-wrap:wrap">
+      <a href="${exportedFile.url}" download="${esc(exportedFile.filename)}" style="font-family:var(--sans);font-size:11px;letter-spacing:.02em;color:var(--ink);text-decoration:none;border:1px solid var(--line-strong);padding:9px 15px;line-height:1">Save the file</a>
+      <a href="${exportedFile.url}" target="_blank" rel="noopener" style="font-family:var(--sans);font-size:11px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px">Read it now</a>
+    </div>
+    <div class="muted small serif" style="font-size:11.5px;margin-top:10px;font-style:italic">One self-contained page — offline, no account, open schema. It is yours the moment you save it.</div>
+  </div>`:''}
+  <div class="muted small" style="margin-top:14px">${PUB&&PUB.url?'':'No address on this device yet. '}<button class="text-action" onclick="openNameAtlas()">${PUB&&PUB.url?'Read a different atlas':'Name an address'}</button>${PUB&&PUB.atlas?` · <button class="text-action" onclick="pubForget()">Set this copy down</button>`:''}</div>
+  <p class="note">A copy states its own date rather than impersonating a feed. That is the difference between reading a record and being shown one.</p>`;
+}
+// R9 · the door out. The welcome's other two doors, no account required and none
+// mentioned — and the published copy stays exactly where it is, underneath.
+function openStartKeeping(){
+  openSheet(`
+  <h3>Start keeping</h3>
+  <div class="sub">Your own record, on this device</div>
+  <p class="primer-b" style="max-width:40ch">The atlas stays exactly as it is; your cups lay over it. Nothing is sent anywhere, no account is made, and the copy you are reading stays underneath as the floor.</p>
+  <button class="btn btn-quiet" onclick="startKeeping(2)"><span>Someone else makes it</span></button>
+  <div class="muted small" style="margin:-4px 2px 12px">A bar and one tap is a whole record.</div>
+  <button class="btn btn-quiet" onclick="startKeeping(3)"><span>I make my own</span></button>
+  <div class="muted small" style="margin:-4px 2px 12px">The instrument opens — grind, dose, water, time.</div>
+  <button class="btn btn-quiet" onclick="closeSheet()">Not yet</button>`);
+}
 function deskSection(k,ro){
+  if(k==='copy')return deskCopyHTML();
+  if(k==='keeping')return `
+  <p class="eyebrow">The desk · the way out</p>
+  <h2 class="display">A record <em>of your own</em></h2>
+  <p class="lede">The atlas stays as it is; your cups lay over it. Nothing is sent anywhere and no account is made.</p>
+  <button class="btn btn-primary" onclick="openStartKeeping()">Start keeping</button>
+  <p class="note">A keeper keeps a record. A reader reads one. The only difference is whether anything is written down.</p>`;
+  if(k==='signin')return `
+  <p class="eyebrow">The desk · sign in</p>
+  <h2 class="display">You already <em>have a record</em></h2>
+  <p class="lede">If you have an account on a CARTA sync server, sign in and your own record comes down. The pen on the shared atlas stays exactly where it is.</p>
+  ${vSyncSection()}
+  <p class="note">Signing in ends the reading and opens your own rooms. The published copy stays underneath, unchanged.</p>`;
   if(k==='atlas')return deskAtlasHTML();
   if(k==='record')return deskRecordHTML(ro);
   if(k==='struck')return ro?'':struckRoomHTML();
@@ -4318,7 +4390,7 @@ function deskPrefsHTML(ro){
     <button class="${th==='auto'?'on':''}" onclick="themeSet('auto')">Auto</button>
   </div>
   ${ro?'':vPrefsSection()}
-  ${ro?'':`<h2>How deep you go</h2>
+  ${ro||reader()?'':`<h2>How deep you go</h2>
   <div class="card">
     ${LADDER.map(l=>`<div class="kv"><span class="k">${l.name}</span>
       <button class="v" style="font:inherit;color:inherit;background:none;border:none;padding:0;text-align:right;cursor:pointer" onclick="ladderTap(${l.n})">${d>=l.n?`${l.desc.split(' — ')[0]} — open`:'waiting — open it'}</button></div>`).join('')}
@@ -4490,13 +4562,34 @@ function inHandHTML(){
   </div>
   <button class="text-action" style="display:block;margin:-14px 0 20px" onclick="go('bags')">or start from the shelf</button>`}`;
 }
+/* ── the reader's head (READER.md R1). The coffee in hand is a keeper's own
+ * shelf, so for a reader the head becomes THE COPY STATING ITSELF. That lede is
+ * the whole honesty of the design in one sentence: it refuses to impersonate a
+ * live service, and it names the hand. It is also the only place on the Atlas
+ * the reader is told anything about their own situation. ── */
+function pubHeadHTML(){
+  const c=(PUB&&PUB.counts)||{},n=atlasLotIds().length;
+  const where=modeOf(regEntries().map(e=>e.city).filter(regSubstance))||'';
+  const title=n?`${where?esc(where)+', in':'The atlas, in'} <em>${esc(numWord(n))} green${n===1?'':'s'}</em>`:'A copy, <em>not yet filled</em>';
+  return `
+  <p class="eyebrow">The published atlas</p>
+  <h2 class="display">${title}</h2>
+  <p class="lede">${PUB&&PUB.publishedAt?`Published ${esc(fmtMDY(PUB.publishedAt))}${PUB.publishedBy?' by '+esc(PUB.publishedBy):''}. `:''}A copy, not a feed — it changes when the keeper publishes again.</p>
+  <div class="btnrow" style="margin:0 0 22px">
+    <button class="btn btn-quiet" onclick="deskGo('copy')">This copy</button>
+    <button class="btn btn-quiet" onclick="openStartKeeping()">Start keeping</button>
+  </div>`;
+}
 /* ── the Atlas — one reading room, three blocks (STREAMLINED.html):
  * the coffee in your hands · the chart at its altitude · the atlas, cut. ── */
 function vAtlas(){
   const lots=atlasLots();
   const q=(atlasQ||'').trim();
-  // the interlude — one considered moment, only ever on a tap, replayable
-  const interlude=!lots.length?'':(!seasonState
+  const rd=reader();
+  // the interlude is ranked by the keeper's own taste, and a reader has none —
+  // so it is absent, not empty. A reading argued from a record nobody kept is
+  // the one thing this app must never print.
+  const interlude=(rd||!lots.length)?'':(!seasonState
     ?`<button class="text-action" style="display:block;margin:2px 2px 10px" onclick="readSeason()">Read the season for me →</button>`
     :`<div class="cafeback" style="margin:2px 0 10px"><strong>Read for your taste —</strong> ${esc(seasonReasons())} <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onclick="openPrimer('interlude')">how</button> · <button class="text-action" style="padding:0;font-size:12px;vertical-align:baseline" onclick="readSeason()">compose again</button></div>`);
   // the plan — the same two frames every node page draws, at atlas scope. The map
@@ -4507,7 +4600,7 @@ function vAtlas(){
     :`<div class="empty">Nothing placed on the map yet — the chart lists until a pin earns its coordinate. Coarse where the record is coarse; never a farm pin invented.</div>`;
   const facets=plateFacets();
   return `
-  ${q?'':inHandHTML()}
+  ${q?'':(rd?pubHeadHTML():inHandHTML())}
   <h2>The chart</h2>
   <label class="f" style="margin:0 0 12px"><input type="text" placeholder="Search the atlas — a coffee, a station, a roaster, a bar…" value="${esc(atlasQ)}" oninput="atlasType(this.value)" autocapitalize="off"></label>
   <div id="atlasres" style="margin:-8px 0 14px">${atlasResHTML()}</div>
@@ -4521,6 +4614,7 @@ function vAtlas(){
   ${lots.length?lots.slice(0,12).map(x=>{const fp=x.lot.fingerprint||{};
     const sub=[fp.region,fp.country,x.lot.variety,fp.process&&fp.process.family&&fp.process.family!=='unspecified'?fp.process.family:''].filter(regSubstance).join(' · ');
     return `<button class="rowlink" onclick="openLotPage(${jsq(x.id)})"><span><span class="t">${esc(lotLabel(x.lot))}</span><br><span class="m">${esc(sub)||'origin unwritten'}</span></span><span class="m num">${x.hands?`${x.hands} hand${x.hands===1?'':'s'}`:'unroasted'}</span></button>`}).join('')
+    :rd?`<div class="empty">This copy carries no green yet. A published atlas states its own date — check the Desk for how old this one is.</div>`
     :`<div class="empty">No green on the atlas yet. A bag on the shelf, a cup out with its beans named, a coffee pasted through the door — any of them starts the chart.</div>`}
   ${lots.length>12?`<p class="note">${lots.length-12} more on the chart — cut the atlas above to read them by country, process or variety.</p>`:''}
   ${seal('Atlas','One graph. Every hand. The record is the nexus.')}`;
@@ -7864,6 +7958,50 @@ function ledgerData(){
     generatedHuman:g.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}),
     record:R,readings,shelf,cupsOut,saved,signedPages};
 }
+/* The exported paper stock — one sheet of CSS, used by both copies a keeper can
+ * carry away: the ledger (their overlay) and the atlas (the published copy). This
+ * is the one sanctioned place the design tokens resolve to literal hexes, because
+ * a file that has left the app cannot ask the app what its colours were. */
+const EXPORT_CSS=`:root{--pg:#f2eee6;--cd:#f8f5ee;--snk:#e9e3d8;--ink:#241d18;--ink2:#554a41;--ink3:#776b60;--line:rgba(36,29,24,.13);--ember:#a63f2b;--serif:'Spectral',Georgia,'Times New Roman',serif;--sans:'Libre Franklin',system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--snk)}
+body{font-family:var(--serif);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main{max-width:660px;margin:0 auto;background:var(--pg);min-height:100vh;padding:52px 44px 72px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.mark{font-family:var(--sans);font-weight:600;letter-spacing:.24em;font-size:12px;color:var(--ink)}
+.eyebrow{font-family:var(--sans);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-top:26px}
+h1{font-size:40px;line-height:1.02;letter-spacing:-.032em;font-weight:600;margin:6px 0 12px}
+.meta{font-family:var(--sans);font-size:12px;color:var(--ink3);letter-spacing:.02em}
+.rule{height:1px;background:var(--line);margin:24px 0}
+.avgs{display:flex;align-items:baseline;gap:36px}
+.avgs .big{font-family:var(--sans);font-size:34px;font-weight:500;color:var(--ember);line-height:1}
+.avgs .u{font-family:var(--sans);font-size:11px;color:var(--ink3);letter-spacing:.04em;margin-top:6px}
+.avgs .n{font-family:var(--sans);font-size:19px;font-weight:500;color:var(--ink);line-height:1}
+.note p{font-family:var(--serif);font-size:15.5px;line-height:1.62;color:var(--ink2);max-width:54ch;margin:0}
+h2{font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:600;margin:44px 0 8px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:9px}
+h2 .n{font-family:var(--serif);text-transform:none;letter-spacing:0;font-style:italic;color:var(--ink3);font-size:13px;font-weight:400}
+.entry{display:flex;justify-content:space-between;gap:20px;padding:15px 0;border-bottom:1px solid var(--line)}
+.entry.col{display:block}
+.entry .row{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.co{font-family:var(--serif);font-weight:600;font-size:17px;color:var(--ink)}
+.rd{font-family:var(--sans);font-size:11.5px;color:var(--ink3);margin-top:4px;letter-spacing:.02em}
+.ln{font-family:var(--serif);font-style:italic;font-size:14.5px;color:var(--ink2);margin-top:7px}
+.mk{text-align:right;flex:none}
+.sc{font-family:var(--sans);font-size:22px;font-weight:500;color:var(--ink)}
+.sc span{font-size:12px;color:var(--ink3);font-weight:400}
+.sc.sm{font-size:14px}
+.wn{font-family:var(--sans);font-size:11px;color:var(--ink3);margin-top:3px}
+.tag{font-family:var(--sans);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border:1px solid var(--line);border-radius:2px;padding:3px 7px;flex:none;white-space:nowrap}
+.your{font-family:var(--serif);font-size:14.5px;color:var(--ink2);margin-top:8px}
+.your b{color:var(--ink);font-weight:600}
+.your.unread{font-style:italic;color:var(--ink3)}
+.fp{font-family:var(--sans);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border:1px solid var(--line);border-radius:2px;padding:2px 5px;margin-left:4px}
+.fine{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink3);max-width:52ch;margin:14px 0 0}
+footer{margin-top:52px}
+.schemaline{font-family:var(--sans);font-size:11px;color:var(--ink3);letter-spacing:.02em}
+.schemaline code{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;background:var(--snk);padding:1px 5px;border-radius:2px;color:var(--ink2)}
+.seal{font-family:var(--sans);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-top:14px}
+.seal b{display:block;font-family:var(--serif);text-transform:none;letter-spacing:0;font-style:italic;font-size:14px;color:var(--ink2);font-weight:400;margin-top:5px}
+@media(max-width:560px){main{padding:34px 22px 56px}h1{font-size:32px}}`;
 function renderLedgerHtml(d){
   const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const R=d.record;
@@ -7906,47 +8044,7 @@ function renderLedgerHtml(d){
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CARTA — the record, exported · ${e(d.generatedHuman)}</title>
-<style>
-:root{--pg:#f2eee6;--cd:#f8f5ee;--snk:#e9e3d8;--ink:#241d18;--ink2:#554a41;--ink3:#776b60;--line:rgba(36,29,24,.13);--ember:#a63f2b;--serif:'Spectral',Georgia,'Times New Roman',serif;--sans:'Libre Franklin',system-ui,-apple-system,sans-serif}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--snk)}
-body{font-family:var(--serif);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-main{max-width:660px;margin:0 auto;background:var(--pg);min-height:100vh;padding:52px 44px 72px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
-.mark{font-family:var(--sans);font-weight:600;letter-spacing:.24em;font-size:12px;color:var(--ink)}
-.eyebrow{font-family:var(--sans);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-top:26px}
-h1{font-size:40px;line-height:1.02;letter-spacing:-.032em;font-weight:600;margin:6px 0 12px}
-.meta{font-family:var(--sans);font-size:12px;color:var(--ink3);letter-spacing:.02em}
-.rule{height:1px;background:var(--line);margin:24px 0}
-.avgs{display:flex;align-items:baseline;gap:36px}
-.avgs .big{font-family:var(--sans);font-size:34px;font-weight:500;color:var(--ember);line-height:1}
-.avgs .u{font-family:var(--sans);font-size:11px;color:var(--ink3);letter-spacing:.04em;margin-top:6px}
-.avgs .n{font-family:var(--sans);font-size:19px;font-weight:500;color:var(--ink);line-height:1}
-.note p{font-family:var(--serif);font-size:15.5px;line-height:1.62;color:var(--ink2);max-width:54ch;margin:0}
-h2{font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:600;margin:44px 0 8px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:9px}
-h2 .n{font-family:var(--serif);text-transform:none;letter-spacing:0;font-style:italic;color:var(--ink3);font-size:13px;font-weight:400}
-.entry{display:flex;justify-content:space-between;gap:20px;padding:15px 0;border-bottom:1px solid var(--line)}
-.entry.col{display:block}
-.entry .row{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
-.co{font-family:var(--serif);font-weight:600;font-size:17px;color:var(--ink)}
-.rd{font-family:var(--sans);font-size:11.5px;color:var(--ink3);margin-top:4px;letter-spacing:.02em}
-.ln{font-family:var(--serif);font-style:italic;font-size:14.5px;color:var(--ink2);margin-top:7px}
-.mk{text-align:right;flex:none}
-.sc{font-family:var(--sans);font-size:22px;font-weight:500;color:var(--ink)}
-.sc span{font-size:12px;color:var(--ink3);font-weight:400}
-.sc.sm{font-size:14px}
-.wn{font-family:var(--sans);font-size:11px;color:var(--ink3);margin-top:3px}
-.tag{font-family:var(--sans);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border:1px solid var(--line);border-radius:2px;padding:3px 7px;flex:none;white-space:nowrap}
-.your{font-family:var(--serif);font-size:14.5px;color:var(--ink2);margin-top:8px}
-.your b{color:var(--ink);font-weight:600}
-.your.unread{font-style:italic;color:var(--ink3)}
-.fp{font-family:var(--sans);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border:1px solid var(--line);border-radius:2px;padding:2px 5px;margin-left:4px}
-.fine{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink3);max-width:52ch;margin:14px 0 0}
-footer{margin-top:52px}
-.schemaline{font-family:var(--sans);font-size:11px;color:var(--ink3);letter-spacing:.02em}
-.schemaline code{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;background:var(--snk);padding:1px 5px;border-radius:2px;color:var(--ink2)}
-.seal{font-family:var(--sans);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-top:14px}
-.seal b{display:block;font-family:var(--serif);text-transform:none;letter-spacing:0;font-style:italic;font-size:14px;color:var(--ink2);font-weight:400;margin-top:5px}
-@media(max-width:560px){main{padding:34px 22px 56px}h1{font-size:32px}}
+<style>${EXPORT_CSS}
 </style></head>
 <body>
 <main>
@@ -7981,6 +8079,132 @@ footer{margin-top:52px}
 </main>
 ${OPEN}${json}${CLOSE}
 </body></html>`;
+}
+/* ---- Download this atlas (READER.md R8). Not a nicety: ownership is the first
+ * brand goal, and a reader who can read but not carry away is being kept. It
+ * renders through the same machinery as the ledger export — one self-contained
+ * HTML page on CARTA paper stock, real token hexes inlined, the machine-readable
+ * copy embedded as carta.atlas/v1 — and it is the reader's, offline, forever.
+ * What it carries is the published copy and its provenance, never a reading:
+ * there is no overlay on a copy nobody kept. ---- */
+function atlasData(){
+  const gs=atlasLotIds().map(id=>catNode('lots',id)).filter(Boolean);
+  const now=new Date();
+  return {
+    generatedISO:now.toISOString(),
+    generatedHuman:now.toLocaleDateString([],{month:'long',day:'numeric',year:'numeric'}),
+    filename:`carta-atlas-${now.toISOString().slice(0,10)}.html`,
+    source:(PUB&&PUB.url)||'', rev:(PUB&&PUB.rev)||0,
+    publishedAt:(PUB&&PUB.publishedAt)||'', publishedBy:(PUB&&PUB.publishedBy)||'',
+    fetchedAt:(PUB&&PUB.fetchedAt)||'',
+    greens:gs.map(l=>{const fp=l.fingerprint||{},st=lotRoadStations(l.id)||[],alt=altOf(l);
+      return {green:lotLabel(l),country:fp.country||'',region:fp.region||'',
+        producer:fp.producer||'',variety:l.variety||'',
+        process:(fp.process&&fp.process.family!=='unspecified'&&fp.process.family)||'',
+        harvest:(fp.harvest&&fp.harvest.year)||'',
+        resolution:(grainRead(l.grain)||['unread'])[0],
+        altitude:alt?altLabel(alt):'',
+        // L7: five stations, never six-with-one-unread. The sixth is Read — the
+        // keeper's own cups — and an absent reader is not a gap in the record.
+        road:st.filter(s=>!s.you).map(s=>({station:s.lb,who:s.who||null})),
+        hands:handsIn([l]).map(r=>roasterName(r)),
+        bars:barsIn([l]).map(b=>b.shop)}}),
+    hands:handsIn(gs).map(id=>{const r=catNode('roasters',id)||{};
+      return {roaster:r.name||'a roaster',city:r.city||'',country:r.country||'',greens:scopeGreens('roaster',id).length}}),
+    bars:barsIn(gs).map(b=>{const e=regByName(b.shop)||{};
+      return {bar:b.shop,city:e.city||'',neighbourhood:e.neighborhood||'',greens:b.lots.size,lastSeen:b.at||''}}),
+  };
+}
+function renderAtlasHtml(d){
+  const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const greenRows=d.greens.map(g=>{
+    const road=g.road.map(s=>s.who?`${e(s.station)} &middot; ${e(s.who)}`:`<span class="unread">${e(s.station)} unread</span>`).join(' &nbsp;');
+    const sub=[g.region,g.country,g.variety,g.process,g.harvest].filter(Boolean).map(e).join(' &middot; ');
+    return `<div class="entry col"><div class="row"><span class="co">${e(g.green)}</span><span class="tag">${e(g.resolution)}</span></div>
+      <div class="rd">${sub||'origin unwritten'}${g.altitude?' &middot; '+e(g.altitude):''}</div>
+      <div class="your">${road}</div>
+      ${g.hands.length?`<div class="your">Roasted by <b>${g.hands.map(e).join(', ')}</b></div>`:''}
+      ${g.bars.length?`<div class="your">Poured at <b>${g.bars.map(e).join(', ')}</b></div>`:''}</div>`}).join('');
+  const handRows=d.hands.map(h=>`
+      <div class="entry"><div class="txt"><div class="co">${e(h.roaster)}</div><div class="rd">${e([h.city,h.country].filter(Boolean).join(', '))||'city unread'}</div></div><div class="mk"><div class="sc sm">${e(h.greens)}</div><div class="wn">greens</div></div></div>`).join('');
+  const barRows=d.bars.map(b=>`
+      <div class="entry"><div class="txt"><div class="co">${e(b.bar)}</div><div class="rd">${e([b.neighbourhood,b.city].filter(Boolean).join(', '))||'address unread'}</div></div><div class="mk"><div class="sc sm">${e(b.greens)}</div><div class="wn">greens</div></div></div>`).join('');
+  const schema={
+    schema:'carta.atlas/v1',
+    generated:d.generatedISO,
+    kind:'published-atlas',
+    note:'A published copy of a shared record, carried away. It holds no reading of anyone — no cups, no brews, no bags. A pour is a dated sighting of what poured where, never how it tasted.',
+    copy:{source:d.source,revision:d.rev,published:d.publishedAt,published_by:d.publishedBy,fetched:d.fetchedAt},
+    resolution:{ladder:['country','region','station','farm','green-lot'],rule:'a record rests on the coarsest rung it can prove'},
+    road:{stations:['Grown','Processed','Milled','Roasted','Poured'],
+      note:'Five stations. The sixth is Read — the keeper’s own cups — and a published copy carries none, so it draws five rather than six with one unread.'},
+    greens:d.greens,hands:d.hands,bars:d.bars,
+    laws:[
+      'The atlas is everyone’s; the record is yours.',
+      'A copy, not a feed — it states its own date rather than impersonating a live service.',
+      'Standing is never for sale; compiled from sourced facts, shown with its evidence.',
+      'Coverage counts, it never grades — a road that runs short is a record told less, not a lesser coffee.',
+      'Never print a number that lied to get there.'
+    ]
+  };
+  const json=JSON.stringify(schema,null,2).replace(/</g,'\\u003c');
+  const OPEN='<'+'script type="application/json" id="carta-atlas">';
+  const CLOSE='<'+'/'+'script>';
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CARTA — the published atlas${d.rev?' · revision '+e(d.rev):''}</title>
+<style>${EXPORT_CSS}</style></head>
+<body>
+<main>
+  <header>
+    <div class="mark">CARTA</div>
+    <div class="eyebrow">The published atlas</div>
+    <h1>The atlas, as it stood.</h1>
+    <div class="meta">${e(d.greens.length)} greens &middot; ${e(d.hands.length)} hands &middot; ${e(d.bars.length)} bars${d.rev?` &middot; revision ${e(d.rev)}`:''}</div>
+    <div class="rule"></div>
+    <div class="meta">${d.publishedAt?`Published ${e(new Date(d.publishedAt).toLocaleDateString([],{month:'long',day:'numeric',year:'numeric'}))}${d.publishedBy?` by ${e(d.publishedBy)}`:''}`:'Published date unread'}${d.source?` &middot; ${e(d.source)}`:''}</div>
+  </header>
+  <section class="note" style="margin-top:28px">
+    <p>This file is a copy of a shared record, taken on ${e(d.generatedHuman)}. It carries no reading of anyone &mdash; no cups, no brews, no bags. What travels is the atlas: the greens, how finely each one is proven, the hands that roast them and the bars that poured them. A pour is a dated sighting of what poured where, never how it tasted. What the keeper has written since is not here, and nothing in this file changes what is.</p>
+  </section>
+  <section>
+    <h2>The greens <span class="n">the road, five stations</span></h2>${greenRows||'<div class="your unread" style="padding:12px 0">this copy carries no green</div>'}
+  </section>
+  <section>
+    <h2>The hands <span class="n">who roasts from here</span></h2>${handRows||'<div class="your unread" style="padding:12px 0">no hand named on this copy</div>'}
+  </section>
+  <section>
+    <h2>The bars <span class="n">dated sightings</span></h2>${barRows||'<div class="your unread" style="padding:12px 0">no bar has poured into this copy yet</div>'}
+    <p class="fine">Each pour is a dated, signed sighting &mdash; the shelf may have moved since. Age is stated, never discounted.</p>
+  </section>
+  <footer>
+    <div class="rule"></div>
+    <div class="schemaline">Machine-readable &middot; schema <code>carta.atlas/v1</code> &middot; embedded in this file as JSON</div>
+    <div class="seal">Quiet Matter<b>We do not sell coffee. We keep the record.</b></div>
+  </footer>
+</main>
+${OPEN}${json}${CLOSE}
+</body></html>`;
+}
+function downloadAtlas(){
+  let built=null;
+  try{
+    const data=atlasData();
+    const blob=new Blob([renderAtlasHtml(data)],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    built={url,filename:data.filename};
+    try{
+      const a=document.createElement('a');
+      a.href=url;a.download=data.filename;a.rel='noopener';
+      document.body.appendChild(a);a.click();
+      setTimeout(()=>{try{a.remove()}catch(err){}},1500);
+    }catch(err){}
+  }catch(err){built=null}
+  if(built){
+    if(exportedFile&&exportedFile.url&&exportedFile.url!==built.url){try{URL.revokeObjectURL(exportedFile.url)}catch(e){}}
+    exportedFile=built;render();
+    toast('The atlas is yours — the file is below.');
+  }else toast('The atlas could not be written just now.');
 }
 function downloadLedger(){
   let built=null;
