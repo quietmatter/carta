@@ -3760,26 +3760,16 @@ function vBags(){
 
 function vSetups(){
   const live=D.setups.filter(s=>!s.archived).sort(byNew),retired=D.setups.filter(s=>s.archived).sort(byNew);
-  const card=s=>`
-    <div class="card tap" onclick="openSetupForm('${s.id}')">
-      <strong>${esc(s.name)}</strong>
-      <div class="muted small">${esc([s.grinder,s.brewer,s.basket].filter(Boolean).join(' · '))}</div>
-      ${s.water?`<div class="muted small">water: ${esc(s.water)}</div>`:''}
-      ${s.grindMin!=null&&s.grindMin!==''&&s.grindMax!=null&&s.grindMax!==''?`<div class="muted small num">grind ${s.grindMin}–${s.grindMax}${s.grindStep?` · step ${s.grindStep}`:''}</div>`:''}
-      <div class="muted num" style="font-size:11px">${setupBrews(s.id)} brews on this Setup</div>
-    </div>`;
+  // a Setup is a page now (UNIFIED §the delta, step 5) — the list stays a list of rowlinks
+  const row=s=>rowlink('setup',s.id,esc(s.name),esc([s.grinder,s.brewer,s.basket].filter(Boolean).join(' · '))||'the assembly, unwritten',esc(nPl(setupBrews(s.id),'brew')));
   return `<button class="back" onclick="go('ledger')">← The desk</button>
   ${readOnly()?'':`<button class="btn btn-primary" onclick="openSetupForm()">New Setup</button>`}
   <div class="muted small serif" style="font-style:italic;margin:10px 2px">A grind setting without a Setup is not a number, it's a rumour. Grind settings are only comparable within a Setup.</div>
   <h2>Setups <span class="n-note">n=${live.length}</span></h2>
-  ${live.length? live.map(card).join('') : `<div class="empty">Define the assembly — grinder, brewer, basket, papers, water — before the first brew.</div>`}
+  ${live.length? live.map(row).join('') : `<div class="empty">Define the assembly — grinder, brewer, basket, papers, water — before the first brew.</div>`}
   ${retired.length?`<div class="section-head"><h2>Retired</h2><span class="n-note num">${retired.length}</span></div>
-  ${retired.map(s=>`<div class="card">
-    <div class="row"><span class="small"><strong>${esc(s.name)}</strong></span><span class="num muted small">${setupBrews(s.id)} brews</span></div>
-    <div class="muted small">${esc([s.grinder,s.brewer].filter(Boolean).join(' · '))||'the assembly, unwritten'}</div>
-    ${readOnly()?'':`<button class="text-action" style="margin-top:7px" onclick="retireSetup('${s.id}')">Back in the rotation</button>`}
-  </div>`).join('')}
-  <div class="muted small serif" style="font-style:italic;margin:6px 2px">A retired Setup leaves the picker; every brew read against it stays exactly as readable as it was.</div>`:''}`;
+  ${retired.map(row).join('')}
+  <div class="muted small serif" style="font-style:italic;margin:6px 2px">A retired Setup leaves the picker; every brew read against it stays exactly as readable as it was. Its page holds the way back into the rotation.</div>`:''}`;
 }
 
 function traceCard(b){
@@ -4862,6 +4852,15 @@ function nodePage(kind,id){
       const p0=ps[0]||{};const h=lotHands(l.id);
       return rowlink('lot',l.id,esc(lotLabel(l)),esc([p0.roasterRef&&roasterName(p0.roasterRef),p0.at&&('seen '+fmtMDY(p0.at))].filter(regSubstance).join(' · ')),
         h>1?esc(nPl(h,'hand')):'')}).join('')}`:'';
+  const setupBrewsSec=(kind==='setup')?(()=>{const bs=D.brews.filter(b=>b&&b.setupId===id).sort(byNew);
+    return bs.length?`<div class="section-head"><h2>Brews on this Setup</h2><span class="n-note num">n=${bs.length}</span></div>
+    ${bs.map(b=>{const lid=b.lotRef?lotFwd(b.lotRef):(D.bags.find(g=>g&&g.id===b.bagId)||{}).lotRef;
+      const l=lid&&catNode('lots',lotFwd(lid));const c=D.cups.find(cc=>cc&&cc.brewId===b.id);
+      const line=[b.grind!=null&&('grind '+b.grind),b.doseG&&b.waterG&&`${b.doseG} g : ${b.waterG} g`,b.tempC!=null&&`${b.tempC} °C`,b.timeSec!=null&&fmtTime(b.timeSec)].filter(Boolean).join(' · ');
+      return l?rowlink('lot',l.id,esc(lotLabel(l)),esc(line),c&&c.hedonic!=null?`${c.hedonic} / 9`:'<span class="unread">unread</span>')
+        :`<div class="rowlink" style="cursor:default"><span><span class="t">${esc(bagName(D.bags.find(g=>g&&g.id===b.bagId)||{}))}</span><br><span class="m">${esc(line)}</span></span><span class="m num">${c&&c.hedonic!=null?`${c.hedonic} / 9`:'<span class="unread">unread</span>'}</span></div>`}).join('')}
+    <div class="muted small" style="margin:8px 2px 0">Grind is shown only within this Setup — it never crosses grinders.</div>`
+    :`<div class="empty">No brew on this Setup yet. The first one starts its record.</div>`})():'';
   const setupSec=(kind!=='setup'&&brews.length)?`<div class="section-head"><h2>How you brew it</h2><span class="n-note num">n=${brews.length}</span></div>
     ${[...new Set(brews.map(b=>b.setupId).filter(Boolean))].map(sid=>{const st=setupById(sid)||{};
       const mine=brews.filter(b=>b.setupId===sid),gr=mine.map(b=>b.grind).filter(v=>v!=null);
@@ -4896,7 +4895,7 @@ function nodePage(kind,id){
   ${nodeHeightHTML(kind,gs,s)}
   ${x.postHeight||''}
   ${up}${down}
-  ${greensSec}${barGreens}${handsSec}${barsSec}${setupSec}
+  ${greensSec}${barGreens}${setupBrewsSec}${handsSec}${barsSec}${setupSec}
   ${overlay}
   ${x.tail||''}
   ${act}
@@ -4928,8 +4927,33 @@ function spec(kind,id){
   case 'country':return specCountry(id);
   case 'city':return specCity(id);
   case 'place':return specPlace(id);
+  case 'setup':return specSetup(id);
   }
   return null;
+}
+function specSetup(sid){
+  const s=setupById(sid);if(!s)return null;
+  const n=setupBrews(sid);
+  const scale=(s.grindMin!=null&&s.grindMin!==''&&s.grindMax!=null&&s.grindMax!=='')?`${s.grindMin}–${s.grindMax}${s.grindStep?` · step ${s.grindStep}`:''}`:'';
+  return {
+    eyebrow:'Setup'+(s.archived?' · retired':''),title:esc(s.name),qual:'',
+    lede:'The assembly, and every brew read against it. A grind setting outside this page is a rumour.',
+    rows:[['Grinder',regSubstance(s.grinder)?esc(s.grinder):'<span class="unread">unread</span>'],
+      ['Brewer',regSubstance(s.brewer)?esc(s.brewer):'<span class="unread">unread</span>'],
+      s.basket?['Basket',esc(s.basket)]:null,
+      s.papers?['Papers',esc(s.papers)]:null,
+      ['Water',regSubstance(s.water)?esc(s.water):'<span class="unread">unread</span>'],
+      ['Grind scale',scale||'<span class="unread">unread</span>'],
+      ['Brews',String(n)]].filter(Boolean),
+    up:[],down:[],
+    roadTail:'brewed on this Setup',
+    extras:{tail:readOnly()?'':(s.archived
+      ?`<button class="btn btn-quiet" onclick="retireSetup(${jsq(sid)})">Back in the rotation</button>
+      <div class="muted small serif" style="font-style:italic;margin:6px 2px 0">A retired Setup leaves the picker; every brew read against it stays exactly as readable as it was.</div>`
+      :'')},
+    actPrimary:readOnly()?'':`<button class="btn btn-primary" onclick="openSetupForm(${jsq(sid)})">Amend the Setup</button>`,
+    sealName:s.name,seal:'Grind is only comparable within one Setup.'
+  };
 }
 function specPlace(shop){
   const e=regByName(shop);
