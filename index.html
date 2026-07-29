@@ -4210,6 +4210,9 @@ let deskOpen=null;
 // the shelf and the tools are screens of their own — the desk points at them
 // rather than re-rendering itself inside a render
 function deskGo(k){if(k==='shelf')return go('bags');if(k==='setups')return go('setups');deskOpen=k;render()}
+// from another room (or from over a page): walk to the desk first, then open the
+// row — go() clears deskOpen, so the order matters
+function deskOpenRoom(k){go('ledger');deskGo(k)}
 function deskBack(){deskOpen=null;render()}
 const DESK_ROWS=[
   // the reader's three, first — this copy, and the two doors out of reading
@@ -4576,7 +4579,7 @@ function pubHeadHTML(){
   <h2 class="display">${title}</h2>
   <p class="lede">${PUB&&PUB.publishedAt?`Published ${esc(fmtMDY(PUB.publishedAt))}${PUB.publishedBy?' by '+esc(PUB.publishedBy):''}. `:''}A copy, not a feed — it changes when the keeper publishes again.</p>
   <div class="btnrow" style="margin:0 0 22px">
-    <button class="btn btn-quiet" onclick="deskGo('copy')">This copy</button>
+    <button class="btn btn-quiet" onclick="deskOpenRoom('copy')">This copy</button>
     <button class="btn btn-quiet" onclick="openStartKeeping()">Start keeping</button>
   </div>`;
 }
@@ -4711,8 +4714,14 @@ function lotRoadStations(lotId){
     {lb:'Milled',who:bat?('dry mill'+(ko?' · '+ko.value:'')):''},
     {lb:'Roasted',who:hands.length?(hands.length>1?hands.length+' hands':roasterName(hands[0])):''},
     {lb:'Poured',who:shops.length?(shops.length>1?shops.length+' bars':shops[0]):''},
-    {lb:'Read',who:cups?(cups+(cups===1?' cup':' cups')):'',you:true}
-  ];
+    // L7 · a reader's road is FIVE stations, not six. The sixth is Read — the
+    // keeper's OWN cups — and a reader has none. That is not a gap in the
+    // record: the gap is the product, and this is not a gap, it is an absent
+    // reader. An empty Read drawn as unread would be the record telling a quiet
+    // lie about itself. Dropped here, at the source, so the drawing, the
+    // reading, the aggregate and the export all say the same thing.
+    reader()?null:{lb:'Read',who:cups?(cups+(cups===1?' cup':' cups')):'',you:true}
+  ].filter(Boolean);
 }
 function road6HTML(stations,draw){
   if(!stations)return'';
@@ -4721,7 +4730,7 @@ function road6HTML(stations,draw){
     const cls='stn'+(held?' held':'')+(s.you&&held?' you':'')+((!held||!prev)?' gap':'');
     prev=held;
     return `<div class="${cls}"><span class="bar"></span><span class="mk"></span><span class="lb">${esc(s.lb)}</span><span class="who"${held?` title="${esc(s.who)}"`:''}>${held?esc(s.who):'unread'}</span></div>`}).join('');
-  return `<div class="road6${draw&&!reducedMotion()?' draw':''}">${cells}</div>`;
+  return `<div class="road6${draw&&!reducedMotion()?' draw':''}" style="--n:${stations.length}">${cells}</div>`;
 }
 /* The road's stated reading — what altReading() is to the terrace. The drawing was always
  * honest, but it made the reader count pips to learn how much of the road stands, and a
@@ -5282,10 +5291,15 @@ function nodePage(kind,id){
       return rowlink('setup',sid,esc(st.name||'a Setup'),esc(st.grinder||'')+(gr.length?`${st.grinder?' · ':''}grind ${Math.min(...gr)===Math.max(...gr)?gr[0]:Math.min(...gr)+'–'+Math.max(...gr)}`:''),esc(nPl(mine.length,'brew')))}).join('')}
     <div class="muted small" style="margin:8px 2px 0">Grind is shown only within one Setup — it never crosses grinders.</div>`:'';
   /* ── 5 · what did you find ── */
+  // A reader has no overlay, so the question is ABSENT, not answered empty. The
+  // five questions never reorder and a kind never drops one — but a reader is
+  // not a kind, and "no reading of yours yet" on every page of a copy nobody
+  // kept is a nag, not a record (READER.md R2).
+  const rd=reader();
   const scored=cups.filter(c=>c.hedonic!=null).sort((a,b)=>b.hedonic-a.hedonic||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   const ov=scored[0]||null;
   const avg=scored.length?(scored.reduce((a,c)=>a+c.hedonic,0)/scored.length).toFixed(1):null;
-  const overlay=`<div class="section-head"><h2>Your overlay</h2><button class="text-action ex" onclick="openPrimer('overlay')">What this means</button></div>
+  const overlay=rd?'':`<div class="section-head"><h2>Your overlay</h2><button class="text-action ex" onclick="openPrimer('overlay')">What this means</button></div>
   ${ov?`<div class="continuation" style="margin-bottom:6px">
     <div class="row">
       <div class="score">${ov.hedonic}<small> / 9</small></div>
@@ -5297,7 +5311,12 @@ function nodePage(kind,id){
   </div>
   <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">Your highest here${scored.length>1?` — ${nPl(scored.length,'reading')}, ${avg} average`:''}. The spine stands without you; this wash is yours.</div>`
   :`<div class="empty">No reading of yours in this scope yet — a blank, not a verdict.</div>`}`;
-  const act=readOnly()?'':`<div class="btnrow" style="margin-top:22px">
+  // the act row is a write, so for a reader it is absent too — replaced by the
+  // one offer a copy is allowed to make, once, at the foot: a record of your own
+  const act=readOnly()?'':rd?`<div class="btnrow" style="margin-top:22px">
+    <button class="btn btn-quiet" onclick="openStartKeeping()">Start a record of your own</button>
+    <button class="btn btn-quiet" onclick="go('atlas')">Back to the atlas</button></div>`
+  :`<div class="btnrow" style="margin-top:22px">
     <button class="btn btn-quiet" onclick="openDoor(${jsq(kind)},${jsq(id)})">＋ A coffee from here</button>
     ${s.actPrimary||`<button class="btn btn-primary" onclick="go('atlas')">Back to the atlas</button>`}</div>`;
   return head+`
@@ -5710,7 +5729,11 @@ function specLot(lotId){
     lede:esc(sub||'origin unwritten'),
     rows,up,down,
     covers:['hands'], // the down section names the hands with their roasts — one section per question
-    extras:{roadTail:mine.length?' Your reading rests at the end of it — below.':'',postHeight,tail:corpusHTML+corrections},
+    // the corpus is own brews and the fold is the keeper's pen — both absent on
+    // a published copy, which loses the lot page almost nothing: this is the
+    // page a reader came for (READER.md R2)
+    extras:{roadTail:mine.length?' Your reading rests at the end of it — below.':'',postHeight,
+      tail:reader()?'':corpusHTML+corrections},
     sealName:lotLabel(lot),seal:'One green, many hands.'
   };
 }
@@ -5807,7 +5830,18 @@ function penCardHTML(entity,key,name){
 // the block a page renders: the offer of the pen (unclaimed) or Your facts (signed).
 // The offer shows only to the founder while the shared record is single-pen.
 function claimBlock(entity,key,name){
-  if(!isAdmin()||!claimEnt(entity,key))return '';
+  if(!claimEnt(entity,key))return '';
+  /* R2 · the offer stands for a reader, and it is the ONE place the app asks
+   * them for anything — asking only of the person who has a right to answer.
+   * A reader who is a roaster is precisely who should hold the pen on their own
+   * page, and the offer is honest with no account: it opens the sign-in door,
+   * not a form. */
+  if(reader())return entSigned(entity,key)?'':`<div class="card" style="border-color:var(--line-strong);margin-top:18px">
+    <div class="row"><strong>Is this ${esc(name)}?</strong><span class="n-note">unsigned</span></div>
+    <div class="muted" style="margin-top:5px">This page is unsigned. If the ${entity==='cafe'?'bar':'roastery'} is yours — sign in and take the pen on your own facts. The page was true before it was signed, and stays the reader's after.</div>
+    <button class="btn btn-quiet" style="margin-top:12px" onclick="deskOpenRoom('signin')">Sign in</button>
+  </div>`;
+  if(!isAdmin())return '';
   if(entSigned(entity,key))return penCardHTML(entity,key,name);
   const body=entity==='cafe'
     ?'The record already reads your site for your colour. Prove the channel is yours and hold the pen on your own link — the pour, the counter, the hours. The roast’s road stays compiled.'
