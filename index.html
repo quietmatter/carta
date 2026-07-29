@@ -272,7 +272,7 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
    A filled mark is a station the record holds; a hollow one is a station it
    does not. The connector is solid between two held stations and dashed
    across a gap. The gap is the product — never a blank to fill. */
-.road6{display:grid;grid-template-columns:repeat(6,1fr);align-items:start;margin:6px 0 4px;padding-top:6px}
+.road6{display:grid;grid-template-columns:repeat(var(--n,6),1fr);align-items:start;margin:6px 0 4px;padding-top:6px}
 .road6 .stn{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative;min-width:0}
 .road6 .stn .bar{position:absolute;top:5px;left:calc(-50% + 7px);width:calc(100% - 14px);height:1px;background:var(--line-strong);opacity:.5}
 .road6 .stn:first-child .bar{display:none}
@@ -348,6 +348,63 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
   .terr.draw .m1{animation-delay:.1s}
   @keyframes terrIn{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:none}}
 }
+/* ===== the plan — one map, every scope (MAPPING.md) =====
+   Two frames, because one projection cannot hold a front door and a country.
+   Monochrome throughout: a mark is a lens, never a rank, and the ember is
+   never spent here. The ink says the grain, and only the grain:
+     filled        the coordinate is as fine as the mark claims
+     hollow        a centroid — a region, an area standing in for a point
+     dashed        coarser still, and admitting it
+     a square      a street address; a circle, a centroid; a dashed square, a scene
+     a ring        your overlay — added, never subtracted */
+.plot-box{border:1px solid var(--line);background:var(--paper);margin:4px 0 8px;position:relative}
+.plot-box svg{display:block;width:100%}
+.plot-box .ed{stroke:var(--ink-3);stroke-width:1;opacity:.55;stroke-dasharray:2 2}
+.plot-box g.mk{cursor:pointer}
+.plot-box g.mk:active .mk-lbl,.plot-box g.mk.sel .mk-lbl{fill:var(--ink)}
+.plot-box g.mk.sel .mk-lbl{font-weight:600}
+.mk-venue{fill:var(--ink)}
+.mk-roaster{fill:var(--ink)}
+.mk-origin{fill:none;stroke:var(--ink-2);stroke-width:1.3}
+.mk-origin.coarse{stroke:var(--ink-3);stroke-dasharray:2 2}
+.mk-scene{fill:none;stroke:var(--ink-2);stroke-width:1.3;stroke-dasharray:3 2}
+.mk-merged{fill:var(--ink)}
+.mk-n{fill:var(--paper);font-family:var(--sans);font-size:8px;font-weight:600}
+.mk-lbl{font-family:var(--sans);font-size:9px;fill:var(--ink-3)}
+.mk-lbl.near{fill:var(--ink-2)}
+.mk-ring{fill:none;stroke:var(--ink);stroke-width:1}
+.mk-held{opacity:.4}
+.mapkey{display:flex;flex-wrap:wrap;gap:3px 14px;margin:0 2px 10px;font-family:var(--sans);
+  font-size:var(--s11);color:var(--ink-3);align-items:center}
+.mapkey span{display:inline-flex;align-items:center;gap:5px}
+.mapkey svg{flex:none;overflow:visible}
+/* the hand-off — the two frames are joined in words, never by a line across the sea */
+.handoff{border-left:2px dashed var(--line-2);padding:9px 13px;margin:2px 0 16px;
+  font-family:var(--serif);font-style:italic;font-size:var(--s13);color:var(--ink-3);max-width:44ch}
+/* what has no coordinate lists rather than lies */
+.listedbox{border:1px dashed var(--line-2);padding:10px 12px 4px;margin:0 0 12px}
+.listedbox .lh{display:flex;justify-content:space-between;align-items:baseline;
+  font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.listedbox .rowlink:last-of-type{border-bottom:none}
+.foldout{border-left:2px solid var(--line-2);padding-left:10px;margin:-2px 0 12px}
+.foldout .rowlink:last-of-type{border-bottom:none}
+/* the walk up — derived from the node, never the stack, so a page reached by
+   search is as navigable as one reached by drilling */
+.crumb{display:flex;flex-wrap:wrap;gap:0 4px;align-items:baseline;margin:0 0 14px}
+.crumb button{background:none;border:none;font-family:var(--sans);font-size:var(--s11);
+  letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);cursor:pointer;padding:0;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-style:dotted}
+.crumb button:active{color:var(--ink)}
+.crumb i{color:var(--ink-3);font-style:normal;font-size:10px}
+/* the prefill rail — what the record already holds, one tap to fill */
+.sug{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.sug .s{font-family:var(--sans);font-size:var(--s11);border:1px solid var(--line-2);
+  border-radius:var(--chipr);background:none;color:var(--ink-2);padding:4px 8px;cursor:pointer}
+.sug .s:active{border-color:var(--line-strong);color:var(--ink)}
+.sug .s b{font-weight:400;color:var(--ink-3);margin-left:5px}
+.sug .lb{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);align-self:center;margin-right:2px}
+
 /* the door — the display voice, the fact chips, the binding rows, the readout */
 .door-display,.sheet h3.door-display{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.12;letter-spacing:-.02em;color:var(--ink);margin:0 0 6px;text-wrap:balance}
 .door-display em{font-style:italic;font-weight:400}
@@ -969,8 +1026,23 @@ function catUpsert(kind,key,fields,who,opts){
   if(changed){e.updatedAt=now;if(who)e.by=who;CAT[kind].dirty=true;saveDoc(kind)}
   return e;
 }
-// Compile an entry's visible fields from its standing sightings — reachCompile,
-// generalised from bag/seen to arbitrary fields. Newest standing line per field
+/* A sighting is set down the way a record is (docs/CORRECTIONS.md): the strike
+ * is an addition, and so is the undo, because an id-union merge only propagates
+ * additions — a withdrawal that removed the line would not travel, and a restore
+ * that removed the date would be undone by the next sync. So liveness derives,
+ * monotone and order-free: struck ⟺ withdrawnAt > restoredAt. Superseded has no
+ * undo and needs none — the line that superseded it IS the correction, and it is
+ * itself withdrawable. */
+const sightStruck=s=>String((s&&s.withdrawnAt)||'')>String((s&&s.restoredAt)||'');
+const sightStanding=s=>!!s&&!s.supersededAt&&!sightStruck(s);
+// the same rule replayed at a moment — only the dates that had landed by then count
+const sightStandingAt=(s,asOf)=>!asOf?sightStanding(s):(s.at<=asOf&&!(s.supersededAt&&s.supersededAt<=asOf)
+  &&!(String((s.withdrawnAt&&s.withdrawnAt<=asOf&&s.withdrawnAt)||'')>String((s.restoredAt&&s.restoredAt<=asOf&&s.restoredAt)||'')));
+const bySight=(a,b)=>(a.at||'').localeCompare(b.at||'')||String(a.id).localeCompare(String(b.id));
+const fmtMY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',year:'numeric'}):'';
+const fmtMDY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';
+// Compile an entry's visible fields from its standing sightings — the reach's old
+// compile, generalised from bag/seen to arbitrary fields. Newest standing line per field
 // carries; a struck line keeps its ink; silence is not denial. The mechanism that
 // lets a value be a READING over attestations — correctable by a later line, never
 // a cell someone overwrote. It also folds the lot's IDENTITY: the strongest standing
@@ -1829,21 +1901,8 @@ const REACH=[null,
   {glyph:'●',word:'Origin',name:'The origin',line:'the farm in the cup: producer, lot, process, freely told.'}];
 const BAG_FACTS={unnamed:{label:'unnamed',depth:1,why:'an honest, unnamed bag'},roaster:{label:'roaster named',depth:2,why:'the bag was named'},lot:{label:'lot named',depth:3,why:'the lot was named'},farm:{label:'farm named',depth:4,why:'the farm was named'}};
 const SEEN_FACTS={inhouse:{label:'roasts in-house',depth:3,why:'the roast in the room'},methods:{label:'more than one method',depth:3,why:'more than one method'},answers:{label:'answers at the counter',depth:2,why:'answers at the counter'},story:{label:'the story, freely told',depth:4,why:'the story, freely told'}};
-/* A sighting is set down the way a record is (docs/CORRECTIONS.md): the strike
- * is an addition, and so is the undo, because an id-union merge only propagates
- * additions — a withdrawal that removed the line would not travel, and a restore
- * that removed the date would be undone by the next sync. So liveness derives,
- * monotone and order-free: struck ⟺ withdrawnAt > restoredAt. Superseded has no
- * undo and needs none — the line that superseded it IS the correction, and it is
- * itself withdrawable. */
-const sightStruck=s=>String((s&&s.withdrawnAt)||'')>String((s&&s.restoredAt)||'');
-const sightStanding=s=>!!s&&!s.supersededAt&&!sightStruck(s);
-// the same rule replayed at a moment — only the dates that had landed by then count
-const sightStandingAt=(s,asOf)=>!asOf?sightStanding(s):(s.at<=asOf&&!(s.supersededAt&&s.supersededAt<=asOf)
-  &&!(String((s.withdrawnAt&&s.withdrawnAt<=asOf&&s.withdrawnAt)||'')>String((s.restoredAt&&s.restoredAt<=asOf&&s.restoredAt)||'')));
-const bySight=(a,b)=>(a.at||'').localeCompare(b.at||'')||String(a.id).localeCompare(String(b.id));
-const fmtMY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',year:'numeric'}):'';
-const fmtMDY=iso=>iso?new Date(iso).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';
+// (the sighting liveness primitives — sightStruck/sightStanding/sightStandingAt/
+// bySight — and fmtMY/fmtMDY live in the catalog section now: the spine reads them.)
 // Compile the reading. The bag is one fact with four readings — newest carries;
 // each counter fact stands while any standing sighting attests it (attest-only:
 // silence is not denial — a shallow sighting at a deep café changes nothing).
@@ -2985,7 +3044,8 @@ const TAB_FAMILY={bags:'atlas',shelf:'atlas',setups:'ledger'};
 /* The header's second line names the screen, not the app — the prototype's SUBS.
  * It is the only place the app says where you are, so it says it plainly. */
 const SUBS={atlas:'The atlas',trace:'The record',ledger:'The desk',bags:'The shelf',setups:'The tools',
-  lot:'A green',roaster:'The roaster',plate:'A plate',place:'The bar',door:'A coffee',curate:'The chart',disc:'The map'};
+  lot:'A green',roaster:'The roaster',plate:'A plate',place:'The bar',door:'A coffee',curate:'The chart',disc:'The map',
+  producer:'The grower',region:'A region',country:'A country',city:'A city',setup:'A Setup',process:'A process',variety:'A variety'};
 let _lastScreenKey=null; // the settle plays on a screen change, never on a repaint
 function screenSub(){
   if(readOnly())return `Viewing ${viewingUser().name}`;
@@ -4745,7 +4805,8 @@ function pagePush(){
   if(top&&top.kind===cur.kind&&top.id===cur.id)return;
   pageStack.push(cur);if(pageStack.length>8)pageStack.shift();
 }
-const PAGE_BACK={lot:'The green',roaster:'The roaster',plate:'The plate',curate:'The chart',place:'The bar'};
+const PAGE_BACK={lot:'The green',roaster:'The roaster',plate:'The plate',curate:'The chart',place:'The bar',
+  producer:'The grower',region:'The region',country:'The country',city:'The city',setup:'The Setup',process:'The process',variety:'The variety'};
 function pageBack(){
   const prev=pageStack.pop();
   if(!prev)return go('atlas');
@@ -4766,6 +4827,18 @@ function openRoasterPage(roasterRef){
   pagePush();closeSheet();pageView={kind:'roaster',id:roasterRef};placeView=null;curateOn=false;discOn=false;doorOn=false;render();
 }
 function closePage(){pageView=null;pageStack=[];render()}
+/* the one navigation primitive (UNIFIED.html): every name anywhere is a rowlink,
+   and every rowlink walks through nav — one shallow stack, whatever the kind.
+   The lot, roaster and place doors keep their own openers (forwarding, tombs,
+   Register resolution); every other kind is just a page keyed {kind,id}. */
+function nav(kind,id){
+  if(kind==='lot')return openLotPage(id);
+  if(kind==='roaster')return openRoasterPage(id);
+  if(kind==='place')return openPlace(id);
+  pagePush();closeSheet();pageView={kind,id};placeView=null;curateOn=false;discOn=false;doorOn=false;render();
+}
+// t and m arrive pre-escaped by the caller (they may carry markup); right is small print
+const rowlink=(kind,id,t,m,right)=>`<button class="rowlink" onclick="nav(${jsq(kind)},${jsq(id)})"><span><span class="t">${t}</span>${m?`<br><span class="m">${m}</span>`:''}</span><span class="m num" style="flex:none;display:flex;gap:9px;align-items:baseline">${right?`<span>${right}</span>`:''}<span class="go">→</span></span></button>`;
 /* every page opens the same way (STREAMLINED.html): a back that names where it
    goes, the eyebrow, the display line, then the sentence under it */
 const pageHero=(eyebrow,title,origin)=>`
