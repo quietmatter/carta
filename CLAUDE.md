@@ -26,7 +26,7 @@ and no test runner for the frontend.** Do not add one unless explicitly asked.
 index.html            The entire app — inline <style> and <script>
 fonts/                Self-hosted typefaces (Spectral + Libre Franklin, woff2 subsets)
 manifest.json         PWA metadata (homescreen install); scope is /carta/
-icon-192.svg          App icons (manifest references .png variants at those sizes)
+icon-192.svg          App icons (the manifest references these SVGs at those sizes)
 icon-512.svg
 README.md             User-facing app docs
 CNAME                 GitHub Pages custom domain
@@ -135,6 +135,18 @@ server/
   returns the own array *itself*, so a keeper's app is unchanged;
   `catWritable(kind,id)` is the write door, adopting an underneath-only node as
   a thin own node **carrying its id** so the two never read as two greens.
+  `catOwn(kind,node)` / `lotOwn(lot)` are the same door for a node handed in as
+  an **object** — what every catalog write primitive calls before it writes,
+  because `catAll` hands back a layered read (the copy's own object, or a
+  `catLayer` of it) and a write onto that is spent on something no save sees:
+  it survives the paint and is gone at the next boot. The pair is deliberate —
+  the **decision reads the layered node** (a height the copy already states is a
+  disagreement to *carry*, not a blank to fill) and only the **write** lands on
+  the own node. `lotBind`, `lotAddHardIds`, `lotAddCaliber`, `lotSetRarity`,
+  `lotSetAltitude`, `repointRoast`, `roastRepointNode`, `reverseBind` and the
+  door's `doorStampActors`/`doorStampAltitude` all pass through it; `caliberWithdraw`
+  reads **own entries only**, because a cupping the copy carries was signed by
+  another hand and is not ours to strike.
 - **the hold** (`docs/READER.md` L4, F1–F3) — the strike's grammar pointed
   outward: `{id:'hold:<ref>', ref, kind, at, by, releasedAt?}` in `D.holds`,
   liveness `at > releasedAt`, merged by `mergeHolds` (the `mergeStruck`
@@ -861,6 +873,16 @@ the brew corpus (step 6) and discovery (step 7) follow.
   own key; `CAT`/`REG` hold the own documents only; `catUpsert`/`regUpsert`
   always write own. If it merged, the day a reader started keeping their record
   and the founder's would be indistinguishable.
+- **A write never lands on a layered read.** `catAll`/`catNode`/`catByKey` are
+  *read* doors — with a published copy on the device they hand back the copy's
+  object or a `catLayer` of it, and a field set on that is lost at the next boot
+  with nothing said. Every catalog write resolves its own node first
+  (`catOwn`/`lotOwn`/`catWritable`), and the decision that *guards* the write
+  keeps reading the layered node, so blanks-only stays honest: a value the copy
+  already states is a disagreement to carry or a blank already filled — never a
+  gap the keeper's figure quietly overwrites. A new write path that takes a node
+  as an argument must pass it through the door; the failure is silent, which is
+  exactly why it is a law and not a habit.
 - **A reader's road is five stations, and their map has no ring.** The sixth
   station is the keeper's own cups and the ring is the keeper's own overlay —
   both come off cleanly, and what is left is whole. An absent reader is not a

@@ -1143,6 +1143,16 @@ function catWritable(kind,id){
   own.push(e);CAT[kind].dirty=true;saveDoc(kind);
   return e;
 }
+/* The same door for a node handed in as an OBJECT. catAll hands back a layered read
+ * when a published copy is on the device — the copy's own object, or a catLayer of
+ * it — and a write onto that is spent on something no save ever sees: it survives
+ * until the next repaint and is gone at the next boot. So every lot primitive below
+ * resolves its own node before it writes. The split is deliberate and is the whole
+ * point: the DECISION keeps reading the layered green (a height the copy already
+ * states is a disagreement to CARRY, not a blank to fill — L6), and only the write
+ * lands on the own node. Read `lot`, write `w`. */
+const catOwn=(kind,n)=>(!n||!n.id||(((CAT[kind]&&CAT[kind].entries)||[]).includes(n)))?n:(catWritable(kind,n.id)||n);
+const lotOwn=lot=>catOwn('lots',lot);
 // Find-or-create by a caller-supplied collapse key. The key is NOT identity — it
 // is how THIS caller chose to dedup (the seed's timid fingerprint below; a lot's
 // real identity is the resolver, a later pass). Sparse by default, the café's law
@@ -1379,7 +1389,7 @@ function normHardId(scheme,raw){
 // A record's hard-ID array → normalised, deduped, firewall-clean {scheme,value}[].
 const normHardIds=list=>{const out=[],seen={};
   (list||[]).forEach(h=>{if(!h)return;const n=normHardId(h.scheme,h.value!=null?h.value:h.raw);
-    if(n&&!seen[n.scheme+' '+n.value]){seen[n.scheme+' '+n.value]=1;out.push(n)}});
+    if(n&&!seen[n.scheme+'\u0000'+n.value]){seen[n.scheme+'\u0000'+n.value]=1;out.push(n)}});
   return out;};
 const recHardIds=r=>normHardIds(r&&r.hardIds);
 // A record is worth a lot node when it carries any origin OR a hard-ID — a bag printed with only an
@@ -1405,10 +1415,12 @@ function lotBindKey(r,fallbackId){return resolveLot(r,fallbackId).key}
 // unions the set across devices like it unions sightings, so a bind is never lost in a sync.
 function lotAddHardIds(lot,hids,who,at){
   if(!lot||lot.role||!hids||!hids.length)return;
-  lot.hardIds=lot.hardIds||[];let changed=false;
-  hids.forEach(h=>{if(!lot.hardIds.some(x=>x.scheme===h.scheme&&x.value===h.value&&!x.withdrawnAt)){
-    lot.hardIds.push({id:uid(),scheme:h.scheme,value:h.value,by:who||'',at:at||null});changed=true}});
-  if(changed){lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots')}
+  const w=lotOwn(lot);                            // the token lands own; the dedup reads what the green shows
+  w.hardIds=w.hardIds||[];let changed=false;
+  const held=(a,h)=>(a||[]).some(x=>x.scheme===h.scheme&&x.value===h.value&&!x.withdrawnAt);
+  hids.forEach(h=>{if(!held(lot.hardIds,h)&&!held(w.hardIds,h)){
+    w.hardIds.push({id:uid(),scheme:h.scheme,value:h.value,by:who||'',at:at||null});changed=true}});
+  if(changed){w.updatedAt=new Date().toISOString();if(who)w.by=who;CAT.lots.dirty=true;saveDoc('lots')}
 }
 /* ---- §2 normalisation (RESOLVER §2, LOT_IDENTITY). The fuzzy rungs degrade to noise without it, so it
  * runs BEFORE any score. Two jobs, all offline and single-file — no dictionary fetched, no key, no model:
@@ -1583,11 +1595,12 @@ function resolveLot(r,fallbackId){
 // a confirm supersedes a standing derived line to upgrade its rung). compile folds it into the reading.
 function lotBind(lot,rec,rung,via,evidence,who,at){
   if(!lot||lot.role||!rec)return;
-  lot.sightings=lot.sightings||[];
-  const ex=lot.sightings.find(s=>s&&s.bind&&s.bind.ref===rec.id&&sightStanding(s));
+  const w=lotOwn(lot);            // a bind of OUR record is our line — it is written own, never onto the copy
+  w.sightings=w.sightings||[];
+  const ex=w.sightings.find(s=>s&&s.bind&&s.bind.ref===rec.id&&sightStanding(s));
   if(ex){if(!(rung==='confirmed'&&ex.rung!=='confirmed'))return;ex.supersededAt=new Date().toISOString()}
-  lot.sightings.push({id:uid(),by:who||'',at:at||new Date().toISOString(),bind:{ref:rec.id,kind:recKind(rec)},rung,via,src:'keeper',evidence:evidence||{}}); // src:'keeper' — a hand authored this bind; the assist would stamp 'ingest' (deferred)
-  lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots');
+  w.sightings.push({id:uid(),by:who||'',at:at||new Date().toISOString(),bind:{ref:rec.id,kind:recKind(rec)},rung,via,src:'keeper',evidence:evidence||{}}); // src:'keeper' — a hand authored this bind; the assist would stamp 'ingest' (deferred)
+  w.updatedAt=new Date().toISOString();if(who)w.by=who;CAT.lots.dirty=true;saveDoc('lots');
 }
 /* ---- The standing (VISION step 5): a coffee's rarity and caliber, compiled from sourced facts —
  * reborn from the old café reach onto the coffee it always belonged on. THREE INDEPENDENT axes —
@@ -1620,15 +1633,19 @@ function caliberResolveTier(tier,fields){
 // exactly like every other sighting in this codebase; a mistyped entry is withdrawn, never erased.
 function lotAddCaliber(lot,fields,who,at){
   if(!lot||lot.role||!regSubstance(fields.score))return null;
-  lot.caliber=lot.caliber||[];
+  const w=lotOwn(lot);
+  w.caliber=w.caliber||[];
   const rec={id:uid(),score:Number(fields.score),protocol:(fields.protocol||'').trim(),cupper:(fields.cupper||'').trim(),
     event:(fields.event||'').trim(),date:fields.date||'',tier:caliberResolveTier(fields.tier,fields),src:'keeper',by:who||'',at:at||new Date().toISOString()};
-  lot.caliber.push(rec);
-  lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots');
+  w.caliber.push(rec);
+  w.updatedAt=new Date().toISOString();if(who)w.by=who;CAT.lots.dirty=true;saveDoc('lots');
   return rec;
 }
+// Own lines only. A cupping the published copy carries was signed by another hand — it is
+// theirs to withdraw, not ours, and reaching through the layered read to strike it would
+// write on a copy no save sees and say "withdrawn" about a record that never moved.
 function caliberWithdraw(lotId,calId){
-  const lot=catNode('lots',lotId);if(!lot)return;
+  const lot=((CAT.lots&&CAT.lots.entries)||[]).find(e=>e&&e.id===lotId);if(!lot)return;
   const c=(lot.caliber||[]).find(x=>x&&x.id===calId);if(!c||c.withdrawnAt)return;
   c.withdrawnAt=new Date().toISOString();
   lot.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots');
@@ -1640,11 +1657,11 @@ function caliberWithdraw(lotId,calId){
 const SCARCE_VARIETIES=['gesha','sudan rume','pink bourbon'];
 function lotSetRarity(lot,fields,who){
   if(!lot||lot.role)return false;
-  let hit=false;
+  const w=lotOwn(lot);let hit=false;
   ['sizeKg','sizeBags','auctionPrice','scarceVariety'].forEach(k=>{
-    if(regSubstance(fields[k])&&!regSubstance(lot[k])){lot[k]=fields[k];hit=true}
+    if(regSubstance(fields[k])&&!regSubstance(lot[k])){w[k]=fields[k];hit=true}  // blanks-only reads the layered green, the write lands own
   });
-  if(hit){lot.updatedAt=new Date().toISOString();if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots')}
+  if(hit){w.updatedAt=new Date().toISOString();if(who)w.by=who;CAT.lots.dirty=true;saveDoc('lots')}
   return hit;
 }
 // The compiled reads, one per axis — kept separate from compile()'s `identity`/`standing` (that
@@ -1708,13 +1725,15 @@ function altParse(text){
 // rather than being silently dropped — which is the whole difference between a record and a claim.
 function lotSetAltitude(lot,band,who,src){
   if(!lot||lot.role||!altValid(band))return null;
-  const now=new Date().toISOString(),stamp=()=>{lot.updatedAt=now;if(who)lot.by=who;CAT.lots.dirty=true;saveDoc('lots')};
-  if(!altOf(lot)){lot.altitudeMasl=band;lot.altitudeSrc=src||'keeper';lot.altitudeBy=who||'';lot.altitudeAt=now;stamp();return 'set'}
-  const cur=lot.altitudeMasl;
+  // The standing band is read off the layered green, so a height the published copy already
+  // states is a divergence to carry — not a blank the keeper's figure quietly overwrites.
+  const w=lotOwn(lot),now=new Date().toISOString(),stamp=()=>{w.updatedAt=now;if(who)w.by=who;CAT.lots.dirty=true;saveDoc('lots')};
+  const cur=altOf(lot);
+  if(!cur){w.altitudeMasl=band;w.altitudeSrc=src||'keeper';w.altitudeBy=who||'';w.altitudeAt=now;stamp();return 'set'}
   if(cur[0]===band[0]&&cur[1]===band[1])return 'same';
-  lot.altitudeAlt=lot.altitudeAlt||[];
-  if(lot.altitudeAlt.some(a=>a&&a.band&&a.band[0]===band[0]&&a.band[1]===band[1]))return 'same';
-  lot.altitudeAlt.push({id:uid(),band,src:src||'keeper',by:who||'',at:now});stamp();
+  w.altitudeAlt=w.altitudeAlt||[];
+  if((lot.altitudeAlt||[]).some(a=>a&&a.band&&a.band[0]===band[0]&&a.band[1]===band[1]))return 'same';
+  w.altitudeAlt.push({id:uid(),band,src:src||'keeper',by:who||'',at:now});stamp();
   return 'diverged';
 }
 // The standing: the three axes, read side by side, never merged into one number. Traceability is
@@ -2611,10 +2630,15 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.10.0';
+const APP_VERSION='6.10.1';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.10.1',date:'July 2026',title:'What you write on a copy is written on your record.',items:[
+    'A green you read from someone else’s published atlas can be written on. Adding a height, a cupping, a printed code, a confirmed bind, or the washing station behind it used to land on the copy — which no save ever keeps — so the fact stood until you closed the app and was gone by morning. It lands on your own record now, and it stays there.',
+    'A height that disagrees is still carried, never resolved. Where the copy already states a band and yours differs, the published figure keeps standing and yours is kept beside it with your name on it — the law the record has always kept for two heights that disagree, now kept across a copy as well.',
+    'The copy is never written on. It is a read layer and stays one: your line goes on your record, and the published atlas is left exactly as it was published.'
+  ]},
   {v:'6.10.0',date:'July 2026',title:'Where it grew gets its ground — and the station gets a page.',items:[
     'The countries are drawn. Where a coffee grew used to be a mark in an empty box: honest, and unreadable — a point at six degrees north tells you nothing on its own. Now the country’s own outline is drawn under it, so a region reads as somewhere in Ethiopia rather than somewhere. The frame opens to hold the whole country, which is the question a coarse mark can actually answer.',
     'And the highlands with them. Inside each outline, contours at a thousand metres, two and three — so the ground says not only where a country is but what shape it is, and a growing region sits on terrain instead of on paper. Terrain and only terrain: it is never a green’s own stated height, which is the terrace and answers a different question, and it is never a grade. A mark inside the two-thousand line is not a finer coffee than a mark outside it. Nothing sorts, cuts or ranks by it, and where a frame is too wide for a contour to be a line rather than a smudge, none is drawn and the page says so.',
@@ -3360,8 +3384,9 @@ function bindApart(recId,candId,msg){
 function reverseBind(lotId,recId){
   if(guard())return;
   const rec=findRec(recId),lot=catNode('lots',lotId); if(!rec||!lot)return;
-  (lot.sightings||[]).forEach(s=>{if(s&&s.bind&&s.bind.ref===recId&&sightStanding(s))s.supersededAt=new Date().toISOString()});
-  lot.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots');
+  const w=lotOwn(lot); // our bind is our line — it stands on the own node, and that is where it is superseded
+  (w.sightings||[]).forEach(s=>{if(s&&s.bind&&s.bind.ref===recId&&sightStanding(s))s.supersededAt=new Date().toISOString()});
+  w.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots');
   rec.lotApart=[...new Set([...(rec.lotApart||[]),lotId])];
   const o=recOrigin(rec),p=catStampProducer(o,activeName(),rec.createdAt);
   const n=catUpsert('lots','lot:'+rec.id,lotFields(o,p&&p.id),activeName(),{at:rec.createdAt||null}); // its own green — never re-collapses
@@ -3378,7 +3403,8 @@ function repointRoast(rec,lot){
   const key=[old.roasterRef||'',lot.id,catNorm(old.offeringName||rec.name),old.roastDate||''].join('|');
   const existing=catByKey('roasts',key);
   if(existing&&existing.id!==old.id){setRef(rec,'roastRef',existing);return} // a roast already stands on the target green → point at it
-  old.lotRef=lot.id;old._key=key;old.updatedAt=new Date().toISOString();old.by=activeName();CAT.roasts.dirty=true;saveDoc('roasts');
+  const w=catOwn('roasts',old);
+  w.lotRef=lot.id;w._key=key;w.updatedAt=new Date().toISOString();w.by=activeName();CAT.roasts.dirty=true;saveDoc('roasts');
 }
 /* ============ §5 merge & split — the correction pass ============ */
 /* The resolver forks timidly, so the atlas can only grow more granular on its own. Merge & split are the
@@ -3391,8 +3417,11 @@ function repointRoast(rec,lot){
 // key just self-heals — catSeed re-derives one roast per key each boot, mergeCatalog collapses by _key.
 function roastRepointNode(roast,keepId){
   if(!roast||roast.lotRef===keepId)return;
-  roast.lotRef=keepId;roast._key=[roast.roasterRef||'',keepId,catNorm(roast.offeringName||''),roast.roastDate||''].join('|');
-  roast.updatedAt=new Date().toISOString();roast.by=activeName();CAT.roasts.dirty=true;saveDoc('roasts');
+  // the key reads off the layered roast (an own node adopted here is thin — its roaster
+  // and offering still show through from underneath); only the re-point lands own
+  const w=catOwn('roasts',roast);
+  w.lotRef=keepId;w._key=[roast.roasterRef||'',keepId,catNorm(roast.offeringName||''),roast.roastDate||''].join('|');
+  w.updatedAt=new Date().toISOString();w.by=activeName();CAT.roasts.dirty=true;saveDoc('roasts');
 }
 // Re-point every downstream record referencing `fromId` onto `keep`, in the acting keeper's own ledger and
 // the shared roast catalog (merge/split are gated to own+writable). Each moved ledger record gains a bind
@@ -7358,12 +7387,12 @@ function doorStampActors(rec,o){
   if(!rec.lotRef)return;
   if(regSubstance(o.producer)&&o.producerKind){
     const p=catByKey('producers',catNorm(o.producer)+'|'+catNorm(o.originCountry));
-    if(p&&!p.producerKind){p.producerKind=o.producerKind;CAT.producers.dirty=true;saveDoc('producers')}
+    if(p&&!p.producerKind){const pw=catOwn('producers',p);pw.producerKind=o.producerKind;CAT.producers.dirty=true;saveDoc('producers')}
   }
   if(regSubstance(o.station)){
     const pn=catUpsert('processors',catNorm(o.station)+'|'+catNorm(o.originCountry),{name:o.station,country:o.originCountry,region:o.originRegion},activeName());
     const lot=catNode('lots',rec.lotRef);
-    if(pn&&lot&&!(lot.processorRefs||[]).length){lot.processorRefs=[pn.id];lot.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots')}
+    if(pn&&lot&&!(lot.processorRefs||[]).length){const w=lotOwn(lot);w.processorRefs=[pn.id];w.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots')}
   }
 }
 // The height the paste stated, onto the green it describes. It was already read and already shown
@@ -8909,10 +8938,13 @@ function readLedgerFile(ev){
   const file=input&&input.files&&input.files[0];
   if(input){try{input.value=''}catch(e){}}
   if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>openReadback(parseLedger(String(reader.result||'')));
-  reader.onerror=()=>openReadback({status:'bad'});
-  try{reader.readAsText(file)}catch(e){openReadback({status:'bad'})}
+  // `fr`, not `reader` — reader() is the gate that answers whether this device holds
+  // only a published copy (READER.md), and shadowing it inside a ledger-import path
+  // is one call away from a hard-to-see bug.
+  const fr=new FileReader();
+  fr.onload=()=>openReadback(parseLedger(String(fr.result||'')));
+  fr.onerror=()=>openReadback({status:'bad'});
+  try{fr.readAsText(file)}catch(e){openReadback({status:'bad'})}
 }
 function parseLedger(text){
   let json=null;
