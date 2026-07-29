@@ -1797,7 +1797,7 @@ function lotTier(lot){
 // or the resolver (a later pass) names one — never a blank coerced into a fake node.
 function catStampProducer(o,who,at){
   if(!regSubstance(o.producer))return null;
-  return catUpsert('producers',catNorm(o.producer)+'|'+catNorm(o.originCountry),{name:o.producer,country:o.originCountry,region:o.originRegion},who,{at:at||null});
+  return catUpsert('producers',catNorm(o.producer)+'|'+catNorm(o.originCountry),{name:o.producer,country:o.originCountry,region:o.originRegion,locality:o.originLocality},who,{at:at||null});
 }
 function catSeed(){
   const srcs=USERS.users.map(u=>({who:u.name,led:readJSONLS(dataKey(u.id))}));
@@ -2675,10 +2675,16 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.13.0';
+const APP_VERSION='6.14.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.14.0',date:'July 2026',title:'The town has a page, and the pins moved closer to the truth.',items:[
+    'A locality is a scope like any other. Tap Pitalito on a green’s crumb and its page opens — the greens traced to it, its growers, its stations, the region and country above it. Derived from the record, like a region: no stored entry, and never a polygon. A town is a point; drawing its boundary would be a guess, and this record does not guess.',
+    'The walk lost its missing step. A green’s crumb reads country › region › town now; a region’s page lists its towns; a grower’s page names the town it works by. Every step is the same tap.',
+    'A grower’s pin lands at the town, not the middle of the region. Where a record names a locality, the map lookup asks for the town in its region and country — one step finer, still never the farm’s own gate. Where the mark may sit is still decided by the grain: a green that proves its town sits at the town; one that proves only its region stays at the region’s centroid, whatever pin is at hand.',
+    'The pin correction speaks the town too — a town, a region or a country for an origin, never the farm.',
+  ]},
   {v:'6.13.0',date:'July 2026',title:'The town has a column.',items:[
     'The locality — Pitalito under Huila, Dipilto under Nueva Segovia. The region was the finest place the record could hold, and a bag that named the town had nowhere to put it. It is its own field now, on every origin block, one step finer than the region and short of any one farm or mill.',
     'A rung of its own. The grain ladder reads six now — country, region, locality, washing station, farm, green lot. The station still outranks the town: a named mill had custody of the cherry, and naming it proves at least the town it stands in, never the reverse.',
@@ -3118,7 +3124,7 @@ const TAB_FAMILY={bags:'atlas',shelf:'atlas',setups:'ledger'};
  * It is the only place the app says where you are, so it says it plainly. */
 const SUBS={atlas:'The atlas',trace:'The record',ledger:'The desk',bags:'The shelf',setups:'The tools',
   lot:'A green',roaster:'The roaster',place:'The bar',door:'A coffee',curate:'The chart',disc:'The map',
-  producer:'The grower',region:'A region',country:'A country',city:'A city',setup:'A Setup',process:'A process',variety:'A variety'};
+  producer:'The grower',processor:'The station',region:'A region',locality:'A locality',country:'A country',city:'A city',setup:'A Setup',process:'A process',variety:'A variety'};
 let _lastScreenKey=null; // the settle plays on a screen change, never on a repaint
 function screenSub(){
   if(readOnly())return `Viewing ${viewingUser().name}`;
@@ -4815,7 +4821,7 @@ function pagePush(){
   pageStack.push(cur);if(pageStack.length>8)pageStack.shift();
 }
 const PAGE_BACK={lot:'The green',roaster:'The roaster',curate:'The chart',place:'The bar',
-  producer:'The grower',processor:'The station',region:'The region',country:'The country',city:'The city',
+  producer:'The grower',processor:'The station',region:'The region',locality:'The locality',country:'The country',city:'The city',
   setup:'The Setup',process:'The process',variety:'The variety'};
 function pageBack(){
   const prev=pageStack.pop();
@@ -5044,6 +5050,9 @@ function scopeGreens(kind,id){
   switch(kind){
     case 'country': return A.filter(l=>eq((l.fingerprint||{}).country,id));
     case 'region':  return A.filter(l=>eq((l.fingerprint||{}).region,id));
+    // the town's own scope — string-keyed like region and country: a locality is a derived
+    // reading over the greens naming it, never a stored node (and never a polygon)
+    case 'locality':return A.filter(l=>eq((l.fingerprint||{}).locality,id));
     case 'producer':return A.filter(l=>(l.producerRefs||[]).includes(id));
     // the station's own scope. A processor is the second origin actor and the one the
     // flat origin field used to swallow: it gathers cherry from many hands, so what it
@@ -5108,11 +5117,15 @@ const nPl=(n,s,p)=>n+' '+(n===1?s:(p||s+'s'));
 // as one reached by drilling.
 function crumbHTML(kind,id){
   let parts=[];
-  if(kind==='lot'){const l=catNode('lots',id)||{},fp=l.fingerprint||{};parts=[['country',fp.country],['region',fp.region]]}
+  if(kind==='lot'){const l=catNode('lots',id)||{},fp=l.fingerprint||{};parts=[['country',fp.country],['region',fp.region],['locality',fp.locality]]}
   else if(kind==='region'){const c=modeOf(scopeGreens('region',id).map(l=>(l.fingerprint||{}).country).filter(regSubstance));parts=[['country',c]]}
-  else if(kind==='producer'||kind==='processor'){const ls=scopeGreens(kind,id);
+  else if(kind==='locality'){const ls=scopeGreens('locality',id);
     parts=[['country',modeOf(ls.map(l=>(l.fingerprint||{}).country).filter(regSubstance))],
            ['region',modeOf(ls.map(l=>(l.fingerprint||{}).region).filter(regSubstance))]]}
+  else if(kind==='producer'||kind==='processor'){const n=catNode(kind==='producer'?'producers':'processors',id)||{},ls=scopeGreens(kind,id);
+    parts=[['country',modeOf(ls.map(l=>(l.fingerprint||{}).country).filter(regSubstance))],
+           ['region',modeOf(ls.map(l=>(l.fingerprint||{}).region).filter(regSubstance))],
+           ['locality',n.locality||modeOf(ls.map(l=>(l.fingerprint||{}).locality).filter(regSubstance))]]}
   const live=parts.filter(x=>x&&regSubstance(x[1]));
   if(!live.length)return'';
   return `<div class="crumb">${live.map((x,i)=>`${i?'<i>›</i>':''}<button onclick="nav(${jsq(x[0])},${jsq(x[1])})">${esc(x[1])}</button>`).join('')}</div>`;
@@ -5131,7 +5144,7 @@ function nodeResHTML(kind,id,gs){
       <div class="meter">${[0,1,2,3,4,5].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</div></div>`;
   }
   const proved=gs.filter(l=>l.grain==='green-lot'||l.grain==='farm').length;
-  const label={country:'Country scope',region:'Region scope',producer:'Grower scope',processor:'Station scope',roaster:'Roaster scope',
+  const label={country:'Country scope',region:'Region scope',locality:'Locality scope',producer:'Grower scope',processor:'Station scope',roaster:'Roaster scope',
     place:'Venue scope',city:'City scope',setup:'Instrument scope',process:'Facet scope',variety:'Facet scope'}[kind]||'Scope';
   const coarse=gs.length-proved;
   return `<div class="res${proved?'':' thin'}" style="margin:18px 0 22px">
@@ -5209,6 +5222,7 @@ function originMarks(gs){
   gs.forEach(l=>{
     const fp=l.fingerprint||{};
     const region=regSubstance(fp.region)?fp.region:'',country=regSubstance(fp.country)?fp.country:'';
+    const loc=regSubstance(fp.locality)?fp.locality:'';
     const rung=RUNG[l.grain]==null?0:RUNG[l.grain];
     /* the coordinate the record actually holds: an origin actor's pin, at its own stated
        grain — never a farm-precise point (atlasGeoFill only ever lands region/country
@@ -5218,25 +5232,30 @@ function originMarks(gs){
        a station's own point, and the ladder below decides the claim exactly as before. */
     const pins=[...(l.producerRefs||[]).map(i=>catNode('producers',i)),
                 ...(l.processorRefs||[]).map(i=>catNode('processors',i))].filter(p=>p&&p.lat!=null);
+    const locPin=pins.find(p=>p.geoGrain==='locality');
     const regPin=pins.find(p=>(p.geoGrain||'region')!=='country');
     const ctyPin=pins.find(p=>(p.geoGrain||'region')==='country');
     // M1: the finest place the GRAIN lets this green claim — region-grain or finer may sit at a region;
-    // a country-grain green draws at country grain even when a region centroid is at hand
+    // a country-grain green draws at country grain even when a region centroid is at hand. The town one
+    // rung finer: locality-grain or finer, with the town named and a locality pin on file, sits at the
+    // town's centroid; missing either, it falls to the region's claim — a coarser draw, never a lie.
     const claim=rung>=1&&region;
+    const claimLoc=rung>=2&&loc;
     /* a country-grain green is drawn by the country's own SHAPE, which needs no pin and
        invents nothing. The centroid dot survives only as the fall for a country this file
        holds no outline for — coarser still, dashed, and saying so. */
     const ctyLand=country?landAnchor(country):null;
     // M2: the fall, stated — a named place with no coordinate does not silently become the country
     if(claim&&!regPin)list('region',region,'no centroid on file'+((ctyLand||ctyPin)?' — drawn at the country instead':''),l.id);
-    const at=claim&&regPin?{k:'region',label:region,lat:regPin.lat,lon:regPin.lon,coarse:false}
+    const at=claimLoc&&locPin?{k:'locality',label:loc,lat:locPin.lat,lon:locPin.lon,coarse:false}
+            :claim&&regPin?{k:'region',label:region,lat:regPin.lat,lon:regPin.lon,coarse:false}
             :country&&ctyLand?{k:'country',label:country,lat:ctyLand.lat,lon:ctyLand.lon,land:country}
             :country&&ctyPin?{k:'country',label:country,lat:ctyPin.lat,lon:ctyPin.lon,coarse:true}:null;
     if(!at){if(country&&!(claim&&!regPin))list('country',country,'no coordinate on file',l.id);return}
     const key=at.k+':'+normPlace(at.label);
     const m=marks[key]=marks[key]||{k:at.k,id:at.label,label:at.label,cls:at.land?'land':'origin',
       coarse:at.coarse,land:at.land,
-      sub:at.land?'the country’s own outline':at.k==='region'?'region centroid':'country centroid',
+      sub:at.land?'the country’s own outline':at.k==='locality'?'locality centroid':at.k==='region'?'region centroid':'country centroid',
       lat:at.lat,lon:at.lon,n:0,greens:[]};
     m.n++;m.greens.push(l.id);
   });
@@ -5279,14 +5298,15 @@ function clusters(ms,km){
    record holds about a country; the mean of the region pins it holds is the fall
    for a country this file has no shape for, coarse and saying so. */
 function originRollup(ms,gs){
-  const cty=m=>m.k==='country'?m.id:(modeOf(gs.filter(l=>normPlace((l.fingerprint||{}).region||'')===normPlace(m.id)).map(l=>(l.fingerprint||{}).country).filter(regSubstance))||m.id);
+  const cty=m=>m.k==='country'?m.id:(modeOf(gs.filter(l=>{const fp=l.fingerprint||{};
+    return normPlace((m.k==='locality'?fp.locality:fp.region)||'')===normPlace(m.id)}).map(l=>(l.fingerprint||{}).country).filter(regSubstance))||m.id);
   if([...new Set(ms.map(m=>normPlace(cty(m))))].length<2)return ms;
   const out={};
   ms.forEach(m=>{const c=cty(m);if(!regSubstance(c))return;
     const o=out[normPlace(c)]=out[normPlace(c)]||{k:'country',id:c,label:c,cls:'origin',coarse:true,sub:'country centroid',
       lat:0,lon:0,n:0,greens:[],rolled:[],_pts:0};
     o.lat=(o.lat*o._pts+m.lat)/(o._pts+1);o.lon=(o.lon*o._pts+m.lon)/(o._pts+1);o._pts++;
-    o.n+=m.n;o.greens=o.greens.concat(m.greens);if(m.k==='region')o.rolled.push(m.label)});
+    o.n+=m.n;o.greens=o.greens.concat(m.greens);if(m.k==='region'||m.k==='locality')o.rolled.push(m.label)});
   const rs=Object.values(out);
   rs.forEach(m=>{const a=landAnchor(m.id);
     // the shape, where the file has one: the label anchors on the mainland and the dashed
@@ -5703,7 +5723,7 @@ function plotSVG(ms,edges,o){
    from what the frame could draw: a legend naming a mark that is not on the plot
    is the same untruth as a mark naming a place the record cannot prove. */
 const KEY_G={
-  origin:['<svg width="11" height="11"><circle class="mk-origin" cx="5.5" cy="5.5" r="4"/></svg>','a region — a centroid, because a region has no drawn shape'],
+  origin:['<svg width="11" height="11"><circle class="mk-origin" cx="5.5" cy="5.5" r="4"/></svg>','a region or a town — a centroid, because neither has a drawn shape'],
   landmk:['<svg width="15" height="12"><path class="mk-land" d="M1.5 9L3 3.5L7.5 1.5L13.5 5.5L10 10.5Z"/></svg>','a country — the shape is the mark, because a country has no meaningful point'],
   sib:['<svg width="11" height="11"><circle class="mk-sib" cx="5.5" cy="5.5" r="3.2"/></svg>','another region of this country — for scale, not counted here'],
   country:['<svg width="11" height="11"><circle class="mk-origin coarse" cx="5.5" cy="5.5" r="4"/></svg>','a country this file holds no outline for — its centroid, coarser and saying so'],
@@ -6024,6 +6044,7 @@ function spec(kind,id){
   case 'producer':return specProducer(id);
   case 'processor':return specProcessor(id);
   case 'region':return specRegion(id);
+  case 'locality':return specLocality(id);
   case 'country':return specCountry(id);
   case 'city':return specCity(id);
   case 'place':return specPlace(id);
@@ -6219,10 +6240,37 @@ function specRegion(id){
       ['Growers',String(growers.length)],
       ['Processes',procs.map(esc).join(' · ')||'<span class="unread">unread</span>']],
     up:[{h:'Part of',items:[regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''].filter(Boolean)}],
-    down:[{h:'Its growers',items:growers.map(prodRowlink)},
+    down:[{h:'Its localities',items:[...new Set(gs.map(l=>(l.fingerprint||{}).locality).filter(regSubstance))]
+        .map(v=>rowlink('locality',v,esc(v),esc(id),esc(nPl(scopeGreens('locality',v).length,'green'))))},
+      {h:'Its growers',items:growers.map(prodRowlink)},
       {h:'Its stations',items:stationsOf(gs).map(procRowlink)}],
     roadTail:'traced to '+id,
     sealName:id,seal:'A region is a scope, not a stamp.'
+  };
+}
+/* the town's page — a region one rung down, inheriting the same five questions.
+ * A derived scope like region and country: no stored node, no id, no polygon —
+ * the greens naming it ARE the page, and its point on the plan is a centroid. */
+function specLocality(id){
+  const gs=scopeGreens('locality',id);
+  if(!gs.length)return null;
+  const region=modeOf(gs.map(l=>(l.fingerprint||{}).region).filter(regSubstance))||'';
+  const country=modeOf(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))||'';
+  const growers=growersOf(gs);
+  return {
+    eyebrow:'Locality'+(regSubstance(country)?' · '+esc(country):''),title:esc(id),qual:'',
+    lede:`The greens the record traces to ${esc(id)} — a town named, finer than its region, short of any one farm or mill.`,
+    rows:[['Region',regSubstance(region)?esc(region):'<span class="unread">unread</span>'],
+      ['Country',regSubstance(country)?esc(country):'<span class="unread">unread</span>'],
+      ['Greens',String(gs.length)],['Growers',String(growers.length)]],
+    up:[{h:'Part of',items:[
+      regSubstance(region)?rowlink('region',region,esc(region),'the region around it',esc(nPl(scopeGreens('region',region).length,'green'))):'',
+      regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''
+    ].filter(Boolean)}],
+    down:[{h:'Its growers',items:growers.map(prodRowlink)},
+      {h:'Its stations',items:stationsOf(gs).map(procRowlink)}],
+    roadTail:'traced to '+id,
+    sealName:id,seal:'A locality is a point, never a polygon.'
   };
 }
 function specCountry(id){
@@ -6354,6 +6402,7 @@ function specLot(lotId){
     ...trueGrowers.map(g=>rowlink('producer',g.id,esc(g.name),g.producerKind==='station'?'the station that processed it':'the grower who grew it','')),
     // the station has a page of its own now — the Station row above names it, this walks to it
     ...stns.map(p=>rowlink('processor',p.id,esc(p.name),'the station it passed through',esc(nPl(scopeGreens('processor',p.id).length,'green')))),
+    regSubstance(fp.locality)?rowlink('locality',fp.locality,esc(fp.locality),'the town it grew by',esc(nPl(scopeGreens('locality',fp.locality).length,'green'))):'',
     regSubstance(fp.region)?rowlink('region',fp.region,esc(fp.region),'the region it grew in',esc(nPl(scopeGreens('region',fp.region).length,'green'))):'',
     regSubstance(fp.country)?rowlink('country',fp.country,esc(fp.country),'the country above that',esc(nPl(scopeGreens('country',fp.country).length,'green'))):'',
     (fp.process&&fp.process.family&&fp.process.family!=='unspecified')?rowlink('process',fp.process.family,esc(sentence(fp.process.family)),'every green processed this way',esc(nPl(scopeGreens('process',fp.process.family).length,'green'))):'',
@@ -7603,7 +7652,7 @@ function doorStampActors(rec,o){
     if(p&&!p.producerKind){const pw=catOwn('producers',p);pw.producerKind=o.producerKind;CAT.producers.dirty=true;saveDoc('producers')}
   }
   if(regSubstance(o.station)){
-    const pn=catUpsert('processors',catNorm(o.station)+'|'+catNorm(o.originCountry),{name:o.station,country:o.originCountry,region:o.originRegion},activeName());
+    const pn=catUpsert('processors',catNorm(o.station)+'|'+catNorm(o.originCountry),{name:o.station,country:o.originCountry,region:o.originRegion,locality:o.originLocality},activeName());
     const lot=catNode('lots',rec.lotRef);
     if(pn&&lot&&!(lot.processorRefs||[]).length){const w=lotOwn(lot);w.processorRefs=[pn.id];w.updatedAt=new Date().toISOString();CAT.lots.dirty=true;saveDoc('lots')}
   }
@@ -8257,18 +8306,21 @@ async function atlasGeoFill(rec){
   const rk=regSubstance(rec.roaster)&&catNorm(rec.roaster),rn=rk&&catByKey('roasters',rk),city=(rec.roasterCity||'').trim();
   if(rn&&city&&rn.lat==null){const pt=await geoOne(city);if(pt){catUpsert('roasters',rk,{lat:pt.lat,lon:pt.lon,geoGrain:'city'},activeName());hit=true}}
   const o=recOrigin(rec);
-  const place=[o.originRegion,o.originCountry].filter(regSubstance).join(', ');
-  const grain=regSubstance(o.originRegion)?'region':'country';
+  // the finest ADMINISTRATIVE place the record states — the town when it names one, else the
+  // region, else the country. Still never the farm's or the station's own name: a locality
+  // centroid is one step finer than a region's and remains an honest, coarse, findable place.
+  const place=[o.originLocality,o.originRegion,o.originCountry].filter(regSubstance).join(', ');
+  const grain=regSubstance(o.originLocality)?'locality':regSubstance(o.originRegion)?'region':'country';
   if(regSubstance(o.producer)&&place){
     const pk=catNorm(o.producer)+'|'+catNorm(o.originCountry),pn=catByKey('producers',pk);
-    if(pn&&pn.lat==null){const pt=await geoOne(place); // region/country only — coarse, never the station name
+    if(pn&&pn.lat==null){const pt=await geoOne(place); // locality/region/country only — coarse, never the station name
       if(pt){catUpsert('producers',pk,{lat:pt.lat,lon:pt.lon,geoGrain:grain},activeName());hit=true}}
   }
   // the station gets the same coarse pin, looked up the same way and for the same reason:
   // a green whose record names a washing station and no farm was unplaceable until now
   if(regSubstance(o.station)&&place){
     const sk=catNorm(o.station)+'|'+catNorm(o.originCountry),sn=catByKey('processors',sk);
-    if(sn&&sn.lat==null){const pt=await geoOne(place); // the REGION, never the station's own name
+    if(sn&&sn.lat==null){const pt=await geoOne(place); // the TOWN or the region, never the station's own name
       if(pt){catUpsert('processors',sk,{lat:pt.lat,lon:pt.lon,geoGrain:grain},activeName());hit=true}}
   }
   if(hit&&curateOn)render();
@@ -8281,11 +8333,11 @@ function openGeoFix(kind,id){
   if(penGuard())return;
   const n=catNode(kind,id); if(!n)return;
   const roaster=kind==='roasters';
-  const label=roaster?(n.name||'this roaster'):([n.region,n.country].filter(regSubstance).join(', ')||n.name||'this origin');
-  const seed=roaster?(n.city||''):[n.region,n.country].filter(regSubstance).join(', ');
+  const label=roaster?(n.name||'this roaster'):([n.locality,n.region,n.country].filter(regSubstance).join(', ')||n.name||'this origin');
+  const seed=roaster?(n.city||''):[n.locality,n.region,n.country].filter(regSubstance).join(', ');
   openSheet(`
   <h3>Correct the pin</h3>
-  <div class="sub">${esc(label)} — ${n.lat!=null?`pinned at ${(+n.lat).toFixed(3)}, ${(+n.lon).toFixed(3)}`:'unplaced; it lists'}. An honest grain only: a city for a roaster, a region or a country for an origin — never the farm.</div>
+  <div class="sub">${esc(label)} — ${n.lat!=null?`pinned at ${(+n.lat).toFixed(3)}, ${(+n.lon).toFixed(3)}`:'unplaced; it lists'}. An honest grain only: a city for a roaster; a town, a region or a country for an origin — never the farm.</div>
   <label class="f"><span class="l">Search the map</span><input type="text" id="gf_q" value="${esc(seed)}" placeholder="${roaster?'the city':'the region, the country'}"></label>
   <button class="btn btn-quiet" onclick="geoFixLook(${jsq(kind)},${jsq(id)})">Find it</button>
   <div id="gf_results"></div>
@@ -8306,7 +8358,7 @@ async function geoFixLook(kind,id){
 function geoFixSet(kind,id,lat,lon){
   if(penGuard())return;
   const n=catNode(kind,id); if(!n)return;
-  const grain=kind==='roasters'?'city':(regSubstance(n.region)?'region':'country');
+  const grain=kind==='roasters'?'city':(regSubstance(n.locality)?'locality':regSubstance(n.region)?'region':'country');
   catUpsert(kind,n._key,{lat:lat==null?null:Number(lat),lon:lon==null?null:Number(lon),geoGrain:lat==null?null:grain},activeName(),{full:true});
   closeSheet();render();
   toast(lat==null?'Unpinned — it lists now':'Pinned — the chart corrects itself');
