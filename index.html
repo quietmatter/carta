@@ -356,6 +356,9 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
      hollow        a centroid — a region, an area standing in for a point
      dashed        coarser still, and admitting it
      a square      a street address; a circle, a centroid; a dashed square, a scene
+     a shape       a country — its outline IS the mark, because a shape is what the
+                   record holds about a country and a point is what it does not
+     a hairline    another region of the same country, drawn for scale, never counted
      a ring        your overlay — added, never subtracted */
 .plot-box{border:1px solid var(--line);background:var(--paper);margin:4px 0 8px;position:relative;overflow:hidden}
 .plot-box svg{display:block;width:100%;position:relative;z-index:1}
@@ -396,6 +399,28 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 .mk-roaster{fill:var(--ink)}
 .mk-origin{fill:none;stroke:var(--ink-2);stroke-width:1.3}
 .mk-origin.coarse{stroke:var(--ink-3);stroke-dasharray:2 2}
+/* A COUNTRY THAT IS A MARK, not ground under one. The record holds a country's SHAPE
+   and does not hold a meaningful point inside it — a country's centroid is a place no
+   coffee is — so the shape carries the mark and the dot is retired. A region is the
+   exact inverse: a point the record holds, an outline it must never guess. Promotion
+   is decided by the record (originMarks), never by the drawing: an outline drawn only
+   for context stays .land — paper, untappable, uncounted. */
+.plot-box .mk-land{fill:var(--surface-page);fill-opacity:.9;stroke:var(--ink-2);stroke-width:1.3;
+  stroke-linejoin:round;stroke-linecap:round}
+/* the ring, on a shape. A ring is ADDED over a mark already complete without it, so on
+   an outline it is the line doubled rather than a circle floated over the middle — the
+   dot we just refused, come back wearing your overlay. Comes off as cleanly as the ring. */
+.plot-box .mk-land-ring{fill:none;stroke:var(--ink);stroke-width:3.4;opacity:.15;stroke-linejoin:round}
+/* A SIBLING — another region of the country already on this paper, drawn for scale.
+   The terrace's middle weight, pointed at the plan: DOTTED IS THE GROUND, a HAIRLINE is
+   another, the firm mark is this one. It is never counted in this scope and never wears
+   the ring, but it is still a rowlink with a position — you can walk sideways to it. */
+/* a country's name is written across its own outline, so it takes the paper halo the
+   frame's labels take over streets — for the same reason, and it is the same rule: ink
+   the reader has to pick out of another line is ink that did not say anything. */
+.plot-box .mk-lbl.onland{paint-order:stroke;stroke:var(--paper);stroke-width:2.8px;stroke-linejoin:round}
+.plot-box .mk-sib{fill:none;stroke:var(--ink-3);stroke-width:.9;opacity:.6}
+.plot-box .mk-lbl.sib{fill:var(--ink-3);opacity:.72;font-size:8.5px}
 .mk-scene{fill:none;stroke:var(--ink-2);stroke-width:1.3;stroke-dasharray:3 2}
 .mk-merged{fill:var(--ink)}
 .mk-n{fill:var(--paper);font-family:var(--sans);font-size:8px;font-weight:600}
@@ -2630,14 +2655,20 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.10.1';
+const APP_VERSION='6.11.1';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
-  {v:'6.10.1',date:'July 2026',title:'What you write on a copy is written on your record.',items:[
+  {v:'6.11.1',date:'July 2026',title:'What you write on a copy is written on your record.',items:[
     'A green you read from someone else’s published atlas can be written on. Adding a height, a cupping, a printed code, a confirmed bind, or the washing station behind it used to land on the copy — which no save ever keeps — so the fact stood until you closed the app and was gone by morning. It lands on your own record now, and it stays there.',
     'A height that disagrees is still carried, never resolved. Where the copy already states a band and yours differs, the published figure keeps standing and yours is kept beside it with your name on it — the law the record has always kept for two heights that disagree, now kept across a copy as well.',
     'The copy is never written on. It is a read layer and stays one: your line goes on your record, and the published atlas is left exactly as it was published.'
+  ]},
+  {v:'6.11.0',date:'July 2026',title:'A region is not a small country.',items:[
+    'A country is drawn as a country. Where a coffee proves its country and no region, the map used to put a dashed dot in the middle of it — which is the one thing about a country the record does not have. The centre of a country is a place no coffee is, and often not even land. So the country’s own outline is the mark now: named, tappable, counted, and carrying your ring as a doubled line. The shape was already on the paper; it was being spent as decoration while a made-up point stood in for it.',
+    'A region stays a point, because that is what the record holds. The two are opposite kinds of fact. A country has a drawn shape and no honest point; a region has a point — roughly where the coffee grew — and no shape at all, since coffee’s regions are sometimes a department and sometimes a catchment nobody has ever drawn. Matching a region’s name to a polygon would be a guess, and this record does not guess. So the plot now draws the grain instead of describing it: on one frame you can see which greens prove a region and which prove only a country.',
+    'Walking into a region adds something. It used to subtract — a region’s map was its country’s map with the other marks removed, one dot on an empty outline, nothing learned by arriving. Now the other regions of that country are drawn with it as hairlines, so a mark reads as where in Ethiopia rather than as a point somewhere. They are there for scale only: not counted in that page’s totals, never wearing your ring, never fading for a hold — those say something about your own record, and a region drawn for scale is not in it. Tap one to walk sideways into it.',
+    'The frame still does not close in as you walk down, and now for a better reason. It stays the whole country because the country is what the comparison is made on — not merely because there is nothing finer under a centroid to zoom to.',
   ]},
   {v:'6.10.0',date:'July 2026',title:'Where it grew gets its ground — and the station gets a page.',items:[
     'The countries are drawn. Where a coffee grew used to be a mark in an empty box: honest, and unreadable — a point at six degrees north tells you nothing on its own. Now the country’s own outline is drawn under it, so a region reads as somewhere in Ethiopia rather than somewhere. The frame opens to hold the whole country, which is the question a coarse mark can actually answer.',
@@ -5164,14 +5195,21 @@ function originMarks(gs){
     // M1: the finest place the GRAIN lets this green claim — region-grain or finer may sit at a region;
     // a country-grain green draws at country grain even when a region centroid is at hand
     const claim=rung>=1&&region;
+    /* a country-grain green is drawn by the country's own SHAPE, which needs no pin and
+       invents nothing. The centroid dot survives only as the fall for a country this file
+       holds no outline for — coarser still, dashed, and saying so. */
+    const ctyLand=country?landAnchor(country):null;
     // M2: the fall, stated — a named place with no coordinate does not silently become the country
-    if(claim&&!regPin)list('region',region,'no centroid on file'+(ctyPin?' — drawn at the country instead':''),l.id);
+    if(claim&&!regPin)list('region',region,'no centroid on file'+((ctyLand||ctyPin)?' — drawn at the country instead':''),l.id);
     const at=claim&&regPin?{k:'region',label:region,lat:regPin.lat,lon:regPin.lon,coarse:false}
+            :country&&ctyLand?{k:'country',label:country,lat:ctyLand.lat,lon:ctyLand.lon,land:country}
             :country&&ctyPin?{k:'country',label:country,lat:ctyPin.lat,lon:ctyPin.lon,coarse:true}:null;
     if(!at){if(country&&!(claim&&!regPin))list('country',country,'no coordinate on file',l.id);return}
     const key=at.k+':'+normPlace(at.label);
-    const m=marks[key]=marks[key]||{k:at.k,id:at.label,label:at.label,cls:'origin',coarse:at.coarse,
-      sub:at.k==='region'?'region centroid':'country centroid',lat:at.lat,lon:at.lon,n:0,greens:[]};
+    const m=marks[key]=marks[key]||{k:at.k,id:at.label,label:at.label,cls:at.land?'land':'origin',
+      coarse:at.coarse,land:at.land,
+      sub:at.land?'the country’s own outline':at.k==='region'?'region centroid':'country centroid',
+      lat:at.lat,lon:at.lon,n:0,greens:[]};
     m.n++;m.greens.push(l.id);
   });
   const out=Object.values(marks);
@@ -5209,8 +5247,9 @@ function clusters(ms,km){
 /* the origin frame's ladder. A scene is a catchment and clusters by distance;
    origin grain is ADMINISTRATIVE, so it rolls up the ladder it already has —
    the atlas draws countries, and inside one country it draws that country's
-   regions. The country mark sits at the mean of the region pins the record
-   holds — derived from what was actually placed, coarse and saying so. */
+   regions. A rolled-up country draws as its own OUTLINE — the shape is what the
+   record holds about a country; the mean of the region pins it holds is the fall
+   for a country this file has no shape for, coarse and saying so. */
 function originRollup(ms,gs){
   const cty=m=>m.k==='country'?m.id:(modeOf(gs.filter(l=>normPlace((l.fingerprint||{}).region||'')===normPlace(m.id)).map(l=>(l.fingerprint||{}).country).filter(regSubstance))||m.id);
   if([...new Set(ms.map(m=>normPlace(cty(m))))].length<2)return ms;
@@ -5221,8 +5260,35 @@ function originRollup(ms,gs){
     o.lat=(o.lat*o._pts+m.lat)/(o._pts+1);o.lon=(o.lon*o._pts+m.lon)/(o._pts+1);o._pts++;
     o.n+=m.n;o.greens=o.greens.concat(m.greens);if(m.k==='region')o.rolled.push(m.label)});
   const rs=Object.values(out);
-  rs.forEach(m=>{m.kept=markKept(m.greens);m.held=markHeld(m.greens)}); // the overlays roll up with the marks
+  rs.forEach(m=>{const a=landAnchor(m.id);
+    // the shape, where the file has one: the label anchors on the mainland and the dashed
+    // centroid — a point in the middle of a country, which is a place no coffee is — goes
+    if(a){m.lat=a.lat;m.lon=a.lon;m.cls='land';m.land=m.id;m.coarse=false;m.sub='the country’s own outline'}
+    m.kept=markKept(m.greens);m.held=markHeld(m.greens)}); // the overlays roll up with the marks
   return rs;
+}
+/* THE SIBLINGS — a region drawn among the other regions of its country.
+ * The walk down used to SUBTRACT here, which no other walk in the app does. Step from
+ * Ethiopia into Yirgacheffe and the frame was the country page's frame with four marks
+ * removed: one dot in an outline, and nothing learned by arriving.
+ * The fix costs no fetch, no fit and no new fact. When the ground under this frame is ONE
+ * country, every region of it the atlas can place is already inside the box — so they are
+ * drawn: this scope's regions firm, the rest a hairline. That is the terrace's exact
+ * construction pointed at the plan (dotted is the ground, a hairline is another, the firm
+ * mark is this one), and it is why the frame still does not close in on the walk down —
+ * not because there is nothing finer under a centroid, but because THE COUNTRY IS WHAT THE
+ * COMPARISON IS MADE ON. A region reads as "where in Ethiopia", against the regions the
+ * atlas holds.
+ * For scale, never for count: a sibling is outside this scope's tally, wears no ring and
+ * never goes faint for a hold — those say something about YOUR record, and a sibling is
+ * not in it. It stays tappable, because a mark is a rowlink that happens to have a
+ * position, and walking sideways to a neighbouring region is a good walk. */
+function siblingMarks(country,drawn){
+  if(!regSubstance(country))return[];
+  const have=new Set(drawn.map(m=>normPlace(m.label)));
+  return originMarks(scopeGreens('country',country)).marks
+    .filter(m=>m.k==='region'&&m.lat!=null&&!have.has(normPlace(m.label)))
+    .map(m=>({k:'region',id:m.id,label:m.label,lat:m.lat,lon:m.lon,n:m.n}));
 }
 // a scene mark sits at its cluster's centroid and is LABELLED AS A SCENE — honest,
 // because a scene genuinely is an area. M4: a cluster of one is not a scene — one
@@ -5403,6 +5469,37 @@ function landRings(name){
   const enc=LANDS[k];if(!enc)return _landC[k]=null;
   return _landC[k]=enc.split(';').map(landPts);
 }
+/* A COUNTRY AND A REGION ARE INVERSE FACTS, and the map should draw each by the thing
+   the record actually holds about it:
+
+     a country   the record HAS its outline (drawn, closed, public domain)
+                 and has NO meaningful point — a country's centroid is a place no
+                 coffee is, and often not even land
+     a region    the record HAS a point at region grain — roughly where the coffee grew
+                 and has NO outline: coffee's regions are sometimes an admin-1 department
+                 (Huila) and sometimes a catchment nobody has drawn (Yirgacheffe), and
+                 matching a name to a shape is the guess the resolver refuses everywhere
+
+   Drawing both as a circle differing by one dash flattened that, and flattened it the
+   wrong way round: it invented the one thing a country does not have while leaving the
+   thing it does have underneath as decoration. So a country marks itself by its outline
+   and a region by its point — and the frame now DRAWS the grain instead of describing
+   it. On one plot you can see which greens prove a region and which prove only a
+   country: the first are points, the second is a shape. M1 said the grain is the
+   geometry; that was true of position, and is now true of form.
+
+   This is also strictly more of the record on the map: a country-grain green needed a
+   country centroid on file to draw at all, and used to LIST without one. An outline
+   needs no pin, so it draws — and nothing about it is guessed. */
+let _anchC={};
+function landAnchor(name){
+  const k=normPlace(name||'');
+  if(k in _anchC)return _anchC[k];
+  const rs=landRings(name);if(!rs||!rs.length)return _anchC[k]=null;
+  // the largest ring, so the label sits on the mainland rather than out among the islands
+  const big=rs.reduce((a,r)=>r.length>a.length?r:a,rs[0]);
+  return _anchC[k]={lat:big.reduce((a,p)=>a+p.lat,0)/big.length,lon:big.reduce((a,p)=>a+p.lon,0)/big.length};
+}
 // the ground under a scope: the countries its greens name, each drawn or counted
 function landsOf(gs){
   const drawn=[],unread=[];
@@ -5456,7 +5553,11 @@ function plotSVG(ms,edges,o){
   // apart would claim a precision the grain never had.
   const out=[];
   ms.forEach(m=>{const p=Object.assign({},m,{x:X(m),y:Y(m)});
-    const near=out.find(q=>normPlace(q.label)===normPlace(p.label)||Math.hypot(q.x-p.x,q.y-p.y)<(o.sep||19));
+    // a SHAPE is never folded into a point, and two of them never into each other. A fold
+    // exists to refuse precision the plot cannot carry; an outline claims no point, so it
+    // has no precision to overstate, and countries do not overlap in the first place.
+    if(p.cls==='land'){out.push(Object.assign({},p,{members:[p]}));return}
+    const near=out.find(q=>q.cls!=='land'&&(normPlace(q.label)===normPlace(p.label)||Math.hypot(q.x-p.x,q.y-p.y)<(o.sep||19)));
     if(near){near.members.push(p);const n=near.members.length;
       near.x=(near.x*(n-1)+p.x)/n;near.y=(near.y*(n-1)+p.y)/n;near.n+=p.n;
       near.kept=near.kept||p.kept;near.held=near.held&&p.held}   // a fold is yours if any member is; held only if all are
@@ -5477,7 +5578,12 @@ function plotSVG(ms,edges,o){
       if(lx!=null&&Math.abs(x-lx)<1.1&&Math.abs(y-ly)<1.1)return;
       d+=(d?'L':'M')+n(x)+' '+n(y);lx=x;ly=y});
     return d?d+(close?'Z':''):''};
-  const landHTML=lands.map(rs=>rs.map(r=>{const d=path(r,true);
+  /* a country the scope MARKS is not drawn as ground under itself — it is drawn once, by
+     the mark layer below, where it can be labelled, tapped and counted. The caller decides
+     which is which (o.landMark), because that decision belongs to the record. */
+  const isMk=new Set(o.landMark||[]);
+  const groundL=(o.lands||[]).map(nm=>isMk.has(normPlace(nm))?null:landRings(nm)).filter(Boolean);
+  const landHTML=groundL.map(rs=>rs.map(r=>{const d=path(r,true);
       return d?`<path class="land" d="${d}"/>`:''}).join('')).join('');
   /* the highlands, over the land's fill and under everything else. Withheld on a frame
      too wide for a thousand-metre interval to be a line rather than a smudge — the same
@@ -5486,8 +5592,12 @@ function plotSVG(ms,edges,o){
   const topo=(o.lands&&gw<=TOPO_KM)?o.lands.map(landTopo).filter(Boolean):[];
   const topoHTML=topo.map(lv=>lv.map((rings,i)=>rings.map(r=>{const d=path(r,false);
       return d?`<path class="topo t${i+1}" d="${d}"/>`:''}).join('')).join('')).join('');
+  // one country's rings, drawn with one class — the mark, or the ring over it
+  const landPath=(nm,cls)=>(landRings(nm)||[]).map(r=>{const d=path(r,true);
+    return d?`<path class="${cls}" d="${d}"/>`:''}).join('');
   // the mark itself, complete on its own — the ring is added over it, never instead
   const body=m=>{
+    if(m.cls==='land')return landPath(m.land,'mk-land');
     if(m.members.length>1)return `<circle class="mk-merged" cx="${n(m.x)}" cy="${n(m.y)}" r="9"/>
       <text class="mk-n" x="${n(m.x)}" y="${n(m.y+3)}" text-anchor="middle">${m.members.length}</text>`;
     if(m.cls==='scene')return `<rect class="mk-scene" x="${n(m.x-7)}" y="${n(m.y-7)}" width="14" height="14"/>`;
@@ -5496,14 +5606,53 @@ function plotSVG(ms,edges,o){
     return `<circle class="mk-roaster" cx="${n(m.x)}" cy="${n(m.y)}" r="4"/>`;
   };
   const ringR=m=>m.members.length>1?12.5:m.cls==='scene'?12.5:m.cls==='origin'?8:7.5;
-  const shape=m=>body(m)+((m.kept&&!o.noRing)?`<circle class="mk-ring" cx="${n(m.x)}" cy="${n(m.y)}" r="${n(ringR(m))}"/>`:'');
+  // on a shape the ring is the line DOUBLED, laid under the outline — a circle floated
+  // over a country's middle would be the dot this whole pass just refused, come back
+  // wearing your overlay. It is still added over a mark complete without it, and still
+  // comes off leaving the drawing whole.
+  const shape=m=>{const r=m.kept&&!o.noRing;
+    return m.cls==='land'?(r?landPath(m.land,'mk-land-ring'):'')+body(m)
+      :body(m)+(r?`<circle class="mk-ring" cx="${n(m.x)}" cy="${n(m.y)}" r="${n(ringR(m))}"/>`:'')};
   const wide=out.length>9,ranked=out.slice().sort((a,b)=>b.n-a.n).slice(0,8);
-  const lbl=m=>{if(wide&&m.members.length===1&&ranked.indexOf(m)<0)return'';
-    const r=m.x>W*.66,t=m.members.length>1?m.members.length+' here':m.label;
+  // a shape is always named: an unlabelled outline is a puzzle, and it is the one mark
+  // whose label cannot collide with anything, having the whole of its own interior
+  const lbl=m=>{if(wide&&m.cls!=='land'&&m.members.length===1&&ranked.indexOf(m)<0)return'';
+    const t=m.members.length>1?m.members.length+' here':m.label;
+    // a country's name sits INSIDE its country, the way it does on any atlas — the anchor
+    // is the shape's own centroid, and there is nothing there for it to collide with
+    if(m.cls==='land')return `<text class="mk-lbl near onland" x="${n(m.x)}" y="${n(m.y)}" text-anchor="middle">${esc(t)}</text>`;
+    const r=m.x>W*.66;
     return `<text class="mk-lbl${m.members.length>1?'':' near'}" x="${n(r?m.x-10:m.x+10)}" y="${n(m.y+3.5)}"${r?' text-anchor="end"':''}>${esc(t)}</text>`};
-  const g=out.map((m,i)=>`<g class="mk${mapSel&&mapSel.f===o.frame&&mapSel.i===i?' sel':''}${m.held?' mk-held':''}"
+  const mkG=(m,i)=>`<g class="mk${mapSel&&mapSel.f===o.frame&&mapSel.i===i?' sel':''}${m.held?' mk-held':''}"
       onclick="${m.members.length>1?`mapPick(${jsq(o.frame)},${i})`:`nav(${jsq(m.k)},${jsq(m.id)})`}">
-      ${shape(m)}${lbl(m)}</g>`).join('');
+      ${shape(m)}${lbl(m)}</g>`;
+  /* the shapes draw in the ground's place and the points over them, so the highlands stay
+     legible inside a country that is itself a mark. They are still marks: tappable,
+     labelled, counted, ringed. Only their depth in the paper is a drawing decision. */
+  const idx=out.map((m,i)=>[m,i]);
+  const landG=idx.filter(([m])=>m.cls==='land').map(([m,i])=>mkG(m,i)).join('');
+  const g=idx.filter(([m])=>m.cls!=='land').map(([m,i])=>mkG(m,i)).join('');
+  /* the siblings — the other regions of the country already on this paper, drawn for
+     scale. They never enter the fit (they sit inside a ground the marks already opened
+     the box to hold), never fold, never count and never ring. One outside the frame is
+     simply not drawn, and one sitting under a real mark is dropped rather than ghosting
+     it — both stated in the count returned, because a cap nobody is told about reads as
+     coverage. */
+  const sibs=[],sibSeen=[];
+  (o.sibs||[]).forEach(sb=>{const x=X(sb),y=Y(sb);
+    if(x<6||x>W-6||y<6||y>H-6)return;
+    if(out.some(m=>m.cls!=='land'&&Math.hypot(m.x-x,m.y-y)<11))return;
+    if(sibSeen.some(p=>Math.hypot(p[0]-x,p[1]-y)<11))return;
+    sibSeen.push([x,y]);sibs.push(Object.assign({},sb,{x,y}))});
+  const sibLbl=sibs.length+out.length<=11;
+  const sibHTML=sibs.map(sb=>{const r=sb.x>W*.66;
+    /* a hairline is never allowed to write over a mark's name. Close in, the dot alone
+       still does its work — it is there for scale, and the scope's own mark is the thing
+       being read. Tapping still reaches it, so nothing is lost but the ink. */
+    const clear=sibLbl&&!out.some(m=>m.cls!=='land'&&Math.hypot(m.x-sb.x,m.y-sb.y)<34)
+                      &&!sibs.some(o=>o!==sb&&Math.hypot(o.x-sb.x,o.y-sb.y)<30&&o.label<sb.label);
+    return `<g class="mk sib" onclick="nav('region',${jsq(sb.id)})"><circle class="mk-sib" cx="${n(sb.x)}" cy="${n(sb.y)}" r="3.4"/>${
+      clear?`<text class="mk-lbl sib" x="${n(r?sb.x-8:sb.x+8)}" y="${n(sb.y+3)}"${r?' text-anchor="end"':''}>${esc(sb.label)}</text>`:''}</g>`}).join('');
   /* the street layer, laid as GROUND under the drawing — an enhancement, never a
      dependency. Everything above this line has already been decided: the marks,
      the folds, the counts, the taps and the ring are the same drawing whether or
@@ -5515,21 +5664,26 @@ function plotSVG(ms,edges,o){
     bounds:[[ground.west,ground.south],[ground.east,ground.north]],
     gkey:[ground.west,ground.south,ground.east,ground.north].map(v=>v.toFixed(4)).join(','),
     fitOpts:{padding:0,maxZoom:17}}):null;
-  return {folds:out,ground,streets,land:lands.length,topo:topo.length,
+  // `land` is what was drawn AS GROUND — a country the scope marks is drawn once, as a
+  // mark, and must not put "ground, never a mark" in a key it is not on
+  return {folds:out,ground,streets,land:groundL.length,topo:topo.length,
+    sibN:sibs.length,sibDropped:(o.sibs||[]).length-sibs.length,sibLbl,
     html:`<div class="plot-box"${sid?` data-smap="${sid}"`:''}><svg viewBox="0 0 ${W} ${H}" role="img"
-    aria-label="${esc(o.label||'plot')}">${landHTML}${topoHTML}${lines}${g}</svg></div>`};
+    aria-label="${esc(o.label||'plot')}">${landHTML}${landG}${topoHTML}${sibHTML}${lines}${g}</svg></div>`};
 }
 /* the key — what each weight of ink means. Derived from WHAT WAS DRAWN, never
    from what the frame could draw: a legend naming a mark that is not on the plot
    is the same untruth as a mark naming a place the record cannot prove. */
 const KEY_G={
-  origin:['<svg width="11" height="11"><circle class="mk-origin" cx="5.5" cy="5.5" r="4"/></svg>','a region centroid'],
-  country:['<svg width="11" height="11"><circle class="mk-origin coarse" cx="5.5" cy="5.5" r="4"/></svg>','a country — coarser, and it says so'],
+  origin:['<svg width="11" height="11"><circle class="mk-origin" cx="5.5" cy="5.5" r="4"/></svg>','a region — a centroid, because a region has no drawn shape'],
+  landmk:['<svg width="15" height="12"><path class="mk-land" d="M1.5 9L3 3.5L7.5 1.5L13.5 5.5L10 10.5Z"/></svg>','a country — the shape is the mark, because a country has no meaningful point'],
+  sib:['<svg width="11" height="11"><circle class="mk-sib" cx="5.5" cy="5.5" r="3.2"/></svg>','another region of this country — for scale, not counted here'],
+  country:['<svg width="11" height="11"><circle class="mk-origin coarse" cx="5.5" cy="5.5" r="4"/></svg>','a country this file holds no outline for — its centroid, coarser and saying so'],
   roaster:['<svg width="11" height="11"><circle class="mk-roaster" cx="5.5" cy="5.5" r="3.5"/></svg>','a hand, at its city'],
   venue:['<svg width="11" height="11"><rect class="mk-venue" x="2" y="2" width="7" height="7"/></svg>','a bar, at its door'],
   scene:['<svg width="13" height="13"><rect class="mk-scene" x="1.5" y="1.5" width="10" height="10"/></svg>','a scene — an area, drawn as one'],
   merged:['<svg width="15" height="15"><circle class="mk-merged" cx="7.5" cy="7.5" r="7"/><text class="mk-n" x="7.5" y="10.5" text-anchor="middle">2</text></svg>','marks the plot cannot separate, folded and counted'],
-  ring:['<svg width="17" height="17"><circle class="mk-roaster" cx="8.5" cy="8.5" r="3.5"/><circle class="mk-ring" cx="8.5" cy="8.5" r="7"/></svg>','a ring — one you keep'],
+  ring:['<svg width="17" height="17"><circle class="mk-roaster" cx="8.5" cy="8.5" r="3.5"/><circle class="mk-ring" cx="8.5" cy="8.5" r="7"/></svg>','a ring, or a doubled outline — one you keep'],
   held:['<svg width="13" height="13" class="mk-held"><rect class="mk-venue" x="3" y="3" width="7" height="7"/></svg>','faint — held back from the published copy'],
   land:['<svg width="15" height="12"><path class="land" d="M1.5 9L3 3.5L7.5 1.5L13.5 5.5L10 10.5Z"/></svg>','the country’s own outline — ground, never a mark'],
   topo:['<svg width="17" height="12"><path class="topo t1" d="M1 9.5C4 6 6 10 9 6.5S14 3 16 5"/><path class="topo t2" d="M3 7C5.5 4.5 7 7.5 9.5 5S13 3.5 14.5 5"/><path class="topo t3" d="M6 5.5C7.5 4 8.5 5.5 10 4.5"/></svg>','the highlands — 1,000 · 2,000 · 3,000 m, terrain and nothing else']
@@ -5541,7 +5695,9 @@ function keyFor(p){
   const any=f=>p.folds.some(m=>m.members.some(f)),ks=[];
   if(p.land)ks.push('land');   // the ground enters the key only on a frame that actually drew one
   if(p.topo)ks.push('topo');
+  if(p.folds.some(m=>m.cls==='land'))ks.push('landmk');
   if(any(m=>m.cls==='origin'&&!m.coarse))ks.push('origin');
+  if(p.sibN)ks.push('sib');
   if(any(m=>m.cls==='origin'&&m.coarse))ks.push('country');
   if(any(m=>m.cls==='scene'))ks.push('scene');
   if(any(m=>m.cls==='roaster'))ks.push('roaster');
@@ -5591,12 +5747,24 @@ function mapHTML(kind,id,gs){
   // its own greens name, drawn as coarsely as its marks. It costs no network, so it
   // is there for a scope that has not one coordinate to draw.
   const land=mapLens.growers?landsOf(gs):{drawn:[],unread:[]};
+  /* a country the scope MARKS is drawn by the mark layer, not twice. Which countries those
+     are is decided by originMarks — by the record — never by the drawing, which is what
+     keeps the invariant intact: ground never taps, counts, sorts or totals, and a country
+     promoted to a mark was never ground. */
+  const landMark=oMs.filter(m=>m.cls==='land').map(m=>normPlace(m.id));
+  /* THE SIBLINGS. When the ground is one country, its other regions are already inside the
+     box the marks opened — so the walk down adds instead of subtracting. A region reads as
+     "where in Ethiopia", against the regions the atlas holds. On a country page the scope's
+     own marks already ARE its regions, so this resolves to nothing and needs no special
+     case; across more than one country there is no single ground to compare on. */
+  const oneLand=(mapLens.growers&&land.drawn.length===1)?land.drawn[0]:'';
+  const sibs=oneLand?siblingMarks(oneLand,oMs):[];
   // a frame with ground under it is taller and folds later: the box opened to hold a
   // whole country, so two region centroids a hundred km apart now sit close in pixels
   // while being no less distinct on the earth. The fold is there to refuse precision
   // the grain never had, never to punish a frame for being wide.
   const op=plotSVG(oMs,null,{frame:'o',minKm:300,h:land.drawn.length?236:(oMs.length<2?124:176),
-    sep:land.drawn.length?15:22,lands:land.drawn,label:'where the greens grew'});
+    sep:land.drawn.length?15:22,lands:land.drawn,landMark,sibs,label:'where the greens grew'});
   const cp=plotSVG(chartMs,edges,{frame:'c',minKm:3,h:chartMs.length<2?124:196,streets:true,label:'where they are carried'});
   const hid=(mapLens.growers?om.marks.length-oMs.length:om.marks.length)+(cm.marks.length-kinds.length);
   // the Yours chip is absent for a reader — the ring and the lens come off
@@ -5607,7 +5775,10 @@ function mapHTML(kind,id,gs){
   const lens=`<div class="lens">${chips
     .map(([kk,l])=>`<button class="chip${mapLens[kk]?' on':''}" onclick="lensTap(${jsq(kk)})">${esc(l)}</button>`).join('')}</div>
   ${hid?`<div class="muted small" style="margin:-4px 2px 10px">${esc(nPl(hid,'mark'))} hidden by the lens — <button class="text-action" onclick="lensAll()">show everything</button>. A lens narrows; it never sorts and never promotes.</div>`:''}`;
-  const oRolled=oMs.some(m=>m.rolled&&m.rolled.length);
+  const oRolled=oMs.some(m=>m.rolled&&m.rolled.length),lmN=landMark.length;
+  // what was actually drawn as GROUND — a country the scope marks is drawn once, as a
+  // mark, and the note must not claim ground the frame did not lay
+  const groundNames=land.drawn.filter(nm=>!landMark.includes(normPlace(nm)));
   const oFrame=`<h2>${one?'Where it grew':'Where they grew'}</h2>
   ${op?`${op.html}${foldHTML('o',op)}${keyFor(op)}`
     :`<div class="empty">${mapLens.growers?'Nothing in this scope carries a coordinate to draw.':'Growers are off in the lens.'}</div>`}
@@ -5615,14 +5786,22 @@ function mapHTML(kind,id,gs){
   <div class="muted small" style="margin:-2px 2px 4px">${oRolled
     ?'Drawn at country grain, because this scope crosses more than one. Walk into a country and the same frame draws its regions — the walk is the zoom.'
     :'Drawn at the finest grain this scope can prove.'} Every origin mark is coarse by design — a region, never a farm-precise pin. CARTA does not geocode a grower’s name, and no street ever goes behind this frame: a centroid drawn over a named road reads as an address, and it is not one.</div>
-  ${land.drawn.length?`<div class="muted small" style="margin:6px 2px 4px">The ground is ${esc(landList(land.drawn))} — ${
-    land.drawn.length===1?'the outline':'the outlines'} drawn as coarsely as the marks on top, from a public-domain atlas carried in this file. ${
-    oMs.length?'The frame opens to hold the whole of it, so a centroid can be read as “where in the country”; it does not close in when you walk to a region, because there is nothing finer under a centroid to walk to.'
+  ${lmN?`<div class="muted small" style="margin:6px 2px 4px">${esc(landList(oMs.filter(m=>m.cls==='land').map(m=>m.label)))} ${
+    lmN===1?'is drawn as a shape rather than a point':'are drawn as shapes rather than points'} — ${
+    lmN===1?'that green proves':'those greens prove'} a country and no region, and a country’s outline is exactly what the record holds about it. A dot in the middle of a country would be finer than the claim and truer to nothing: a country’s centre is a place no coffee is. A region is the other way round — the record holds a point for it and no honest shape, so it draws as a point. ${
+    exBtn('regions','why a region is not a small country','badge ghost')}</div>`:''}
+  ${groundNames.length?`<div class="muted small" style="margin:6px 2px 4px">The ground is ${esc(landList(groundNames))} — ${
+    groundNames.length===1?'the outline':'the outlines'} drawn as coarsely as the marks on top, from a public-domain atlas carried in this file. ${
+    oMs.length?'The frame opens to hold the whole of it, so a centroid can be read as “where in the country”.'
       :'Nothing in this scope carries a coordinate yet, so the ground is drawn on its own — the country, and no green placed inside it.'} ${
     exBtn('ground','why an outline and not a map','badge ghost')}${
     land.unread.length?` ${esc(landList(land.unread))} ${land.unread.length===1?'is named by the record and has no outline here':'are named by the record and have no outline here'} — counted, never guessed at.`:''}</div>`:''}
+  ${op&&op.sibN?`<div class="muted small" style="margin:6px 2px 4px">The ${esc(nPl(op.sibN,'hairline'))} ${
+    op.sibN===1?'is another region':'are other regions'} of ${esc(oneLand)} this atlas can place — drawn for scale, so this ${
+    oMs.length===1?'mark reads':'set reads'} as <em>where in ${esc(oneLand)}</em> rather than as a point on an empty country. They are not counted in this scope, never wear your ring and never go faint for a hold — those say something about your record, and a region drawn for scale is not in it. Tap one to walk sideways into it.${
+    op.sibDropped?` ${esc(sentence(numWord(op.sibDropped)))} more ${op.sibDropped===1?'sits':'sit'} outside this frame or under a mark already drawn, and ${op.sibDropped===1?'is':'are'} left off rather than crowded on.`:''} This is why the frame stays the whole country as you walk down: the country is what the comparison is made on.</div>`:''}
   ${op&&op.topo?`<div class="muted small" style="margin:6px 2px 4px">The dotted lines inside it are the highlands — a thousand metres, two, three. That is terrain and only terrain: it is the shape of the land these greens grew on, never a green’s own stated height, which is the terrace below, and never a grade. A mark inside the two-thousand line is not a finer coffee than one outside it. ${exBtn('highlands','how to read the contours','badge ghost')}</div>`
-   :(op&&op.land?`<div class="muted small" style="margin:6px 2px 4px">No highlands drawn behind this frame: ${
+   :((op&&(op.land||lmN))?`<div class="muted small" style="margin:6px 2px 4px">No highlands drawn ${lmN&&!op.land?'inside':'behind'} this frame: ${
      landTopo(land.drawn[0])||land.drawn.length>1?'at this span a thousand-metre contour is a smudge rather than a line, so the outline stands alone':'the record’s countries here are lowland, or their terrain is not carried in this file'}.</div>`:'')}`;
   const cFrame=`<h2>${one?'Where it is carried':'Where they are carried'}</h2>
   ${cp?`${cp.html}${foldHTML('c',cp)}${keyFor(cp)}`
@@ -6669,7 +6848,8 @@ const PR={
   road:{t:'The road',b:'Six stations — grown, processed, milled, roasted, poured, read. A filled mark is a station the record holds; a hollow one is a station it has not been told about, and the connector across a gap is dashed. The gap is the product: it is the record stating what it does not know, never a blank to fill. The count beneath says the same thing in words, with its denominator, so it need not be read off the marks. Read it as the record’s reach and nothing else — four of six is not a lesser coffee than six of six, it is a coffee the record has been told less about. Nothing here sorts by that count, and it never joins the standing.'},
   plate:{t:'A plate',b:'One facet of the atlas — a country, a process, a variety — read as a page. Its road is the aggregate: how many of the facet’s greens reach each station, so you can see exactly where the record goes dark. A facet is a query, never a collection, and a green that leaves the field unread is counted out loud, never quietly dropped.'},
   grain:{t:'Drawn to its grain',b:'A mark is drawn as coarsely as the record knows it. A filled mark sits at a street or a city — somewhere you could stand. A dashed, hollow mark is a region or a country centroid: honestly an area, never a farm pin invented. A node with no coordinate at all lists by name instead of lying. Correct a pin and every chart redraws — nothing sorts or ranks by grain.'},
-  ground:{t:'The ground under a mark',b:'Two frames, two grounds. Where a coffee is carried, the marks are doors — a bar has an address — so streets can settle in behind them when the network answers. Where it grew, the marks are centroids: a region standing in for a point. A centroid drawn over a named road would read as an address, so no street is ever laid behind that frame. What it gets instead is the one ground as coarse as the mark itself — the country’s own outline, simplified and carried inside this file, so it draws with no network at all. The outline is there to orient the eye and nothing more: nothing on it taps, counts, sorts or ranks, and a country whose shape the file does not hold is named in words rather than guessed at. It is a drawing, not an adjudication — CARTA keeps coffee’s record, not the world’s borders.'},
+  ground:{t:'The ground under a mark',b:'Two frames, two grounds. Where a coffee is carried, the marks are doors — a bar has an address — so streets can settle in behind them when the network answers. Where it grew, the marks are centroids: a region standing in for a point. A centroid drawn over a named road would read as an address, so no street is ever laid behind that frame. What it gets instead is the one ground as coarse as the mark itself — the country’s own outline, simplified and carried inside this file, so it draws with no network at all. Ground is there to orient the eye and nothing more: nothing on it taps, counts, sorts or ranks. A country the record has actually placed a green in is a different thing — it is a mark, drawn as its own shape, and it counts and taps like any other mark. Which of the two a country is gets decided by the record, never by the drawing. A country whose shape the file does not hold is named in words rather than guessed at. It is a drawing, not an adjudication — CARTA keeps coffee’s record, not the world’s borders.'},
+  regions:{t:'A region is not a small country',b:'The two sit on one ladder and are opposite kinds of fact, so the map draws each by the thing the record actually holds. A country has a shape: drawn, closed, public domain, carried in this file. What it has no honest version of is a point — the centre of a country is a place no coffee is, and often not even land. So a green that proves only its country is drawn as that country’s outline. A region is the exact inverse. The record holds a point for it, roughly where the coffee grew, and no shape at all: coffee’s regions are sometimes an administrative department and sometimes a catchment nobody has ever drawn, so matching a region’s name to a polygon would be a guess, and this record does not guess. So a region draws as a point. That is why the plot looks the way it does — the shapes are the coarser claim and the points the finer one, which reads backwards until you know that the coarser claim is the one with the better drawing behind it. A region page also draws the other regions of its country as hairlines. They are there for scale, so a mark reads as somewhere in particular rather than a dot on an empty country. They are not counted in that page’s totals, never wear your ring and never fade for a hold — those say something about your own record, and a region drawn for scale is not in it.'},
   highlands:{t:'The highlands',b:'The dotted lines inside a country are contours — a thousand metres, two thousand, three. They are the shape of the land, cut from a public-domain elevation model at about five kilometres and carried in this file like the outlines, so they draw with no network at all. Weight rises with height because that is how a contour is read, and for no other reason. What they are not: a coffee’s stated height, which is the terrace lower down this page — that is a section, this is a plan, and the two answer different questions. Nor a grade. A mark inside the two-thousand line is not a finer coffee than a mark outside it; it is a coffee grown on higher ground, and the record does not sort, facet or rank by that. Where a frame is too wide for a contour to be a line rather than a smudge, none is drawn and the page says so.'},
   scene:{t:'Scenes and charts',b:'A scene is a cluster of roasters and bars close enough to move through in one outing — derived from the pins, never authored. A chart is one or more scenes under one name you give it. Membership follows the coordinates at read time: fix a pin and the chart corrects itself; a stored tag would only rot. The chart frame holds the ground you can walk; where the green came from keeps its own frame, at its own grain, joined in words — a sea route is not a line on a map.'},
   founderpen:{t:'The founder’s pen',b:'While the atlas settles, the shared record — the atlas and the Register — is kept by one pen: the founder’s. Everyone reads everything; everyone writes their own ledger, always. What waits is only the shared page. When the moderation ceremony ships, proposals stand for every keeper again — nothing here is taken away for good.'}
