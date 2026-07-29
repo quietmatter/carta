@@ -15,6 +15,8 @@
  *   <data>/ledgers/<id>.json   {rev, updatedAt, ledger} per user (read on demand)
  *   <data>/register.json       {rev, updatedAt, register} — the shared café Register
  *   <data>/catalog-<kind>.json {rev, updatedAt, catalog} — one per spine kind
+ *   <data>/public.json         {rev, publishedAt, publishedBy, held, counts, atlas}
+ *   <data>/public-meta.json    the same, without the atlas — so a reader polls bytes
  *
  * Auth model: name + passcode per user. Every authenticated user can READ
  * every ledger — seeing each other's records is the point. Only the owner
@@ -26,6 +28,12 @@
  * by one pen while the atlas settles; group-writable curation returns when the
  * moderation ceremony ships. This is trust-your-friends auth for a small group,
  * not a hardened public service. See server/README.md.
+ *
+ * The one unauthenticated data endpoint is GET /api/public — the published
+ * atlas (docs/READER.md L8). It is a COPY minted by POST /api/publish, never
+ * a switch that opens the shared documents to the world: a snapshot carries a
+ * revision and a date, so the reader's copy can state its own age instead of
+ * impersonating a live feed.
  * ============================================================ */
 
 const http = require('node:http');
@@ -129,13 +137,71 @@ function counts(ledger) {
   return { setups: n('setups'), bags: n('bags'), brews: n('brews'), cups: n('cups') };
 }
 
+/* ---------- the published atlas (docs/READER.md) ----------
+ * L1: the published atlas is the shared documents and nothing else — the
+ * catalog's eight kinds and the café Register. There is no endpoint here that
+ * would carry a cup, so no read path can leak one by forgetting a filter.
+ * L2 is the one exception and it earns it: a POUR publishes, its cup never
+ * does. A pour is "this green was poured at this bar on this date, attested by
+ * this hand" — a fact about the world, not a reading of one — and without it
+ * the reader's road goes dark at Poured. It travels with cupRef cut.
+ * L3: publishing is a copy, not a switch. The snapshot is minted here, from
+ * the documents this server already holds, so a publish can never disagree
+ * with the record; the founder's device sends only the hold list. */
+const PUBLIC_FILE = path.join(DATA, 'public.json');
+const PUBLIC_META_FILE = path.join(DATA, 'public-meta.json');
+function readPublic() { return readJSON(PUBLIC_FILE); }
+// The meta file is written after the full copy, so a torn publish leaves the
+// pointer stale rather than advertising an atlas that is not there yet.
+function readPublicMeta() {
+  const m = readJSON(PUBLIC_META_FILE);
+  if (m) return m;
+  const p = readPublic();
+  return p ? { rev: p.rev, publishedAt: p.publishedAt, publishedBy: p.publishedBy, counts: p.counts } : null;
+}
+// L4's cascade, applied at publish time: holding a green holds its roasts and
+// its pours with it. A green whose roasts are public and whose identity is not
+// is a broken road, not a redaction.
+function mintAtlas(held) {
+  const dead = new Set((held || []).filter(x => typeof x === 'string'));
+  const catalog = {};
+  for (const kind of CATALOG_KINDS) {
+    const doc = readCatalog(kind).catalog;
+    if (!doc || !Array.isArray(doc.entries)) continue;
+    const entries = kind === 'lots' ? doc.entries.filter(e => e && !dead.has(e.id))
+      : kind === 'roasts' ? doc.entries.filter(e => e && !dead.has(e.lotRef))
+      : doc.entries;
+    catalog[kind] = { ...doc, entries };
+  }
+  const register = readRegister().register || null;
+  // The only place this server reads a ledger for a purpose other than serving
+  // it to its owner — and it reads nothing from it but the pours.
+  const pours = [];
+  for (const u of db.users) {
+    const led = readLedger(u.id).ledger;
+    if (!led || !Array.isArray(led.pours)) continue;
+    for (const p of led.pours) {
+      if (!p || !p.id || dead.has(p.lotRef)) continue;
+      const { cupRef, ...rest } = p; // the link to a private reading is the private part
+      pours.push(rest);
+    }
+  }
+  const regEntries = (register && Array.isArray(register.entries)) ? register.entries : [];
+  const n = kind => (catalog[kind] ? catalog[kind].entries.length : 0);
+  return {
+    atlas: { catalog, register, pours },
+    counts: { greens: n('lots'), roasters: n('roasters'), roasts: n('roasts'), bars: regEntries.length, pours: pours.length, held: dead.size },
+  };
+}
+
 /* ---------- http plumbing ---------- */
-function send(res, status, body) {
+function send(res, status, body, extra) {
   const buf = Buffer.from(JSON.stringify(body));
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Content-Length': buf.length,
     'Access-Control-Allow-Origin': '*',
+    ...(extra || {}),
   });
   res.end(buf);
 }
@@ -277,6 +343,47 @@ function handlePutCatalog(req, res, auth, kind) {
   });
 }
 
+/* The reader's two doors. Unauthenticated by design and by design ONLY these:
+ * adding the reader must not loosen a byte of the existing auth surface (L8).
+ * A server with nothing published answers 404 not-published — never an empty
+ * atlas, which would be a claim that the record is empty, and it is not. */
+function handleGetPublic(req, res, metaOnly) {
+  const meta = readPublicMeta();
+  if (!meta) return err(res, 404, 'not-published', 'Nothing has been published from this server yet');
+  if (metaOnly) return send(res, 200, { rev: meta.rev, publishedAt: meta.publishedAt, counts: meta.counts });
+  const tag = `"carta-atlas-${meta.rev}"`;
+  // The rev is the whole identity of a snapshot, so a repeat read is a 304 —
+  // a reader who has this revision already never pulls the megabytes again.
+  const hdr = { ETag: tag, 'Cache-Control': 'no-cache', 'Access-Control-Expose-Headers': 'ETag' };
+  if ((req.headers['if-none-match'] || '').split(/,\s*/).includes(tag)) {
+    res.writeHead(304, { 'Access-Control-Allow-Origin': '*', ...hdr });
+    return res.end();
+  }
+  const p = readPublic();
+  if (!p) return err(res, 404, 'not-published', 'Nothing has been published from this server yet');
+  send(res, 200, { rev: p.rev, publishedAt: p.publishedAt, publishedBy: p.publishedBy, atlas: p.atlas }, hdr);
+}
+
+// The founder's hand. The device sends only {held} — the atlas itself is read
+// here, from the documents this server already holds.
+function handlePublish(req, res, auth) {
+  if (penHeld(res, auth)) return;
+  readBody(req, res, body => {
+    const held = body.held === undefined ? [] : body.held;
+    if (!Array.isArray(held) || held.some(x => typeof x !== 'string'))
+      return err(res, 400, 'bad-input', 'Expected {held} — an array of held refs');
+    const cur = readPublicMeta();
+    const { atlas, counts: c } = mintAtlas(held);
+    const next = {
+      rev: (cur ? cur.rev : 0) + 1, publishedAt: new Date().toISOString(),
+      publishedBy: auth.name, held, counts: c, atlas,
+    };
+    writeJSON(PUBLIC_FILE, next);
+    writeJSON(PUBLIC_META_FILE, { rev: next.rev, publishedAt: next.publishedAt, publishedBy: next.publishedBy, counts: c });
+    send(res, 200, { rev: next.rev, publishedAt: next.publishedAt, counts: c, held });
+  });
+}
+
 function handlePutLedger(req, res, auth, id) {
   if (auth.id !== id) return err(res, 403, 'not-owner', 'You can only write your own ledger');
   readBody(req, res, body => {
@@ -315,11 +422,18 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && p === '/api/register') return handleRegister(req, res, ip);
   if (req.method === 'POST' && p === '/api/login') return handleLogin(req, res, ip);
 
+  // The published atlas — the ONE unauthenticated data endpoint (READER.md L8).
+  if (req.method === 'GET' && p === '/api/public')
+    return handleGetPublic(req, res, u.searchParams.get('meta') === '1');
+
   // Everything below requires auth.
   const auth = authUser(req);
   if (!auth) return err(res, 401, 'unauthorized', 'Missing or invalid token');
 
   if (req.method === 'GET' && p === '/api/users') return handleUsers(res);
+
+  // Minting the copy is the founder's act, and the only write here.
+  if (req.method === 'POST' && p === '/api/publish') return handlePublish(req, res, auth);
 
   // /api/cafes is the café Register ("register" was taken by sign-up).
   if (p === '/api/cafes') {
