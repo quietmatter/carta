@@ -337,7 +337,8 @@ claims nothing the mark does not already claim.
   on the walk down: step from a country into one of its regions and the marks
   narrow while the ground stays put. That is correct rather than a limitation.
   There is nothing finer under a centroid to walk closer to, and closing in on
-  one would claim there was.
+  one would claim there was. *(The conclusion holds and the argument was thin —
+  see "A region is not a small country", below, for the reason that replaced it.)*
 - **It is never the record.** Nothing on the land taps, counts, sorts, ranks or
   enters a total. It is paper — a fill and a hairline, monochrome, never the
   ember — drawn under the marks and behind the edges, and the key names it as
@@ -378,6 +379,108 @@ Three things keep it honest, and each is a line already drawn elsewhere:
 
 Drawn in the terrace's own grammar — **dotted is the ground** — monochrome, never
 the ember, quieter than every mark laid over it.
+
+## A region is not a small country
+
+The ground pass (6.10.0) left one thing flattened, and it was the half of the map
+CARTA exists for. Country and region rode **one ladder** in `RUNG`, **one mark
+builder** in `originMarks`, and **one drawing** — a hollow circle, differing by a
+dash. Everything above treats them as two rungs of the same kind of thing.
+
+They are not. They are inverse kinds of fact:
+
+| | the record **holds** | the record **does not hold** |
+|---|---|---|
+| a **country** | its outline — drawn, closed, public domain, already in the file | a meaningful point. A country's centre is a place no coffee is, and often not even land |
+| a **region** | a point at region grain — roughly where the coffee grew | an outline. Coffee's regions are sometimes an admin-1 department (Huila) and sometimes a catchment nobody has drawn (Yirgacheffe) |
+
+Drawing both as circles flattened that, and flattened it the wrong way round: it
+**invented the one thing a country does not have**, while the thing it does have
+sat underneath as decoration. So each is drawn by what the record actually holds.
+
+### A country marks itself by its shape
+
+When a country is a *mark of the scope* — the Atlas's rollup, or a country-grain
+green on any page — the outline carries the mark: a firmer stroke, its name
+written across it, a tap to its page, its count, and your ring as the **line
+doubled** rather than a circle floated over the middle (which would be the dot we
+just refused, come back wearing the overlay). The dashed centroid survives only as
+the fall for a country this file holds no outline for — coarser still, and saying so.
+
+Three consequences, all deliberate:
+
+- **The map now draws the grain instead of describing it.** On one frame you can
+  see which greens prove a region and which prove only a country: the first are
+  points, the second is a shape. M1 said the grain is the geometry — that was true
+  of *position*, and is now true of *form*.
+- **It reads backwards until you know why**, which is worth stating on the page:
+  the coarser claim is the one with the better drawing behind it. `openPrimer('regions')`
+  says exactly that.
+- **Strictly more of the record is on the map, and nothing is guessed.** A
+  country-grain green used to need a country centroid on file and *listed* without
+  one. An outline needs no pin.
+
+**The invariant is amended, not repealed.** *Nothing on the land taps, counts,
+sorts or totals* — that still binds every outline drawn as **ground**. What
+changes is that ground and mark are now two states of the same shape, and
+**which one a country is gets decided by `originMarks` — by the record — never by
+the drawing.** A country drawn only for context is `pointer-events:none` and enters
+no count; a country the record placed a green in was always going to be a mark, and
+was merely being drawn as a dot.
+
+### A region draws among its siblings
+
+The second defect was the walk. Step Atlas → Ethiopia → Yirgacheffe and the region
+page was **the country page with four marks removed**: one dot on an outline, same
+frame, nothing learned by arriving. Every other walk in CARTA adds; this one
+subtracted.
+
+The fix costs no fetch, no new fact and **no change to the fit**. When the ground
+under the frame is **one country**, every region of it the atlas can place is
+already inside the box the marks opened — so they are drawn: this scope's regions
+firm, the rest a **hairline**.
+
+That is `aggTerraceHTML`'s exact construction pointed at the plan, and it gives the
+two projections the same three weights meaning the same three things:
+
+| | the terrace (a section) | the map (a plan) |
+|---|---|---|
+| the ground | dotted | the land, and the contours |
+| another one | a hairline | a sibling region |
+| this one | the sunk band | the firm mark |
+
+**For scale, never for count.** A sibling is outside the scope's tally, wears no
+ring and never goes faint for a hold — those three say something about *your
+record*, and a region drawn for scale is not in it. It stays tappable, because a
+mark is a rowlink that happens to have a position and walking sideways to a
+neighbouring region is a good walk.
+
+It degenerates correctly with no special case: on a **country** page the scope's own
+marks already *are* its regions, so the sibling set is empty; across **more than one**
+country there is no single ground to compare on, so there are none. A sibling
+outside the frame, or sitting under a mark already drawn, is dropped rather than
+crowded on — and counted in words, because a cap nobody is told about reads as
+coverage. A hairline never writes its name over a mark's.
+
+### And the frame still does not zoom — now for a reason
+
+The old argument was a shrug: *there is nothing finer under a centroid to walk
+closer to*. True, and thin — it explains why closing in would be a lie without
+explaining why staying put is a reading. The siblings supply the missing half:
+
+> **The frame stays the whole country because the country is what the comparison
+> is made on.** A region reads as *where in Ethiopia*, against the regions the
+> atlas holds.
+
+### What this does not do
+
+No region polygon, ever — the refusal in the ground section above is unchanged and
+is the reason a region draws as a point at all. No new catalog kind, no new data in
+the file (`LANDS` is the same 65 outlines), no fetch, no fit change, no camera. The
+contours are untouched: still terrain, still never a reading, still withheld above
+`TOPO_KM`. Nothing sorts, facets or ranks by any of it — a country drawn as a shape
+is not a finer coffee than a region drawn as a point, and the page says which claim
+is the coarser one.
 
 ## What this answers in `CHARTS.md`, and what it retires
 
@@ -455,11 +558,15 @@ published atlas over it.
 | 8 | the street layer as **ground**: tiles under the chart frame at scene scale, fitted to the plot's own box; never under the origin frame; no camera | `smapBoot` gains `behind`, `plotSVG` returns its ground | **built** (6.8.0) |
 | 9 | the **country outlines** under the origin frame — carried in the file, the frame fitted to them, the undrawn countries counted in words | `LANDS`/`landRings`/`landsOf`, `plotSVG` gains `o.lands` | **built** (6.10.0) |
 | 9b | the **highlands** inside them — contours at 1,000/2,000/3,000 m, terrain and never a reading, withheld above `TOPO_KM` | `LAND_TOPO`/`landTopo`, `.topo t1–t3` | **built** (6.10.0) |
+| 10 | **a country marks itself by its shape** — the outline lifted from ground to mark where the record placed a green in it, the dashed centroid kept only as the fall | `landAnchor`, `originMarks`/`originRollup`, `plotSVG`'s `landMark` + `.mk-land` | **built** (6.11.0) |
+| 10b | **a region draws among its siblings** — the other regions of the country already on the paper, as hairlines, for scale and never for count | `siblingMarks`, `plotSVG`'s `o.sibs` + `.mk-sib` | **built** (6.11.0) |
 
 Steps 1–4 give every page in the app one honest map. 5–7 give a stranger the
 same map, and give the founder the ability to see what they are not sending.
 8 puts real ground under the half of it that has a ground to stand on, and 9
 puts the *other* ground under the half that does not — the half about coffee.
+10 stops that half drawing two opposite kinds of fact as one kind of mark, and
+makes the walk down into a region add something instead of taking marks away.
 
 ### As built (6.7.0)
 
@@ -511,4 +618,7 @@ report, because the drawing was always the map.
 *One projection cannot hold a front door and a country. One drawing can hold
 every scope, so long as it says at every mark how coarsely it knows where
 anything is — and so long as what it knows about you comes off cleanly, leaving
-the atlas whole.*
+the atlas whole. A country is a shape the record holds and a point it does not;
+a region is a point it holds and a shape it must never guess. Draw each as the
+thing that is actually there, and the plan stops describing the grain and starts
+being it.*
