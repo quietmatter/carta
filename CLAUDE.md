@@ -223,7 +223,7 @@ server/
   masthead's second line (the prototype's `SUBS`). Overlays over the tab:
   `doorOn` (`vDoor`, a screen not a sheet), `placeView` (a café's page, kind
   `place`), `pageView` (`{kind,id}`, kinds `lot`/`roaster`/`producer`/`processor`/
-  `region`/`country`/`city`/`place`/`setup`/`process`/`variety` — every one rendered by
+  `region`/`locality`/`country`/`city`/`place`/`setup`/`process`/`variety` — every one rendered by
   `nodePage(kind,id)`), `discOn` (`vDiscover`), `curateOn` (`vCurate`). The screen-settle animation
   (`.ca-screen`) plays only when the screen key changes, never on a repaint.
   Overlays walk into each other, so back is a shallow stack: `pageStack` +
@@ -562,19 +562,34 @@ server/
   the page's other corrections. `devSeedChart` demonstrates both a real
   sourced reading and an unnamed claim, clearly demo-labeled.
 - **the grain** — how finely a green's origin is proven: **one spatial ladder,
-  five rungs** (`country` · `region` · `station` · `farm` · `green-lot`), derived
+  six rungs** (`country` · `region` · `locality` · `station` · `farm` ·
+  `green-lot`), derived
   in `lotIdentity` and read through `GRAIN_READ`/`grainRead`, `DOOR_GRAIN` and
   `grainPrimerKey`. A record rests on the **coarsest rung it can prove** — the
   ladder reads evidence, never field-presence. `green-lot` needs a lot identity
   (a printed lot name or a hard-ID), not a mere producer name; `farm` and
   `station` are told apart by `actorKind` — the door's tag (`producerKind`), the
   lot's `processorRefs` edge, or the shared `FARM_RE`/`STATION_RE` vocabulary,
-  the mill tested first. **An unmatched name buys no rung** (SURFACES' law:
+  the mill tested first. The **locality** (6.13.0) is the town/municipality —
+  presence-granted like region (it is geography, not an actor), typed only (the
+  door never parses it — towns and regions share names everywhere coffee grows),
+  outranked by the station (naming the mill proves at least the town it stands
+  in), appended to `lotKeyOf` after the year (never inserted, never counted
+  toward the ≥2 threshold) and scored **both-present-only** at `FP_W.locality`.
+  The **grower** (6.15.0) is the second actor field (`grower`, flat on the
+  record, never retired, never a rung, never in the key): `growerKind`
+  (`GROUP_RE` → `'group'`, else `'smallholder'`) classifies it,
+  `catStampGrower` + `lotAddProducerRef` mint the node and append the
+  lot → grower edge beside the head's, and `mergeCatalog` unions
+  `producerRefs`/`processorRefs` so an appended hand survives sync.
+  **An unmatched name buys no rung** (SURFACES' law:
   never guessed into a tier). The **season is not a rung** (MODEL_QA A5) — the
   harvest is its own column, `fingerprint.harvest.year`, read by `harvestYear`
   and weighted 0.18 by the scorer. Grain is a rule's output, not an attestation,
   so `lotRederive` writes it **through** on every re-derivation (blanks-only
-  would freeze the first guess); the year fills blanks only. The two pre-6.1
+  would freeze the first guess), and the head's tier with it (the lot-name head
+  reads `headTier:'lot'` since 6.13.0 — formerly mis-tagged `'farm'`); the year
+  and the locality fill blanks only. The two pre-6.1
   values (`station-season`, `region-grade`) stay readable for an unswept record.
 - **users** — multi-user management (add/switch/view/delete), read-only viewing
   of other users' ledgers.
@@ -616,7 +631,8 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
   when *that* brew was pulled on it, so an amend can never silently re-point a
   grind to a different grinder.
 - **bags** — a bag of coffee: `roaster`, `name`, origin fields (`originCountry`,
-  `originRegion`, `producer`, `variety`, `process`, `lot`), `roastDate`,
+  `originRegion`, `originLocality`, `producer`, `grower`, `variety`, `process`,
+  `lot`), `roastDate`,
   `roastLevel` (index into `ROAST_LEVELS`), `price`, `archived`, plus its `site`
   (the roaster's/bag's website) and a `palette` **read from that site**
   (`readBrand` → `paletteFromColors`) → `{h,s,l,brand,dark}`, which themes the
@@ -631,7 +647,8 @@ The ledger (`D`) is a plain object with these arrays. Records carry an `id`
 - **cups** — a tasting. `kind` is `home` (linked to a `brewId`/`bagId`) or
   `cafe` (with `shop`, `city`, `style`, `drink`, `roaster`, `origin`, `price`,
   `again`, plus optional structured traceability aligned to bags —
-  `originCountry`, `originRegion`, `producer`, `variety`, `lot`, `process`).
+  `originCountry`, `originRegion`, `originLocality`, `producer`, `grower`,
+  `variety`, `lot`, `process`).
   `hedonic` (1–9), `descriptors[]`, `notes`. A café cup may also carry the beans'
   brand read from the roaster's website: its `site` and a `palette`
   (`readBrand`), which tints the cup's row and detail. A legacy `photo` may

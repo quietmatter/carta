@@ -157,7 +157,7 @@ shared, provenance-carrying entity, and lets records *reference* them:
   stages* (fermentation → drying → finishing); harvest as crop · year · hemisphere.
   Carries a **sourcing channel** and, separately, an **intermediary** (see *Lot
   identity*, and *Where each fact is born*); a recorded **traceability resolution**
-  with its **grain** (country · region · station · farm · green-lot); an optional
+  with its **grain** (country · region · locality · station · farm · green-lot); an optional
   **namespaced hard-id set** (a Kenyan
   outturn, an auction lot, an ICO mark — when one exists, zero-or-many); split/merge
   **lineage**; and a stable opaque id — identity *compiled*, never keyed on the text.
@@ -290,7 +290,8 @@ always correctable. It is a **ladder**, walked strongest rung first:
   |---|---|
   | `country` | a country named |
   | `region` | a region named |
-  | `station` | a processor named — a mill's catchment, many growers pooled |
+  | `locality` | a town or municipality named — administrative, one step finer than the region |
+  | `station` | a processor named — a mill's catchment, many growers pooled; naming the mill proves at least the town it stands in, so the station outranks the locality |
   | `farm` | one grower's parcel named |
   | `green-lot` | a lot *identity* — a printed lot name, or a hard-ID the trade minted |
 

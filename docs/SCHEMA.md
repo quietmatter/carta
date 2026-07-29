@@ -125,6 +125,18 @@ envelope above. Types are informal (all JSON).
 name, kind:'farm'|'estate'|'smallholder'|'group',
 country, region, locality, altitudeMasl:[min,max], lat, lon
 ```
+> **Built (6.13.0–6.15.0), with two recorded deviations.** The classifier field in
+> the build is **`producerKind`**, not `kind` — every catalog entry already carries
+> the envelope's `kind:'producer'`, and the collision was not worth a migration.
+> Its enum is `'farm'|'station'|'smallholder'|'group'`: `estate` folds into `farm`
+> (`FARM_RE` already reads the word), and `'station'` survives on producers nodes
+> the door tagged before the processors kind had its page — the double-node seam
+> `growersOf` suppresses. `locality` and `lat`/`lon` (+`geoGrain`, now up to
+> `'locality'`) are built; `altitudeMasl` on the producer remains unbuilt (the
+> lot's band is a different fact and is). Known debt: the producers key is
+> `name|country`, so two same-named farms in different departments still collapse —
+> re-keying would fork the catalog and dangle every `producerRefs`, so it waits for
+> a keyed migration with ref forwarding.
 
 ### Processor — *washes / dries / first-aggregates* — **not the producer**
 ```
@@ -216,8 +228,14 @@ of columns the resolver walks strongest-first.
   // --- rung 2: the fingerprint (the fuzzy majority; a CLUSTER, not one field) ---
   fingerprint: {
     headName,              // the record's head-string, NORMALISED + tier-tagged
-    headTier: 'farm'|'producer'|'station'|'region',   // reconcile before proposing
+    headTier: 'lot'|'producer'|'station'|'region',    // reconcile before proposing.
+                           //   'lot' (6.13.0) is the printed-lot-name head, formerly
+                           //   mis-tagged 'farm' — the legacy value stays readable
     country, region,
+    locality,              // the town/municipality (6.13.0) — one step finer than the
+                           //   region; scored BOTH-present-only (a green minted before
+                           //   the column is silent about it, never disagreeing), and
+                           //   appended to the floor key after the year, never inserted
     varieties: [ … ],      // a SET, admitting 'mixed-heirloom' / 'unknown'
     process: {             // COMPOUND + staged, admitting 'unspecified'
       family:'washed'|'natural'|'honey'|'anaerobic'|'experimental'|'unspecified',
