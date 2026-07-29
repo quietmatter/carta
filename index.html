@@ -2771,6 +2771,7 @@ function render(){
   m.scrollTop=0;window.scrollTo(0,0);
   smapMount();
   if(doorOn&&doorStep===0){const ta=document.getElementById('d_text');if(ta)ta.focus()}
+  if(doorOn&&doorStep===2)repaintSug(); // the rails need the inputs to exist first
 }
 function viewBanner(){return `<div class="viewbar"><span>Viewing <strong>${esc(viewingUser().name)}</strong>'s ledger — read only${remoteStale?` · cached ${fmtAgo(remoteStale===true?null:remoteStale)}`:''}</span><button onclick="exitView()">Back to mine</button></div>`}
 
@@ -5976,7 +5977,7 @@ function openBagForm(id){
   <h3>${id?'Edit the coffee':'Put a coffee on the shelf'}</h3>
   <div class="sub">${id?'Fill in what you have now — the record keeps the rest.':'The bag in your hand — two lines is plenty. Or give its website and CARTA reads the rest.'}</div>
   <div class="grid2">
-    <label class="f"><span class="l">Roaster</span><input type="text" id="f_roaster" value="${esc(b.roaster||bagRoaster(b))}" placeholder="Sey"></label>
+    <label class="f"><span class="l">Roaster</span><input type="text" id="f_roaster" value="${esc(b.roaster||bagRoaster(b))}" placeholder="Sey" oninput="repaintSug()" autocomplete="off"><span id="sugbox_f_roaster"></span></label>
     <label class="f"><span class="l">Coffee</span><input type="text" id="f_name" value="${esc(b.name)}" placeholder="Gesha Village"></label>
   </div>
   <label class="f"><span class="l">Website <span class="opt">optional</span></span>
@@ -5989,11 +5990,11 @@ function openBagForm(id){
     ${seg('roast',ROAST_LEVELS.slice(1),rr.level||'Medium')}</label>
   <details class="trace-more" ${more?'open':''}><summary>Add the rest <span class="opt">origin, roast date, price — now or later</span></summary>
     <div class="grid2">
-      <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry||o.country)}" placeholder="Ethiopia"></label>
-      <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion||o.region)}" placeholder="Bench Maji"></label>
-      <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer||o.producer)}" placeholder="free text"></label>
-      <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety||o.variety)}" placeholder="Gesha 1931"></label>
-      <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process||o.process)}" placeholder="washed"></label>
+      <label class="f"><span class="l">Country</span><input type="text" id="f_country" value="${esc(b.originCountry||o.country)}" placeholder="Ethiopia" oninput="repaintSug()" autocomplete="off"><span id="sugbox_f_country"></span></label>
+      <label class="f"><span class="l">Region</span><input type="text" id="f_region" value="${esc(b.originRegion||o.region)}" placeholder="Bench Maji" oninput="repaintSug()" autocomplete="off"><span id="sugbox_f_region"></span></label>
+      <label class="f"><span class="l">Producer / station</span><input type="text" id="f_producer" value="${esc(b.producer||o.producer)}" placeholder="free text" oninput="repaintSug()" autocomplete="off"><span id="sugbox_f_producer"></span></label>
+      <label class="f"><span class="l">Variety</span><input type="text" id="f_variety" value="${esc(b.variety||o.variety)}" placeholder="Gesha 1931" oninput="repaintSug()" autocomplete="off"><span id="sugbox_f_variety"></span></label>
+      <label class="f"><span class="l">Process</span><input type="text" id="f_process" value="${esc(b.process||o.process)}" placeholder="washed" oninput="repaintSug()" autocomplete="off"><span id="sugbox_f_process"></span></label>
       <label class="f"><span class="l">Lot no.</span><input type="text" id="f_lot" value="${esc(b.lot||o.lot)}" placeholder="free text"></label>
       <label class="f"><span class="l">Roast date</span><input type="date" id="f_roastDate" value="${esc(rr.roastDate)}"></label>
     </div>
@@ -6007,6 +6008,7 @@ function openBagForm(id){
   <button class="btn btn-primary" onclick="saveBag('${id||''}')">${id?'Save changes':'On the shelf it goes'}</button>
   ${id?`<button class="btn btn-quiet" onclick="archiveBag('${id}')">${b.archived?'Back on the shelf':'Put the bag away'}</button>
   <button class="btn btn-quiet" onclick="openCorrect('bags','${id}')">Set this coffee down…</button>`:''}`);
+  repaintSug(); // a sheet never passes through render() — paint the rails once its inputs exist
 }
 function saveBag(id){
   if(guard())return;
@@ -6261,7 +6263,7 @@ function vDoor(){
   <h2 class="display">One <em>binding</em></h2>
   <p class="lede">The green exists once you bind it. This last tap says what it is <em>to you</em>.</p>
   <div class="grid2">
-    <label class="f"><span class="l">Roaster <span class="opt">optional</span></span><input type="text" id="d_roaster" list="d_roasterlist" value="${esc(f2.roaster||'')}" placeholder="Sey"></label>
+    <label class="f"><span class="l">Roaster <span class="opt">optional</span></span><input type="text" id="d_roaster" list="d_roasterlist" value="${esc(f2.roaster||'')}" placeholder="Sey" oninput="repaintSug()" autocomplete="off"><span id="sugbox_d_roaster"></span></label>
     <label class="f"><span class="l">The coffee <span class="opt">optional</span></span><input type="text" id="d_name" value="${esc(f2.nameGuess||'')}" placeholder="as the bag names it"></label>
   </div>
   <label class="f"><span class="l">Roasted <span class="opt">optional</span></span><input type="date" id="d_roasted" value="${esc(doorRoasted)}" max="${today()}"></label>
@@ -6352,6 +6354,51 @@ function doorBind(kind){
   if(kind==='brew'){go('atlas');openBrew(nb.id)}
   else{go('bags');toast('On the shelf. The first brew starts whenever you do.')}
   if(lotRes&&lotRes.action==='propose')openLotPropose(nb.id,lotRes.propose.lot.id,lotRes.propose.fields); // one uncertain candidate — ask inline while the context is warm (§4)
+}
+
+/* ---- the prefill rail — never type a country twice (UNIFIED §6).
+ * Every origin field carries what the record already holds, ranked by how often
+ * it holds it, with counts, one tap to fill. The rail NARROWS to what has been
+ * chosen on the same screen and says so — pick Colombia and the region rail
+ * reads "on file in Colombia"; pick Ethiopia and the same rail re-ranks. Two
+ * rules it must keep: a rail suggests, it never constrains (the field stays
+ * free text — a green from a country you have never recorded must still be
+ * enterable); and a rail that would come back empty widens rather than
+ * disappearing — an empty rail teaches the keeper the feature is broken.
+ * Rails are painted after the inputs exist (repaintSug), never while the
+ * template is being built — a rail that read the DOM mid-build would always
+ * miss the values on its own screen. ---- */
+const NARROW={region:'country',producer:'region',variety:'country',process:'country'};
+const SUG_FIELDS=[['f_country','country'],['f_region','region'],['f_producer','producer'],['f_variety','variety'],['f_process','process'],['f_roaster','roaster'],['d_roaster','roaster']];
+function known(field,ctx){
+  ctx=ctx||{};
+  const all=atlasLots().map(x=>x.lot);
+  const fv=(l,f)=>{const fp=l.fingerprint||{};
+    return f==='country'?fp.country:f==='region'?fp.region
+      :f==='producer'?(fp.producer||((l.producerRefs||[])[0]&&(catNode('producers',l.producerRefs[0])||{}).name)||'')
+      :f==='variety'?l.variety
+      :f==='process'?(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):''):''};
+  const by=NARROW[field],key=by&&ctx[by];
+  let ls=all;
+  if(regSubstance(key))ls=ls.filter(l=>normPlace(String(fv(l,by)||''))===normPlace(String(key)));
+  if(!ls.length&&regSubstance(key))ls=all; // nothing recorded under it yet — offer the wider list rather than nothing
+  const m=new Map();
+  if(field==='roaster')CAT.roasters.entries.forEach(r=>{if(r&&regSubstance(r.name)){const n=scopeGreens('roaster',r.id).length;if(n)m.set(r.name,n)}});
+  else ls.forEach(l=>{const v=fv(l,field);if(regSubstance(v))m.set(v,(m.get(v)||0)+1)});
+  const rows=[...m.entries()].sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0]))).slice(0,6);
+  return {rows,narrowedBy:regSubstance(key)&&ls.length<all.length?key:''};
+}
+const sugCtx=prefix=>({country:val(prefix+'country'),region:val(prefix+'region')});
+function sugHTML(inputId,field,ctx){
+  const k=known(field,ctx);
+  if(!k.rows.length)return'';
+  return `<span class="sug"><span class="lb">${k.narrowedBy?'on file in '+esc(k.narrowedBy):'on file'}</span>
+  ${k.rows.map(([v,n])=>`<button class="s" type="button" onclick="fillSug(${jsq(inputId)},${jsq(v)})">${esc(v)}<b class="num">${n}</b></button>`).join('')}</span>`;
+}
+function fillSug(id,v){const el=document.getElementById(id);if(el){el.value=v;repaintSug()}}
+function repaintSug(){
+  SUG_FIELDS.forEach(([id,f])=>{const box=document.getElementById('sugbox_'+id);
+    if(box)box.innerHTML=sugHTML(id,f,sugCtx(id.slice(0,2)))});
 }
 
 /* ============ setup form ============ */
