@@ -838,7 +838,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 /* ============ store ============ */
 const KEY='carta.v1';           // legacy single-user key — migrated to per-user keys on first boot
 const USERS_KEY='carta.users';
-const blank={version:1,setups:[],bags:[],brews:[],cups:[],pours:[],cafes:[],authored:[],cafeFavs:[],cafeWants:[],deleted:[],struck:[],prefs:{},createdAt:new Date().toISOString()};
+const blank={version:1,setups:[],bags:[],brews:[],cups:[],pours:[],cafes:[],authored:[],cafeFavs:[],cafeWants:[],deleted:[],struck:[],holds:[],prefs:{},createdAt:new Date().toISOString()};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dataKey=id=>KEY+'.'+id;
 function loadUsers(){
@@ -2194,6 +2194,67 @@ function eraseStruck(ref){
   dead.push({id:ref,at});
   if(e.pour)dead.push({id:e.pour.id,at});
   const j=STRUCK().findIndex(s=>s&&s.ref===ref);if(j>=0)STRUCK().splice(j,1);
+}
+
+/* ============ the hold — what does not leave with the copy (docs/READER.md L4) ============ */
+/* A hold is the strike's grammar pointed outward. The strike answers "this is
+ * not true of my record"; the hold answers "this is true and it is not the
+ * world's yet" — so it takes exactly the same shape: a dated, signed entry
+ * ({id:'hold:<ref>', ref, kind, at, by, releasedAt?}), additive on both sides,
+ * merged by the same monotone rule (at > releasedAt), reversible with a tap.
+ *
+ * Two things it deliberately is NOT. It is not a flag on the node — a flag
+ * every read path must remember to check is the failure the strike was built to
+ * avoid. And it does not touch the local record at all: a held green stays
+ * whole in the catalog, on every page, in every count. It is subtracted from
+ * the SNAPSHOT, at publish time, by the server (READER §4) — which is why
+ * releasing one is free and why nothing here can lose a fact.
+ *
+ * Holding a green holds its roasts and its pours with it, the same cascade
+ * shape as strikeDeps and for the same reason: a green whose roasts are public
+ * and whose identity is not is a broken road, not a redaction. */
+const HELD=()=>D.holds||(D.holds=[]);
+const holdStands=h=>!!(h&&h.at&&String(h.at)>String(h.releasedAt||''));
+const holdOn=ref=>HELD().find(h=>h&&h.ref===ref&&holdStands(h))||null;
+const holdList=()=>HELD().filter(holdStands).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+// what the founder's device sends to POST /api/publish — the hold list, nothing else
+const heldRefs=()=>holdList().map(h=>h.ref);
+// named in full BEFORE the tap, exactly as strikeFollows is — consent should be
+// stated in the units it will be read in
+function holdCarries(ref){
+  const lot=catNode('lots',ref);
+  return {roasts:lot?CAT.roasts.entries.filter(r=>r&&r.lotRef&&lotFwd(r.lotRef)===ref).length:0,
+          pours:lot?poursIn([lot]).length:0};
+}
+function holdCarriesLine(ref){
+  const c=holdCarries(ref),p=[c.roasts&&nPl(c.roasts,'roast'),c.pours&&nPl(c.pours,'pour')].filter(Boolean);
+  return p.length?`and its ${p.join(', and its ')}`:'';
+}
+function holdGreen(ref){
+  if(penGuard())return;
+  const prev=HELD().find(h=>h&&h.ref===ref);
+  const at=afterIso(new Date().toISOString(),prev&&prev.releasedAt); // a re-hold must outrank the release it undoes
+  const e={ref,kind:'lot',at,by:activeName()};
+  if(prev)Object.assign(prev,e);else HELD().push({id:'hold:'+ref,...e});
+  save();closeSheet();render();toast('Held back from the published copy');
+}
+function releaseHold(ref){
+  if(penGuard())return;
+  const e=holdOn(ref);if(!e)return;
+  e.releasedAt=afterIso(new Date().toISOString(),e.at);
+  save();render();toast('Released — it travels with the next copy');
+}
+// mergeStruck's construction: both dates only ever add, so max/max is order-free
+// and two founder devices land on the same answer whatever order they merge in.
+function mergeHolds(...lists){
+  const m=new Map();
+  lists.flat().filter(h=>h&&h.ref).forEach(h=>{
+    const p=m.get(h.ref);
+    if(!p){m.set(h.ref,{...h,id:h.id||'hold:'+h.ref});return}
+    if(String(h.at||'')>String(p.at||''))Object.assign(p,{at:h.at,by:h.by,kind:h.kind});
+    if(String(h.releasedAt||'')>String(p.releasedAt||''))p.releasedAt=h.releasedAt;
+  });
+  return [...m.values()].sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||String(a.ref).localeCompare(String(b.ref)));
 }
 
 /* ============ street map ============ */
@@ -3836,7 +3897,9 @@ function vAdminSection(){
     <div class="muted" style="margin-top:5px">The shared record — the atlas and the Register — is kept from here. Enter a fact once, cleanly; every keeper reads it.</div>
     <button class="btn btn-primary" style="margin-top:12px" onclick="openDesk()">Open the founder's desk</button>
     ${!synced&&PEN?`<button class="text-action" style="margin-top:8px" onclick="setDownPen()">Set the pen down on this device</button>`:''}
-  </div>`;
+  </div>
+  <button class="rowlink" onclick="openPublish()"><span><span class="t">Publish the atlas</span><br><span class="m">a copy of the shared record, readable by anyone with the address — no ledger travels</span></span><span class="go">→</span></button>
+  ${holdList().length?`<button class="rowlink" onclick="openHeldList()"><span><span class="t">What you're holding back</span><br><span class="m">kept out of the published copy — the record keeps them whole</span></span><span class="go">${holdList().length}</span></button>`:''}`;
   const holder=PEN&&userById(PEN.userId);
   const line=synced?'The shared record is kept by the founder on your sync server. Every page is yours to read; your own ledger is entirely yours.'
     :holder?`The pen on this device is held by <strong>${esc(holder.name)}</strong>. Every page is yours to read; your own ledger is entirely yours.`
@@ -3882,6 +3945,110 @@ function openDesk(){
   </div>
   <div class="muted small serif" style="font-style:italic;margin:2px 2px 0">${synced?'What you enter here pushes to every keeper on the server.':'Unsynced — what you enter here lives on this device until a server carries it.'}</div>`);
 }
+/* ---- the published atlas, the founder's side (docs/READER.md §7).
+ * "The atlas is everyone's; the record is yours" — until now only the second
+ * half of that sentence was true for someone who never signed in. This is the
+ * hand that makes the first half true, and it is deliberately ONE act: no
+ * preview screen, no diff. The atlas is the founder's own record and they know
+ * what is in it; the counts are there to catch the surprise, not to review the
+ * content — and they are stated in the same units the reader will see them in.
+ * The ember is spent on Publish, and nowhere else on this surface. ---- */
+const publishable=()=>!!(typeof SYNC!=='undefined'&&SYNC&&syncedHere()&&SYNC.token);
+const atlasLink=()=>publishable()?location.origin+location.pathname+'#atlas='+encodeURIComponent(SYNC.url):'';
+let pubState=null;   // {rev,publishedAt,counts} — what the server answered, this session
+// What leaves, counted from the shared documents this device holds canonically —
+// the founder holds the pen, so this copy IS the record. Pours are the one count
+// the device cannot know: they are gathered from every keeper's ledger on the
+// server, so the sheet says so rather than printing a number it guessed.
+function publishCounts(){
+  const held=new Set(heldRefs());
+  return {
+    greens:CAT.lots.entries.filter(e=>e&&!held.has(e.id)).length,
+    roasters:CAT.roasters.entries.filter(e=>e&&regSubstance(e.name)).length,
+    roasts:CAT.roasts.entries.filter(e=>e&&!held.has(e.lotRef)).length,
+    bars:regEntries().length,
+    held:held.size,
+  };
+}
+function openPublish(){
+  if(penGuard())return;
+  const c=publishCounts(),n=(v,l)=>`<strong class="num">${v}</strong> ${esc(l)}`;
+  const done=pubState?`<div class="card" style="margin-top:14px">
+    <div class="kv"><span class="k">Published</span><span class="v num">revision ${pubState.rev}</span></div>
+    <div class="kv"><span class="k">The address</span><span class="v" style="font-family:var(--mono);font-size:11.5px;word-break:break-all;text-align:right">${esc(atlasLink())}</span></div>
+    </div>
+    <button class="btn btn-quiet" onclick="copyAtlasLink()">Copy the address</button>
+    <div class="muted small serif" style="font-style:italic;margin:2px 2px 0">One link, no account, no install. Whoever opens it reads the atlas as you published it.</div>`:'';
+  openSheet(`
+  <h3>Publish the atlas</h3>
+  <div class="sub">The pen · a copy of the shared record, readable by anyone with the address</div>
+  <p class="primer-b" style="max-width:42ch">No ledger travels — no cups, no brews, no bags. What goes is the atlas: the greens, the hands, the bars, and the dated sightings of what poured where. The hands that attested are named.</p>
+  ${publishable()?`
+  <div class="card">
+    <div class="kv"><span class="k">What leaves</span><span class="v">${n(c.greens,'greens')} · ${n(c.roasters,'roasters')} · ${n(c.bars,'bars')}</span></div>
+    <div class="kv"><span class="k">Roasts on them</span><span class="v num">${c.roasts}</span></div>
+    <div class="kv"><span class="k">Held back</span><span class="v num">${c.held||'none'}</span></div>
+  </div>
+  <div class="muted small" style="margin:-2px 2px 12px">The pours are gathered on the server from every keeper's ledger — with the cup cut off each one — so their number is the server's to state, and it does, the moment you publish.</div>
+  <button class="btn btn-primary" onclick="publishAtlas()">Publish</button>
+  ${c.held?`<button class="text-action" style="margin-top:8px" onclick="openHeldList()">What you're holding back →</button>`
+    :`<div class="muted small" style="margin:2px 2px 0">Nothing is held back. A green can be held from its own page, any time.</div>`}
+  ${done}
+  <p class="note">A copy, not a switch. What you publish stands until you publish again — the reader's copy states its own date rather than impersonating a feed.</p>`
+  :`<div class="empty">Publishing needs a server to publish to. Connect to one from the Desk → Sync, and this door opens.</div>`}`);
+}
+async function publishAtlas(){
+  if(penGuard())return;
+  if(!publishable()){toast('Connect to a sync server first');return}
+  toast('Publishing…');
+  try{
+    const r=await api('/api/publish','POST',{held:heldRefs()});
+    if(r.status===403){penRefused(r);toast('The pen is held elsewhere — nothing published');return}
+    if(r.status!==200){toast((r.body&&r.body.message)||'The server refused the copy');return}
+    pubState={rev:r.body.rev,publishedAt:r.body.publishedAt,counts:r.body.counts};
+    openPublish();
+    const p=r.body.counts||{};
+    toast(`Published. Revision ${r.body.rev} — ${nPl(p.pours||0,'pour')} carried.`);
+  }catch(e){toast(e&&e.auth?'Sign in again to publish':'Server unreachable — nothing published')}
+}
+function copyAtlasLink(){
+  const s=atlasLink();if(!s)return;
+  try{navigator.clipboard.writeText(s).then(()=>toast('The address is on your clipboard'),()=>toast('Select the address to copy it'))}
+  catch(e){toast('Select the address to copy it')}
+}
+// F2 · the held list. Each row names what rides with it, and releases with a tap
+// — nothing here erases, so nothing here asks twice (CORRECTIONS.md, unchanged).
+function openHeldList(){
+  if(penGuard())return;
+  const hs=holdList();
+  openSheet(`
+  <h3>What you're holding back</h3>
+  <div class="sub">${hs.length?esc(nPl(hs.length,'green')):'Nothing'} kept out of the published copy</div>
+  ${hs.length?hs.map(h=>{const l=catNode('lots',h.ref);const rides=holdCarriesLine(h.ref);
+    return `<div class="wc-item" style="cursor:default"><span class="tx">
+      <span class="tt">${esc(l?lotLabel(l):'a green no longer on file')}</span>
+      <span class="dd">${rides?esc(rides)+' · ':''}held ${esc(fmtMDY(h.at))}${h.by?' by '+esc(h.by):''}</span></span>
+      <button class="btn btn-quiet" style="width:auto;padding:4px 10px;margin:0" onclick="releaseHold(${jsq(h.ref)});openHeldList()">Release</button></div>`}).join('')
+  :'<div class="empty">Nothing is held back. The whole atlas travels with the next copy.</div>'}
+  <p class="note">The record keeps every one of these whole — a hold is a subtraction from the copy, never from the record. Release one and it travels with the next publish.</p>
+  <button class="btn btn-quiet" onclick="openPublish()">← Publish the atlas</button>`);
+}
+// F3 · the lot page's row, beside amend and withdraw — the same grammar, so the
+// same sheet shape. In ink, never in red: this is reversible, and red is spent once.
+function openHoldGreen(lotId){
+  if(penGuard())return;
+  const l=catNode('lots',lotId);if(!l)return;
+  const on=holdOn(lotId),rides=holdCarriesLine(lotId);
+  openSheet(`
+  <h3>${on?'Release this green':'Hold this green back'}</h3>
+  <div class="sub">${esc(lotLabel(l))}</div>
+  <p class="primer-b" style="max-width:40ch">${on
+    ?`It travels again with the next published copy${rides?', '+esc(rides):''}. Nothing about the record changed while it was held.`
+    :`It leaves the published copy at the next publish. The record keeps it whole; readers simply never see it.${rides?` Its roasts and its pours are held with it — ${esc(rides.replace(/^and its /,''))}.`:''}`}</p>
+  <button class="btn btn-quiet" onclick="${on?`releaseHold(${jsq(lotId)});closeSheet()`:`holdGreen(${jsq(lotId)})`}">${on?'Release it':'Hold it back'}</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Leave it as it is</button>`);
+}
+
 function openDeskCafe(){
   if(penGuard())return;
   const known=regEntries().map(e=>e.name).sort((a,b)=>a.localeCompare(b));
@@ -5286,6 +5453,10 @@ function specLot(lotId){
     ${batchLine}
     ${bindRows?`<h2>Bound here</h2><div class="muted small" style="margin-bottom:8px">Each record read onto this green, and how. Keep one apart to fork it back onto its own.</div>${bindRows}`:''}
     ${isAdmin()?`<button class="btn btn-quiet" onclick="openLotStanding(${jsq(lotId)})">${(cal.best||cal.claims.length||rar.facts.length)?'Add another reading':'Record the standing'}</button>`:''}
+    ${isAdmin()?`<button class="btn btn-quiet" onclick="openHoldGreen(${jsq(lotId)})">${holdOn(lotId)?'Release it into the published copy':'Hold this green back'}</button>
+    <div class="muted small" style="margin:2px 2px 10px">${holdOn(lotId)
+      ?`Held back since ${esc(fmtMDY(holdOn(lotId).at))} — absent from the published copy, whole here. ${esc(holdCarriesLine(lotId)||'Nothing rides with it yet')}.`
+      :'It would leave the published copy at the next publish; the record keeps it whole, and readers simply never see it.'}</div>`:''}
     ${cands.length?`<button class="btn btn-quiet" onclick="openLotMerge(${jsq(lotId)})">Join to another green…</button><div class="muted small" style="margin:2px 2px 10px">${cands.length} green${cands.length===1?'':'s'} read${cands.length===1?'s':''} like this one. Join and every record on both follows here — undoable.</div>`:''}
     ${undoable.map(t=>`<button class="btn btn-quiet" onclick="openLotUndoMerge(${jsq(lotId)},${jsq(t.id)})">Split back apart — restore ${esc(lotLabel(t))}</button>`).join('')}
   </details>`:'';
@@ -7882,6 +8053,9 @@ function mergeLedgers(loc,rem){
   // collections on every device, and its body rides the entry so any of them can
   // put it back (docs/CORRECTIONS.md)
   out.struck=mergeStruck(loc.struck,rem.struck).filter(s=>!dead.has(s.ref));
+  // the holds merge the same way and subtract nothing here: a hold is a
+  // subtraction from the SNAPSHOT, never from the record (READER.md L4)
+  out.holds=mergeHolds(loc.holds,rem.holds).filter(h=>!dead.has(h.ref));
   // `down` is derived every merge, never persisted as a tombstone: a strike must
   // stay undoable, and a tombstone is the one thing that cannot be taken back. A
   // struck café cup's pour is held down the same way, by its own strike entry.
