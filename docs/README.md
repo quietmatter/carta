@@ -23,6 +23,9 @@ alone. Cite the document, not a memory of it.
   reading out, and what to cut so the graph can fill
 - **READER.md** — the person who keeps nothing: what the founder publishes, what
   a reader sees, and every write that is absent rather than locked
+- **GEOCODE.md** — the place resolver: how a place enters the record (the map
+  rail, the comma-run split) and how two entries naming one place become one
+  page. Deliberately outside `RESOLVER.md` — a place is not an identity
 - **LOT_IDENTITY.md** — what a lot is, and what it honestly is not
 - **CORRECTIONS.md** — how a record is amended and how it is set down: the
   strike, the cascade, the one irreversible door

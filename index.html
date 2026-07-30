@@ -495,6 +495,15 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 .sug .s:active{border-color:var(--line-strong);color:var(--ink)}
 .sug .s b{font-weight:400;color:var(--ink-3);margin-left:5px}
 .sug .lb{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);align-self:center;margin-right:2px}
+/* the map rail — the second rung of the same rail. What the record holds is offered firm; what
+   the world holds sits below it in a dashed line, because it is a place the record has not been
+   to yet and the drawing should say so before the keeper taps it. */
+.sug.place{margin-top:4px;flex-direction:column;align-items:stretch;gap:4px}
+.sug.place .lb{align-self:flex-start;margin:0 0 1px}
+.sug.place .s{border-style:dashed;text-align:left;display:block;width:100%}
+.sug.place .s .ch{display:block;font-size:var(--s11);color:var(--ink-3);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sug.place .pl{font-family:var(--sans);font-size:var(--s11);color:var(--ink-2)}
 
 /* the door — the display voice, the fact chips, the binding rows, the readout */
 .door-display,.sheet h3.door-display{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.12;letter-spacing:-.02em;color:var(--ink);margin:0 0 6px;text-wrap:balance}
@@ -1247,7 +1256,7 @@ CAT_KINDS.forEach(k=>{CAT[k]=loadDoc(k)});
  * this returns the own array itself (not a copy), so every existing mutation
  * path keeps its object identity and nothing about a keeper's app changes. ---- */
 let _catL=null,_catLive=null;
-const catBust=()=>{_catL=null;_catLive=null};
+const catBust=()=>{_catL=null;_catLive=null;_placeIx=null}; // the learned place fold is derived from the greens, so it busts with them
 const catLayer=(own,pub)=>{const w={...pub};Object.keys(own).forEach(k=>{if(regSubstance(own[k]))w[k]=own[k]});w._pubUnder=1;return w};
 function catRaw(kind){
   const own=(CAT[kind]&&CAT[kind].entries)||[];
@@ -1773,15 +1782,144 @@ function normPlace(s){const g=genFold(s);return _placeCanon[g]||g}
  * own records carried, because those words are what somebody actually wrote down. */
 const nameScore=s=>{const t=String(s);
   return (/[a-z]/.test(t)?4:0)+(/[^\u0000-\u007f]/.test(t)?2:0)+(/[A-Z]/.test(t)?1:0)};
-function foldNames(list){
-  const by=new Map();
-  (list||[]).filter(v=>v!=null&&v!=='').forEach(v=>{const k=normPlace(String(v));if(!k)return;
+function foldNames(list,key){
+  const kf=key||normPlace,by=new Map();
+  (list||[]).filter(v=>v!=null&&v!=='').forEach(v=>{const k=kf(String(v));if(!k)return;
     const g=by.get(k)||{n:0,c:{}};g.n++;g.c[String(v)]=(g.c[String(v)]||0)+1;by.set(k,g)});
   return [...by.values()].sort((a,b)=>b.n-a.n)
     .map(g=>Object.keys(g.c).sort((a,b)=>g.c[b]-g.c[a]||nameScore(b)-nameScore(a)||a.length-b.length||a.localeCompare(b))[0]);
 }
 // the one form of a name a scope should print — foldNames' most-carried group, modeOf that folds
-const canonName=list=>foldNames(list)[0]||'';
+const canonName=(list,key)=>foldNames(list,key)[0]||'';
+
+/* ============ the place resolver (docs/GEOCODE.md) ============
+ * normPlace answers "are these two words the same word". It cannot answer the question a
+ * coffee record actually asks, which is "are these two ENTRIES the same place" — because a
+ * place word does not arrive alone. A bag prints "Huila, Colombia"; a keeper types the
+ * region into the locality box because the bag called Yirgacheffe a region and the map calls
+ * it a town; a second keeper types the same town in Spanish word order. Every one of those
+ * drew its own page, and the atlas looked as though it held four places where it held one.
+ *
+ * The resolver is in two halves and the offline half is the one that matters. It NEVER
+ * fetches, so a record folds correctly on a plane, and it does only what a comma and a
+ * capital letter can defend:
+ *   placeSegs   a run of place words is split — "Pitalito, Huila, Colombia" is three facts
+ *               a bag printed on one line, finest first, not a place named "Pitalito, Huila,
+ *               Colombia". A run is presentation, exactly as case and accents are.
+ *   placeFold   the token two entries are compared on: the LEAD segment, folded by normPlace,
+ *               then through the learned index below. It is the read-side fold — it decides
+ *               what shares a page, and writes nothing.
+ *   placeSplit  the entry-side act: the run, redistributed across the three columns it was
+ *               always describing. It runs where a record is READ OFF A FORM, before the
+ *               record exists — never over a green already standing, because rewriting the
+ *               words somebody wrote down is not a fold, it is an edit, and edits are
+ *               deliberate and signed (CORRECTIONS.md).
+ *
+ * The learned index is the half that grows. When a keeper picks a place off the map rail the
+ * green keeps the resolved chain (lot.place), and the index reads back the words that green
+ * uses for it — the map's own name, and the green's own column. So the next time any green
+ * anywhere on the atlas carries that spelling it folds onto the same page: evidence somebody
+ * actually confirmed, carried on the greens themselves, synced with them, derived at read.
+ * No gazetteer is bundled, downloaded or stored — the atlas learns only the places its own
+ * records have been to.
+ *
+ * What it must never do: fold two words on a guess. genFold's doubled-letter collapse is a
+ * scorer's licence and it is not borrowed here (keyFold's law, one kind up) — an unconfirmed
+ * spelling folds on the alias table and the comma and nothing else. */
+// A place run, finest first. Commas, semicolons, slashes, middots and spaced dashes all print
+// the same hierarchy; a hyphen inside a word (Addis-Ababa, Huehuetenango) is part of the name.
+const placeSegs=s=>String(s??'').split(/\s*[,;/·|]\s*|\s+[–—-]\s+/).map(x=>x.trim()).filter(Boolean);
+// the place itself, out of the run it was printed in
+const placeLead=s=>placeSegs(s)[0]||'';
+// The learned fold — spelling → the canonical token, built from the confirmed chains the greens
+// already carry. Memoed on the catalog's own bust, because scopeGreens asks per green per paint.
+let _placeIx=null;
+function placeIndex(){
+  if(_placeIx)return _placeIx;
+  const ix={};
+  catAll('lots').forEach(l=>{const p=l&&l.place;if(!p||!p.ref||!nodeLive(l))return;
+    const canon='ref:'+p.ref,lvl=p.level||'locality';
+    /* Three words stand for this one confirmed place, and every one of them is evidence
+     * rather than a guess: the map's own name, the word the map states at the level the pick
+     * landed on, and — the one that earns the index — THIS GREEN'S OWN COLUMN, which is how
+     * this record spells that place. The last is what folds a transliteration or a local
+     * spelling no alias table could carry.
+     *
+     * It is safe for a reason built one layer down, not by luck: placeHeld refuses to save a
+     * chain at all unless the columns still agree with the pick. A keeper who types Guji,
+     * thinks again and picks Gedeo has a record whose column and whose pick disagree, and it
+     * keeps no chain — so the one case that could fold two real regions into one page never
+     * reaches this index. What does reach it was confirmed twice: once by the tap, once by
+     * the columns still saying it at save.
+     *
+     * And where it does fold, the page says so: a derived scope states which spellings it
+     * gathered and that a confirmed place was one of the reasons (scopeSpellingsHTML), and
+     * the green can be amended. The standard is not that a fold is never wrong — it is that
+     * a fold is never wrong silently, and never without appeal. */
+    const own=(l.fingerprint||{})[lvl]||l[lvl];
+    [p.name,p[lvl],own].forEach(v=>{const k=normPlace(placeLead(v));if(k)ix[k]=canon});
+  });
+  return (_placeIx=ix);
+}
+// the token two place entries are compared on, across the whole atlas
+function placeFold(s){const k=normPlace(placeLead(s));return k?(placeIndex()[k]||k):''}
+// two place entries, one place?
+const placeEq=(v,w)=>regSubstance(v)&&placeFold(v)===placeFold(w);
+// a list of place words, folded and printed in the form the record carried most — foldNames
+// pointed at places, its values reduced to the place itself so a page never prints the run
+const foldPlaces=list=>foldNames((list||[]).map(placeLead),placeFold);
+const canonPlace=list=>foldPlaces(list)[0]||'';
+/* placeSplit — the run, redistributed. It reads a form's three place columns as ONE ladder and
+ * puts each segment in the column it belongs to, under three refusals:
+ *   · a word is never dropped. A segment it cannot place stays exactly where it was typed.
+ *   · a column already filled is never overwritten. It fills blanks, the sparse law everywhere.
+ *   · it never invents. A segment becomes the country only if it NAMES one — matched against
+ *     the vocabularies the build already carries, never guessed from position.
+ * So "Huila, Colombia" typed into Region, with Country blank, becomes Region Huila · Country
+ * Colombia; typed with Country already Colombia it becomes Region Huila and the restated
+ * country is dropped as the duplicate it is. Anything else is left alone and the record says
+ * what the keeper said. */
+const titleCase=s=>String(s||'').replace(/(^|[\s-])([a-z])/g,(m,a,b)=>a+b.toUpperCase());
+const COUNTRY_WORDS=()=>{const m={};
+  (typeof DOOR_COUNTRIES!=='undefined'?DOOR_COUNTRIES:[]).forEach(c=>{m[normPlace(c)]=c});
+  // LANDS is keyed lowercase (it is a drawing's index, not a name) — title-cased before it can
+  // ever be written into a field, so the resolver never puts a shout or a whisper on the record
+  (typeof LANDS!=='undefined'?Object.keys(LANDS):[]).forEach(c=>{if(!m[normPlace(c)])m[normPlace(c)]=titleCase(c)});
+  return m};
+let _ctryW=null;
+const placeCountry=s=>{const m=(_ctryW=_ctryW||COUNTRY_WORDS());return m[normPlace(s)]||''};
+function placeSplit(o){
+  const F=['originCountry','originRegion','originLocality'];
+  // the country box is the one that reads the other way: a bag prints "Huila, Colombia" and a
+  // keeper pastes the whole line into Country, so the country is the run's LAST word, not its
+  // first. Named, never positional — a segment leads only if it is a country the build knows.
+  const cs=placeSegs(o.originCountry);
+  if(cs.length>1&&!placeCountry(cs[0])){const i=cs.findIndex(placeCountry);
+    if(i>0)o.originCountry=[cs[i],...cs.filter((_,j)=>j!==i)].join(', ')}
+  const seen={};F.forEach(f=>{const l=placeLead(o[f]);if(l)seen[normPlace(l)]=f});
+  // A run reads finest first, the postal order every origin on every bag is printed in. So a
+  // segment after the lead is that lead's PARENT, and the column it wants is the coarser one.
+  // The country box has nothing coarser, so a stray there falls back to the region.
+  const up={originLocality:['originRegion','originCountry'],originRegion:['originCountry'],originCountry:['originRegion']};
+  F.forEach(f=>{
+    const segs=placeSegs(o[f]);if(segs.length<2)return;
+    const keep=[segs[0]];
+    segs.slice(1).forEach(s=>{
+      const n=normPlace(s);
+      if(seen[n])return;                                             // its parent, restated — the run's whole purpose
+      const c=placeCountry(s);
+      // a segment that NAMES a country is one, wherever it was typed — the only claim made by word
+      if(c&&!regSubstance(o.originCountry)){o.originCountry=c;seen[n]='originCountry';return}
+      if(c&&placeEq(c,o.originCountry))return;                       // the country already stands — a restatement in other words
+      if(c){keep.push(s);return}                                     // it names a DIFFERENT country: the seam stays visible, never quietly dropped
+      const slot=(up[f]||[]).find(t=>t!=='originCountry'&&!regSubstance(o[t]));
+      if(slot){o[slot]=s;seen[n]=slot;return}
+      keep.push(s);                                                  // unplaceable — it stays where it was typed
+    });
+    o[f]=keep.join(', ');
+  });
+  return o;
+}
 // reconcileTier(fp) → the naming tier the head-string sits at (farm|producer|station|region), or null when
 // genuinely ambiguous — TAG only, the head-string itself is never rewritten (decision #4). Reads the head
 // against the structured columns already present and the table's tier tags.
@@ -2054,6 +2192,29 @@ function lotSetAltitude(lot,band,who,src){
   w.altitudeAlt=w.altitudeAlt||[];
   if((lot.altitudeAlt||[]).some(a=>a&&a.band&&a.band[0]===band[0]&&a.band[1]===band[1]))return 'same';
   w.altitudeAlt.push({id:uid(),band,src:src||'keeper',by:who||'',at:now});stamp();
+  return 'diverged';
+}
+/* The resolved place, onto the green it describes (GEOCODE.md §4). lotSetAltitude's construction
+ * exactly, and for the same reason: the first confirmation stands, a later one that DISAGREES is
+ * carried beside it rather than resolved, and both are signed and dated. What it holds is not a
+ * new claim about the coffee — it is the ladder a keeper confirmed on a map for the words their
+ * own record already carried, which is what lets two greens spelling one town differently read as
+ * one town (placeIndex) and what gives a grower an honest pin with no second lookup.
+ *
+ * It is NOT identity. It is outside lotKeyOf, outside the fingerprint, outside the grain: a green
+ * whose town somebody confirmed on a map has not proved a finer rung than one whose keeper simply
+ * typed it — confirming a spelling is not evidence about the coffee, and the ladder is never
+ * rounded up by a lookup. The columns stay the record; this stays the reading over them. */
+function lotSetPlace(lot,place,who){
+  if(!lot||lot.role||!place||!place.ref)return null;
+  const w=lotOwn(lot),now=new Date().toISOString(),stamp=()=>{w.updatedAt=now;if(who)w.by=who;CAT.lots.dirty=true;saveDoc('lots')};
+  const p=Object.assign({},place,{by:who||'',at:now});
+  const cur=lot.place;                              // read off the LAYERED green — a copy's chain is a divergence to carry, not a blank to fill
+  if(!cur||!cur.ref){w.place=p;stamp();return 'set'}
+  if(cur.ref===p.ref)return 'same';
+  w.placeAlt=w.placeAlt||[];
+  if((lot.placeAlt||[]).some(a=>a&&a.ref===p.ref))return 'same';
+  w.placeAlt.push(Object.assign({id:uid()},p));stamp();
   return 'diverged';
 }
 // The standing: the three axes, read side by side, never merged into one number. Traceability is
@@ -2973,11 +3134,11 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.17.0';
+const APP_VERSION='6.18.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
-  {v:'6.17.0',date:'July 2026',title:'The page folds, and it rests on the place it is about.',items:[
+  {v:'6.18.0',date:'July 2026',title:'The page folds, and it rests on the place it is about.',items:[
     'Every section is a card now. A green’s page answered nine questions in one scroll, and the corrections were at the bottom of all of them. Each section folds into a card that opens and closes, and the page opens as a stack of them — every question still asked, in the same order, none of them shouting. A closed card keeps its heading and its count on the face, so the stack reads as a table of contents rather than a row of blank drawers.',
     'It stays how you leave it. A card remembers by its name, not by its page: close “Where it sits” once and it is closed on the next green and the one after. Set the posture you want to read in and every page is the short page you asked for. Open all is one tap, and it persists too. The reading never folds — the head, the road and the resolution readout are always open, because a page that hides its answer behind a tap has stopped being a record.',
     'The page rests on its own map. The same drawing the map section makes is laid under the whole screen, ink withheld: streets where the scope stands on streets — a bar, a city, a roaster — the country’s outline and its highlands everywhere else. Close the cards and the ground is simply there. It is paper in the strictest sense: nothing on it, nothing to tap, in no count and in no key. Hide the ground if you would rather read on plain stock.',
@@ -2985,6 +3146,13 @@ const CHANGELOG=[
     'The entry field stopped asking for both at once. “Producer / farm / station” is now “Farm or station”, beside “Grower” — the two facts the door has always kept apart, asked for apart.',
     'The double border, from the prototype. The leaf is ruled twice — the edge of the sheet, and the margin the page is written inside. Unlike the outer line it lands on a phone too.',
     'The columns read as a register. A green’s Farm, Region, Process and Altitude are set the way every other quiet label in the app is set — a tracked line down the left, the values ranged right — so an identity card reads as an entry rather than as a settings list.',
+  ]},
+  {v:'6.17.0',date:'July 2026',title:'The place fills itself in, and one place is one page.',items:[
+    'Type into Country, Region or Locality and the map answers. Which box Yirgacheffe belongs in is a question about Ethiopian administrative geography, and no keeper should have to answer it — so the rail offers real places as you type, each showing the whole ladder it sits in, and one tap fills every column from that ladder. A café has been findable on a map since the beginning; a coffee’s own origin never was.',
+    'A run is not a place name. “Pitalito, Huila, Colombia” is three facts a bag printed on one line, and it used to enter the record as one region called all of that — which then had its own page, next to the page for Huila. The columns are sorted out at entry now, on the device, with no lookup: a word is never dropped, a filled column is never overwritten, and a word that names a country becomes the country only because it names one.',
+    'One place, however it was written. HUILA, Huila, “Huila, Colombia” and a spelling somebody confirmed on the map now gather onto one page, and the page says which spellings it gathered. Nothing was rewritten to make that happen — every green still carries the words its own record was given.',
+    'The atlas learns the places it has been to. Confirm a place and the green keeps the ladder, so the next record spelling that town differently lands on the same page. No gazetteer is downloaded and none is bundled: the fold knows only what this record has confirmed.',
+    'A confirmed place is not a finer grain. It does not enter a green’s identity, it does not move the traceability rung, and it never becomes a page of its own. Confirming a spelling is evidence about a word, not about the coffee.',
   ]},
   {v:'6.16.0',date:'July 2026',title:'The atlas is correctable — and one name spelled two ways is one name.',items:[
     'The fold. A collapse key folded case and nothing else, so TARRAZÚ, Tarrazú and tarrazu minted three nodes for one region, and an accent or a stray comma forked a green from itself. The resolver now folds case, accents and punctuation before it decides — and folds nothing more, because collapsing further is a guess and an identity key never guesses. The twins already standing on your atlas are joined once, undoably, the earliest naming keeping the node.',
@@ -3940,6 +4108,7 @@ function saveNodeAmend(doc,id){
     if(regSubstance(o.producer)){const p=catStampProducer(o,who,at);if(p)lotAddProducerRef(w,p.id)}
     if(regSubstance(o.grower)){const g=catStampGrower(o,who,at);if(g)lotAddProducerRef(w,g.id)}
     if(o.altitudeM)lotSetAltitude(w,o.altitudeM,who,'keeper');
+    if(o.place)lotSetPlace(w,o.place,who);   // a place confirmed on the map while amending — an amend runs every stamp a create runs
     if((o.hardIds||[]).length)lotAddHardIds(w,o.hardIds,who,at);
   }else if(doc==='roasts'){
     const name=val('na_name');
@@ -4433,7 +4602,7 @@ function saveAuthorRoast(){
   if(!f.roaster){toast('Name the roaster — a roast is one roaster’s reading of a green');return}
   if(!lotWorthy({...f,origin:''})){toast('Give the green an origin — a country at least, or a printed code');return}
   const {rec,res}=authorRoast(f);
-  doorStampActors(rec,o);doorStampAltitude(rec,o);save(); // the authored green keeps the same two columns a bag's does
+  doorStampActors(rec,o);doorStampAltitude(rec,o);doorStampPlace(rec,o);save(); // the authored green keeps the same three columns a bag's does
   atlasGeoFill(rec); // the optional, keyless fill — locates the roaster's city and the origin's region on the map
   closeSheet();
   if(res&&res.action==='propose'&&res.propose){openLotPropose(rec.id,res.propose.lot.id,res.propose.fields);toast('Authored — one green reads close; settle it')}
@@ -5690,12 +5859,14 @@ function aggTerraceHTML(lotIds,heading,tail){
 function scopeGreens(kind,id){
   const A=atlasLots().map(x=>x.lot);
   const eq=(v,w)=>regSubstance(v)&&normPlace(String(v))===normPlace(String(w));
+  // the administrative scopes compare through the PLACE fold, not the name fold: "Huila",
+  // "Huila, Colombia" and a spelling somebody confirmed on the map are one page (GEOCODE.md)
   switch(kind){
-    case 'country': return A.filter(l=>eq((l.fingerprint||{}).country,id));
-    case 'region':  return A.filter(l=>eq((l.fingerprint||{}).region,id));
+    case 'country': return A.filter(l=>placeEq((l.fingerprint||{}).country,id));
+    case 'region':  return A.filter(l=>placeEq((l.fingerprint||{}).region,id));
     // the town's own scope — string-keyed like region and country: a locality is a derived
     // reading over the greens naming it, never a stored node (and never a polygon)
-    case 'locality':return A.filter(l=>eq((l.fingerprint||{}).locality,id));
+    case 'locality':return A.filter(l=>placeEq((l.fingerprint||{}).locality,id));
     case 'producer':return A.filter(l=>(l.producerRefs||[]).includes(id));
     // the station's own scope. A processor is the second origin actor and the one the
     // flat origin field used to swallow: it gathers cherry from many hands, so what it
@@ -5705,9 +5876,9 @@ function scopeGreens(kind,id){
     case 'roaster': return A.filter(l=>catAll('roasts').some(r=>r&&r.roasterRef===id&&r.lotRef&&lotFwd(r.lotRef)===l.id));
     case 'place':   {const ids=new Set(poursHere(id,regByName(id)).map(x=>x.id));return A.filter(l=>ids.has(l.id))}
     case 'city':{   // a city is a scope like any other — what pours there, and what is roasted there. The scene, derived, never stored
-      const rs=new Set(catAll('roasters').filter(r=>r&&eq(r.city,id)).map(r=>r.id));
+      const rs=new Set(catAll('roasters').filter(r=>r&&placeEq(r.city,id)).map(r=>r.id));
       const poured=new Set();
-      regEntries().filter(e=>eq(e.city,id)).forEach(e=>poursHere(e.name,e).forEach(x=>poured.add(x.id)));
+      regEntries().filter(e=>placeEq(e.city,id)).forEach(e=>poursHere(e.name,e).forEach(x=>poured.add(x.id)));
       return A.filter(l=>poured.has(l.id)||catAll('roasts').some(r=>r&&r.lotRef&&lotFwd(r.lotRef)===l.id&&rs.has(r.roasterRef)));}
     case 'setup':   {const ids=new Set(brewsIn(A,id).map(b=>b._lotId));return A.filter(l=>ids.has(l.id))}
     case 'process': return A.filter(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'&&eq(f.family,id)});
@@ -5761,14 +5932,14 @@ const nPl=(n,s,p)=>n+' '+(n===1?s:(p||s+'s'));
 function crumbHTML(kind,id){
   let parts=[];
   if(kind==='lot'){const l=catNode('lots',id)||{},fp=l.fingerprint||{};parts=[['country',fp.country],['region',fp.region],['locality',fp.locality]]}
-  else if(kind==='region'){const c=canonName(scopeGreens('region',id).map(l=>(l.fingerprint||{}).country));parts=[['country',c]]}
+  else if(kind==='region'){const c=canonPlace(scopeGreens('region',id).map(l=>(l.fingerprint||{}).country));parts=[['country',c]]}
   else if(kind==='locality'){const ls=scopeGreens('locality',id);
-    parts=[['country',canonName(ls.map(l=>(l.fingerprint||{}).country))],
-           ['region',canonName(ls.map(l=>(l.fingerprint||{}).region))]]}
+    parts=[['country',canonPlace(ls.map(l=>(l.fingerprint||{}).country))],
+           ['region',canonPlace(ls.map(l=>(l.fingerprint||{}).region))]]}
   else if(kind==='producer'||kind==='processor'){const n=catNode(kind==='producer'?'producers':'processors',id)||{},ls=scopeGreens(kind,id);
-    parts=[['country',canonName(ls.map(l=>(l.fingerprint||{}).country))],
-           ['region',canonName(ls.map(l=>(l.fingerprint||{}).region))],
-           ['locality',n.locality||canonName(ls.map(l=>(l.fingerprint||{}).locality))]]}
+    parts=[['country',canonPlace(ls.map(l=>(l.fingerprint||{}).country))],
+           ['region',canonPlace(ls.map(l=>(l.fingerprint||{}).region))],
+           ['locality',n.locality||canonPlace(ls.map(l=>(l.fingerprint||{}).locality))]]}
   const live=parts.filter(x=>x&&regSubstance(x[1]));
   if(!live.length)return'';
   return `<div class="crumb">${live.map((x,i)=>`${i?'<i>›</i>':''}<button onclick="nav(${jsq(x[0])},${jsq(x[1])})">${esc(x[1])}</button>`).join('')}</div>`;
@@ -6196,7 +6367,7 @@ function landAnchor(name){
 // the ground under a scope: the countries its greens name, each drawn or counted
 function landsOf(gs){
   const drawn=[],unread=[];
-  foldNames(gs.map(l=>(l.fingerprint||{}).country))
+  foldPlaces(gs.map(l=>(l.fingerprint||{}).country))
     .forEach(n=>(landRings(n)?drawn:unread).push(n));
   return {drawn,unread};
 }
@@ -6756,8 +6927,26 @@ function nodeCorrectHTML(kind,id,gs){
   if(!word||!gs||!gs.length)return '';
   return `<details class="trace-more" style="margin-top:18px"><summary>Corrections</summary>
   <div class="muted small" style="margin:0 2px 10px">A ${esc(word)} is a reading over the greens that name it — there is no stored entry here to amend, and the record will not invent one. Correct the ${esc(word)} on a green below and this page follows at once; two spellings of one ${esc(word)} fold together on their own.</div>
+  ${scopeSpellingsHTML(kind,id,gs)}
   ${gs.slice(0,8).map(l=>rowlink('lot',l.id,esc(lotLabel(l)),'amend it on the green',''))
     .join('')}${gs.length>8?`<div class="muted small" style="margin:6px 2px 0">${gs.length-8} more on this page above.</div>`:''}</details>`;
+}
+/* The fold, shown its work (GEOCODE.md §2). A keeper who spelled one region four ways used to
+ * see four pages and could at least count them; now they see one, which is right — and would
+ * have no way to know the other three ever existed. So the page says which spellings it gathered
+ * and what folded them. It is the difference between a record that quietly tidies itself and one
+ * that tells you what it did: nothing was rewritten, and every word somebody typed is still on
+ * its own green. Silent when there is only ever one spelling, which is most of the time. */
+const SCOPE_COL={country:'country',region:'region',locality:'locality'};
+function scopeSpellingsHTML(kind,id,gs){
+  const col=SCOPE_COL[kind];if(!col)return '';
+  const raw=gs.map(l=>(l.fingerprint||{})[col]).filter(regSubstance);
+  const forms=[...new Set(raw.map(String))].filter(v=>v!==id);
+  if(!forms.length)return '';
+  const ran=raw.some(v=>placeSegs(v).length>1),conf=gs.some(l=>l.place&&l.place.ref&&placeEq(l.place[col],id));
+  return `<div class="card" style="margin:0 0 10px"><div class="kv"><span class="k">Also written</span>
+    <span class="v">${forms.slice(0,6).map(v=>esc(v)).join(' · ')}${forms.length>6?` · +${forms.length-6}`:''}</span></div></div>
+  <div class="muted small" style="margin:-4px 2px 12px">${nPl(forms.length+1,'spelling')} of one ${esc(DERIVED_SCOPES[kind])}, gathered onto this page — folded by ${['case and accents',ran?'the run a bag printed it in':'',conf?'a place confirmed on the map':''].filter(Boolean).join(', ')}. Nothing was rewritten: each green still carries the words its own record was given. ${exBtn('placefold','how a place folds')}</div>`;
 }
 // aggRoadReading returns wrapped HTML; the node page wants the bare sentence to set beside the primer tap
 function aggRoadReadingText(lotIds,tail){
@@ -6958,8 +7147,8 @@ function specProducer(pid){
   const p=catNode('producers',pid);if(!p)return null;
   const gs=scopeGreens('producer',pid);
   const stn=p.producerKind==='station';
-  const region=p.region||canonName(gs.map(l=>(l.fingerprint||{}).region))||'';
-  const country=p.country||canonName(gs.map(l=>(l.fingerprint||{}).country))||'';
+  const region=p.region||canonPlace(gs.map(l=>(l.fingerprint||{}).region))||'';
+  const country=p.country||canonPlace(gs.map(l=>(l.fingerprint||{}).country))||'';
   const farm=isFarmNode(p),hand=isHandNode(p);
   /* THE OTHER SIDE OF THE SPLIT, derived and never stored. A green carries an edge to its
      farm AND an edge to its hand, so the hands on a farm are the hand-nodes on that farm's
@@ -7006,8 +7195,8 @@ function specProducer(pid){
 function specProcessor(pid){
   const p=catNode('processors',pid);if(!p)return null;
   const gs=scopeGreens('processor',pid);
-  const region=p.region||canonName(gs.map(l=>(l.fingerprint||{}).region))||'';
-  const country=p.country||canonName(gs.map(l=>(l.fingerprint||{}).country))||'';
+  const region=p.region||canonPlace(gs.map(l=>(l.fingerprint||{}).region))||'';
+  const country=p.country||canonPlace(gs.map(l=>(l.fingerprint||{}).country))||'';
   const fams=foldNames(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}));
   return {
     eyebrow:'Washing station'+(regSubstance(country)?' · '+esc(country):''),
@@ -7034,7 +7223,7 @@ function specProcessor(pid){
 function specRegion(id){
   const gs=scopeGreens('region',id);
   if(!gs.length)return null;
-  const country=canonName(gs.map(l=>(l.fingerprint||{}).country))||'';
+  const country=canonPlace(gs.map(l=>(l.fingerprint||{}).country))||'';
   const procs=foldNames(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}));
   return {
     eyebrow:'Region'+(regSubstance(country)?' · '+esc(country):''),title:esc(id),qual:'',
@@ -7045,7 +7234,7 @@ function specRegion(id){
       ['Processes',procs.map(esc).join(' · ')||'<span class="unread">unread</span>']],
     rowsEx:['hands','Farm, grower, station'],
     up:[{h:'Part of',items:[regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''].filter(Boolean)}],
-    down:[{h:'Its localities',items:foldNames(gs.map(l=>(l.fingerprint||{}).locality))
+    down:[{h:'Its localities',items:foldPlaces(gs.map(l=>(l.fingerprint||{}).locality))
         .map(v=>rowlink('locality',v,esc(v),esc(id),esc(nPl(scopeGreens('locality',v).length,'green'))))},
       ...prodSections(gs),
       {h:'Its stations',items:stationsOf(gs).map(procRowlink)}],
@@ -7059,8 +7248,8 @@ function specRegion(id){
 function specLocality(id){
   const gs=scopeGreens('locality',id);
   if(!gs.length)return null;
-  const region=canonName(gs.map(l=>(l.fingerprint||{}).region))||'';
-  const country=canonName(gs.map(l=>(l.fingerprint||{}).country))||'';
+  const region=canonPlace(gs.map(l=>(l.fingerprint||{}).region))||'';
+  const country=canonPlace(gs.map(l=>(l.fingerprint||{}).country))||'';
   return {
     eyebrow:'Locality'+(regSubstance(country)?' · '+esc(country):''),title:esc(id),qual:'',
     lede:`The greens the record traces to ${esc(id)} — a town named, finer than its region, short of any one farm or mill.`,
@@ -7082,7 +7271,7 @@ function specLocality(id){
 function specCountry(id){
   const gs=scopeGreens('country',id);
   if(!gs.length)return null;
-  const regs=foldNames(gs.map(l=>(l.fingerprint||{}).region));
+  const regs=foldPlaces(gs.map(l=>(l.fingerprint||{}).region));
   const vars=foldNames(gs.map(l=>l.variety));
   return {
     eyebrow:'Country',title:esc(id),qual:'',
@@ -7110,7 +7299,7 @@ function specCity(id){
     eyebrow:'City',title:esc(id),qual:'',
     lede:`What is poured and what is roasted in ${esc(id)} — the scene, read as one scope.`,
     rows:[['Bars',String(barsHere.length)],['Hands',String(handsHere.length)],['Greens',String(gs.length)],
-      ['Countries',foldNames(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>']],
+      ['Countries',foldPlaces(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>']],
     up:[],
     down:[{h:'Its bars',items:barsHere.map(e=>rowlink('place',e.name,esc(e.name),esc(e.neighborhood||id),esc(nPl(poursHere(e.name,e).length,'green'))))},
       {h:'Its hands',items:handsHere.map(r=>rowlink('roaster',r.id,esc(r.name),'roasting here',esc(nPl(scopeGreens('roaster',r.id).length,'green'))))}],
@@ -7146,7 +7335,7 @@ function specRoaster(rid){
     eyebrow:'Roaster'+(place?' · '+esc(place):''),title:esc(r.name),qual:'',
     lede:'Every green this hand has roasted into the record — and where those greens grew.',
     rows:[['City',esc(r.city||'unread')],['Greens',String(gs.length)],
-      ['Countries',foldNames(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>'],
+      ['Countries',foldPlaces(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>'],
       ['Bars pouring it',String(barsIn(gs).length)],
       r.site?['Site',esc(r.site)]:null].filter(Boolean),
     up:[{h:'Part of',items:[regSubstance(r.city)?rowlink('city',r.city,esc(r.city),'the city it roasts in',esc(nPl(scopeGreens('city',r.city).length,'green'))):''].filter(Boolean)}],
@@ -7170,7 +7359,7 @@ function specFacet(kind,id){
     title:esc(label),qual:`in ${numWord(gs.length)} green${gs.length===1?'':'s'}`,
     lede:`The ${esc(label)} greens you have met, and how far down the road the record actually follows each one.`,
     rows:[['Greens',String(gs.length)],
-      ['Countries',foldNames(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>'],
+      ['Countries',foldPlaces(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>'],
       ['Hands',String(handsIn(gs).length)],['Bars',String(barsIn(gs).length)]],
     up:[],down:[],
     roadTail:'on this plate',terrTail:'on this plate',
@@ -7214,6 +7403,12 @@ function specLot(lotId){
   if(fp.harvest&&fp.harvest.year)rows.push(['Harvest',esc(fp.harvest.year)]); // its own column, never a rung of the grain (MODEL_QA A5)
   const alt=altOf(lot);
   if(alt)rows.push(['Altitude',exV(altLabel(alt),'altitude')]); // last of the origin facts: identity above it, a growing condition here
+  // the confirmed ladder, if a keeper ever pointed at this place on a map. Below the origin
+  // facts because it is not one: it is a reading OVER the columns above, and it never re-keys
+  // the green, never moves the grain, never becomes a page of its own (GEOCODE.md §4).
+  const pl=lot.place,plAlt=(lot.placeAlt||[]);
+  if(pl&&pl.ref)rows.push(['Placed',exV(pl.chain?pl.chain.join(' · '):pl.label||pl.name,'placed')
+    +(plAlt.length?`<span class="muted"> · ${plAlt.length} other reading${plAlt.length===1?'':'s'}</span>`:'')]);
   if(ko)rows.push(['Outturn',exV(ko.value,'outturn')]);
   if(!rows.length)rows.push(['On file',`<span class="unread">unread</span>`]);
   // ── the walk up — part of ──
@@ -7721,6 +7916,8 @@ const PR={
   caliber:{t:'Caliber',b:'A cup score never travels bare. A score enters the standing only through its source — a competition, an estate auction, a named cupper or lab. An unnamed number is on file as a claim, unverified, and it never prints as the score.'},
   standing:{t:'The standing',b:'What the coffee is in the world — caliber, rarity, traceability — compiled from sourced facts, never picked. It is not whether you’ll love it. That stays yours, on the overlay.'},
   altitude:{t:'The height it grew at',b:'Metres above sea level, as the record was told them. Height is a growing condition — slower cherry, denser bean — never a grade: the trade’s shorthand that higher is better is a shorthand, and this record does not repeat it. Nothing here sorts by it. A stated range draws as a band and a single figure as one line, because a lot sold as 1,800–1,900 m never said 1,850. It is the one origin fact continuous enough to read two greens on the same scale, which is why it earns a drawing — a section, beside the map’s plan. It is never part of a coffee’s identity, and never a pin: a height is not a place.'},
+  placed:{t:'Placed',b:'The administrative ladder this green sits in, as somebody confirmed it on a map — the town, the region above it, the province above that, the country. It is a reading over the origin columns, never one of them: it does not make the green’s identity, it does not move the grain, and a green whose town was confirmed on a map has proved nothing more about the coffee than one whose keeper simply typed it. What it does is let two records spelling one place differently read as one place, and give a grower an honest pin without a second lookup. Two confirmations that disagree are both kept — the first stands and the other is carried beside it, the way two heights are.'},
+  placefold:{t:'One place, however it was written',b:'A place word rarely arrives alone. A bag prints “Huila, Colombia”; one keeper types the town where another types the region; a third copies the line in capitals off the header. Those are one place, and the atlas folds them onto one page — by case and accents, by the run a bag printed them in, and by any spelling somebody has confirmed on the map. It folds nothing further: collapsing two words on a resemblance is a guess, and a page merged on a guess has no appeal. Nothing is rewritten to make the fold work — every green keeps the words its own record was given, and the page says which spellings it gathered.'},
   rarity:{t:'Rarity',b:'How much of it exists — bags landed, an auction price, a scarce variety, how narrowly it is carried. Scarcity stated as a fact, never as a countdown.'},
   outturn:{t:'The outturn',b:'Kenya sews an identifier into the bag: one cherry delivery, milled and graded into sibling lots — AA, AB, PB — under one outturn. Two records naming this code are the same green, outright.'},
   hands:{t:'One green, many hands',b:'The same green lot, bought by more than one roaster — each a different reading of one coffee. The page nothing else can render.'},
@@ -8021,11 +8218,15 @@ function readHardIds(idp,existing){
  * carries every prefixed id and sugCtx derives the narrowing context from it, so a surface costs
  * nothing to add. ---- */
 function originFieldsHTML(p,o,h,extra){o=o||{};
-  const f=(k,label,ph,rail)=>`<label class="f"><span class="l">${label}</span><input type="text" id="${p}${k}" value="${esc(o[k]||'')}" placeholder="${esc(ph)}"${rail?' oninput="repaintSug()" autocomplete="off"':''}>${rail?`<span id="sugbox_${p}${k}"></span>`:''}</label>`;
+  // a fresh surface holds no confirmation — the last screen's pick is not this record's place
+  _placePick[p]=null;['country','region','locality'].forEach(k=>{_placeQ[p+k]=''});
+  // rail 1 is the record's own rail (what is on file); rail 2 adds the map rail — the three
+  // administrative columns, and only those, because only those name a place a map can answer for
+  const f=(k,label,ph,rail)=>`<label class="f"><span class="l">${label}</span><input type="text" id="${p}${k}" value="${esc(o[k]||'')}" placeholder="${esc(ph)}"${rail?' oninput="repaintSug()" autocomplete="off"':''}>${rail?`<span id="sugbox_${p}${k}"></span>`:''}${rail===2?`<span id="mapbox_${p}${k}"></span>`:''}</label>`;
   return `<div class="grid2">
-    ${f('country','Country','Ethiopia',1)}
-    ${f('region','Region','Bench Maji',1)}
-    ${f('locality','Locality','Mizan Teferi',1)}
+    ${f('country','Country','Ethiopia',2)}
+    ${f('region','Region','Bench Maji',2)}
+    ${f('locality','Locality','Mizan Teferi',2)}
     ${f('producer','Farm or station','Finca El Paraíso',1)}
     ${f('grower','Grower','the hand behind it',0)}
     ${f('variety','Variety','Gesha 1931',1)}
@@ -8047,6 +8248,8 @@ function readOriginFields(p,existing){
   const hids=readHardIds(p+'hid',existing); if(hids===false)return false;
   const o={originCountry:val(p+'country'),originRegion:val(p+'region'),originLocality:val(p+'locality'),producer:val(p+'producer'),
     variety:val(p+'variety'),process:val(p+'process'),lot:val(p+'lot'),harvest:val(p+'harvest'),hardIds:hids};
+  placeSplit(o);              // the run a bag printed on one line, into the columns it was describing (GEOCODE.md)
+  o.place=placeHeld(p,o);     // the chain, if one was confirmed off the map rail and the fields still agree with it
   o.altitudeM=altParse(val(p+'altitude'));
   o.producerKind=actorKind(o);o.station=o.producerKind==='station'?o.producer:'';
   o.grower=val(p+'grower'); // the second actor — a node and an edge, never a rung and never in the key
@@ -8172,14 +8375,14 @@ function saveBag(id){
   if(id){const b=bagById(id);Object.assign(b,rec,{updatedAt:new Date().toISOString()});
     catStampRoaster(b);let lotRes=catStampLot(b);catStampRoast(b);
     if(pickedLot('f_'))lotRes=bindPicked(b,'f_'); // the keeper named the green outright — a confirmed bind outranks anything the key would have done
-    doorStampActors(b,o);doorStampAltitude(b,o); // the typed form lands the same two columns a paste does
+    doorStampActors(b,o);doorStampAltitude(b,o);doorStampPlace(b,o); // the typed form lands the same three columns a paste does
     _picked['f_']=null;save();setAccent(roastLevel);closeSheet();render();toast('The record, revised');
     if(lotRes&&lotRes.action==='propose')openLotPropose(b.id,lotRes.propose.lot.id,lotRes.propose.fields); // an amend that gains facts is exactly when the question is worth asking
     return}
   const nb={id:uid(),createdAt:new Date().toISOString(),archived:false,...rec};
   D.bags.push(nb);curBagId=nb.id;catStampRoaster(nb);let lotRes=catStampLot(nb);catStampRoast(nb);
   if(pickedLot('f_'))lotRes=bindPicked(nb,'f_');
-  doorStampActors(nb,o);doorStampAltitude(nb,o);
+  doorStampActors(nb,o);doorStampAltitude(nb,o);doorStampPlace(nb,o);
   if(nb.roasterRef)nb.roaster=''; // flat roaster retired on new bags — the node authored above carries it (bagRoaster reads through), and a bag never surfaces to another keeper's circle
   if(nb.lotRef)['originCountry','originRegion','originLocality','producer','variety','process','lot'].forEach(k=>nb[k]=''); // flat origin retired on new bags — the lot node authored above carries it (lotRead reads through, node-first). Bags only: a café cup's circle surfaces read flat origin by design, so cup origin stays
   if(nb.roastRef){nb.roastLevel=0;nb.roastDate=''} // flat roast level + date retired on new bags — the roast node authored above carries them (roastRead reads through, flat-first-node-floor)
@@ -8330,12 +8533,12 @@ function doorParse(text){
 function doorFields(){
   const f=doorParsed||{},s=doorStruck;
   const farm=(!s.producer&&f.producer)||'',stn=(!s.processor&&f.processor)||'';
-  return {originCountry:(!s.country&&f.country)||'',originRegion:(!s.region&&f.region)||'',
+  return placeSplit({originCountry:(!s.country&&f.country)||'',originRegion:(!s.region&&f.region)||'',
     originLocality:(!s.locality&&f.locality)||'', // never parsed off a paste — carried only from a pre-bound green (doorFromLot)
     producer:farm||stn,producerKind:farm?'farm':stn?'station':'',station:stn,
     variety:(!s.variety&&(f.varieties||[])[0])||'',process:(!s.process&&f.process)||'',lot:'',
     altitude:(!s.altitude&&f.altitude)||'',altitudeM:(!s.altitude&&f.altitudeM)||null,harvest:(!s.harvest&&f.harvest)||'',
-    roastLevel:(!s.roastLevel&&f.roastLevel)||''};
+    roastLevel:(!s.roastLevel&&f.roastLevel)||''});   // the run a paste printed on one line, into its columns (GEOCODE.md)
 }
 // lotIdentity's grain rule and lotKeyOf's ≥2-of-6 threshold, computed exactly as the save will
 function doorResolve(){
@@ -8496,6 +8699,13 @@ function doorStampAltitude(rec,o){
   if(!rec.lotRef||!altValid(o.altitudeM))return;
   lotSetAltitude(catNode('lots',lotFwd(rec.lotRef)),o.altitudeM,activeName(),'door');
 }
+// The confirmed place, onto the green — run beside the other two stamps, on every surface a
+// record can enter by, so a chain confirmed on a café cup teaches the atlas exactly what one
+// confirmed on a bag does. Nothing happens when nobody confirmed anything (GEOCODE.md §4).
+function doorStampPlace(rec,o){
+  if(!rec.lotRef||!o||!o.place)return;
+  lotSetPlace(catNode('lots',lotFwd(rec.lotRef)),o.place,activeName());
+}
 function doorBind(kind){
   if(guard())return;
   const o=doorFields(),roaster=val('d_roaster'),name=val('d_name');
@@ -8533,7 +8743,7 @@ function doorBind(kind){
     D.authored=D.authored||[];D.authored.push(rec);
     catStampRoaster(rec);let res=catStampLot(rec);catStampRoast(rec);
     if(preBound)res=preBind(rec);
-    doorStampActors(rec,o);doorStampAltitude(rec,o);save();atlasGeoFill(rec);
+    doorStampActors(rec,o);doorStampAltitude(rec,o);doorStampPlace(rec,o);save();atlasGeoFill(rec);
     doorOn=false;
     if(res&&res.action==='propose'&&res.propose)openLotPropose(rec.id,res.propose.lot.id,res.propose.fields);
     else if(rec.lotRef){openLotPage(rec.lotRef);toast(res&&res.action==='auto'?'Noted — folded onto a green already charted':'Noted — the green is on your atlas')}
@@ -8545,7 +8755,7 @@ function doorBind(kind){
   D.bags.push(nb);curBagId=nb.id;
   catStampRoaster(nb);let lotRes=catStampLot(nb);catStampRoast(nb);
   if(preBound)lotRes=preBind(nb);
-  doorStampActors(nb,o);doorStampAltitude(nb,o);
+  doorStampActors(nb,o);doorStampAltitude(nb,o);doorStampPlace(nb,o);
   if(nb.roasterRef)nb.roaster=''; // flat fields retire under a standing node, exactly as saveBag
   if(nb.lotRef)['originCountry','originRegion','originLocality','producer','variety','process','lot'].forEach(k=>nb[k]='');
   if(nb.roastRef){nb.roastLevel=0;nb.roastDate=''}
@@ -8569,8 +8779,10 @@ function doorBind(kind){
  * miss the values on its own screen. ---- */
 const NARROW={region:'country',locality:'region',producer:'region',variety:'country',process:'country'};
 // every prefixed id the origin block can emit — one row per surface, so adding a surface is one line
-const SUG_FIELDS=['f_','c_','a_'].flatMap(p=>[[p+'country','country'],[p+'region','region'],[p+'locality','locality'],[p+'producer','producer'],[p+'variety','variety'],[p+'process','process'],[p+'roaster','roaster']])
-  .concat([['d_roaster','roaster']]);
+// the prefix rides along rather than being sliced back off the id — 'na_' (the node amend) is
+// three characters, and a rail that guessed two painted the bag form's context onto it
+const SUG_FIELDS=['f_','c_','a_','na_'].flatMap(p=>[[p+'country','country',p],[p+'region','region',p],[p+'locality','locality',p],[p+'producer','producer',p],[p+'variety','variety',p],[p+'process','process',p],[p+'roaster','roaster',p]])
+  .concat([['d_roaster','roaster','d_']]);
 function known(field,ctx){
   ctx=ctx||{};
   const all=atlasLots().map(x=>x.lot);
@@ -8581,10 +8793,19 @@ function known(field,ctx){
       :f==='process'?(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):''):''};
   const by=NARROW[field],key=by&&ctx[by];
   let ls=all;
-  if(regSubstance(key))ls=ls.filter(l=>normPlace(String(fv(l,by)||''))===normPlace(String(key)));
+  // narrowed through the PLACE fold — a green filed under "Huila, Colombia" belongs to the
+  // keeper who has just typed Huila, and a chip counted twice teaches the atlas holds two
+  if(regSubstance(key))ls=ls.filter(l=>placeEq(fv(l,by),key));
   if(!ls.length&&regSubstance(key))ls=all; // nothing recorded under it yet — offer the wider list rather than nothing
   const m=new Map();
+  const isPlace=/^(country|region|locality)$/.test(field);
   if(field==='roaster')catAll('roasters').forEach(r=>{if(r&&regSubstance(r.name)){const n=scopeGreens('roaster',r.id).length;if(n)m.set(r.name,n)}});
+  else if(isPlace){ // one chip per PLACE, printed in the form the record carried most
+    const by2=new Map();
+    ls.forEach(l=>{const v=fv(l,field);if(!regSubstance(v))return;const k=placeFold(v);
+      const g=by2.get(k)||{n:0,vals:[]};g.n++;g.vals.push(v);by2.set(k,g)});
+    by2.forEach(g=>m.set(canonPlace(g.vals),g.n));
+  }
   else ls.forEach(l=>{const v=fv(l,field);if(regSubstance(v))m.set(v,(m.get(v)||0)+1)});
   const rows=[...m.entries()].sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0]))).slice(0,6);
   return {rows,narrowedBy:regSubstance(key)&&ls.length<all.length?key:''};
@@ -8598,8 +8819,11 @@ function sugHTML(inputId,field,ctx){
 }
 function fillSug(id,v){const el=document.getElementById(id);if(el){el.value=v;repaintSug()}}
 function repaintSug(){
-  SUG_FIELDS.forEach(([id,f])=>{const box=document.getElementById('sugbox_'+id);
-    if(box)box.innerHTML=sugHTML(id,f,sugCtx(id.slice(0,2)))});
+  SUG_FIELDS.forEach(([id,f,p])=>{const box=document.getElementById('sugbox_'+id);
+    if(box)box.innerHTML=sugHTML(id,f,sugCtx(p));
+    // the map rail rides the same input, one rung below: what the record holds first, then
+    // what the world holds. Only the three administrative columns ask a map anything.
+    if(/^(country|region|locality)$/.test(f)&&document.getElementById('mapbox_'+id))placeRail(p,f)});
 }
 
 /* ============ setup form ============ */
@@ -8818,7 +9042,7 @@ function saveCup(kind,brewId,bagId,skip,editId){
     if(pickedLot('c_'))lotRes=bindPicked(cup,'c_'); // the keeper named the green outright — a confirmed sighting, rung 1, so no later amend can re-key the cup off it
     // the door's other facts land too — the pour path keeps everything the shelf path keeps, and now
     // so does the typed form: cupOrigin carries the same actor kind and height a paste carries
-    doorStampActors(cup,cupOrigin);doorStampAltitude(cup,cupOrigin);
+    doorStampActors(cup,cupOrigin);doorStampAltitude(cup,cupOrigin);doorStampPlace(cup,cupOrigin);
     cafeBound=null;
     if(!ex){ // new cups only — retire the flat text once a node stands to carry it (edit path untouched, so the retirement proves out on fresh saves first)
       if(cup.roasterRef)cup.roaster=''; // own surfaces read cupRoaster (node-first), the circle reads circleRoaster (flat-first-node-floor) — a friend still sees it through the group catalog
@@ -9104,6 +9328,148 @@ function nbhoodOf(addr){
   addr=addr||{};
   return addr.neighbourhood||addr.suburb||addr.quarter||addr.city_district||addr.hamlet||addr.borough||'';
 }
+/* ---- the map rail (docs/GEOCODE.md §3) — the geocode, brought to the origin fields.
+ * A café has been findable on a map since the beginning; a coffee's own origin never was, and
+ * it is the harder one, because a café has an address and a green has an argument. Which box
+ * Yirgacheffe goes in is a question about Ethiopian administrative geography that no keeper
+ * should have to answer, and the answer is on a map somebody has already drawn.
+ *
+ * So: type into Country, Region or Locality and the rail offers real administrative places,
+ * each showing the whole ladder it sits in. One tap fills EVERY column at once, from that
+ * ladder rather than from a guess — which is the entire fix for "the right name in the right
+ * field". The pick also hands back its chain, which the green keeps (lotSetPlace) so the fold
+ * learns it and every later record spelling it differently lands on the same page.
+ *
+ * Two services, both keyless, accountless, bundling nothing (the app's law for a network read):
+ * PHOTON answers each keystroke — it is OSM data built for type-ahead, which Nominatim's own
+ * usage policy forbids; NOMINATIM stays what it has always been, the confirm and the pin, and
+ * it is also the fallback when Photon is silent. `layer` keeps the answers administrative: a
+ * street or a house number is not a place a coffee grows in and is never offered.
+ *
+ * It suggests, it never constrains. Every field stays free text, a green from a country the
+ * map has never heard of is still enterable, and with no network the rail simply is not there
+ * and the record saves exactly as it did before. ---- */
+const PHOTON='https://photon.komoot.io/api/';
+const PHOTON_LAYERS='&layer=country&layer=state&layer=county&layer=city&layer=district&layer=locality';
+// Photon's own place type → the column CARTA keeps that place in. Three columns for five or six
+// administrative levels, so the map's finer ancestry is CARRIED (place.state, place.district)
+// rather than crushed into a box: it is what the fold reads and what the page states, and it is
+// never a rung, never in lotKeyOf, never a page of its own. A level the table does not know
+// files as a locality — the finest column, so the resolver never over-claims a place's reach.
+const PHOTON_COL={country:'country',state:'region',county:'region',region:'region',province:'region',
+  city:'locality',town:'locality',village:'locality',municipality:'locality',district:'locality',locality:'locality'};
+// One Photon feature, in the shape the origin block speaks. The feature's OWN name lands in its
+// own column; the coarser columns fill from the ancestry it states, and nothing finer is invented.
+function placeOf(f){
+  const p=(f&&f.properties)||{},g=(f&&f.geometry)||{},c=(g.coordinates)||[];
+  const lvl=PHOTON_COL[p.type]||PHOTON_COL[p.osm_value]||'locality';
+  if(!regSubstance(p.name))return null;
+  // A place is never its own parent. Photon files a municipality under `county` as well as
+  // naming it, so the region column must take the coarsest ancestor that is NOT this place —
+  // otherwise Pitalito files itself as the region of Pitalito and the ladder collapses.
+  const above=(...vs)=>vs.find(v=>regSubstance(v)&&normPlace(v)!==normPlace(p.name))||'';
+  const o={ref:(p.osm_type&&p.osm_id!=null)?'osm:'+p.osm_type+p.osm_id:'',name:p.name,level:lvl,src:'photon',
+    country:p.country||'',state:p.state||'',region:above(p.county,p.state),locality:above(p.city,p.district),district:p.district||'',
+    lat:c[1]!=null?Number(c[1]):null,lon:c[0]!=null?Number(c[0]):null};
+  if(lvl==='country')o.country=o.name;
+  else if(lvl==='region'){o.region=o.name;o.locality=''}   // a region names nothing below it
+  else o.locality=o.name;
+  // the ladder, said out loud on the row — a keeper picking Gedeb should see which Gedeb
+  o.chain=[o.locality,o.region!==o.locality?o.region:'',o.state&&o.state!==o.region?o.state:'',o.country]
+    .filter(regSubstance).filter((v,i,a)=>a.indexOf(v)===i);
+  o.label=o.chain.join(' · ');
+  return o;
+}
+// The same shape out of a Nominatim answer — the fallback, so a silent Photon costs the rail
+// nothing but a slower first result. Nominatim names its levels in `address`, not a `type`.
+function placeOfNom(r){
+  const a=(r&&r.address)||{};
+  const loc=a.city||a.town||a.village||a.municipality||a.hamlet||'';
+  // the same refusal as above: a town is not its own region, however the gazetteer files it
+  const reg=[a.county,a.state_district,a.state,a.region].find(v=>regSubstance(v)&&(!loc||normPlace(v)!==normPlace(loc)))||'';
+  const lvl=loc?'locality':reg?'region':a.country?'country':'';
+  if(!lvl)return null;
+  const o={ref:r.osm_type&&r.osm_id!=null?'osm:'+String(r.osm_type)[0].toUpperCase()+r.osm_id:'',
+    name:loc||reg||a.country||'',level:lvl,src:'nominatim',
+    country:a.country||'',state:a.state||'',region:reg,locality:loc,district:a.suburb||'',
+    lat:r.lat!=null?Number(r.lat):null,lon:r.lon!=null?Number(r.lon):null};
+  o.chain=[o.locality,o.region!==o.locality?o.region:'',o.state&&o.state!==o.region?o.state:'',o.country]
+    .filter(regSubstance).filter((v,i,a2)=>a2.indexOf(v)===i);
+  o.label=o.chain.join(' · ');
+  return o;
+}
+/* The one place lookup, for a WORD rather than an address. `ctx` is what the keeper has already
+ * chosen on the same screen — the country, the region — appended to the query so "Gedeb" in an
+ * Ethiopian record is not answered with a Gedeb in another hemisphere. Narrowing the QUERY, never
+ * filtering the answers: the rail must still be able to offer a place the record has never been to. */
+async function placeSearch(q,ctx){
+  q=String(q||'').trim(); if(q.length<2)return [];
+  ctx=ctx||{};
+  const tail=[ctx.region,ctx.country].filter(regSubstance).filter(v=>normPlace(v)!==normPlace(q));
+  const full=[q,...tail].join(', ');
+  try{
+    const r=await fetch(PHOTON+'?q='+encodeURIComponent(full)+'&limit=6&lang=en'+PHOTON_LAYERS);
+    if(r.ok){const j=await r.json(),fs=(j&&j.features)||[];
+      const out=fs.map(placeOf).filter(Boolean);
+      if(out.length)return placeDedupe(out);}
+  }catch(e){}
+  try{return placeDedupe((await geoSearch(full)).map(placeOfNom).filter(Boolean))}catch(e){}
+  return [];
+}
+// two answers naming one place, once — the rail's own small fold, so a list of six is six places
+const placeDedupe=list=>{const seen=new Set();return list.filter(o=>{const k=o.ref||o.label;
+  if(seen.has(k))return false;seen.add(k);return true})};
+
+/* the rail on screen. Debounced, because a keystroke is not a question — and long enough that a
+ * keeper typing a word asks once, not eight times. A pick is remembered per surface until the
+ * keeper edits away from it; placeHeld is the check at save. */
+let _placeHits={},_placePick={},_placeT={},_placeQ={};
+const PLACE_MIN=3,PLACE_WAIT=450;
+function placeRail(prefix,field){
+  const box=document.getElementById('mapbox_'+prefix+field),key=prefix+field;if(!box)return;
+  const q=(val(key)||'').trim();
+  if(q.length<PLACE_MIN){box.innerHTML='';_placeQ[key]='';return}
+  if(_placeQ[key]===q)return;                                // already asked, already drawn
+  if(!navigator.onLine){box.innerHTML='';return}             // offline the rail is simply absent — never an error the keeper cannot act on
+  clearTimeout(_placeT[key]);                                // one timer PER FIELD — repaintSug walks them all, and a shared timer let the last field cancel the one being typed in
+  _placeT[key]=setTimeout(async()=>{
+    _placeQ[key]=q;
+    const ctx={country:field==='country'?'':val(prefix+'country'),region:field==='region'?'':val(prefix+'region')};
+    const hits=await placeSearch(q,ctx);
+    const b=document.getElementById('mapbox_'+prefix+field);
+    if(!b||(val(prefix+field)||'').trim()!==q)return;         // the keeper moved on — never paint a stale answer
+    _placeHits[prefix+field]=hits;
+    b.innerHTML=hits.length?`<span class="sug place"><span class="lb">on the map</span>
+      ${hits.map((o,i)=>`<button class="s" type="button" onclick="placePick(${jsq(prefix)},${jsq(field)},${i})">${esc(o.name)}<span class="ch">${esc(o.chain.slice(1).join(' · '))}</span></button>`).join('')}</span>`:'';
+  },PLACE_WAIT);
+}
+/* The pick. It fills every column the map's own ladder states and leaves them all editable — the
+ * whole point is that the keeper stops having to decide which box Yirgacheffe goes in, not that
+ * the map overrules them. A column the keeper has already filled is left alone; the chain is
+ * remembered whole so the green can keep it. */
+function placePick(prefix,field,i){
+  const o=(_placeHits[prefix+field]||[])[i];if(!o)return;
+  const typed=(val(prefix+field)||'').trim();
+  const set=(k,v,force)=>{const el=document.getElementById(prefix+k);
+    if(el&&regSubstance(v)&&(force||!regSubstance(el.value)))el.value=v};
+  set('country',o.country,1);
+  set('region',o.region,o.level!=='locality');
+  set('locality',o.locality,o.level==='locality');
+  _placePick[prefix]=Object.assign({},o,{typed});
+  ['country','region','locality'].forEach(f=>{const b=document.getElementById('mapbox_'+prefix+f);if(b)b.innerHTML='';_placeQ[prefix+f]=''});
+  const note=document.getElementById('mapbox_'+prefix+field);
+  if(note)note.innerHTML=`<span class="sug place"><span class="lb">placed</span><span class="pl">${esc(o.chain.join(' · '))}</span></span>`;
+  repaintSug();
+}
+/* The pick, at save. A chain is only carried if the fields STILL say what the map said — a
+ * keeper who picked Gedeb and then typed over the region has corrected the map, and a chain
+ * that no longer matches the record is a fact about a different place. Silent, not an error:
+ * the record saves either way, it simply stops claiming a confirmation it no longer has. */
+function placeHeld(prefix,o){
+  const p=_placePick[prefix];if(!p)return null;
+  const same=k=>!regSubstance(p[k])||placeEq(o['origin'+k[0].toUpperCase()+k.slice(1)],p[k]);
+  return (same('country')&&same('region')&&same('locality'))?p:null;
+}
 // One keyless Nominatim read, shared by the café geocode and the atlas fill. Returns [] offline or on a
 // silent endpoint; every caller degrades to typed text or a list, never a blank pretending to be a pin.
 async function geoSearch(q){
@@ -9132,7 +9498,9 @@ async function geoOne(q,ctx){
 // name, so no farm-precise pin is ever invented (LOT_IDENTITY). Offline (or a silent endpoint) it does
 // nothing and the node lists; a located node is never re-looked-up or overwritten.
 async function atlasGeoFill(rec){
-  if(readOnly()||!rec||!navigator.onLine)return;
+  if(readOnly()||!rec)return;
+  const held=rec.lotRef&&(catNode('lots',lotFwd(rec.lotRef))||{}).place;   // a chain confirmed earlier needs no network to spend
+  if(!navigator.onLine&&!(held&&held.lat!=null))return;
   let hit=false;
   const rk=regSubstance(rec.roaster)&&catNorm(rec.roaster),rn=rk&&catByKey('roasters',rk),city=(rec.roasterCity||'').trim();
   if(rn&&city&&rn.lat==null){const pt=await geoOne(city);if(pt){catUpsert('roasters',rk,{lat:pt.lat,lon:pt.lon,geoGrain:'city'},activeName());hit=true}}
@@ -9142,16 +9510,23 @@ async function atlasGeoFill(rec){
   // centroid is one step finer than a region's and remains an honest, coarse, findable place.
   const place=[o.originLocality,o.originRegion,o.originCountry].filter(regSubstance).join(', ');
   const grain=regSubstance(o.originLocality)?'locality':regSubstance(o.originRegion)?'region':'country';
+  // The chain the keeper confirmed on the map rail already carries a point at exactly this grain,
+  // signed and dated. Prefer it: it is the same lookup, already made and already agreed to, so the
+  // fill costs no second request and lands on the place somebody actually pointed at rather than
+  // the first answer to a re-typed string (GEOCODE.md §4).
+  const conf=(()=>{const n=rec.lotRef&&catNode('lots',lotFwd(rec.lotRef)),p=n&&n.place;
+    return (p&&p.lat!=null&&p.lon!=null&&RUNG[p.level]<=RUNG[grain])?{lat:p.lat,lon:p.lon}:null})();
+  const point=async()=>conf||await geoOne(place);
   if(regSubstance(o.producer)&&place){
     const pk=catNorm(o.producer)+'|'+catNorm(o.originCountry),pn=catByKey('producers',pk);
-    if(pn&&pn.lat==null){const pt=await geoOne(place); // locality/region/country only — coarse, never the station name
+    if(pn&&pn.lat==null){const pt=await point(); // locality/region/country only — coarse, never the station name
       if(pt){catUpsert('producers',pk,{lat:pt.lat,lon:pt.lon,geoGrain:grain},activeName());hit=true}}
   }
   // the station gets the same coarse pin, looked up the same way and for the same reason:
   // a green whose record names a washing station and no farm was unplaceable until now
   if(regSubstance(o.station)&&place){
     const sk=catNorm(o.station)+'|'+catNorm(o.originCountry),sn=catByKey('processors',sk);
-    if(sn&&sn.lat==null){const pt=await geoOne(place); // the TOWN or the region, never the station's own name
+    if(sn&&sn.lat==null){const pt=await point(); // the TOWN or the region, never the station's own name
       if(pt){catUpsert('processors',sk,{lat:pt.lat,lon:pt.lon,geoGrain:grain},activeName());hit=true}}
   }
   if(hit&&curateOn)render();
@@ -10370,6 +10745,7 @@ function mergeCatalog(loc,rem){
     if(l.sightings||r.sightings)w.sightings=mergeSightings(l.sightings||[],r.sightings||[]);
     if(l.hardIds||r.hardIds)w.hardIds=mergeHardIds(l.hardIds||[],r.hardIds||[]); // the identity set unions — a bind is never lost to the winner
     if(l.altitudeAlt||r.altitudeAlt)w.altitudeAlt=mergeById(l.altitudeAlt||[],r.altitudeAlt||[]); // a divergence recorded on one device is not lost to the other's copy — the seam is the point
+    if(l.placeAlt||r.placeAlt)w.placeAlt=mergeById(l.placeAlt||[],r.placeAlt||[]);               // the same seam, one column over: two devices placing one green differently keep both readings
     // the actor edges union too — bare-id arrays a newer edit would otherwise silently drop:
     // a grower ref appended on one device must survive the other device's later save
     if(l.producerRefs||r.producerRefs)w.producerRefs=[...new Set([...(l.producerRefs||[]),...(r.producerRefs||[])])];
@@ -10393,6 +10769,8 @@ function mergeCatalog(loc,rem){
     if(hg.length)w.hardIds=hg;
     const ag=mergeById(...g.map(e=>e.altitudeAlt||[]));
     if(ag.length)w.altitudeAlt=ag;
+    const plg=mergeById(...g.map(e=>e.placeAlt||[]));
+    if(plg.length)w.placeAlt=plg;
     const pg=[...new Set(g.flatMap(e=>e.producerRefs||[]))]; // the collapse keeps every actor edge its members carried
     if(pg.length)w.producerRefs=pg;
     const xg=[...new Set(g.flatMap(e=>e.processorRefs||[]))];
