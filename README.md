@@ -84,11 +84,22 @@ locality — Pitalito under Huila, Dipilto under Nueva Segovia — one step fine
 than the region, with its own rung on the grain ladder (a named mill still
 outranks it: naming the station proves at least the town it stands in), its own
 page, and its own place in the crumb: country › region › town. And a second
-actor field, *Grower / co-op*, keeps the other name a bag prints — "Finca
+actor field, *Grower*, keeps the other name a bag prints — "Finca
 Gascon — Felipe Contreras" no longer makes you choose. The farm stays the head;
 the person, family or association behind it gets its own page and its own edge
 onto the green. A grower buys no rung, and a name the record cannot classify
 still buys nothing.
+
+**A farm is a place. A grower is a hand. A station is neither.** Three actors
+stand between the seed and the sack, and the pages keep them apart: a green
+states its *Farm*, its *Grower* and its *Station* on separate lines, a farm's
+page reads the hands that worked it, a grower's page reads the land they grew
+on, and a washing station's page keeps naming its deliveries as deliveries —
+what leaves a mill is as many lots as arrived, never one blurred producer. The
+road's *Grown* mark names the person where the record holds one, and counts one
+kind of actor at a time: a farm and the person who works it are one origin told
+twice, not two hands. An actor the record has a name for but nothing that says
+which of the three it is stays a *producer*, and says so.
 
 **One page, every scope.** A country, a region, a locality, a grower, a green,
 a roaster, a bar, a city, a Setup, a process, a variety — every one of them is
@@ -103,6 +114,26 @@ has no zoom — the walk is the zoom**: two frames on every page, where it grew
 and where it is carried, drawn from the record itself. A mark is never finer
 than the grain it rests on, what cannot be placed lists rather than lies, and
 one bar is never dressed up as a scene.
+
+**Every section is a card.** A page that answers nine questions is a long
+scroll, so each section folds: tap a heading and it tucks away, tap it again
+and it opens. A closed card keeps its heading and its count on the face, so the
+page reads as a table of contents rather than a row of blank drawers, and the
+corrections at the foot are a few rows down instead of a page away. Cards
+remember by name, not by page — close *Where it sits* once and it stays closed
+on the next green and the one after, so you set the posture you want to read in
+and every page is the short page you asked for. *Open all* is one tap, and it
+persists too. What never folds is the reading itself: the title, the road and
+the resolution readout are always open, because a page that hides its answer
+behind a tap has stopped being a record.
+
+**And the page rests on the place it is about.** The same drawing the map makes
+is laid under the whole screen with its ink withheld — the streets of the city
+where a page is about a bar, a hand or a scene, the country's own outline and
+its highlands where it is about a green, a grower or a region. The cards ride
+over it; close them and the ground is simply there. Nothing on it can be
+tapped, counted or ranked: it is paper, and it is there to put a reading
+somewhere. *Hide the ground* if you would rather read on plain stock.
 
 See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the product thesis and restraint standard.
 
