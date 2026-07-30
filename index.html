@@ -946,7 +946,7 @@ function isAdmin(){
   if(typeof SYNC!=='undefined'&&SYNC&&syncedHere()&&SYNC.founder!==undefined)return !!SYNC.founder;
   return !!(PEN&&PEN.userId===USERS.activeId);
 }
-function penGuard(){if(guard())return true;if(!isAdmin()){toast('The shared record is read-only for now — the founder holds the pen');return true}return false}
+function penGuard(){if(guard())return true;if(!isAdmin()){toast('The shared record is read-only here — take up the pen under the desk to write it');return true}return false}
 function takePen(){if(guard())return;PEN={userId:USERS.activeId,at:new Date().toISOString()};savePen();closeSheet();render();toast('The pen is yours on this device')}
 function setDownPen(){PEN=null;savePen();closeSheet();render();toast('The pen is set down')}
 /* ---- the reader (docs/READER.md). The person who keeps nothing: they open
@@ -1137,10 +1137,10 @@ CAT_KINDS.forEach(k=>{CAT[k]=loadDoc(k)});
  * with no conflict and no duplicate green. With no published copy on the device
  * this returns the own array itself (not a copy), so every existing mutation
  * path keeps its object identity and nothing about a keeper's app changes. ---- */
-let _catL=null;
-const catBust=()=>{_catL=null};
+let _catL=null,_catLive=null;
+const catBust=()=>{_catL=null;_catLive=null};
 const catLayer=(own,pub)=>{const w={...pub};Object.keys(own).forEach(k=>{if(regSubstance(own[k]))w[k]=own[k]});w._pubUnder=1;return w};
-function catAll(kind){
+function catRaw(kind){
   const own=(CAT[kind]&&CAT[kind].entries)||[];
   const ps=pubCat(kind);
   if(!ps.length)return own;                       // the ordinary keeper — nothing underneath
@@ -1183,15 +1183,48 @@ const lotOwn=lot=>catOwn('lots',lot);
 // real identity is the resolver, a later pass). Sparse by default, the café's law
 // one kind up: a write fills blanks, never erases; {full:true} overwrites; {at}
 // backdates provenance so the earliest record to name a node holds it.
-const catByKey=(kind,key)=>CAT[kind]?catAll(kind).find(e=>e&&e._key===String(key))||null:null;
-const catNode=(kind,id)=>id&&CAT[kind]?catAll(kind).find(e=>e&&e.id===id)||null:null;
-// A lot merged into another is a TOMBSTONE: it carries lineage.mergedInto (the keep it became) and is
-// struck-not-deleted — kept for provenance and reversal, never browsed, never matched. A role:'batch' node
-// is the synthetic processing-batch parent (RESOLVER §5): it groups grade-split siblings, never shows as a
-// browsable green, and matches only its own bare-outturn token. lotLive is a real standing green — the only
-// thing the atlas browses, the scorer proposes over, or a fresh bind lands on.
-const lotTomb=l=>(l&&l.lineage&&l.lineage.mergedInto)||null;
-const lotLive=l=>!!l&&!l.role&&!lotTomb(l);
+/* ---- the fold. Two hands writing one name differently — TARRAZÚ, Tarrazú, tarrazu —
+ * were minting two nodes, because the collapse key folded case and nothing else: an
+ * accent, a comma or a stray dash forked a green from itself. keyFold strips what is
+ * presentation and keeps what is a fact — case, diacritics and punctuation go, the
+ * key's segment structure stays. It is deliberately NOT genFold, the scorer's fuzzy
+ * fold: that one collapses doubled letters, which is a licence to guess, and an
+ * identity key never guesses. The key itself is never rewritten, so an old node keeps
+ * its ink and every new spelling simply lands on it. ---- */
+const keyFold=k=>String(k??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
+  .split('|').map(s=>s.replace(/[^a-z0-9:@]+/g,' ').replace(/\s+/g,' ').trim()).join('|');
+function catByKey(kind,key){
+  if(!CAT[kind])return null;
+  const all=catAll(kind),k=String(key);
+  const exact=all.find(e=>e&&e._key===k);if(exact)return exact;
+  const f=keyFold(k);
+  return f?all.find(e=>e&&e._key&&keyFold(e._key)===f)||null:null;
+}
+// ids resolve over the RAW read: a tombstone and a node set down must both still be
+// reachable by ref, or lotFwd could not follow a merge and nothing could be stood back up.
+const catNode=(kind,id)=>id&&CAT[kind]?catRaw(kind).find(e=>e&&e.id===id)||null:null;
+/* A node merged into another is a TOMBSTONE: it carries lineage.mergedInto (the node it became) and is
+ * struck-not-deleted — kept for provenance and reversal, never browsed, never matched. A node SET DOWN is
+ * the strike's grammar one kind up (CORRECTIONS.md): an artifact the record should never have carried —
+ * a name typed twice, a roast entered twice, a hand that turned out not to exist. Both are additions and
+ * both are undoable; liveness derives, monotone and order-free, exactly as a struck record's does.
+ * catAll hands back the live nodes and only those, so a set-down node cannot leak into a count, a plate,
+ * a map or a published copy because some read path forgot a filter — the same law the strike keeps. */
+const nodeTomb=e=>(e&&e.lineage&&e.lineage.mergedInto)||null;
+const nodeDown=e=>String((e&&e.setDown&&e.setDown.at)||'')>String((e&&e.setDown&&e.setDown.restoredAt)||'');
+const nodeLive=e=>!!e&&!nodeTomb(e)&&!nodeDown(e);
+function catAll(kind){
+  const raw=catRaw(kind);
+  _catLive=_catLive||{};
+  if(_catLive[kind])return _catLive[kind];
+  const out=raw.filter(nodeLive);
+  return _catLive[kind]=(out.length===raw.length?raw:out);   // nothing set down or merged → the raw array itself, object identity intact
+}
+// a role:'batch' node is the synthetic processing-batch parent (RESOLVER §5): it groups grade-split
+// siblings, never shows as a browsable green, and matches only its own bare-outturn token. lotLive is a
+// real standing green — the only thing the atlas browses, the scorer proposes over, or a fresh bind lands on.
+const lotTomb=nodeTomb;
+const lotLive=l=>!!l&&!l.role&&nodeLive(l);
 // Follow a merge chain to the standing keep (cycle-guarded): a stale ref onto an absorbed lot reads through
 // to the green it became, so a merge survives boot re-derivation and a device that hasn't re-pointed yet.
 function lotFwd(id){let n=catNode('lots',id),seen={},steps=0;
@@ -1213,6 +1246,112 @@ function catUpsert(kind,key,fields,who,opts){
     if(opts.full ? ((regSubstance(v)||regSubstance(e[k]))&&e[k]!==v) : (regSubstance(v)&&!regSubstance(e[k]))){e[k]=v==null?null:v;changed=true}});
   if(changed){e.updatedAt=now;if(who)e.by=who;CAT[kind].dirty=true;saveDoc(kind)}
   return e;
+}
+/* ---- correcting the atlas. Until now the spine was the one part of the record with no
+ * way back out: a green minted from a typo, a hand that never existed, one roast entered
+ * twice — each stood forever, uneditable and unstrikeable, because every write path only
+ * ever added. These are the three verbs the ledger already had (CORRECTIONS.md), pointed
+ * at a node: SET DOWN (it leaves the atlas, the record keeps it whole), STAND BACK UP, and
+ * JOIN (two nodes that are one hand). All three are additions, so an id-union merge carries
+ * them; none of them deletes, so all three are undoable. ---- */
+// where a node of each kind is pointed at from — read by the join, so an absorbed node
+// leaves no ref behind. Catalog documents first, then the ledger's own collections.
+const CAT_REFS={
+  producers:[['lots','producerRefs']],
+  processors:[['lots','processorRefs']],
+  roasters:[['roasts','roasterRef'],['pours','roasterRef'],['cups','roasterRef'],['bags','roasterRef'],['authored','roasterRef']],
+  roasts:[['brews','roastRef'],['pours','roastRef'],['cups','roastRef']],
+  gear:[['setups','grinderRef'],['setups','brewerRef']],
+};
+function catRepointRefs(kind,fromId,toId){
+  (CAT_REFS[kind]||[]).forEach(([src,field])=>{
+    const list=CAT_KINDS.includes(src)?((CAT[src]&&CAT[src].entries)||[]):(D[src]||[]);
+    list.forEach(r=>{if(!r)return;
+      if(Array.isArray(r[field])){if(r[field].includes(fromId))r[field]=[...new Set(r[field].map(x=>x===fromId?toId:x))]}
+      else if(r[field]===fromId)r[field]=toId});
+    if(CAT_KINDS.includes(src)){CAT[src].dirty=true;saveDoc(src)}});
+}
+// Set a node down. Additive and reversible, exactly like a strike: the date is the record,
+// liveness is `at > restoredAt`, and both sides converge under an id-union merge whatever
+// order they arrive in. Nothing is spliced out of the document — catAll's filter is what
+// takes it off the atlas, so there is one place the subtraction happens and no read path
+// has to remember it.
+function catSetDown(kind,id,why){
+  const w=catWritable(kind,id)||catNode(kind,id);if(!w||!CAT[kind]||!CAT[kind].entries.includes(w))return false;
+  const at=afterIso(new Date().toISOString(),w.setDown&&w.setDown.restoredAt); // a re-strike must outrank the restore it undoes
+  w.setDown={at,by:activeName(),why:why||'',restoredAt:(w.setDown&&w.setDown.restoredAt)||''};
+  w.updatedAt=at;w.by=activeName();CAT[kind].dirty=true;saveDoc(kind);save();return true;
+}
+function catStandUp(kind,id){
+  const w=catWritable(kind,id);if(!w||!w.setDown)return false;
+  w.setDown.restoredAt=afterIso(new Date().toISOString(),w.setDown.at); // nudged past the strike so a tie can never form
+  w.updatedAt=new Date().toISOString();w.by=activeName();CAT[kind].dirty=true;saveDoc(kind);save();return true;
+}
+// every node the keeper has set down, newest first — what the struck room gathers
+function catSetDownList(){
+  const out=[];
+  CAT_KINDS.forEach(kind=>catRaw(kind).forEach(e=>{if(e&&nodeDown(e))out.push({kind,node:e})}));
+  return out.sort((a,b)=>String(b.node.setDown.at).localeCompare(String(a.node.setDown.at)));
+}
+/* Join two nodes of one kind. The green has had this since the resolver's §5 (mergeLots, which
+ * also re-keys, re-binds and records the join as a sighting); this is the same act for the hands
+ * and the places around it, where a fold twin or a plain misspelling used to be permanent. Blanks
+ * on the keep fill from the absorbed node — the sparse law, so joining never loses a fact — and
+ * the absorbed node becomes a tombstone carrying the boundary, so the join can be undone. */
+function catJoin(kind,keepId,absorbId,who){
+  if(kind==='lots')return mergeLots(keepId,absorbId,who,'joined by hand');
+  const keep=catWritable(kind,keepId),absorb=catWritable(kind,absorbId);
+  if(!keep||!absorb||keep.id===absorb.id)return {ok:false,reason:'Nothing to join there.'};
+  if(nodeTomb(keep)||nodeTomb(absorb))return {ok:false,reason:'One of these has already been joined into another.'};
+  who=who||activeName();const at=new Date().toISOString();
+  Object.keys(absorb).forEach(k=>{if(/^(id|_key|kind|lineage|setDown|sightings|createdAt|updatedAt|by|firstBy|firstAt)$/.test(k))return;
+    if(regSubstance(absorb[k])&&!regSubstance(keep[k]))keep[k]=absorb[k]});          // blanks-only — a join never erases
+  if(absorb.firstAt&&(!keep.firstAt||absorb.firstAt<keep.firstAt)){keep.firstAt=absorb.firstAt;keep.firstBy=absorb.firstBy||keep.firstBy}
+  catRepointRefs(kind,absorbId,keepId);
+  keep.lineage=keep.lineage||{};keep.lineage.mergedFrom=[...new Set([...(keep.lineage.mergedFrom||[]),absorbId])];
+  absorb.lineage=absorb.lineage||{};absorb.lineage.mergedInto=keepId;
+  absorb._key='merged:'+absorbId;   // re-keyed so it can never collapse with a twin another device seeded
+  keep.sightings=keep.sightings||[];
+  keep.sightings.push({id:uid(),by:who,at,bind:{ref:absorbId,kind:catSingular[kind]},rung:'confirmed',via:'merge',evidence:{name:absorb.name||''}});
+  keep.updatedAt=absorb.updatedAt=at;keep.by=absorb.by=who;CAT[kind].dirty=true;saveDoc(kind);save();
+  return {ok:true,keep};
+}
+function catJoinUndo(kind,keepId,absorbId,who){
+  if(kind==='lots')return lotMergeUndo(keepId,absorbId,who);
+  const keep=catWritable(kind,keepId),absorb=catWritable(kind,absorbId);
+  if(!keep||!absorb||nodeTomb(absorb)!==keepId)return {ok:false,reason:'Nothing to part there.'};
+  const at=new Date().toISOString();
+  delete absorb.lineage.mergedInto;absorb._key='joined:'+absorbId;   // a singleton key — it never re-collapses on its own
+  keep.lineage.mergedFrom=(keep.lineage.mergedFrom||[]).filter(x=>x!==absorbId);
+  (keep.sightings||[]).forEach(s=>{if(s&&s.via==='merge'&&s.bind&&s.bind.ref===absorbId&&sightStanding(s))s.supersededAt=at});
+  keep.updatedAt=absorb.updatedAt=at;keep.by=absorb.by=who||activeName();CAT[kind].dirty=true;saveDoc(kind);save();
+  return {ok:true};
+}
+/* The twins already on the atlas, joined once. The fold is new; the record is not — a keeper who
+ * typed one name two ways has been carrying two nodes for one hand since the day they typed it.
+ * Runs once per device (carta.fold.v1): each kind grouped by the folded key, the earliest-named
+ * node kept, the rest joined into it. Greens go through mergeLots, which re-points every roast,
+ * pour and record and leaves the join undoable; the other kinds re-point their own edges. It never
+ * joins across a fold boundary, so it can only ever collapse two spellings of one string — the one
+ * merge that needs no scorer to defend it. */
+const FOLD_KEY='carta.fold.v1';
+function catFoldSweep(){
+  if(readOnly()||reader())return 0;
+  let n=0;
+  CAT_KINDS.forEach(kind=>{
+    const groups={};
+    ((CAT[kind]&&CAT[kind].entries)||[]).forEach(e=>{
+      if(!e||!e._key||!nodeLive(e)||e.role)return;
+      const f=keyFold(e._key);if(!f||/^(merged|joined):/.test(f))return;
+      (groups[f]=groups[f]||[]).push(e)});
+    Object.keys(groups).forEach(f=>{
+      const g=groups[f];if(g.length<2)return;
+      g.sort((a,b)=>String(a.firstAt||a.createdAt||'').localeCompare(String(b.firstAt||b.createdAt||'')));
+      const keep=g[0];
+      g.slice(1).forEach(x=>{const r=catJoin(kind,keep.id,x.id,x.by||keep.by||'');if(r&&r.ok)n++})});
+  });
+  try{localStorage.setItem(FOLD_KEY,'1')}catch(e){}
+  return n;
 }
 /* A sighting is set down the way a record is (docs/CORRECTIONS.md): the strike
  * is an addition, and so is the undo, because an id-union merge only propagates
@@ -1515,6 +1654,25 @@ PLACE_ALIASES.forEach(([canon,vars,tier])=>{const c=genFold(canon);_placeTier[c]
 // normPlace(s) → the canonical folded token: the alias table first, the generic fold otherwise. It never
 // invents a fold it isn't sure of — an unknown token folds only presentation noise and stands as itself.
 function normPlace(s){const g=genFold(s);return _placeCanon[g]||g}
+/* One name, however it was typed. Two greens naming TARRAZÚ and Tarrazú are one region, and
+ * scopeGreens has always known it — it compares through normPlace. What did not know it were the
+ * lists that ENUMERATE a scope's regions, towns, varieties and countries: those gathered raw
+ * strings, so one region drew two rows, both opening the same page, and the atlas looked as though
+ * it held two. foldNames folds the list and picks the form to PRINT — the spelling the record used
+ * most, accents kept over accents lost, and never the shout of a name copied out of a bag's
+ * all-caps header. It picks a form to print; it never writes one. The greens keep the words their
+ * own records carried, because those words are what somebody actually wrote down. */
+const nameScore=s=>{const t=String(s);
+  return (/[a-z]/.test(t)?4:0)+(/[^\u0000-\u007f]/.test(t)?2:0)+(/[A-Z]/.test(t)?1:0)};
+function foldNames(list){
+  const by=new Map();
+  (list||[]).filter(v=>v!=null&&v!=='').forEach(v=>{const k=normPlace(String(v));if(!k)return;
+    const g=by.get(k)||{n:0,c:{}};g.n++;g.c[String(v)]=(g.c[String(v)]||0)+1;by.set(k,g)});
+  return [...by.values()].sort((a,b)=>b.n-a.n)
+    .map(g=>Object.keys(g.c).sort((a,b)=>g.c[b]-g.c[a]||nameScore(b)-nameScore(a)||a.length-b.length||a.localeCompare(b))[0]);
+}
+// the one form of a name a scope should print — foldNames' most-carried group, modeOf that folds
+const canonName=list=>foldNames(list)[0]||'';
 // reconcileTier(fp) → the naming tier the head-string sits at (farm|producer|station|region), or null when
 // genuinely ambiguous — TAG only, the head-string itself is never rewritten (decision #4). Reads the head
 // against the structured columns already present and the table's tier tags.
@@ -2704,10 +2862,16 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.15.0';
+const APP_VERSION='6.16.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.16.0',date:'July 2026',title:'The atlas is correctable — and one name spelled two ways is one name.',items:[
+    'The fold. A collapse key folded case and nothing else, so TARRAZÚ, Tarrazú and tarrazu minted three nodes for one region, and an accent or a stray comma forked a green from itself. The resolver now folds case, accents and punctuation before it decides — and folds nothing more, because collapsing further is a guess and an identity key never guesses. The twins already standing on your atlas are joined once, undoably, the earliest naming keeping the node.',
+    'Every page answers the three verbs. A green, a grower, a station, a roaster and a roast can each be amended, joined to the node it is really one with, or set down. Until now the spine was the one part of the record with no way back out: a green minted from a typo, one roast entered twice, a hand that turned out to be the mill stood forever. All three verbs are additions — dated, signed, undoable — and what you set down waits under the desk beside everything else you have.',
+    'A region has no entry to amend, and the page says so. A region, a town, a country, a process, a variety are readings over the greens that name them — never stored, never a polygon. Their pages now name the greens to correct instead of offering an edit that would have to invent a record to write to.',
+    'Where the pen is, stated on the page. A surface whose corrections you cannot make now says the pen is elsewhere and points at the desk, rather than quietly drawing nothing.',
+  ]},
   {v:'6.15.0',date:'July 2026',title:'The farm and the hand behind it are two facts now.',items:[
     'A second actor field — Grower / co-op. A bag that reads “Finca Gascon — Felipe Contreras” used to make you choose which name to keep. The farm stays the head; the person, family or association behind it has its own field, its own page on the atlas, and its own edge onto the green — beside the farm’s, never over it.',
     'A grower buys no rung. A person is not a parcel and a co-op is not a mill, so the grain still reads only the head. The second name is a fact about hands, not about where the coffee grew — and it never enters the green’s identity, so nothing standing re-keys.',
@@ -3399,26 +3563,196 @@ function saveLotStanding(lotId){
 const findRec=id=>(D.bags||[]).find(b=>b&&b.id===id)||(D.cups||[]).find(c=>c&&c.id===id)||(D.authored||[]).find(a=>a&&a.id===id)||null;
 /* ---- §5 the merge/split affordances, on the lot page. Own+writable only; each shows its reason. A join
  * keeps the earliest-named green (stable identity) and absorbs the other; an undo restores the boundary. ---- */
-function lotJoin(aId,bId){
-  if(penGuard())return;
-  const a=catNode('lots',aId),b=catNode('lots',bId);if(!a||!b){toast('Gone.');return}
-  const keepFirst=String(a.firstAt||a.createdAt||'')<=String(b.firstAt||b.createdAt||'');
-  const keep=keepFirst?a:b,absorb=keepFirst?b:a;
-  const r=mergeLots(keep.id,absorb.id,activeName(),'joined by hand');closeSheet();
-  if(!r.ok){toast(r.reason||'Couldn’t join those.');return}
-  toast('Joined — one green now.');openLotPage(keep.id);
+/* ---- §6 the pen on a page. Every node the atlas draws now answers the three verbs the ledger
+ * already answered (CORRECTIONS.md): amend it, join it to the node it is really one with, set it
+ * down. Before this the spine was write-once — a green minted from a typo, one roast entered
+ * twice, a grower who turned out to be the mill stood forever, and the only page that offered
+ * anything was the green's, to the founder, folded twice down. The verbs are the same everywhere
+ * and so is their grammar: additive, dated, signed, undoable. ---- */
+const CAT_DOC={lot:'lots',producer:'producers',processor:'processors',roaster:'roasters',roast:'roasts',gear:'gear'};
+const nodeLabel=(doc,n)=>!n?'this':doc==='lots'?lotLabel(n):(n.name||n.model||n.offeringName||'unnamed');
+const nodeKindWord=doc=>({lots:'green',producers:'grower',processors:'station',roasters:'roaster',roasts:'roast',gear:'piece of gear'})[doc]||'entry';
+// The nodes this one could be joined to. A green goes through the resolver's own guard — a join must
+// still clear the scorer or share a printed code, so a string coincidence never unions two greens
+// (RESOLVER §5). For the hands and the places there is no fingerprint to score, so the test is the
+// fuzzy fold of the name and nothing else: it is offered, never taken, and the keeper decides.
+function nodeJoinCands(doc,id){
+  if(doc==='lots')return mergeCandidates(id).map(c=>({node:c.lot,why:c.fields&&c.fields.length?'reads like this on '+c.fields.join(' · '):'a shared printed code'}));
+  const n=catNode(doc,id);if(!n)return [];
+  const me=genFold(nodeLabel(doc,n));if(!me)return [];
+  return catAll(doc).filter(x=>x&&x.id!==id&&nodeLive(x)&&regSubstance(nodeLabel(doc,x)))
+    .map(x=>{const f=genFold(nodeLabel(doc,x));
+      return f===me?{node:x,why:'the same name, spelled differently'}
+        :(f.length>3&&me.length>3&&(f.indexOf(me)>=0||me.indexOf(f)>=0))?{node:x,why:'one name inside the other'}:null})
+    .filter(Boolean);
 }
-function openLotMerge(lotId){
-  const cands=mergeCandidates(lotId);if(!cands.length){toast('No other green reads as this one.');return}
-  openSheet(`<h3>Join to another green</h3>
-  <div class="muted small" style="margin:2px 2px 12px">Two greens you’ve learned are one. Every roast, pour and record on both follows onto the earliest-named green — nothing lost, and the join can be undone.</div>
-  ${cands.map(c=>`<button class="wc-item" onclick="lotJoin(${jsq(lotId)},${jsq(c.lot.id)})"><span class="tx"><span class="tt">${esc(lotLabel(c.lot))}</span><span class="dd">${c.fields&&c.fields.length?'reads like this on '+esc(c.fields.join(' · ')):'a shared printed code'}</span></span><span class="go">→</span></button>`).join('')}
+// the act row, folded on every node page. Read-only and the pen's guard both answer here rather
+// than at the tap, so a keeper is never offered a door that refuses them.
+function catActsHTML(doc,id){
+  const n=catNode(doc,id);if(!n)return '';
+  const down=nodeDown(n);
+  if(down)return `<div class="muted small" style="margin:0 2px 10px"><strong>Set down</strong> ${esc(fmtAgo(n.setDown.at))}${n.setDown.by?' by '+esc(n.setDown.by):''} — off the atlas, kept whole on the record.</div>
+  ${isAdmin()?`<button class="btn btn-quiet" onclick="nodeStandUp(${jsq(doc)},${jsq(id)})">Stand it back up</button>`:''}`;
+  if(!isAdmin())return `<div class="muted small" style="margin:0 2px 4px">Amending, joining and setting down are writes to the shared record, and the pen is elsewhere. Take it up under <button class="text-action" onclick="deskGo('pen')">the desk · the pen</button> and this page opens to correction.</div>`;
+  const cands=nodeJoinCands(doc,id);
+  const parted=((n.lineage&&n.lineage.mergedFrom)||[]).map(i=>catNode(doc,i)).filter(t=>t&&nodeTomb(t)===id);
+  return `<button class="btn btn-quiet" onclick="openNodeAmend(${jsq(doc)},${jsq(id)})">Amend this ${esc(nodeKindWord(doc))}</button>
+  ${cands.length?`<button class="btn btn-quiet" onclick="openNodeJoin(${jsq(doc)},${jsq(id)})">Join to another ${esc(nodeKindWord(doc))}…</button>
+  <div class="muted small" style="margin:2px 2px 10px">${cands.length} other${cands.length===1?'':'s'} read${cands.length===1?'s':''} like this one. Join and every record on both follows here — undoable.</div>`:''}
+  ${parted.map(t=>`<button class="btn btn-quiet" onclick="openNodePart(${jsq(doc)},${jsq(id)},${jsq(t.id)})">Part them again — restore ${esc(nodeLabel(doc,t))}</button>`).join('')}
+  <button class="btn btn-quiet" onclick="openNodeSetDown(${jsq(doc)},${jsq(id)})">Set this ${esc(nodeKindWord(doc))} down…</button>
+  ${doc==='lots'?roastActsHTML(id):''}`;
+}
+/* The roasts on a green, each its own node and until now each unreachable: a roast is listed by its
+ * roaster everywhere it appears, so one offering entered twice — the same bag pasted with and without
+ * its roast date — drew two rows and there was no page to correct either from. They are corrected
+ * here, on the green they are readings of, because that is the only surface that shows them together. */
+function roastActsHTML(lotId){
+  const rs=catAll('roasts').filter(r=>r&&r.lotRef&&lotFwd(r.lotRef)===lotFwd(lotId));
+  if(!rs.length)return '';
+  return `<h2>The roasts on this green</h2>
+  <div class="muted small" style="margin:0 2px 8px">One line per roaster's reading of it. Amend one, or set a double entry down — the green stays whole either way.</div>
+  ${rs.map(r=>`<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(roasterName(r.roasterRef))}${r.offeringName?' · '+esc(r.offeringName):''}</span><span class="dd">${esc([r.level,r.roastDate&&('roasted '+fmtMDY(r.roastDate))].filter(regSubstance).join(' · ')||'no level or date on file')}</span></span>
+    <span style="display:flex;gap:6px;flex:none"><button class="btn btn-quiet" style="width:auto;padding:4px 10px;margin:0" onclick="openNodeAmend('roasts',${jsq(r.id)})">Amend</button><button class="btn btn-quiet" style="width:auto;padding:4px 10px;margin:0" onclick="openNodeSetDown('roasts',${jsq(r.id)})">Set down</button></span></div>`).join('')}`;
+}
+/* Amend a node. A green reopens its origin columns in the same block the bag form and the door use,
+ * so there is one vocabulary and one place to fix a parse; the hands reopen the two or three facts
+ * they carry. An amend is a first-class write (the invariant): it writes THROUGH, blanks included,
+ * because a keeper correcting "Acvado" to "Acevedo" is not filling a blank — and it re-keys the
+ * green off the corrected origin, since a stale key would let the next bag fork a second one. If
+ * the corrected key is already another green's, the amend stops and offers the join instead: that
+ * is the resolver's answer, and it is not the amend's to guess at. */
+function openNodeAmend(doc,id){
+  if(penGuard())return;
+  const n=catNode(doc,id);if(!n){toast('Gone.');return}
+  if(doc==='lots'){
+    const o={country:n.country,region:n.region,locality:n.locality,producer:n.producer,grower:n.grower,variety:n.variety,
+      process:n.process,lot:n.lotName,harvest:(n.fingerprint&&n.fingerprint.harvest&&n.fingerprint.harvest.year)||'',altitude:altLabel(altOf(n))||''};
+    openSheet(`<h3>Amend this green</h3>
+    <div class="sub">The columns as the record holds them. Correct one and the green re-reads itself — its grain, its head, its key. Every record already bound to it stays bound.</div>
+    ${originFieldsHTML('na_',o,(n.hardIds||[]).filter(h=>!h.withdrawnAt))}
+    <button class="btn btn-primary" onclick="saveNodeAmend('lots',${jsq(id)})">Save the correction</button>
+    <button class="btn btn-quiet" onclick="closeSheet()">Cancel</button>`);
+    setTimeout(repaintSug,0);return;
+  }
+  const isP=doc==='producers'||doc==='processors';
+  if(doc==='roasts')return openSheet(`<h3>Amend this roast</h3>
+  <div class="sub">One roaster's reading of this green — the name it gave it, how far it took it, and when. The green underneath is untouched.</div>
+  <label class="f"><span class="l">Offering</span><input type="text" id="na_name" value="${esc(n.offeringName||'')}" placeholder="as printed on the bag"></label>
+  <div class="grid2">
+    <label class="f"><span class="l">Level <span class="opt">optional</span></span><input type="text" id="na_level" value="${esc(n.level||'')}" placeholder="Medium"></label>
+    <label class="f"><span class="l">Roast date <span class="opt">optional</span></span><input type="date" id="na_date" value="${esc(n.roastDate||'')}"></label>
+  </div>
+  <button class="btn btn-primary" onclick="saveNodeAmend('roasts',${jsq(id)})">Save the correction</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Cancel</button>`);
+  openSheet(`<h3>Amend this ${esc(nodeKindWord(doc))}</h3>
+  <div class="sub">The facts this node carries. Correcting a name here corrects it on every green that names it.</div>
+  <label class="f"><span class="l">Name</span><input type="text" id="na_name" value="${esc(n.name||n.model||'')}"></label>
+  ${isP?`<div class="grid2">
+    <label class="f"><span class="l">Region <span class="opt">optional</span></span><input type="text" id="na_region" value="${esc(n.region||'')}"></label>
+    <label class="f"><span class="l">Locality <span class="opt">optional</span></span><input type="text" id="na_locality" value="${esc(n.locality||'')}"></label>
+  </div>
+  <label class="f"><span class="l">Country <span class="opt">optional</span></span><input type="text" id="na_country" value="${esc(n.country||'')}"></label>`
+  :`<div class="grid2">
+    <label class="f"><span class="l">City <span class="opt">optional</span></span><input type="text" id="na_city" value="${esc(n.city||'')}"></label>
+    <label class="f"><span class="l">Country <span class="opt">optional</span></span><input type="text" id="na_country" value="${esc(n.country||'')}"></label>
+  </div>
+  <label class="f"><span class="l">Website <span class="opt">optional</span></span><input type="text" id="na_site" value="${esc(n.site||'')}" inputmode="url" autocapitalize="off" autocorrect="off"></label>`}
+  <button class="btn btn-primary" onclick="saveNodeAmend(${jsq(doc)},${jsq(id)})">Save the correction</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Cancel</button>`);
+}
+function saveNodeAmend(doc,id){
+  if(penGuard())return;
+  const w=catWritable(doc,id);if(!w){toast('Gone.');return}
+  const who=activeName(),at=new Date().toISOString();
+  if(doc==='lots'){
+    const o=readOriginFields('na_',(w.hardIds||[]).filter(h=>!h.withdrawnAt)); if(o===false)return;
+    if(![o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].some(regSubstance)){toast('A green needs at least one origin column to stand on');return}
+    const key=lotKeyOf(o,w.id),clash=catByKey('lots',key);
+    if(clash&&clash.id!==w.id){closeSheet();
+      toast('That correction reads as a green already on the atlas — join them instead');
+      openNodeJoin('lots',id);return}
+    // the origin columns and the derived fingerprint, and deliberately nothing else: hardIds,
+    // lineage and the batch ref are the node's accumulated identity, and an amend of the words
+    // is not a licence to drop a printed code or a join somebody made
+    const f=lotFields(o,null);delete f.hardIds;delete f.lineage;delete f.processingBatchRef;
+    catUpsert('lots',w._key,f,who,{full:true,at:w.firstAt||w.createdAt});   // written THROUGH — an amend corrects, it does not fill blanks
+    w._key=key;                                                            // re-keyed off the corrected origin, so the next bag lands here and does not fork
+    lotRederive(w,o);
+    if(regSubstance(o.producer)){const p=catStampProducer(o,who,at);if(p)lotAddProducerRef(w,p.id)}
+    if(regSubstance(o.grower)){const g=catStampGrower(o,who,at);if(g)lotAddProducerRef(w,g.id)}
+    if(o.altitudeM)lotSetAltitude(w,o.altitudeM,who,'keeper');
+    if((o.hardIds||[]).length)lotAddHardIds(w,o.hardIds,who,at);
+  }else if(doc==='roasts'){
+    const name=val('na_name');
+    if(!regSubstance(name)){toast('An offering needs a name — it is how the bag read');return}
+    catUpsert('roasts',w._key,{offeringName:name,level:val('na_level'),roastDate:val('na_date')},who,{full:true,at:w.firstAt||w.createdAt});
+    w._key=[w.roasterRef||'',w.lotRef||'',catNorm(name),val('na_date')||''].join('|');
+  }else{
+    const name=val('na_name');
+    if(!regSubstance(name)){toast('A name is what the node is — it cannot be blank');return}
+    const f={name,country:val('na_country')};
+    if(doc==='producers'||doc==='processors'){f.region=val('na_region');f.locality=val('na_locality')}
+    else{f.city=val('na_city');f.site=val('na_site')}
+    catUpsert(doc,w._key,f,who,{full:true,at:w.firstAt||w.createdAt});
+    if(doc==='roasters')w._key=catNorm(name);
+    else if(doc==='producers'||doc==='processors')w._key=catNorm(name)+'|'+catNorm(f.country);
+  }
+  w.sightings=w.sightings||[];
+  w.sightings.push({id:uid(),by:who,at,via:'amend',rung:'confirmed',evidence:{}});   // the correction is itself a record — signed, dated, strikeable
+  w.updatedAt=at;w.by=who;CAT[doc].dirty=true;saveDoc(doc);save();closeSheet();
+  toast('Corrected — the page reads it now');render();
+}
+/* Set a node down. The consequence is stated in full and in ink, never in red: a set-down node is
+ * off every count, plate, map and published copy, and one tap from coming back. Erasing it for good
+ * is the struck room's door, not this one. */
+function openNodeSetDown(doc,id){
+  if(penGuard())return;
+  const n=catNode(doc,id);if(!n){toast('Gone.');return}
+  const gs=doc==='lots'?[n]:scopeGreens(doc==='producers'?'producer':doc==='processors'?'processor':'roaster',id);
+  openSheet(`<h3>Set this ${esc(nodeKindWord(doc))} down?</h3>
+  <div class="sub">${esc(nodeLabel(doc,n))} leaves the atlas — off every count, every plate, every map, and out of a published copy at the next publish. The record keeps it whole, and it waits under the desk in <em>What you set down</em>, one tap from standing back up.</div>
+  ${doc==='lots'?`<div class="muted small" style="margin:0 2px 12px">Your bags, brews and cups are untouched: they keep their own pages, and if you stand the green back up they read against it again.</div>`
+  :gs.length?`<div class="muted small" style="margin:0 2px 12px">${nPl(gs.length,'green')} name${gs.length===1?'s':''} it. They stay on the atlas — they simply stop walking to this page.</div>`:''}
+  <button class="btn btn-primary" onclick="nodeSetDown(${jsq(doc)},${jsq(id)})">Set it down</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Leave it standing</button>`);
+}
+function nodeSetDown(doc,id){
+  if(penGuard())return;
+  if(!catSetDown(doc,id)){toast('Couldn’t set that down.');return}
+  closeSheet();
+  if(doc==='roasts')render();else pageBack();   // a roast is set down FROM the green's page — the page stays, one line lighter
+  toast('Set down — under the desk, in what you set down');
+}
+function nodeStandUp(doc,id){
+  if(penGuard())return;
+  if(!catStandUp(doc,id)){toast('Couldn’t stand that back up.');return}
+  closeSheet();render();toast('Standing again — back on the atlas');
+}
+function openNodeJoin(doc,id){
+  if(penGuard())return;
+  const cands=nodeJoinCands(doc,id);
+  if(!cands.length){toast('Nothing else reads as this one.');return}
+  openSheet(`<h3>Join to another ${esc(nodeKindWord(doc))}</h3>
+  <div class="sub">Two ${esc(nodeKindWord(doc))}s you have learned are one. Every record on both follows onto the one named first — nothing is lost, and the join can be parted again.</div>
+  ${cands.map(c=>`<button class="wc-item" onclick="nodeJoin(${jsq(doc)},${jsq(id)},${jsq(c.node.id)})"><span class="tx"><span class="tt">${esc(nodeLabel(doc,c.node))}</span><span class="dd">${esc(c.why)}</span></span><span class="go">→</span></button>`).join('')}
   <button class="btn btn-quiet" style="margin-top:8px" onclick="closeSheet()">Not now</button>`);
 }
-function openLotUndoMerge(lotId,absorbId){
-  const r=lotMergeUndo(lotId,absorbId,activeName());closeSheet();
-  if(!r.ok){toast(r.reason||'Couldn’t split those back.');return}
-  toast('Split back apart — both greens stand.');openLotPage(lotId);
+function nodeJoin(doc,aId,bId){
+  if(penGuard())return;
+  const a=catNode(doc,aId),b=catNode(doc,bId);if(!a||!b){toast('Gone.');return}
+  const keepFirst=String(a.firstAt||a.createdAt||'')<=String(b.firstAt||b.createdAt||'');
+  const keep=keepFirst?a:b,absorb=keepFirst?b:a;
+  const r=catJoin(doc,keep.id,absorb.id,activeName());closeSheet();
+  if(!r||!r.ok){toast((r&&r.reason)||'Couldn’t join those.');return}
+  toast(`Joined — one ${nodeKindWord(doc)} now.`);
+  if(doc==='lots')openLotPage(keep.id);else{pageView={kind:doc==='producers'?'producer':doc==='processors'?'processor':'roaster',id:keep.id};render()}
+}
+function openNodePart(doc,keepId,absorbId){
+  if(penGuard())return;
+  const r=catJoinUndo(doc,keepId,absorbId,activeName());closeSheet();
+  if(!r||!r.ok){toast((r&&r.reason)||'Couldn’t part those.');return}
+  toast('Parted — both stand again.');render();
 }
 // The processing-batch parent's page — never a browsable green, drawn honestly (RESOLVER §5): the outturn
 // it carries, its graded siblings (AA/AB/PB), and every bare-outturn record still on it, each offered the
@@ -3977,7 +4311,7 @@ function vCurate(){
   const chartLots=lotRows.map(x=>x.lot);
   const located=chartLots.length>0,view=located?(atlasView||'map'):'list';
   const sameGreenHTML=sameGreen.length?`<h2>The same green, in more than one hand</h2>
-  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The page nothing else shows — one washing station, more than one roaster’s reading of it. The Act II gate, standing on real authored data.</div>
+  <div class="muted small serif" style="font-style:italic;margin:0 2px 8px">The page nothing else shows — one washing station, more than one roaster’s reading of it.</div>
   ${sameGreen.map(lotRow).join('')}`:'';
   const toggle=located?`<div class="seg" style="max-width:220px;margin:0 0 12px">
     <button class="${view==='map'?'on':''}" onclick="atlasSetView('map')">Map</button>
@@ -3999,7 +4333,7 @@ function vCurate(){
   ${authoredExtra.map(ref=>`<button class="wc-item" onclick="openRoasterPage(${jsq(ref)})"><span class="tx"><span class="tt">${esc(roasterName(ref))}</span><span class="dd">walk its greens</span></span><span class="go">→</span></button>`).join('')}`:''}`:'';
   return `
   <button class="back" onclick="closeCurate()">← The atlas</button>
-  <div class="eyebrow">Act II · the chart</div>
+  <div class="eyebrow">The chart</div>
   <div style="font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-0.02em;color:var(--ink);line-height:1.05">${esc(CHART1.name)}</div>
   <div class="sub">${located?'scenes derive from the pins as they land — never a stored tag':'nothing located yet — the chart derives from the pins'}</div>
   <div class="muted small serif" style="font-style:italic;margin:8px 2px 16px">${ro
@@ -4445,13 +4779,13 @@ const DESK_ROWS=[
   {k:'sync',   t:'Sync',                   d:'optional, and never required'},
   {k:'keepers',t:'Keepers on this device', d:'add, switch, read another ledger'},
   {k:'prefs',  t:'Preferences',            d:'appearance, units, marks, how deep you go'},
-  {k:'manual', t:'The manual',             d:'how to read a cup, what changed, the doors ahead'},
+  {k:'manual', t:'The manual',             d:'how to read a cup, and what changed'},
 ];
 const READER_ROWS=['copy','keeping','signin','prefs','manual'];
 function vDesk(){
   const ro=readOnly(),rd=reader();
   if(deskOpen)return `<button class="back" onclick="deskBack()">← The desk</button>${deskSection(deskOpen,ro)}`;
-  const sn=ro?0:strikeCount();
+  const sn=ro?0:strikeCount()+(isAdmin()?catSetDownList().length:0); // the drawer counts everything in it — the ledger's strikes and the atlas's
   // the room appears only once there is something in it — an empty drawer is not a row.
   // A reader gets five rows and no others: sync setup, the users room, the pen, what
   // you set down, export, the shelf and the tools all describe a record they do not
@@ -4627,13 +4961,7 @@ function deskManualHTML(ro){
   ${LEGACY_ON?`<button class="btn btn-quiet" onclick="openGuide()">Quick start</button>`:''}
   ${ro?'':`<button class="btn btn-quiet" onclick="openWelcome()">Replay the welcome</button>`}
   <button class="btn btn-quiet" onclick="openWhatsNew(false)">What changed</button>
-  <h2>The doors ahead</h2>
-  <div class="card">
-    <div class="kv"><span class="k">Act III</span><span class="v" style="text-align:left">signed pages — the pen, live on the chart</span></div>
-    <div class="kv"><span class="k">Act IV</span><span class="v" style="text-align:left">the desks — closed until earned</span></div>
-    <div class="kv"><span class="k">Act V–VI</span><span class="v" style="text-align:left">the doors, then origin</span></div>
-  </div>
-  <p class="note">Each act gated in writing. Tolls follow traffic; they never summon it.</p>
+  <p class="note">The record is kept, not sold. Nothing here is measured, scored or ranked for anyone but you.</p>
   <div class="muted small serif" style="font-style:italic;text-align:center;margin:14px 2px 2px">CARTA v${APP_VERSION}</div>`;
 }
 // Preferences — presentation/input, not data. Two controls, phase-0 minimal.
@@ -5156,14 +5484,14 @@ const nPl=(n,s,p)=>n+' '+(n===1?s:(p||s+'s'));
 function crumbHTML(kind,id){
   let parts=[];
   if(kind==='lot'){const l=catNode('lots',id)||{},fp=l.fingerprint||{};parts=[['country',fp.country],['region',fp.region],['locality',fp.locality]]}
-  else if(kind==='region'){const c=modeOf(scopeGreens('region',id).map(l=>(l.fingerprint||{}).country).filter(regSubstance));parts=[['country',c]]}
+  else if(kind==='region'){const c=canonName(scopeGreens('region',id).map(l=>(l.fingerprint||{}).country));parts=[['country',c]]}
   else if(kind==='locality'){const ls=scopeGreens('locality',id);
-    parts=[['country',modeOf(ls.map(l=>(l.fingerprint||{}).country).filter(regSubstance))],
-           ['region',modeOf(ls.map(l=>(l.fingerprint||{}).region).filter(regSubstance))]]}
+    parts=[['country',canonName(ls.map(l=>(l.fingerprint||{}).country))],
+           ['region',canonName(ls.map(l=>(l.fingerprint||{}).region))]]}
   else if(kind==='producer'||kind==='processor'){const n=catNode(kind==='producer'?'producers':'processors',id)||{},ls=scopeGreens(kind,id);
-    parts=[['country',modeOf(ls.map(l=>(l.fingerprint||{}).country).filter(regSubstance))],
-           ['region',modeOf(ls.map(l=>(l.fingerprint||{}).region).filter(regSubstance))],
-           ['locality',n.locality||modeOf(ls.map(l=>(l.fingerprint||{}).locality).filter(regSubstance))]]}
+    parts=[['country',canonName(ls.map(l=>(l.fingerprint||{}).country))],
+           ['region',canonName(ls.map(l=>(l.fingerprint||{}).region))],
+           ['locality',n.locality||canonName(ls.map(l=>(l.fingerprint||{}).locality))]]}
   const live=parts.filter(x=>x&&regSubstance(x[1]));
   if(!live.length)return'';
   return `<div class="crumb">${live.map((x,i)=>`${i?'<i>›</i>':''}<button onclick="nav(${jsq(x[0])},${jsq(x[1])})">${esc(x[1])}</button>`).join('')}</div>`;
@@ -5589,7 +5917,7 @@ function landAnchor(name){
 // the ground under a scope: the countries its greens name, each drawn or counted
 function landsOf(gs){
   const drawn=[],unread=[];
-  [...new Set(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))]
+  foldNames(gs.map(l=>(l.fingerprint||{}).country))
     .forEach(n=>(landRings(n)?drawn:unread).push(n));
   return {drawn,unread};
 }
@@ -6055,9 +6383,31 @@ function nodePage(kind,id){
   ${greensSec}${barGreens}${setupBrewsSec}${handsSec}${barsSec}${setupSec}
   ${overlay}
   ${x.tail||''}
+  ${nodeCorrectHTML(kind,id,gs)}
   ${act}
   <p class="note">Every page in CARTA answers the same five questions in the same order. Only the nouns change.</p>
   ${seal(s.sealName,s.seal)}`;
+}
+/* The corrections fold, on every page that is not a green's — the green draws its own, because its
+ * identity has more to say (its rung, what is bound to it, its printed codes). Two shapes, and the
+ * difference is a fact about the atlas rather than a gap in this surface: a KIND WITH A NODE (a
+ * grower, a station, a hand) is corrected here; a DERIVED SCOPE (a region, a town, a country, a
+ * process, a variety, a city) has no node to correct — it is a reading over the greens that name it,
+ * so the correction belongs on one of them and the page says so and points at them. Saying that out
+ * loud is the whole answer to "why can I not edit this page": there is nothing here to edit, and
+ * inventing a stored region so there would be is how a record starts guessing. */
+const DERIVED_SCOPES={region:'region',locality:'town',country:'country',process:'process',variety:'variety',city:'city'};
+function nodeCorrectHTML(kind,id,gs){
+  if(readOnly()||reader())return '';
+  const doc=CAT_DOC[kind];
+  if(doc&&doc!=='lots'&&catNode(doc,id))return `<details class="trace-more" style="margin-top:18px"><summary>Corrections</summary>
+  ${catActsHTML(doc,id)}</details>`;
+  const word=DERIVED_SCOPES[kind];
+  if(!word||!gs||!gs.length)return '';
+  return `<details class="trace-more" style="margin-top:18px"><summary>Corrections</summary>
+  <div class="muted small" style="margin:0 2px 10px">A ${esc(word)} is a reading over the greens that name it — there is no stored entry here to amend, and the record will not invent one. Correct the ${esc(word)} on a green below and this page follows at once; two spellings of one ${esc(word)} fold together on their own.</div>
+  ${gs.slice(0,8).map(l=>rowlink('lot',l.id,esc(lotLabel(l)),'amend it on the green',''))
+    .join('')}${gs.length>8?`<div class="muted small" style="margin:6px 2px 0">${gs.length-8} more on this page above.</div>`:''}</details>`;
 }
 // aggRoadReading returns wrapped HTML; the node page wants the bare sentence to set beside the primer tap
 function aggRoadReadingText(lotIds,tail){
@@ -6197,7 +6547,7 @@ function prodRowlink(p){
   return rowlink('producer',p.id,esc(p.name),esc([prodKindLabel(p.producerKind),p.region].filter(regSubstance).join(' · ')),esc(nPl(n,'green')));
 }
 // the same walk, pointed at the second origin actor — the station a green passed through
-const stationsOf=gs=>[...new Set(gs.flatMap(l=>l.processorRefs||[]))].map(i=>catNode('processors',i)).filter(Boolean);
+const stationsOf=gs=>[...new Set(gs.flatMap(l=>l.processorRefs||[]))].map(i=>catNode('processors',i)).filter(nodeLive);
 /* a station is a processor, never a grower — specLot's law, applied at every scope now
    that the station has a page of its own. A producers node the door tagged a station (or
    one standing as a processor on the same greens) belongs in Its stations and nowhere
@@ -6205,7 +6555,7 @@ const stationsOf=gs=>[...new Set(gs.flatMap(l=>l.processorRefs||[]))].map(i=>cat
 function growersOf(gs){
   const stk=new Set(stationsOf(gs).map(p=>normPlace(p.name)));
   return [...new Set(gs.flatMap(l=>l.producerRefs||[]))].map(i=>catNode('producers',i))
-    .filter(p=>p&&p.producerKind!=='station'&&!stk.has(normPlace(p.name)));
+    .filter(p=>nodeLive(p)&&p.producerKind!=='station'&&!stk.has(normPlace(p.name)));
 }
 function procRowlink(p){
   if(!p)return'';
@@ -6216,8 +6566,8 @@ function specProducer(pid){
   const p=catNode('producers',pid);if(!p)return null;
   const gs=scopeGreens('producer',pid);
   const stn=p.producerKind==='station';
-  const region=p.region||modeOf(gs.map(l=>(l.fingerprint||{}).region).filter(regSubstance))||'';
-  const country=p.country||modeOf(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))||'';
+  const region=p.region||canonName(gs.map(l=>(l.fingerprint||{}).region))||'';
+  const country=p.country||canonName(gs.map(l=>(l.fingerprint||{}).country))||'';
   return {
     eyebrow:(stn?'Washing station':p.producerKind==='group'?'Producer group':'Grower')+(regSubstance(country)?' · '+esc(country):''),
     title:esc(p.name),qual:'',
@@ -6245,12 +6595,12 @@ function specProducer(pid){
 function specProcessor(pid){
   const p=catNode('processors',pid);if(!p)return null;
   const gs=scopeGreens('processor',pid);
-  const region=p.region||modeOf(gs.map(l=>(l.fingerprint||{}).region).filter(regSubstance))||'';
-  const country=p.country||modeOf(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))||'';
+  const region=p.region||canonName(gs.map(l=>(l.fingerprint||{}).region))||'';
+  const country=p.country||canonName(gs.map(l=>(l.fingerprint||{}).country))||'';
   // the hands that deliver into it — the growers on its greens; growersOf already refuses
   // to count a station as one of them, including this one
   const growers=growersOf(gs);
-  const fams=[...new Set(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}).filter(Boolean))];
+  const fams=foldNames(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}));
   return {
     eyebrow:'Washing station'+(regSubstance(country)?' · '+esc(country):''),
     title:esc(p.name),qual:'',
@@ -6272,9 +6622,9 @@ function specProcessor(pid){
 function specRegion(id){
   const gs=scopeGreens('region',id);
   if(!gs.length)return null;
-  const country=modeOf(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))||'';
+  const country=canonName(gs.map(l=>(l.fingerprint||{}).country))||'';
   const growers=growersOf(gs);
-  const procs=[...new Set(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}).filter(Boolean))];
+  const procs=foldNames(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}));
   return {
     eyebrow:'Region'+(regSubstance(country)?' · '+esc(country):''),title:esc(id),qual:'',
     lede:`The greens the record traces to ${esc(id)}, and how far it follows each one.`,
@@ -6282,7 +6632,7 @@ function specRegion(id){
       ['Growers',String(growers.length)],
       ['Processes',procs.map(esc).join(' · ')||'<span class="unread">unread</span>']],
     up:[{h:'Part of',items:[regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''].filter(Boolean)}],
-    down:[{h:'Its localities',items:[...new Set(gs.map(l=>(l.fingerprint||{}).locality).filter(regSubstance))]
+    down:[{h:'Its localities',items:foldNames(gs.map(l=>(l.fingerprint||{}).locality))
         .map(v=>rowlink('locality',v,esc(v),esc(id),esc(nPl(scopeGreens('locality',v).length,'green'))))},
       {h:'Its growers',items:growers.map(prodRowlink)},
       {h:'Its stations',items:stationsOf(gs).map(procRowlink)}],
@@ -6296,8 +6646,8 @@ function specRegion(id){
 function specLocality(id){
   const gs=scopeGreens('locality',id);
   if(!gs.length)return null;
-  const region=modeOf(gs.map(l=>(l.fingerprint||{}).region).filter(regSubstance))||'';
-  const country=modeOf(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))||'';
+  const region=canonName(gs.map(l=>(l.fingerprint||{}).region))||'';
+  const country=canonName(gs.map(l=>(l.fingerprint||{}).country))||'';
   const growers=growersOf(gs);
   return {
     eyebrow:'Locality'+(regSubstance(country)?' · '+esc(country):''),title:esc(id),qual:'',
@@ -6318,9 +6668,9 @@ function specLocality(id){
 function specCountry(id){
   const gs=scopeGreens('country',id);
   if(!gs.length)return null;
-  const regs=[...new Set(gs.map(l=>(l.fingerprint||{}).region).filter(regSubstance))];
+  const regs=foldNames(gs.map(l=>(l.fingerprint||{}).region));
   const growers=growersOf(gs);
-  const vars=[...new Set(gs.map(l=>l.variety).filter(regSubstance))];
+  const vars=foldNames(gs.map(l=>l.variety));
   return {
     eyebrow:'Country',title:esc(id),qual:'',
     lede:`Every green the record traces to ${esc(id)} — and everyone who has carried one.`,
@@ -6345,7 +6695,7 @@ function specCity(id){
     eyebrow:'City',title:esc(id),qual:'',
     lede:`What is poured and what is roasted in ${esc(id)} — the scene, read as one scope.`,
     rows:[['Bars',String(barsHere.length)],['Hands',String(handsHere.length)],['Greens',String(gs.length)],
-      ['Countries',[...new Set(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))].map(esc).join(' · ')||'<span class="unread">unread</span>']],
+      ['Countries',foldNames(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>']],
     up:[],
     down:[{h:'Its bars',items:barsHere.map(e=>rowlink('place',e.name,esc(e.name),esc(e.neighborhood||id),esc(nPl(poursHere(e.name,e).length,'green'))))},
       {h:'Its hands',items:handsHere.map(r=>rowlink('roaster',r.id,esc(r.name),'roasting here',esc(nPl(scopeGreens('roaster',r.id).length,'green'))))}],
@@ -6381,7 +6731,7 @@ function specRoaster(rid){
     eyebrow:'Roaster'+(place?' · '+esc(place):''),title:esc(r.name),qual:'',
     lede:'Every green this hand has roasted into the record — and where those greens grew.',
     rows:[['City',esc(r.city||'unread')],['Greens',String(gs.length)],
-      ['Countries',[...new Set(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))].map(esc).join(' · ')||'<span class="unread">unread</span>'],
+      ['Countries',foldNames(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>'],
       ['Bars pouring it',String(barsIn(gs).length)],
       r.site?['Site',esc(r.site)]:null].filter(Boolean),
     up:[{h:'Part of',items:[regSubstance(r.city)?rowlink('city',r.city,esc(r.city),'the city it roasts in',esc(nPl(scopeGreens('city',r.city).length,'green'))):''].filter(Boolean)}],
@@ -6405,7 +6755,7 @@ function specFacet(kind,id){
     title:esc(label),qual:`in ${numWord(gs.length)} green${gs.length===1?'':'s'}`,
     lede:`The ${esc(label)} greens you have met, and how far down the road the record actually follows each one.`,
     rows:[['Greens',String(gs.length)],
-      ['Countries',[...new Set(gs.map(l=>(l.fingerprint||{}).country).filter(regSubstance))].map(esc).join(' · ')||'<span class="unread">unread</span>'],
+      ['Countries',foldNames(gs.map(l=>(l.fingerprint||{}).country)).map(esc).join(' · ')||'<span class="unread">unread</span>'],
       ['Hands',String(handsIn(gs).length)],['Bars',String(barsIn(gs).length)]],
     up:[],down:[],
     roadTail:'on this plate',terrTail:'on this plate',
@@ -6420,11 +6770,11 @@ function specLot(lotId){
   const gr=grainRead(lot.grain);
   const roasts=catAll('roasts').filter(r=>r&&r.lotRef===lotId)
     .sort((a,b)=>(b.roastDate||'').localeCompare(a.roastDate||'')||(b.createdAt||'').localeCompare(a.createdAt||''));
-  const growers=(lot.producerRefs||[]).map(i=>catNode('producers',i)).filter(Boolean);
+  const growers=(lot.producerRefs||[]).map(i=>catNode('producers',i)).filter(nodeLive);
   const bat=lot.processingBatchRef&&catNode('lots',lot.processingBatchRef);
   const ko=(lot.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt)||(bat&&(bat.hardIds||[]).find(h=>h.scheme==='kenya-outturn'&&!h.withdrawnAt));
   // ── identity rows — the columns, each mark opening its meaning ──
-  const stns=(lot.processorRefs||[]).map(i=>catNode('processors',i)).filter(Boolean);
+  const stns=(lot.processorRefs||[]).map(i=>catNode('processors',i)).filter(nodeLive);
   const stnKeys=new Set(stns.map(p=>normPlace(p.name)));
   const trueGrowers=growers.filter(g=>g.producerKind!=='station'&&!stnKeys.has(normPlace(g.name))); // a station is a processor, never a grower
   const rows=[];
@@ -6512,9 +6862,7 @@ function specLot(lotId){
     return `<div class="wc-item" style="cursor:default"><span class="tx"><span class="tt">${esc(label)}</span><span class="dd">${how}${(b.evidence&&(b.evidence.fields||[]).length)?' · '+esc(b.evidence.fields.join(' · ')):''}</span></span><button class="btn btn-quiet" style="width:auto;padding:4px 10px;margin:0" onclick="reverseBind(${jsq(lotId)},${jsq(b.bind.ref)})">Keep apart</button></div>`}).join('');
   const sibs=bat?catAll('lots').filter(l=>lotLive(l)&&l.processingBatchRef===bat.id&&l.id!==lotId):[];
   const batchLine=bat?`<div class="muted small" style="margin:0 2px 12px">Part of a processing batch — <button class="text-action" onclick="openBatchPage(${jsq(bat.id)})">the outturn</button>${sibs.length?', beside '+sibs.map(sb=>`<button class="text-action" onclick="openLotPage(${jsq(sb.id)})">${esc(lotLabel(sb))}</button>`).join(', '):''}. Same cherry, a different screen.</div>`:'';
-  const cands=isAdmin()?mergeCandidates(lotId):[];
-  const undoable=!isAdmin()||!lot.lineage?[]:(lot.lineage.mergedFrom||[]).map(i=>catNode('lots',i)).filter(t=>t&&lotTomb(t)===lotId);
-  const corrections=(bindRows||batchLine||idLine||cands.length||undoable.length||isAdmin())?`
+  const corrections=`
   <details class="trace-more" style="margin-top:18px"><summary>Corrections & identity</summary>
     ${idLine}
     ${batchLine}
@@ -6524,9 +6872,8 @@ function specLot(lotId){
     <div class="muted small" style="margin:2px 2px 10px">${exBtn('hold','a hold','badge ghost')} ${holdOn(lotId)
       ?`Held back since ${esc(fmtMDY(holdOn(lotId).at))} — absent from the published copy, whole here. ${esc(holdCarriesLine(lotId)||'Nothing rides with it yet')}.`
       :'It would leave the published copy at the next publish; the record keeps it whole, and readers simply never see it.'}</div>`:''}
-    ${cands.length?`<button class="btn btn-quiet" onclick="openLotMerge(${jsq(lotId)})">Join to another green…</button><div class="muted small" style="margin:2px 2px 10px">${cands.length} green${cands.length===1?'':'s'} read${cands.length===1?'s':''} like this one. Join and every record on both follows here — undoable.</div>`:''}
-    ${undoable.map(t=>`<button class="btn btn-quiet" onclick="openLotUndoMerge(${jsq(lotId)},${jsq(t.id)})">Split back apart — restore ${esc(lotLabel(t))}</button>`).join('')}
-  </details>`:'';
+    ${catActsHTML('lots',lotId)}
+  </details>`;
   // ── the head — the green and its seed; the line under it carries the place ──
   const sub=[fp.region,fp.country].filter(regSubstance).join(', ');
   const headName=[lot.producer,lot.lotName].filter(regSubstance)[0]||sub||'A green';
@@ -6703,7 +7050,7 @@ function renderClaim(){
   }
   openSheet(`
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px">
-    <span style="font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600">Act III · the signed page</span>
+    <span style="font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600">The signed page</span>
     <span class="n-note" style="flex:none">${stepLabel}</span>
   </div>
   <h3>${esc(head)}</h3>
@@ -8766,6 +9113,7 @@ function placeRestore(id){
  * the app where the word "permanently" is honest, and the only red button left. */
 function struckRoomHTML(){
   const mine=strikeList(),reg=isAdmin()?regStruck():[];
+  const nodes=isAdmin()?catSetDownList():[];
   const row=s=>{const n=strikeCarried(s.ref).length;
     return `<button class="rowlink" onclick="openStruckItem(${jsq(s.ref)})"><span><span class="t">${esc(strikeName(s.coll,s.rec))}</span><br><span class="m">${esc(strikeSub(s.coll,s.rec))} · set down ${esc(fmtAgo(s.at))}${n?` · carried ${n} with it`:''}</span></span><span class="go">→</span></button>`};
   return `
@@ -8773,10 +9121,13 @@ function struckRoomHTML(){
   <h2 class="display">What you have <em>set down</em></h2>
   <p class="lede">Struck from the record, not erased. Each one waits here whole — with everything that came down with it — and goes back with one tap.</p>
   ${mine.length?`<h2>Your ledger</h2>${mine.map(row).join('')}`:''}
+  ${nodes.length?`<h2>On the atlas</h2>
+  <div class="muted small" style="margin:0 2px 8px">Nodes set down from the shared spine — a green minted from a typo, a roast entered twice, a hand that turned out not to be one. Off every count and every published copy; whole here.</div>
+  ${nodes.map(x=>`<button class="rowlink" onclick="nodeStandUp(${jsq(x.kind)},${jsq(x.node.id)})"><span><span class="t">${esc(nodeLabel(x.kind,x.node))}</span><br><span class="m">${esc(nodeKindWord(x.kind))} · set down ${esc(fmtAgo(x.node.setDown.at))}${x.node.setDown.by?` by ${esc(x.node.setDown.by)}`:''} — tap to stand it back up</span></span><span class="go">↺</span></button>`).join('')}`:''}
   ${reg.length?`<h2>On the Register</h2>
   <div class="muted small" style="margin:0 2px 8px">Entries struck from the shared record. Standing one back up returns it for every keeper.</div>
   ${reg.map(e=>`<button class="rowlink" onclick="placeRestore(${jsq(e.id)})"><span><span class="t">${esc(e.name)}</span><br><span class="m">café · struck ${esc(fmtAgo(e.withdrawnAt))}${e.by?` by ${esc(e.by)}`:''} — tap to stand it back up</span></span><span class="go">↺</span></button>`).join('')}`:''}
-  ${!mine.length&&!reg.length?`<div class="empty">Nothing is set down. Everything you have ever kept is still on the record.</div>`:''}
+  ${!mine.length&&!reg.length&&!nodes.length?`<div class="empty">Nothing is set down. Everything you have ever kept is still on the record.</div>`:''}
   ${mine.length?`<p class="note">Nothing above is counted, averaged, plotted or exported. It is simply held, in case you want it back.</p>
   <button class="btn btn-danger" onclick="openEraseAll()">Erase them for good</button>
   <div class="muted small serif" style="font-style:italic;margin:8px 2px 2px">The one act in CARTA with no door back. Everything else here is a correction.</div>`:''}`;
@@ -9568,6 +9919,12 @@ function mergeRegister(loc,rem){
  * so the two copies of one node always land together; a ledger ref left dangling
  * by the collapse re-points next boot through the same _key. */
 function mergeCatalog(loc,rem){
+  // the set-down's two dates only ever add, so each takes the max independently of which
+  // copy won the field race — mergeSightings' monotone rule, one kind up
+  const downDates=(w,...g)=>{const d={};['at','restoredAt'].forEach(k=>{
+      const v=g.map(e=>String((e&&e.setDown&&e.setDown[k])||'')).filter(Boolean).sort().pop();if(v)d[k]=v});
+    if(d.at){const src=g.find(e=>e&&e.setDown&&e.setDown.at===d.at)||{};
+      w.setDown={...(src.setDown||{}),...d}}};
   const fuller=e=>Object.keys(e).filter(k=>regSubstance(e[k])).length;
   const beats=(l,r)=>{const lu=l.updatedAt||'',ru=r.updatedAt||'';if(lu!==ru)return lu>ru;
     const lf=fuller(l),rf=fuller(r);if(lf!==rf)return lf>rf;
@@ -9584,9 +9941,12 @@ function mergeCatalog(loc,rem){
     // a grower ref appended on one device must survive the other device's later save
     if(l.producerRefs||r.producerRefs)w.producerRefs=[...new Set([...(l.producerRefs||[]),...(r.producerRefs||[])])];
     if(l.processorRefs||r.processorRefs)w.processorRefs=[...new Set([...(l.processorRefs||[]),...(r.processorRefs||[])])];
+    downDates(w,l,r);
     m.set(l.id,w)});
   const groups={};
-  [...m.values()].filter(e=>e&&e._key&&!dead.has(e.id)).forEach(e=>{(groups[e._key]=groups[e._key]||[]).push(e)});
+  // grouped by the FOLDED key, so two devices that spelled one name differently — an accent,
+  // a comma, a capital — collapse into one node here exactly as they do on the device (keyFold)
+  [...m.values()].filter(e=>e&&e._key&&!dead.has(e.id)).forEach(e=>{const k=keyFold(e._key)||e._key;(groups[k]=groups[k]||[]).push(e)});
   const entries=Object.keys(groups).sort().map(k=>{
     const g=groups[k].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')||String(a.id).localeCompare(String(b.id)));
     const w={...g[0]};
@@ -9604,6 +9964,7 @@ function mergeCatalog(loc,rem){
     if(pg.length)w.producerRefs=pg;
     const xg=[...new Set(g.flatMap(e=>e.processorRefs||[]))];
     if(xg.length)w.processorRefs=xg;
+    downDates(w,...g);
     return w;
   });
   return {entries,deleted:[...dead.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id)))};
@@ -10942,6 +11303,9 @@ gearRepoint(); // and each Setup carries grinderRef/brewerRef
 brewRepoint(); // and each brew reads its Roast through its bag
 cupPrepRepoint(); // and each cup is a Reading over its Preparation — a Brew or a Pour
 catRetire(); // then the flat roaster + structured origin (and a bag's roast level + date) retire under those refs — the node is the only copy now (step 3)
+// and once, on the device that predates the fold: the twins one name typed two ways
+// left standing are joined — undoably, the earliest naming keeping the node
+if(!localStorage.getItem(FOLD_KEY))catFoldSweep();
 const lastBag=D.bags.slice().sort(byNew)[0];
 if(lastBag)setAccent(lastBag.roastLevel);
 // The deepest open room is where the day starts — Home, else Café, else Find.
