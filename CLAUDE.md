@@ -759,6 +759,35 @@ from every readable ledger (`catSeed`/`catSeedGear`), re-points the ledger onto 
 then retires the flat text once a node stands (`catRetire`, the one irreversible
 step). Write-path stamps (`catStamp*`) author nodes at save, not next boot.
 
+**Correcting the atlas (6.16.0).** The spine was write-once: every catalog path only
+ever added, so a node minted from a typo stood forever. Three verbs now answer on
+every node, the ledger's grammar pointed one kind up — all additive, dated, signed,
+undoable, all pen-gated. **The fold** (`keyFold`) strips case, diacritics and
+punctuation from a `_key` while keeping its segment structure; `catByKey` falls back
+to it, so an old node keeps its ink and every new spelling lands on it, and
+`mergeCatalog` groups by the folded key so two devices converge. It is deliberately
+**not** `genFold` — that one collapses doubled letters, a scorer's licence, and an
+identity key never guesses. `catFoldSweep()` runs once per device (`carta.fold.v1`)
+and joins the twins already standing. **Set down** is `node.setDown{at,by,why,
+restoredAt}`, liveness `at > restoredAt`, merged by `downDates` (the `mergeStruck`
+construction); the subtraction happens at ONE choke point — `catAll` is the live
+read, `catRaw` the everything read, and `catNode`/`catWritable`/`catOwn` stay on raw
+so a tombstone and a set-down node are still reachable by ref. **Join** is `catJoin`
+/`catJoinUndo` (delegating to `mergeLots`/`lotMergeUndo` for greens, which carry the
+resolver's over-merge guard and every repoint); `CAT_REFS` declares where each kind
+is pointed at from. **Amend** is `openNodeAmend`/`saveNodeAmend` — a green reopens
+`originFieldsHTML('na_')`, writes THROUGH (`full:true`, minus `hardIds`/`lineage`/
+`processingBatchRef` — an amend of the words is not a licence to drop a printed code
+or somebody's join), re-keys off the corrected origin, and **stops and offers the
+join** if the corrected key is already another green's. `catActsHTML`/`roastActsHTML`
+are the act row (on the green's existing *Corrections & identity* fold, and a
+`Corrections` fold of its own on every other node page); `nodeCorrectHTML` also
+answers for the **derived scopes** (`DERIVED_SCOPES` — region · locality · country ·
+process · variety · city): they have no node, so the page says so and names the
+greens to correct instead of inventing a stored region to write to. `foldNames`/
+`canonName` pick the form to PRINT where a scope enumerates raw strings — the
+spelling the record used most, accents kept, never the all-caps shout.
+
 A record binds to its lot through the resolver's ladder (`docs/RESOLVER.md`, the step-2
 spec), strongest rung first. The **hard-ID rung** is built: a namespaced
 `{scheme,value}` printed lot code (kenya-outturn · coe · best-of-panama ·
@@ -846,6 +875,24 @@ the brew corpus (step 6) and discovery (step 7) follow.
   unrendered. Never delete them in a merge, never strip them from an entry,
   and never re-render the reading without a design pass. Erasing the record,
   if ever, is its own deliberate version.
+- **The fold folds presentation, never substance.** `keyFold` strips case,
+  diacritics and punctuation and stops there. It never collapses doubled letters,
+  never reaches for an alias table, never shortens a word — those are the scorer's
+  fuzzy licences (`genFold`, `PLACE_ALIASES`), and an identity key that guesses
+  merges two greens with no appeal. A key is never rewritten by the fold either:
+  `catByKey` falls back to it, so provenance survives and every spelling lands on
+  the node that was already there.
+- **Correcting the atlas never deletes.** The three verbs are additions: an amend
+  appends its own signed sighting, a join leaves a tombstone carrying the boundary,
+  a set-down is a date beside a restore date. A set-down node stays IN its document
+  and is subtracted at `catAll` — one choke point, never a flag every read path must
+  remember, and never a tombstone, because a tombstone cannot be taken back. Writes
+  keep resolving through `catNode`/`catWritable`/`catOwn` on the RAW read, or a
+  merge could not be followed and nothing could be stood back up.
+- **A derived scope has nothing to amend, and says so.** A region, a town, a
+  country, a process, a variety are readings over the greens that name them. Never
+  give one a stored node so its page can have an edit button — that is the moment
+  the record starts holding facts nobody entered. Name the greens to correct instead.
 - **The grain is never rounded up.** A green rests on the coarsest rung it can
   prove. A rung is promoted by evidence, never by a field merely being non-empty,
   and never by a name the record cannot classify. If a new rung is added, its

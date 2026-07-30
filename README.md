@@ -306,6 +306,48 @@ record, and the tags you've given it.
 
 Cups stay personal, per ledger. Only the place is common knowledge.
 
+### Correcting the atlas
+
+The atlas is compiled from what records say, so it inherits their mistakes — and
+until now it inherited them permanently. Every node the atlas draws now answers
+the same three verbs a cup does, folded under **Corrections** at the foot of its
+page (the pen writes the shared record, so taking it up under **the Desk → The
+pen** is what opens them; a page you cannot correct says so and points there
+rather than quietly drawing nothing).
+
+- **Amend it.** A green reopens its origin columns in the same block the paste
+  door and the bag form use — correct *Acvado* to *Acevedo* and the green re-reads
+  itself: its grain, its head, its key. Every record already bound to it stays
+  bound. A grower, a station, a roaster and a roast reopen the few facts they
+  carry; correcting a name there corrects it on every green that names it.
+- **Join it.** Two greens you learn are one merge, and every roast, pour and
+  record on both follows onto the one named first — the resolver's own guard still
+  applies, so a join needs a shared printed code or a fingerprint the scorer would
+  at least propose, and a bare string coincidence never unions two greens. Growers,
+  stations and roasters join on the offered read of their names, which the keeper
+  confirms. Any join can be parted again.
+- **Set it down.** An artifact the record should never have carried — a green
+  minted from a typo, one roast entered twice, a hand that turned out to be the
+  mill — leaves the atlas: off every count, every plate, every map, and out of a
+  published copy at the next publish. Nothing is erased. It waits under **the
+  Desk → What you set down** beside everything else, and stands back up with one
+  tap. Your own bags, brews and cups are untouched throughout.
+
+**One name, however it was typed.** Behind all of it the resolver now folds case,
+accents and punctuation before it decides anything: TARRAZÚ, Tarrazú and tarrazu
+are one region, *Famille Hidalgo Umaña* is not a second grower from *FAMILLE
+HIDALGO UMANA*, and the twins already standing on your atlas are joined once, the
+earliest naming keeping the node. It folds exactly that far and no further —
+collapsing more would be a guess, and an identity key never guesses. Where two
+spellings survive on purpose, the pages print the form the record used most,
+keeping accents over losing them and never the shout of a name copied out of a
+bag's all-caps header.
+
+**A region has no entry to amend, and its page says so.** A region, a town, a
+country, a process, a variety are *readings* over the greens that name them —
+never stored, never a polygon. Their pages name the greens to correct instead of
+offering an edit that would have to invent a record to write to.
+
 ### The reach, set down
 
 Older versions carried a second classification of café depth — ○ Counter ·
