@@ -90,6 +90,38 @@ the person, family or association behind it gets its own page and its own edge
 onto the green. A grower buys no rung, and a name the record cannot classify
 still buys nothing.
 
+**The place fills itself in.** Which box Yirgacheffe belongs in is a question
+about Ethiopian administrative geography, and you shouldn't have to answer it.
+Type into Country, Region or Locality and the map answers as you go: real
+administrative places, each showing the whole ladder it sits in — *Pitalito ·
+Huila · Colombia* — and one tap fills every column from that ladder rather than
+from a guess. A café has been findable on a map since the beginning; a coffee's
+own origin never was.
+
+It suggests, it never constrains. Every field stays free text, a green from a
+country the map has never heard of is still enterable, and with no network the
+rail is simply absent and the record saves exactly as it did before.
+
+**A run is not a place name.** "Pitalito, Huila, Colombia" is three facts a bag
+printed on one line, and it used to enter the record as one region called all of
+that — which then had a page of its own, next to the page for Huila. The columns
+are sorted out as you enter them now, on the device, with no lookup: a word is
+never dropped, a column you've filled is never overwritten, and a word becomes
+the country only because it *names* one.
+
+**One place, however it was written.** HUILA, Huila, "Huila, Colombia" and a
+spelling somebody confirmed on the map gather onto one page — and the page says
+which spellings it gathered, so a fold is never something the record did behind
+your back. Nothing is rewritten to make it work: every green keeps the words its
+own record was given. Confirm a place and the green keeps the ladder, so the next
+record spelling that town differently lands on the same page — the atlas learns
+only the places it has actually been to, and no gazetteer is downloaded or
+carried.
+
+A confirmed place is not a finer grain. It never enters a green's identity, never
+moves the traceability rung, and never becomes a page of its own: confirming a
+spelling is evidence about a word, not about the coffee.
+
 **One page, every scope.** A country, a region, a locality, a grower, a green,
 a roaster, a bar, a city, a Setup, a process, a variety — every one of them is
 the same page pointed at a different slice of one record, answering the same

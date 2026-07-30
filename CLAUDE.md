@@ -32,7 +32,7 @@ README.md             User-facing app docs
 CNAME                 GitHub Pages custom domain
 docs/                 The design record — reference, never runtime (see docs/README.md)
   VOICE.md            The voice standard every user-facing string screens against
-  NORTH_STAR.md, VISION.md, RESOLVER.md, SCHEMA.md, …   the thesis + specs
+  NORTH_STAR.md, VISION.md, RESOLVER.md, GEOCODE.md, SCHEMA.md, …   the thesis + specs
   CORRECTIONS.md      The grammar for amending a record and setting one down
   DESIGN_BRIEF.md     The redesign commission
   redesign-concept/   The Claude Design prototype (CARTA Redesign.dc.html) — THE
@@ -561,6 +561,30 @@ server/
   `saveLotStanding` are the entry sheet, gated by `readOnly()` exactly like
   the page's other corrections. `devSeedChart` demonstrates both a real
   sourced reading and an unnamed claim, clearly demo-labeled.
+- **the place resolver** (`docs/GEOCODE.md`, 6.17.0) — `normPlace` answers "same word";
+  a coffee record asks "same *place*", and a place word never arrives alone. Two halves,
+  and the **offline half is the one that matters**: `placeSegs`/`placeLead` split the run
+  a bag prints on one line, `placeFold` is the token two entries are compared on (the lead
+  segment → `normPlace` → the learned index), `placeEq`/`foldPlaces`/`canonPlace` are its
+  read doors, and `placeSplit(o)` is the only thing that **writes** — the run redistributed
+  across the three columns it was always describing, at *entry* (`readOriginFields`,
+  `doorFields`), never over a green already standing. Three refusals: a word is never
+  dropped, a filled column is never overwritten, a segment becomes the country only if it
+  *names* one (`DOOR_COUNTRIES` + `LANDS`, never positional). `scopeGreens`'s
+  administrative cases, the scope enumerations and the rail's `known()` all compare through
+  it, so `"Huila, Colombia"`, `HUILA` and `Huila` are one page — and `scopeSpellingsHTML`
+  says on the page which spellings it gathered, because a fold nobody can see is a record
+  tidying itself behind the keeper's back. The network half is the **map rail**:
+  `placeSearch` (Photon for the type-ahead — Nominatim's policy forbids autocomplete —
+  falling back to Nominatim), `placeOf`/`placeOfNom` mapping a feature to the three columns
+  under one refusal (*a place is never its own parent*), `placeRail` (debounced 450 ms, one
+  timer per field, absent offline), `placePick` filling every column from the map's own
+  ladder, `placeHeld` the check at save. A confirmed pick lands as `lot.place` via
+  `lotSetPlace` (`lotSetAltitude`'s construction — first stands, a disagreement carried in
+  `placeAlt[]`), stamped by `doorStampPlace` beside the actor and height stamps on every
+  save path. It feeds `placeIndex` (the learned fold), `atlasGeoFill` (the pin, free), and
+  the green's *Placed* row. It is **not** identity, **not** a rung, **not** a fourth column
+  and **not** a stored node — see the invariant below.
 - **the grain** — how finely a green's origin is proven: **one spatial ladder,
   six rungs** (`country` · `region` · `locality` · `station` · `farm` ·
   `green-lot`), derived
@@ -753,7 +777,14 @@ never a coordinate, and not a fourth standing axis — it is a growing condition
 nothing sorts or facets by it. The band the lot carries is what the *lot* was sold
 as; a producer's own range is a different fact for the producer's desk
 (`PLATFORM.md`'s scope table), and the two disagreeing is the divergence case, not
-an error to fix. Migration seeds the catalog
+an error to fix. It also carries **the place** (6.17.0) — `place{ref,level,name,typed,
+country,state,region,locality,district,chain[],lat,lon,src,by,at}`, the administrative
+ladder a keeper confirmed on the map rail for the words the record already carried, with
+`placeAlt[]` for a later confirmation that **disagrees** (carried, never resolved, unioned
+by `mergeById` in `mergeCatalog` exactly as `altitudeAlt` is). Written only by
+`lotSetPlace`, blanks-only, read off the layered green and written to the own node. It is a
+**reading over** the origin columns, never one of them: outside `lotKeyOf`, outside the
+fingerprint, outside the grain — see the invariant. Migration seeds the catalog
 from every readable ledger (`catSeed`/`catSeedGear`), re-points the ledger onto it
 (`catRepoint`/`gearRepoint`/`brewRepoint`/`cupPrepRepoint`, additive + reversible),
 then retires the flat text once a node stands (`catRetire`, the one irreversible
@@ -893,6 +924,26 @@ the brew corpus (step 6) and discovery (step 7) follow.
   country, a process, a variety are readings over the greens that name them. Never
   give one a stored node so its page can have an edit button — that is the moment
   the record starts holding facts nobody entered. Name the greens to correct instead.
+- **A place is not an identity, and confirming one proves nothing about the coffee.**
+  `lot.place` is outside `lotKeyOf`, outside the fingerprint, outside `scoreLot`: two
+  greens confirmed to one town are not thereby one green. It is not a rung either — a
+  green whose town was confirmed on a map has proved nothing more than one whose keeper
+  typed it, because confirming a spelling is evidence about a *word*. The map's finer and
+  coarser levels are **carried** in the chain and never promoted to a box a keeper must
+  fill or a page they can walk to; adding a rung moves the key, the fingerprint,
+  `GRAIN_READ`, `DOOR_GRAIN` and the primer together, and carrying a reading costs none of
+  that. The learned fold is derived at read from the greens themselves and busts with them
+  (`catBust`) — never a stored gazetteer, never a document, never a page.
+- **The fold folds a place; the split writes only at entry.** `placeFold` never borrows
+  `genFold`'s doubled-letter collapse (`keyFold`'s law, one kind up) — a page merged on a
+  resemblance has no appeal. `placeSplit` runs where a record is read off a form, before
+  the record exists; rewriting the words on a standing green is an amend, and an amend is
+  deliberate and signed. Wherever the fold gathers more than one spelling, the page states
+  what it gathered and what folded them.
+- **The rail is never required.** Every origin column stays free text and every place
+  surface must keep working with zero network: `placeSplit` and the fold's first two rungs
+  need nothing but the device, the rail is simply absent offline, and no save path may ever
+  wait on a lookup. The two services stay keyless, accountless and unbundled.
 - **The grain is never rounded up.** A green rests on the coarsest rung it can
   prove. A rung is promoted by evidence, never by a field merely being non-empty,
   and never by a name the record cannot classify. If a new rung is added, its
@@ -1069,7 +1120,9 @@ is the one exception browsers allow, so local dev needs no TLS.
   (zero deps). This is a core design property, not an accident. The app ships
   nothing but itself; its network reads are *optional* progressive enhancements
   that degrade offline: the café address lookup (OpenStreetMap Nominatim →
-  manual text), the brand read (`readBrand`: Microlink → the site's palette,
+  manual text), the origin **map rail** (`placeSearch`: Photon for the type-ahead,
+  since Nominatim's own policy forbids autocomplete → Nominatim → typed text),
+  the brand read (`readBrand`: Microlink → the site's palette,
   name and description), and the street map (MapLibre GL + OpenFreeMap vector
   tiles, lazy-loaded at runtime → the drawn plot). Each is keyless, accountless
   and bundles nothing into the file, and must stay that way (no design-system
