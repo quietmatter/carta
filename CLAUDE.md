@@ -111,7 +111,37 @@ server/
   side). Figure/ground: the app column is `--surface-card` (the leaf), so a
   `.card` is `--surface-page` and reads sunk into it. Buttons speak in sentence
   case. Screens open in one order — back · eyebrow · display · lede · the
-  reading · the sections · the note.
+  reading · the sections · the note. The leaf is **ruled twice** (6.18.0) —
+  `body`'s own border is the edge of the sheet, `body::before` at `inset:5px`
+  the margin the page is written inside; it sits above the header and the bar
+  (z 35, under every sheet) and is `pointer-events:none`, so unlike the outer
+  line it lands on a phone too.
+- **the tuck** (6.18.0) — a section folds into a card. **One pass over the
+  painted DOM, never a component**: `tuckAll(root)` walks the *direct children*
+  of the screen, and each run from an `<h2>` or a `.section-head` to the next
+  becomes `.tuck` (`.tuckhead` > `.tucktap` + `.meta`, then `.tuckwrap` >
+  `.tuckbody` > `.tuckin`). Every view gets it for free — add a section anywhere
+  and it folds, the same test the one page applies to a new node kind. It runs
+  on the DOM because an `<h2>` inside a `<details>` or a card belongs to that
+  block, and a regex over the string cannot tell the difference. `.display` is
+  an `h2` and is **not** a section; a `<details>` and anything marked
+  `data-notuck` **end** a run without starting one (that is what keeps the act
+  row, the closing note and the seal out of the last card). State is keyed by
+  the section's **name**, not the screen — a posture set on one green holds on
+  the next — and lives device-local in `carta.tucks.v1`, outside the ledger and
+  the sync (`TUCKS`/`TUCK_OPEN`/`tuckIsOpen`; `tuckTap` never re-renders, since
+  a repaint would throw the scroll back to the top). `tuckBarAdd` hangs *Open
+  all* / *Hide the ground* above a stack of three or more.
+- **the page's ground** (6.18.0) — the map laid *under* the page as well as on
+  it: `pageGroundHTML(kind,id,gs)` → `#ground`, a `plotSVG` call with `bare`
+  (no mark, no label, no edge, no ring) and `fill`, pinned behind the scroll
+  while the cards ride over it. **The ground answers the same question the page
+  does** (`GROUND_STREET`): a bar, a city, a hand rest on streets; a green, a
+  grower, a station, a region, a country rest on the country outline and its
+  highlands — never a green grounded in the streets of its roaster's city, a
+  place the coffee has never been. Both refusals hold unchanged, because it is
+  built by the same two calls the section makes. `groundOn()` /
+  `carta.ground.v1` is the device-local switch.
 - **the reader + the published atlas** (`docs/READER.md`) — the person who keeps
   nothing opens CARTA, reads the atlas as the founder published it, and never
   signs in. `reader()` is true when the device holds a published copy
@@ -984,6 +1014,25 @@ the brew corpus (step 6) and discovery (step 7) follow.
   another, `growersOf` refuses to count a station-tagged producer, and a station
   page never reads as a farm — what leaves a washing station is as many lots as
   arrived, never one blurred producer.
+- **A farm is a place; a grower is a hand; a station is neither** (6.18.0). The
+  spine has held all three apart since the grower split — the surfaces now read
+  them back apart too, which is where the collapse kept coming back. `isFarmNode`
+  / `isHandNode` / `PROD_HAND` cut `growersOf`'s set into `farmsIn` / `handsOfLand`
+  / `unkindIn`, and `prodSections(gs)` is the three-section block every scope
+  draws (the region, the town, the country, the station). `specLot` states **Farm**,
+  **Grower** and **Station** as separate rows; `specProducer` reads as a farm or as
+  a hand (eyebrow, lede, seal, `nodeResHTML`'s scope label, `screenSub`,
+  `pageBackLabel`) and names **the other side** — the hands on a farm, the land a
+  hand works — *derived* from the greens' own edges, never a stored column. The
+  road's **Grown** mark names the hand where the record holds one and counts **one
+  kind of actor at a time**: a farm and the person who works it are one origin told
+  twice, and "2 hands" there is the exact double-count the split exists to end.
+  An actor the record cannot classify stays a **producer** and says so —
+  `prodKindLabel`'s untagged case is the superordinate word, never the warmer one,
+  because an unmatched name buys no tier here for the same reason it buys no rung
+  on the grain. This is the structure the encyclopedic pass rests on: a farm's
+  facts, a grower's facts and a mill's facts cannot be written down until the
+  record knows which of the three it is being told about.
 - **Coverage counts, it never grades.** A station count is what the record holds —
   never a measure of the coffee, the grower or the roaster. Four of six is not a
   lesser green than six of six; it is a green the record has been told less about.

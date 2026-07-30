@@ -178,16 +178,29 @@ html,body{height:100%}
    from a bound register: the column is the CARD, the ground behind it the PAGE.
    That figure/ground is what makes a .card read as sunk rather than as a box
    floating on nothing. On a phone the frame lands off-screen; on a desk it is
-   the whole point. */
+   the whole point.
+
+   THE DOUBLE BORDER (STREAMLINED.html's .leaf, finally built). A bound register
+   is not ruled once. The outer line is the edge of the sheet; the inner one, set
+   five pixels in, is the ruled margin the page is written inside — the same
+   figure the road, the terrace and the chart frame all draw at their own scale.
+   Unlike the outer line it lands ON a phone, so the frame reads on every device
+   rather than only on a desk. It is paper: pointer-events:none, above the screen
+   so it is never scrolled off, and under the header, the bar and every sheet, so
+   nothing that can be tapped is ever behind it. */
 html{background:var(--surface-page)}
 body{
   background:var(--surface-card);color:var(--ink);
   font-family:var(--serif);
   font-size:16px;line-height:1.5;
   max-width:480px;margin:0 auto;
-  border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);
+  border:1px solid var(--line-2);
   height:100vh;height:100dvh;
-  display:flex;flex-direction:column;overflow:hidden;
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+}
+body::before{
+  content:"";position:absolute;inset:5px;z-index:35;
+  border:1px solid var(--border-hairline);pointer-events:none;
 }
 .num{font-family:var(--sans);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 .sans{font-family:var(--sans)}
@@ -206,7 +219,31 @@ header.app .sub{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(
   border:1px solid var(--line-strong);border-radius:var(--radius);background:none;color:var(--ink);
   font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em}
 .doorbtn:active{background:var(--paper-2)}
-main{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:20px 20px 26px}
+main{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:20px 20px 26px;
+  position:relative;z-index:1}
+
+/* ═══ THE GROUND — the page rests on the place it is about ═══════════════════
+   The same drawing the map section makes, ink withheld, pinned behind the whole
+   scroll: streets where the scope stands on streets, the country's outline and
+   its highlands where it does not. The cards ride over it; close them and the
+   ground is simply there. It is paper in the strictest sense the file already
+   means it — aria-hidden, pointer-events:none, not one mark on it — so nothing
+   here can be tapped, counted or read as a record. See pageGroundHTML. */
+#ground{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+  contain:paint;opacity:.26}
+html[data-theme="dusk"] #ground{opacity:.34}
+#ground .ground-plot{position:absolute;inset:-1px}
+#ground .plot-box{border:0;background:none;margin:0;width:100%;height:100%;overflow:hidden}
+#ground .plot-box svg{width:100%;height:100%;display:block}
+#ground .plot-box .smap-live{opacity:1}
+/* the wash — the display, the lede and the road sit on open paper above the first
+   card, so the ground is faded out from under them rather than read through them */
+#ground::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(to bottom,var(--surface-card) 0,var(--surface-card) 12%,color-mix(in srgb,var(--surface-card) 62%,transparent) 34%,transparent 64%)}
+@media (prefers-reduced-motion:no-preference){
+  #ground{animation:groundIn var(--mo-considered) var(--mo-ease) both}
+  @keyframes groundIn{from{opacity:0}}
+}
 
 /* ===== section label ===== */
 /* the section rule — a label under a hairline, the prototype's h3.sect. Every
@@ -680,6 +717,68 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 .section-head h2{margin:0;padding:0;border:0}
 .section-head:first-child{margin-top:2px}
 .text-action{font-family:var(--sans);font-size:11px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
+/* the two frames inside "Where it sits" name themselves without claiming a section of
+   their own — one question, one card, two frames, joined in words and never by a line */
+.framehead{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);margin:16px 0 8px}
+
+/* ═══ THE TUCK — a section that folds away ═══════════════════════════════════
+   A CARTA page answers the same questions in the same order, and as the record
+   filled in, answering all of them at once became one very long scroll. So each
+   section is now a card that opens and closes, and the page opens as a stack of
+   them: every question still asked, in the same order, none of them shouting.
+
+   The laws it keeps:
+   · A CLOSED CARD STILL SAYS SOMETHING. The heading and its count stay on the
+     face — a closed section reads "The greens · n=12", not a blank drawer. A
+     fold that hides the fact it has anything in it is a wall.
+   · THE READING NEVER FOLDS. The head, the road and the resolution readout sit
+     above the first card and are always open: that is the page's answer, and a
+     page that hides its answer behind a tap has stopped being a record.
+   · THE MARK IS THE ONE ALREADY IN THE FILE. + and – , the same grammar the
+     trace folds have always worn. No chevron, no icon, no rotation.
+   · A CARD IS A FRAME, NOT A FILL. It wears the leaf's own surface and a
+     hairline, so the sunk .card inside it still reads as sunk (QM figure/ground).
+     When a card holds nothing but one .card, that inner box dissolves — one
+     frame, never two. */
+.tuck{border:1px solid var(--line);background:var(--surface-card);margin:0 0 8px}
+.tuckhead{display:flex;align-items:baseline;gap:10px;padding:0 12px 0 0}
+.tucktap{flex:1 1 auto;min-width:0;display:flex;align-items:baseline;gap:9px;
+  background:none;border:0;padding:12px 4px 12px 12px;cursor:pointer;text-align:left;color:inherit}
+.tucktap:active{background:var(--paper-2)}
+.tucktap .mk{flex:none;width:11px;font-family:var(--sans);font-size:13px;color:var(--ink-3);line-height:1.4}
+.tucktap .mk::before{content:"+"}
+.tuck[open] .tucktap .mk::before{content:"–"}
+.tucktap .t{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tuck[open] .tucktap .t{color:var(--ink-2)}
+.tuck[open] .tucktap .mk{color:var(--ink-2)}
+.tuckhead .meta{flex:none;display:flex;align-items:baseline;gap:8px}
+/* the body: a grid row animating 0fr → 1fr, which is the one way to transition
+   to a height nobody has measured. Stilled to its end frame under reduced motion. */
+.tuckwrap{display:grid;grid-template-rows:0fr}
+.tuck[open] .tuckwrap{grid-template-rows:1fr}
+.tuckbody{overflow:hidden;min-height:0}
+.tuckin{padding:2px 12px 13px;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:no-preference){
+  .tuckwrap{transition:grid-template-rows var(--mo-base) var(--mo-ease)}
+}
+/* the first thing in an open card should not re-state the rule it sits under */
+.tuckin>h2:first-child,.tuckin>.section-head:first-child{margin-top:12px}
+/* one frame, never two — a card that IS the section drops its own box. A section
+   holding SEVERAL cards keeps them: there the boxes are telling the blocks apart. */
+.tuckin>.card:first-child:not(:has(~.card)){border:0;background:none;padding:0;margin:0;border-radius:0}
+.tuckin>.card:first-child{margin-top:8px}
+.tuckin>.rowlink:first-child{padding-top:6px}
+.tuckin>*:last-child{margin-bottom:0}
+.tuckin>.empty{padding:18px 8px}
+/* open all / close all — one quiet line above the stack, never a button row */
+.tuckbar{display:flex;justify-content:flex-end;gap:16px;margin:18px 2px 8px}
+.tuckbar button{background:none;border:0;padding:2px 0;cursor:pointer;
+  font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);text-decoration:underline;text-underline-offset:3px}
+.tuckbar button:active{color:var(--ink)}
+
 .coffee-card{position:relative;padding-right:70px}
 .coffee-card .count{position:absolute;right:16px;top:16px;font-family:var(--sans);font-size:11px;color:var(--ink-3)}
 .empty-hero{padding:34px 4px 24px}
@@ -777,10 +876,19 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 
 /* ===== misc ===== */
 .empty{font-family:var(--serif);font-style:italic;color:var(--ink-3);text-align:center;padding:30px 20px;font-size:15px}
-.kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;gap:10px}
+/* the ledger row (STREAMLINED.html's .row, ported faithfully). A column is named
+   the way every other quiet label in the app is named — the tracked, uppercase
+   eyebrow — and its value is set in the reading face, ranged right. That one
+   change is what makes an identity card read as a register entry rather than as
+   a settings list: the labels line up as a rule down the left, the values as a
+   rule down the right, and the eye reads the values as a column. */
+.kv{display:flex;justify-content:space-between;align-items:baseline;
+  padding:9px 0;border-bottom:1px solid var(--line);font-size:var(--s15);gap:12px}
 .kv:last-child{border-bottom:none}
-.kv .k{color:var(--ink-3);font-family:var(--sans);font-size:13px;flex:none}
-.kv .v{font-variant-numeric:tabular-nums;text-align:right}
+.kv .k{color:var(--ink-3);font-family:var(--sans);font-size:var(--s11);
+  letter-spacing:var(--track-label);text-transform:uppercase;flex:none;white-space:nowrap;line-height:1.5}
+.kv .v{font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
+.kv .v .unread,.kv .v.unread{font-style:italic;color:var(--ink-3)}
 .n-note{font-family:var(--sans);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
 svg text{font-family:'Libre Franklin',sans-serif}
 .toast{
@@ -888,6 +996,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:1p
 <header class="app">
 <div><h1>Carta</h1><div class="sub" id="who">The atlas</div></div>
 <button class="doorbtn" id="doorbtn" onclick="openDoor()" aria-label="Add a coffee">＋ A coffee</button></header>
+<div id="ground" aria-hidden="true"></div>
 <main id="main"></main>
 <nav class="tabs" id="tabs"></nav>
 <div class="sheet-bg" id="sheetbg" onclick="closeSheet()"></div>
@@ -2931,7 +3040,9 @@ function smapMount(){
     if(typeof discMatch!=='undefined'&&discMatch)return;
     document.querySelectorAll('[data-smap]').forEach(el=>{
       const cfg=_smapCfg[el.dataset.smap];
-      if(cfg&&!el._smap)smapBoot(el,cfg);
+      // a surface inside a closed fold has no width, and a camera fitted to nothing is
+      // a camera pointed at the wrong ground. It boots when the card is opened.
+      if(cfg&&!el._smap&&el.clientWidth>0)smapBoot(el,cfg);
     });
   },300);
 }
@@ -3023,10 +3134,19 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.17.0';
+const APP_VERSION='6.18.0';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.18.0',date:'July 2026',title:'The page folds, and it rests on the place it is about.',items:[
+    'Every section is a card now. A green’s page answered nine questions in one scroll, and the corrections were at the bottom of all of them. Each section folds into a card that opens and closes, and the page opens as a stack of them — every question still asked, in the same order, none of them shouting. A closed card keeps its heading and its count on the face, so the stack reads as a table of contents rather than a row of blank drawers.',
+    'It stays how you leave it. A card remembers by its name, not by its page: close “Where it sits” once and it is closed on the next green and the one after. Set the posture you want to read in and every page is the short page you asked for. Open all is one tap, and it persists too. The reading never folds — the head, the road and the resolution readout are always open, because a page that hides its answer behind a tap has stopped being a record.',
+    'The page rests on its own map. The same drawing the map section makes is laid under the whole screen, ink withheld: streets where the scope stands on streets — a bar, a city, a roaster — the country’s outline and its highlands everywhere else. Close the cards and the ground is simply there. It is paper in the strictest sense: nothing on it, nothing to tap, in no count and in no key. Hide the ground if you would rather read on plain stock.',
+    'The parcel and the hand, told apart on every page. The record has held the farm, the grower and the washing station as three separate nodes since the grower split — but the pages read them back as one row, “Grower: Finca El Paraíso · Diego Samuel Bermúdez”, which is the collapse the model was split to end, made again in ink. A green now states its Farm, its Grower and its Station apart. A farm’s page reads the hands that worked it; a grower’s page reads the land they grew on; a station’s page keeps naming its deliveries as deliveries. The road’s Grown mark names the person where the record holds one, and counts one kind of actor at a time — a farm and the person who works it are one origin told twice, never two hands. An actor the record cannot classify stays a producer and says so: an unmatched name buys no tier here for the same reason it buys no rung on the grain.',
+    'The entry field stopped asking for both at once. “Producer / farm / station” is now “Farm or station”, beside “Grower” — the two facts the door has always kept apart, asked for apart.',
+    'The double border, from the prototype. The leaf is ruled twice — the edge of the sheet, and the margin the page is written inside. Unlike the outer line it lands on a phone too.',
+    'The columns read as a register. A green’s Farm, Region, Process and Altitude are set the way every other quiet label in the app is set — a tracked line down the left, the values ranged right — so an identity card reads as an entry rather than as a settings list.',
+  ]},
   {v:'6.17.0',date:'July 2026',title:'The place fills itself in, and one place is one page.',items:[
     'Type into Country, Region or Locality and the map answers. Which box Yirgacheffe belongs in is a question about Ethiopian administrative geography, and no keeper should have to answer it — so the rail offers real places as you type, each showing the whole ladder it sits in, and one tap fills every column from that ladder. A café has been findable on a map since the beginning; a coffee’s own origin never was.',
     'A run is not a place name. “Pitalito, Huila, Colombia” is three facts a bag printed on one line, and it used to enter the record as one region called all of that — which then had its own page, next to the page for Huila. The columns are sorted out at entry now, on the device, with no lookup: a word is never dropped, a filled column is never overwritten, and a word that names a country becomes the country only because it names one.',
@@ -3425,6 +3545,135 @@ const CHANGELOG=[
 const lastSeenVersion=()=>{try{return localStorage.getItem(SEEN_KEY)}catch(e){return null}};
 const markVersionSeen=()=>{try{localStorage.setItem(SEEN_KEY,APP_VERSION)}catch(e){}};
 
+/* ============ the tuck — a section folds away (one pass, every screen) ============ */
+/* CARTA's pages answer the same questions in the same order, and as the record filled
+ * in, answering all of them at once became one very long scroll: a green's page states
+ * its identity, its plan, its heights, its standing, its hands, its bars, its brews and
+ * your overlay, and the corrections are at the bottom of all of it. Nothing there is
+ * wrong — a page that dropped a question to stay short would be lying — so the answer
+ * is not to say less. It is to let the keeper choose what is unrolled.
+ *
+ * ONE PASS, NOT A COMPONENT. Every screen already builds its sections the same way: an
+ * <h2>, or a .section-head carrying that h2 and one action, followed by the section's
+ * blocks. So no view learns anything new — the painted DOM is walked once and each of
+ * those runs becomes a card. Add a section anywhere in the app and it folds for free;
+ * that is the same test the one page applies to a new node kind.
+ *
+ * ON THE DOM, NEVER ON THE STRING, and only over the DIRECT children of the screen. An
+ * <h2> inside a <details> or inside a card belongs to that block, not to the page, and
+ * a regex over the HTML cannot tell the difference. This one can, because it asks the
+ * document rather than the text.
+ *
+ * KEYED BY THE SECTION'S NAME, NOT THE SCREEN. Close "Where it sits" once and it stays
+ * closed as you walk from green to green — which is the whole point: the keeper sets a
+ * reading posture, not a per-page state, and then every page is the short page they
+ * asked for. It is a convenience about the app and never a fact about coffee, so it
+ * lives in its own device-local key, outside the ledger and outside the sync. */
+const TUCK_KEY='carta.tucks.v1';
+let TUCKS=(()=>{try{return JSON.parse(localStorage.getItem(TUCK_KEY)||'{}')||{}}catch(e){return {}}})();
+const tuckSave=()=>{try{localStorage.setItem(TUCK_KEY,JSON.stringify(TUCKS))}catch(e){}};
+/* what stands open on a device that has never been told otherwise. Identity is what the
+ * page IS — a green's columns, a Setup's assembly — and the standing is the reading the
+ * identity earns, so those two are the page at a glance. Every other section states its
+ * count on its own face and waits to be asked for: a closed card is never a blank
+ * drawer, it is a line in a table of contents. */
+const TUCK_OPEN={'identity':1,'the standing':1,'your facts':1,'the greens':1,'lately':1};
+const tuckId=t=>String(t).toLowerCase().replace(/\s+/g,' ').trim();
+const tuckIsOpen=k=>TUCKS[k]==null?!!TUCK_OPEN[k]:!!TUCKS[k];
+function tuckAll(root){
+  if(!root)return;
+  let host=root;
+  // the settle wrapper is the screen, not a section of it — walk through it
+  while(host.children.length===1&&host.firstElementChild.classList&&host.firstElementChild.classList.contains('ca-screen'))
+    host=host.firstElementChild;
+  if(host.hasAttribute('data-notuck'))return;
+  // the screen's own big line is an h2 too (.display) and is not a section of anything
+  const isHead=el=>(el.tagName==='H2'&&!el.classList.contains('display'))||el.classList.contains('section-head');
+  // what ends a section without starting one: the page's own furniture (the act row,
+  // the closing note, the seal) and a <details>, which is a fold already and would
+  // otherwise be swallowed by whatever section happened to precede it
+  const stops=el=>el.hasAttribute('data-notuck')||el.tagName==='DETAILS';
+  const secs=[];let cur=null;
+  [...host.children].forEach(el=>{
+    if(isHead(el)){cur={head:el,body:[]};secs.push(cur);return}
+    if(stops(el)){cur=null;return}
+    if(cur)cur.body.push(el);
+  });
+  // one section is not a stack. A screen with nothing to fold is left exactly as it was.
+  if(secs.filter(s=>s.body.length).length<2)return;
+  let n=0;
+  secs.forEach(s=>{
+    if(!s.body.length)return;                       // a heading with nothing under it stays a heading
+    const h2=s.head.tagName==='H2'?s.head:s.head.querySelector('h2');
+    const title=((h2||s.head).textContent||'').trim();
+    if(!title)return;
+    const k=tuckId(title),open=tuckIsOpen(k);
+    const sec=document.createElement('section');
+    sec.className='tuck';sec.dataset.k=k;if(open)sec.setAttribute('open','');
+    const hd=document.createElement('div');hd.className='tuckhead';
+    const tap=document.createElement('button');tap.type='button';tap.className='tucktap';
+    tap.setAttribute('aria-expanded',open?'true':'false');
+    tap.innerHTML='<span class="mk" aria-hidden="true"></span><span class="t"></span>';
+    tap.querySelector('.t').textContent=title;
+    tap.onclick=()=>tuckTap(sec);
+    hd.appendChild(tap);
+    /* whatever rode on the right of the section head — the count, a primer tap — keeps
+       its place and its own tap, OUTSIDE the fold's button. A button inside a button is
+       not a control, it is a bug: the browser drops the inner one. */
+    const meta=document.createElement('span');meta.className='meta';
+    if(h2&&s.head!==h2)[...s.head.children].forEach(c=>{if(c!==h2)meta.appendChild(c)});
+    hd.appendChild(meta);
+    const wrap=document.createElement('div');wrap.className='tuckwrap';
+    const body=document.createElement('div');body.className='tuckbody';
+    const inner=document.createElement('div');inner.className='tuckin';
+    s.body.forEach(el=>inner.appendChild(el));
+    body.appendChild(inner);wrap.appendChild(body);
+    sec.appendChild(hd);sec.appendChild(wrap);
+    host.insertBefore(sec,s.head);s.head.remove();n++;
+  });
+  if(n>=3)tuckBarAdd(host);
+}
+// open all / close all — one quiet line above the stack. The stack IS the page now, so
+// the way back to the old long scroll has to be one tap, and it has to persist.
+function tuckBarAdd(host){
+  const first=host.querySelector(':scope > .tuck');if(!first)return;
+  const bar=document.createElement('div');bar.className='tuckbar';
+  // the ground's own switch sits here and nowhere else: it is the same act as closing
+  // the cards — how much of the place under the page you want to see at once
+  if(_groundAvail){
+    const g=document.createElement('button');g.type='button';g.className='gnd';
+    g.textContent=groundOn()?'Hide the ground':'Show the ground';
+    g.onclick=groundToggle;bar.appendChild(g);
+  }
+  const b=document.createElement('button');b.type='button';b.className='all';
+  b.onclick=()=>tuckSetAll(host,tuckAnyShut(host));
+  bar.appendChild(b);host.insertBefore(bar,first);
+  tuckBar(host);
+}
+const tuckSecs=host=>host?[...host.querySelectorAll(':scope > .tuck')]:[];
+const tuckAnyShut=host=>tuckSecs(host).some(t=>!t.hasAttribute('open'));
+function tuckBar(host){
+  const b=host&&host.querySelector(':scope > .tuckbar > button.all');if(!b)return;
+  b.textContent=tuckAnyShut(host)?'Open all':'Close all';
+}
+// a tap never re-renders: a repaint would throw the scroll back to the top, which is
+// exactly the walk the fold exists to spare. The card opens in place.
+function tuckOne(sec,open){
+  if(open)sec.setAttribute('open','');else sec.removeAttribute('open');
+  const t=sec.querySelector('.tucktap');if(t)t.setAttribute('aria-expanded',open?'true':'false');
+  TUCKS[sec.dataset.k]=open?1:0;
+}
+function tuckTap(sec){
+  const open=!sec.hasAttribute('open');
+  tuckOne(sec,open);tuckSave();tuckBar(sec.parentElement);
+  // a live map cannot boot into a closed card — it has no width to fit a camera to
+  if(open)smapMount();
+}
+function tuckSetAll(host,open){
+  tuckSecs(host).forEach(sec=>tuckOne(sec,open));
+  tuckSave();tuckBar(host);if(open)smapMount();
+}
+
 /* ============ router ============ */
 /* The rooms open a ladder at a time — Reading (Find), Remembering (Café),
  * Making (Home), Keeping (Record). depth() is how far this user has stepped in;
@@ -3500,6 +3749,10 @@ function screenSub(){
   if(readOnly())return `Viewing ${viewingUser().name}`;
   if(doorOn)return SUBS.door;
   if(curateOn)return SUBS.curate;
+  // a producer is a farm, a hand or an unclassified actor — the masthead says which,
+  // because "The grower" over a parcel of land is the collapse this pass just undid
+  if(pageView&&pageView.kind==='producer'){const p=catNode('producers',pageView.id)||{};
+    return isFarmNode(p)?'The farm':isHandNode(p)?'The grower':'The producer'}
   if(pageView)return SUBS[pageView.kind]||SUBS.atlas;
   if(placeView)return SUBS.place;
   if(discOn)return SUBS.disc;
@@ -3522,8 +3775,13 @@ function render(){
   const m=document.getElementById('main');
   const screenKey=[tab,placeView||'',pageView?pageView.kind+':'+pageView.id:'',discOn?1:0,curateOn?1:0,doorOn?'door'+doorStep:0].join('|');
   const settle=screenKey!==_lastScreenKey&&!reducedMotion();_lastScreenKey=screenKey;
+  _pageGround='';_groundAvail=false;  // built by the page — and only a node page has one
   const body=(readOnly()?viewBanner():'')+(doorOn?vDoor():curateOn?vCurate():pageView?nodePage(pageView.kind,pageView.id):placeView?nodePage('place',placeView):discOn?vDiscover():(({atlas:vAtlas,bags:vBags,setups:vSetups,trace:vTrace,ledger:vDesk})[tab]||vAtlas)());
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
+  // the ground goes up in the same pass, so its street surface is registered against the
+  // same smapReg generation the frames are — smapDestroy cleared them both a moment ago
+  const gl=document.getElementById('ground');if(gl)gl.innerHTML=_pageGround;
+  tuckAll(m);      // every section becomes a card, before anything measures the page
   m.scrollTop=0;window.scrollTo(0,0);
   smapMount();
   if(doorOn&&doorStep===0){const ta=document.getElementById('d_text');if(ta)ta.focus()}
@@ -5358,6 +5616,14 @@ function pagePush(){
 const PAGE_BACK={lot:'The green',roaster:'The roaster',curate:'The chart',place:'The bar',
   producer:'The grower',processor:'The station',region:'The region',locality:'The locality',country:'The country',city:'The city',
   setup:'The Setup',process:'The process',variety:'The variety'};
+/* the back button names where it goes — and PAGE_BACK's one word for a producer is the
+   collapse this pass undid, so the label is read off the node rather than the kind */
+function pageBackLabel(p){
+  if(!p)return 'The atlas';
+  if(p.kind==='producer'){const n=catNode('producers',p.id)||{};
+    return isFarmNode(n)?'The farm':isHandNode(n)?'The grower':'The producer'}
+  return PAGE_BACK[p.kind]||'Back';
+}
 function pageBack(){
   const prev=pageStack.pop();
   if(!prev)return go('atlas');
@@ -5393,7 +5659,7 @@ const rowlink=(kind,id,t,m,right)=>`<button class="rowlink" onclick="nav(${jsq(k
 /* every page opens the same way (STREAMLINED.html): a back that names where it
    goes, the eyebrow, the display line, then the sentence under it */
 const pageHero=(eyebrow,title,origin)=>`
-  <button class="back" onclick="pageBack()">← ${esc(pageStack.length?PAGE_BACK[pageStack[pageStack.length-1].kind]||'Back':'The atlas')}</button>
+  <button class="back" onclick="pageBack()">← ${esc(pageStack.length?pageBackLabel(pageStack[pageStack.length-1]):'The atlas')}</button>
   <p class="eyebrow">${eyebrow}</p>
   <h2 class="display">${title}</h2>
   ${origin?`<p class="lede">${origin}</p>`:''}`;
@@ -5426,8 +5692,19 @@ function lotRoadStations(lotId){
   const stnKeys=new Set(procs.map(p=>normPlace(p.name)));
   const trueGrowers=growers.filter(g=>g.producerKind!=='station'&&!stnKeys.has(normPlace(g.name)));
   const flatGrower=regSubstance(fp.producer)&&!stnKeys.has(normPlace(fp.producer))?fp.producer:'';
+  /* every station on this road names a HAND — grown by, processed by, roasted by, poured by.
+     So where the record holds both the parcel and the person, Grown says the person: a farm
+     is a place, and places are what the plan and the crumb are for. With no hand on file it
+     falls to the farm, then to the flat field, then to the region — each step coarser, each
+     step stated. The page names all of them a line below, apart, in the identity card.
+     And the plural counts ONE kind of actor at a time: a farm and the person who works it
+     are one green's origin told twice, not two hands, and "2 hands" there would be the very
+     double-count the split exists to end. */
+  const rHands=trueGrowers.filter(isHandNode),rFarms=trueGrowers.filter(g=>!isHandNode(g));
+  const grownWho=rHands.length?(rHands.length>1?rHands.length+' growers':rHands[0].name)
+    :rFarms.length?(rFarms.length>1?rFarms.length+' farms':rFarms[0].name):(flatGrower||originWhere);
   return [
-    {lb:'Grown',who:trueGrowers.length?(trueGrowers.length>1?trueGrowers.length+' growers':trueGrowers[0].name):(flatGrower||originWhere)},
+    {lb:'Grown',who:grownWho},
     {lb:'Processed',who:procs.length?procs[0].name:(fp.process&&fp.process.family&&fp.process.family!=='unspecified'?sentence(fp.process.family):'')},
     {lb:'Milled',who:bat?('dry mill'+(ko?' · '+ko.value:'')):''},
     {lb:'Roasted',who:hands.length?(hands.length>1?hands.length+' hands':roasterName(hands[0])):''},
@@ -5681,7 +5958,9 @@ function nodeResHTML(kind,id,gs){
       <div class="meter">${[0,1,2,3,4,5].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</div></div>`;
   }
   const proved=gs.filter(l=>l.grain==='green-lot'||l.grain==='farm').length;
-  const label={country:'Country scope',region:'Region scope',locality:'Locality scope',producer:'Grower scope',processor:'Station scope',roaster:'Roaster scope',
+  const prodScope=()=>{const p=catNode('producers',id)||{};
+    return isFarmNode(p)?'Farm scope':isHandNode(p)?'Grower scope':'Producer scope'};
+  const label={country:'Country scope',region:'Region scope',locality:'Locality scope',producer:prodScope(),processor:'Station scope',roaster:'Roaster scope',
     place:'Venue scope',city:'City scope',setup:'Instrument scope',process:'Facet scope',variety:'Facet scope'}[kind]||'Scope';
   const coarse=gs.length-proved;
   return `<div class="res${proved?'':' thin'}" style="margin:18px 0 22px">
@@ -6249,12 +6528,20 @@ function plotSVG(ms,edges,o){
     bounds:[[ground.west,ground.south],[ground.east,ground.north]],
     gkey:[ground.west,ground.south,ground.east,ground.north].map(v=>v.toFixed(4)).join(','),
     fitOpts:{padding:0,maxZoom:17}}):null;
+  /* BARE — the drawing with its ink withheld: the ground layers alone, and not one mark,
+     label, edge or ring. It is what the page's own ground is made of (see pageGroundHTML),
+     and the reason that ground can be laid behind a whole screen without touching a single
+     invariant: there is nothing on it to tap, count, sort or total, because there is
+     nothing on it at all. The marks stay where they have always been — in the frame, in
+     the card, with their key and their words. */
+  const bare=!!o.bare;
   // `land` is what was drawn AS GROUND — a country the scope marks is drawn once, as a
   // mark, and must not put "ground, never a mark" in a key it is not on
   return {folds:out,ground,streets,land:groundL.length,topo:topo.length,
     sibN:sibs.length,sibDropped:(o.sibs||[]).length-sibs.length,sibLbl,
-    html:`<div class="plot-box"${sid?` data-smap="${sid}"`:''}><svg viewBox="0 0 ${W} ${H}" role="img"
-    aria-label="${esc(o.label||'plot')}">${landHTML}${landG}${topoHTML}${sibHTML}${lines}${g}</svg></div>`};
+    html:`<div class="plot-box"${sid?` data-smap="${sid}"`:''}><svg viewBox="0 0 ${W} ${H}"${
+      o.fill?' preserveAspectRatio="xMidYMid slice"':''} role="img"
+    aria-label="${esc(o.label||'plot')}">${landHTML}${bare?'':landG}${topoHTML}${bare?'':sibHTML+lines+g}</svg></div>`};
 }
 /* the key — what each weight of ink means. Derived from WHAT WAS DRAWN, never
    from what the frame could draw: a legend naming a mark that is not on the plot
@@ -6364,7 +6651,7 @@ function mapHTML(kind,id,gs){
   // what was actually drawn as GROUND — a country the scope marks is drawn once, as a
   // mark, and the note must not claim ground the frame did not lay
   const groundNames=land.drawn.filter(nm=>!landMark.includes(normPlace(nm)));
-  const oFrame=`<h2>${one?'Where it grew':'Where they grew'}</h2>
+  const oFrame=`<div class="framehead">${one?'Where it grew':'Where they grew'}</div>
   ${op?`${op.html}${foldHTML('o',op)}${keyFor(op)}`
     :`<div class="empty">${mapLens.growers?'Nothing in this scope carries a coordinate to draw.':'Growers are off in the lens.'}</div>`}
   ${listedHTML(om.listed,'A place the record names but cannot put on a map. It lists here rather than being guessed onto a nearby point.')}
@@ -6388,7 +6675,7 @@ function mapHTML(kind,id,gs){
   ${op&&op.topo?`<div class="muted small" style="margin:6px 2px 4px">The dotted lines inside it are the highlands — a thousand metres, two, three. That is terrain and only terrain: it is the shape of the land these greens grew on, never a green’s own stated height, which is the terrace below, and never a grade. A mark inside the two-thousand line is not a finer coffee than one outside it. ${exBtn('highlands','how to read the contours','badge ghost')}</div>`
    :((op&&(op.land||lmN))?`<div class="muted small" style="margin:6px 2px 4px">No highlands drawn ${lmN&&!op.land?'inside':'behind'} this frame: ${
      landTopo(land.drawn[0])||land.drawn.length>1?'at this span a thousand-metre contour is a smudge rather than a line, so the outline stands alone':'the record’s countries here are lowland, or their terrain is not carried in this file'}.</div>`:'')}`;
-  const cFrame=`<h2>${one?'Where it is carried':'Where they are carried'}</h2>
+  const cFrame=`<div class="framehead">${one?'Where it is carried':'Where they are carried'}</div>
   ${cp?`${cp.html}${foldHTML('c',cp)}${keyFor(cp)}`
     :`<div class="empty">No hand or bar in this scope carries a coordinate yet.</div>`}
   ${listedHTML(cm.listed,'Named by the record, unplaced on it. A node without a coordinate lists rather than lies.')}
@@ -6423,6 +6710,67 @@ function mapHTML(kind,id,gs){
     esc(nPl(oMs.length+chartMs.length,'mark'))}</span></div>
   ${lens}${oFrame}${handoff}${cFrame}${heldNote}`;
 }
+/* ═══ THE PAGE'S GROUND — every screen rests on the place it is about ═══════════
+ * A node page is a reading about somewhere: a green grown in Huila, a bar on a street
+ * in Los Angeles, every grower in a region. The map has always been ON the page, one
+ * section among several. This lays it UNDER the page as well — the same drawing, ink
+ * withheld, pinned behind the whole scroll while the cards ride over it. Close the
+ * cards and the ground is simply there; open one and you are reading about a place
+ * while standing on it.
+ *
+ * IT IS PAPER, AND THE LAW SAYS SO ALREADY. "Never let anything on the land be tapped,
+ * counted, sorted or totalled — it is paper, and the moment it enters a count it has
+ * become a record it never was." The ground draws with plotSVG's `bare` flag: no marks,
+ * no labels, no edges, no ring, no key, pointer-events:none, aria-hidden. There is
+ * nothing on it to enter a count. The record's marks stay exactly where they were —
+ * inside the frame, inside the card, tappable, with their key and their words.
+ *
+ * AND IT NEVER READS FINER THAN THE MARK ABOVE IT. The two refusals hold unchanged,
+ * because the ground is built by the same two calls the section makes: streets only
+ * behind the carried frame and only under STREET_KM, and the origin ground is the
+ * country outline and its contours, never a street. A page whose scope is a green in
+ * Huila gets Colombia's outline; a page whose scope is a bar gets that bar's streets.
+ * The one thing the page ground adds is scale — it is drawn at screen size instead of
+ * frame size, and a contour or a street is no less honest for being large. */
+let _pageGround='',_groundAvail=false;               // built by nodePage, hung by render
+const GROUND_KEY='carta.ground.v1';
+const groundOn=()=>{try{return localStorage.getItem(GROUND_KEY)!=='0'}catch(e){return true}};
+function groundToggle(){
+  try{localStorage.setItem(GROUND_KEY,groundOn()?'0':'1')}catch(e){}
+  render();
+}
+/* which ground a kind stands on. THE GROUND ANSWERS THE SAME QUESTION THE PAGE DOES: a
+ * bar, a city, a hand are about where a coffee is CARRIED, so they rest on streets; a
+ * green, a grower, a station, a region, a country are about where it GREW, so they rest
+ * on the country's outline and its highlands. That is not a preference — it is the same
+ * rule the two frames are already ordered by, applied one layer down, and it is what
+ * stops a green's page being grounded in the streets of the city its roaster happens to
+ * sit in, which would be a place the coffee has never been. */
+const GROUND_STREET={place:1,city:1,roaster:1};
+const groundStreets=gs=>{
+  /* no lens is consulted: the ground is not a reading, so it cannot be narrowed, and a
+     mark hidden by a lens must never change the paper under it. */
+  const cMs=chartMarks(gs).marks;if(!cMs.length)return '';
+  const p=plotSVG(cMs,null,{frame:'g',minKm:3,h:560,streets:true,bare:true,fill:true,label:''});
+  // `streets` false means the frame is wider than STREET_KM — a ground you could not
+  // cross in a morning, where a street is texture standing in for a place. Nothing drawn.
+  return p&&p.streets?`<div class="ground-plot streets">${p.html}</div>`:'';
+};
+const groundLand=gs=>{
+  const land=landsOf(gs);if(!land.drawn.length)return '';
+  const p=plotSVG(originRollup(originMarks(gs).marks,gs),null,
+    {frame:'g',minKm:300,h:560,lands:land.drawn,bare:true,fill:true,label:''});
+  return p?`<div class="ground-plot">${p.html}</div>`:'';
+};
+function pageGroundHTML(kind,id,gs){
+  if(!groundOn()||!gs.length)return '';
+  /* and if the ground this kind asks for cannot be drawn, the other one is offered rather
+     than nothing — a page rests on whatever place it can prove. The street layer is an
+     enhancement and may simply never land (no network, no tiles); the land needs nothing
+     at all, which is why it is the floor here exactly as the drawn plot is the floor
+     under the frames. */
+  return GROUND_STREET[kind]?(groundStreets(gs)||groundLand(gs)):(groundLand(gs)||groundStreets(gs));
+}
 // the terrace at any scope — one green draws itself against the atlas, a set draws its span
 function nodeHeightHTML(kind,gs,s){
   s=s||{};
@@ -6454,8 +6802,10 @@ function nodePage(kind,id){
   const hands=handsIn(gs),bars=barsIn(gs),cups=s.cups||cupsIn(gs),brews=brewsIn(gs);
   const one=gs.length===1;
   const x=s.extras||{};
+  _groundAvail=gs.length>0;                 // a scope with no green has no place to stand on
+  _pageGround=pageGroundHTML(kind,id,gs);   // the place this page is about, laid under it
   /* ── 1 · what is it ── */
-  const head=`<button class="back" onclick="pageBack()">← ${esc(pageStack.length?PAGE_BACK[pageStack[pageStack.length-1].kind]||'Back':'The atlas')}</button>
+  const head=`<button class="back" onclick="pageBack()">← ${esc(pageStack.length?pageBackLabel(pageStack[pageStack.length-1]):'The atlas')}</button>
   ${crumbHTML(kind,id)}
   <p class="eyebrow">${s.eyebrow}</p>
   <h2 class="display">${s.title}${s.qual?` <em>${s.qual}</em>`:''}</h2>
@@ -6545,7 +6895,7 @@ function nodePage(kind,id){
   ${road}
   ${res}
   ${x.postRes||''}
-  <h2>Identity</h2>
+  ${s.rowsEx?`<div class="section-head"><h2>Identity</h2><button class="text-action ex" onclick="openPrimer(${jsq(s.rowsEx[0])})">${esc(s.rowsEx[1])}</button></div>`:'<h2>Identity</h2>'}
   <div class="card">${s.rows.map(r=>`<div class="kv"><span class="k">${esc(r[0])}</span><span class="v">${r[1]}</span></div>`).join('')}</div>
   ${mapHTML(kind,id,gs)}
   ${nodeHeightHTML(kind,gs,s)}
@@ -6555,9 +6905,9 @@ function nodePage(kind,id){
   ${overlay}
   ${x.tail||''}
   ${nodeCorrectHTML(kind,id,gs)}
-  ${act}
-  <p class="note">Every page in CARTA answers the same five questions in the same order. Only the nouns change.</p>
-  ${seal(s.sealName,s.seal)}`;
+  <div data-notuck>${act}
+  <p class="note">Every page in CARTA answers the same five questions in the same order. Only the nouns change. Each answer folds away, and stays folded on the next page — the order never does.</p>
+  ${seal(s.sealName,s.seal)}</div>`;
 }
 /* The corrections fold, on every page that is not a green's — the green draws its own, because its
  * identity has more to say (its rung, what is bound to it, its printed codes). Two shapes, and the
@@ -6726,10 +7076,38 @@ function specPlace(shop){
     sealName:shop,seal:'A page that writes itself, cup by cup.'
   };
 }
-// the producer's kind, in words — the widened enum (SCHEMA: farm · station · smallholder · group;
-// estate folds into farm, FARM_RE already reads it). An untagged node stays the honest 'grower'.
-const prodKindLabel=k=>k==='station'?'washing station':k==='group'?'producer group':k==='farm'?'farm':'grower';
-// the grower row — shared by the country and region pages
+/* ═══ THE PARCEL AND THE HAND ═══════════════════════════════════════════════════
+ * Finca El Paraíso is a place. Diego Samuel Bermúdez is a person. Konga washing
+ * station is neither — it is a mill that gathers cherry from many of both. The record
+ * has held all three apart on the spine since the grower split (6.15.0): the farm and
+ * the hand are two `producers` nodes with different `producerKind`, the station is a
+ * `processors` node, and every one of them carries its own edge onto the green. What
+ * the SURFACES read back was one row — "Grower: Finca El Paraíso · Diego Samuel
+ * Bermúdez" — which is the collapse the model was split to end, made again in ink.
+ *
+ * So the pages now say which is which, everywhere a producer appears: a FARM is a
+ * parcel of land, a GROWER is the hand behind it (a person, a family, an association),
+ * a STATION is a processor and never either. An actor the record cannot classify is a
+ * PRODUCER and stays one — that is the same refusal the grain makes at every rung, and
+ * for the same reason: an unmatched name buys no tier, so it must not be rounded into
+ * the warmer word either.
+ *
+ * This is the structure the encyclopedic pass rests on. A farm has an altitude, a soil,
+ * a set of parcels; a grower has a family, a history, other farms; a station has a
+ * throughput and a season. None of those facts can be written down until the record
+ * knows which of the three it is being told about. */
+const prodKindLabel=k=>k==='station'?'washing station':k==='group'?'producer group'
+  :k==='farm'?'farm':k==='smallholder'?'grower':'producer';
+// a hand: a person, a family, an association. A farm is a place and a station is a mill,
+// and neither is a hand — the whole point of keeping the three apart.
+const PROD_HAND={smallholder:1,group:1};
+const isFarmNode=p=>!!p&&p.producerKind==='farm';
+const isHandNode=p=>!!p&&!!PROD_HAND[p.producerKind];
+// what the row's second line says, so a producer is never nameless about its own kind
+const prodKindLede=k=>k==='station'?'the station it passed through'
+  :k==='group'?'the association behind it':k==='farm'?'the farm it grew on'
+  :k==='smallholder'?'the hand behind it':'named on the record, its kind unread';
+// the producer row — shared by the green, the region, the locality and the country pages
 function prodRowlink(p){
   if(!p)return'';
   const n=scopeGreens('producer',p.id).length;
@@ -6746,6 +7124,20 @@ function growersOf(gs){
   return [...new Set(gs.flatMap(l=>l.producerRefs||[]))].map(i=>catNode('producers',i))
     .filter(p=>nodeLive(p)&&p.producerKind!=='station'&&!stk.has(normPlace(p.name)));
 }
+// the same set, cut the way the record already holds it. growersOf stays the whole of
+// the origin actors that are not the mill — these three name what each of them IS.
+const farmsIn=gs=>growersOf(gs).filter(isFarmNode);
+const handsOfLand=gs=>growersOf(gs).filter(isHandNode);
+const unkindIn=gs=>growersOf(gs).filter(p=>!isFarmNode(p)&&!isHandNode(p));
+/* the three sections a scope draws for its origin actors, in the order the coffee moves
+   through them: the land, then the hands on it, then the ones the record has not been
+   told enough about to place. A section with nothing in it is dropped by nodePage, so a
+   record that only ever names farms reads exactly as it did before this split. */
+const prodSections=gs=>[
+  {h:farmsIn(gs).length===1?'Its farm':'Its farms',items:farmsIn(gs).map(prodRowlink)},
+  {h:handsOfLand(gs).length===1?'Its grower':'Its growers',items:handsOfLand(gs).map(prodRowlink)},
+  {h:'Named, unplaced',items:unkindIn(gs).map(prodRowlink)}
+];
 function procRowlink(p){
   if(!p)return'';
   const n=scopeGreens('processor',p.id).length;
@@ -6757,22 +7149,41 @@ function specProducer(pid){
   const stn=p.producerKind==='station';
   const region=p.region||canonPlace(gs.map(l=>(l.fingerprint||{}).region))||'';
   const country=p.country||canonPlace(gs.map(l=>(l.fingerprint||{}).country))||'';
+  const farm=isFarmNode(p),hand=isHandNode(p);
+  /* THE OTHER SIDE OF THE SPLIT, derived and never stored. A green carries an edge to its
+     farm AND an edge to its hand, so the hands on a farm are the hand-nodes on that farm's
+     greens, and the farms a grower works are the farm-nodes on theirs. Neither is a new
+     column: it is the same walk scopeGreens makes, read one step sideways — which is the
+     whole reason the two were split into separate nodes rather than one field with a tag. */
+  const across=growersOf(gs).filter(o=>o.id!==pid);
+  const kin=farm?across.filter(isHandNode):hand?across.filter(isFarmNode):[];
+  const kinH=farm?(kin.length===1?'The hand behind it':'The hands behind it')
+    :(kin.length===1?'The land it grows on':'The land it grows on');
   return {
-    eyebrow:(stn?'Washing station':p.producerKind==='group'?'Producer group':'Grower')+(regSubstance(country)?' · '+esc(country):''),
+    eyebrow:(stn?'Washing station':p.producerKind==='group'?'Producer group':farm?'Farm':hand?'Grower':'Producer')
+      +(regSubstance(country)?' · '+esc(country):''),
     title:esc(p.name),qual:'',
     lede:stn?'A station gathers cherry from many hands. Its greens stand apart here — never one blurred farm.'
       :p.producerKind==='group'?'A group pools many members’ cherry. Its greens stand apart here — the record never blurs them into one hand.'
-      :`The greens the record traces to ${esc(p.name)}, each its own lot.`,
+      :farm?`A place. The greens the record traces to ${esc(p.name)}, each its own lot${kin.length?' — and the hands that worked it':''}.`
+      :hand?`A hand. The greens the record traces to ${esc(p.name)}${kin.length?', and the land they were grown on':''} — a person is not a parcel, and this page is not the farm’s.`
+      :`The greens the record traces to ${esc(p.name)}, each its own lot. What kind of actor this is has not been written down — the record will not guess it.`,
     rows:[['Kind',prodKindLabel(p.producerKind)],['Region',regSubstance(region)?esc(region):'<span class="unread">unread</span>'],
       ['Country',regSubstance(country)?esc(country):'<span class="unread">unread</span>'],['Greens',String(gs.length)]],
+    rowsEx:['hands','Farm, grower, station'],
     up:[{h:'Part of',items:[
       regSubstance(region)?rowlink('region',region,esc(region),'the region around it',esc(nPl(scopeGreens('region',region).length,'green'))):'',
       regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''
     ].filter(Boolean)}],
-    down:[],
-    roadTail:'traced to this grower',terrHeading:'The heights it grows at',terrTail:'as each green was stated',
-    extras:{tail:isAdmin()?`<button class="text-action" style="margin-top:8px" onclick="openGeoFix('producers',${jsq(pid)})">Correct the pin${p.lat!=null?'':' — unplaced'}</button>`:''},
-    sealName:p.name,seal:'The grower owns the farm, never the roast.'
+    down:[{h:kinH,items:kin.map(prodRowlink)}],
+    roadTail:farm?'grown on this farm':hand?'traced to this hand':'traced to this producer',
+    terrHeading:'The heights it grows at',terrTail:'as each green was stated',
+    extras:{tail:(farm||hand?`<div class="muted small serif" style="font-style:italic;margin:12px 2px 0">${
+      farm?'A farm is a place — the parcel the cherry came off. Who worked it is a second fact, and it has its own page.'
+        :'A grower is a hand — a person, a family, an association. Where they grew it is a second fact, and it has its own page.'
+      }</div>`:'')
+      +(isAdmin()?`<button class="text-action" style="margin-top:8px" onclick="openGeoFix('producers',${jsq(pid)})">Correct the pin${p.lat!=null?'':' — unplaced'}</button>`:'')},
+    sealName:p.name,seal:farm?'A farm is a place. A grower is a hand.':'The grower owns the farm, never the roast.'
   };
 }
 /* the station's page. The processor has had a node on the spine since the door learned to
@@ -6786,9 +7197,6 @@ function specProcessor(pid){
   const gs=scopeGreens('processor',pid);
   const region=p.region||canonPlace(gs.map(l=>(l.fingerprint||{}).region))||'';
   const country=p.country||canonPlace(gs.map(l=>(l.fingerprint||{}).country))||'';
-  // the hands that deliver into it — the growers on its greens; growersOf already refuses
-  // to count a station as one of them, including this one
-  const growers=growersOf(gs);
   const fams=foldNames(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}));
   return {
     eyebrow:'Washing station'+(regSubstance(country)?' · '+esc(country):''),
@@ -6802,7 +7210,11 @@ function specProcessor(pid){
       regSubstance(region)?rowlink('region',region,esc(region),'the region around it',esc(nPl(scopeGreens('region',region).length,'green'))):'',
       regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''
     ].filter(Boolean)}],
-    down:[{h:growers.length===1?'The hand that delivers here':'The hands that deliver here',items:growers.map(prodRowlink)}],
+    // what delivers here, told apart: parcels of land, and the hands that work them
+    down:[{h:farmsIn(gs).length===1?'The farm that delivers here':'The farms that deliver here',items:farmsIn(gs).map(prodRowlink)},
+      {h:handsOfLand(gs).length===1?'The hand that delivers here':'The hands that deliver here',items:handsOfLand(gs).map(prodRowlink)},
+      {h:'Named, unplaced',items:unkindIn(gs).map(prodRowlink)}],
+    rowsEx:['hands','Farm, grower, station'],
     roadTail:'processed here',terrHeading:'The heights it processes',terrTail:'as each green was stated',
     extras:{tail:isAdmin()?`<button class="text-action" style="margin-top:8px" onclick="openGeoFix('processors',${jsq(pid)})">Correct the pin${p.lat!=null?'':' — unplaced'}</button>`:''},
     sealName:p.name,seal:'The station owns the processing, never the farm.'
@@ -6812,18 +7224,19 @@ function specRegion(id){
   const gs=scopeGreens('region',id);
   if(!gs.length)return null;
   const country=canonPlace(gs.map(l=>(l.fingerprint||{}).country))||'';
-  const growers=growersOf(gs);
   const procs=foldNames(gs.map(l=>{const f=(l.fingerprint||{}).process;return f&&f.family&&f.family!=='unspecified'?sentence(f.family):''}));
   return {
     eyebrow:'Region'+(regSubstance(country)?' · '+esc(country):''),title:esc(id),qual:'',
     lede:`The greens the record traces to ${esc(id)}, and how far it follows each one.`,
     rows:[['Country',regSubstance(country)?esc(country):'<span class="unread">unread</span>'],['Greens',String(gs.length)],
-      ['Growers',String(growers.length)],
+      ['Farms',String(farmsIn(gs).length)],['Growers',String(handsOfLand(gs).length)],
+      ['Stations',String(stationsOf(gs).length)],
       ['Processes',procs.map(esc).join(' · ')||'<span class="unread">unread</span>']],
+    rowsEx:['hands','Farm, grower, station'],
     up:[{h:'Part of',items:[regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''].filter(Boolean)}],
     down:[{h:'Its localities',items:foldPlaces(gs.map(l=>(l.fingerprint||{}).locality))
         .map(v=>rowlink('locality',v,esc(v),esc(id),esc(nPl(scopeGreens('locality',v).length,'green'))))},
-      {h:'Its growers',items:growers.map(prodRowlink)},
+      ...prodSections(gs),
       {h:'Its stations',items:stationsOf(gs).map(procRowlink)}],
     roadTail:'traced to '+id,
     sealName:id,seal:'A region is a scope, not a stamp.'
@@ -6837,18 +7250,19 @@ function specLocality(id){
   if(!gs.length)return null;
   const region=canonPlace(gs.map(l=>(l.fingerprint||{}).region))||'';
   const country=canonPlace(gs.map(l=>(l.fingerprint||{}).country))||'';
-  const growers=growersOf(gs);
   return {
     eyebrow:'Locality'+(regSubstance(country)?' · '+esc(country):''),title:esc(id),qual:'',
     lede:`The greens the record traces to ${esc(id)} — a town named, finer than its region, short of any one farm or mill.`,
     rows:[['Region',regSubstance(region)?esc(region):'<span class="unread">unread</span>'],
       ['Country',regSubstance(country)?esc(country):'<span class="unread">unread</span>'],
-      ['Greens',String(gs.length)],['Growers',String(growers.length)]],
+      ['Greens',String(gs.length)],['Farms',String(farmsIn(gs).length)],
+      ['Growers',String(handsOfLand(gs).length)],['Stations',String(stationsOf(gs).length)]],
+    rowsEx:['hands','Farm, grower, station'],
     up:[{h:'Part of',items:[
       regSubstance(region)?rowlink('region',region,esc(region),'the region around it',esc(nPl(scopeGreens('region',region).length,'green'))):'',
       regSubstance(country)?rowlink('country',country,esc(country),'the country above it',esc(nPl(scopeGreens('country',country).length,'green'))):''
     ].filter(Boolean)}],
-    down:[{h:'Its growers',items:growers.map(prodRowlink)},
+    down:[...prodSections(gs),
       {h:'Its stations',items:stationsOf(gs).map(procRowlink)}],
     roadTail:'traced to '+id,
     sealName:id,seal:'A locality is a point, never a polygon.'
@@ -6858,17 +7272,18 @@ function specCountry(id){
   const gs=scopeGreens('country',id);
   if(!gs.length)return null;
   const regs=foldPlaces(gs.map(l=>(l.fingerprint||{}).region));
-  const growers=growersOf(gs);
   const vars=foldNames(gs.map(l=>l.variety));
   return {
     eyebrow:'Country',title:esc(id),qual:'',
     lede:`Every green the record traces to ${esc(id)} — and everyone who has carried one.`,
     rows:[['Regions',regs.map(esc).join(' · ')||'<span class="unread">unread</span>'],['Greens',String(gs.length)],
-      ['Growers',String(growers.length)],
+      ['Farms',String(farmsIn(gs).length)],['Growers',String(handsOfLand(gs).length)],
+      ['Stations',String(stationsOf(gs).length)],
       ['Varieties',vars.map(esc).join(' · ')||'<span class="unread">unread</span>']],
+    rowsEx:['hands','Farm, grower, station'],
     up:[],
     down:[{h:'Its regions',items:regs.map(r=>rowlink('region',r,esc(r),esc(id),esc(nPl(scopeGreens('region',r).length,'green'))))},
-      {h:'Its growers',items:growers.map(prodRowlink)},
+      ...prodSections(gs),
       {h:'Its stations',items:stationsOf(gs).map(procRowlink)}],
     roadTail:'traced to '+id,
     sealName:id,seal:'One country, read as one scope.'
@@ -6968,9 +7383,21 @@ function specLot(lotId){
   const trueGrowers=growers.filter(g=>g.producerKind!=='station'&&!stnKeys.has(normPlace(g.name))); // a station is a processor, never a grower
   const rows=[];
   const exV=(v,ex)=>`<button class="v ex" style="font:inherit;color:inherit;text-align:right;background:none;border:none;padding:0" onclick="openPrimer(${jsq(ex)})">${esc(v)}</button>`;
-  if(trueGrowers.length)rows.push([trueGrowers.length>1?'Growers':'Grower',trueGrowers.map(g=>esc(g.name)).join(' · ')]);
-  else if(regSubstance(fp.producer)&&!stnKeys.has(normPlace(fp.producer)))rows.push(['Producer',esc(fp.producer)]);
-  if(stns.length)rows.push(['Station',stns.map(p=>esc(p.name)).join(' · ')]); // the processor, kept apart from the grower — two actors, two nodes, two pages
+  /* THE PARCEL AND THE HAND, on the one page they matter most. Three rows where there
+     used to be one: the farm is a place, the grower is whoever works it, the station is
+     the mill and is neither. An actor the record cannot classify keeps the superordinate
+     word and its own row — never rounded into the warmer one, exactly as a rung is never
+     rounded up. Each row opens the primer that says what the three are. */
+  const farms=trueGrowers.filter(isFarmNode),hands=trueGrowers.filter(isHandNode),
+        unkind=trueGrowers.filter(g=>!isFarmNode(g)&&!isHandNode(g));
+  const names=a=>a.map(g=>esc(g.name)).join(' · ');
+  if(farms.length)rows.push([farms.length>1?'Farms':'Farm',names(farms)]);
+  if(hands.length)rows.push([hands.length>1?'Growers':'Grower',names(hands)]);
+  if(unkind.length)rows.push([unkind.length>1?'Producers':'Producer',names(unkind)]);
+  // the flat field, for a green whose actors never became nodes — the same honest word
+  if(!trueGrowers.length&&regSubstance(fp.producer)&&!stnKeys.has(normPlace(fp.producer)))
+    rows.push(['Producer',esc(fp.producer)]);
+  if(stns.length)rows.push([stns.length>1?'Stations':'Station',names(stns)]); // the processor, kept apart from both — a third actor, a third page
   if(regSubstance(lot.variety))rows.push(['Variety',esc(lot.variety)]);
   if(fp.process&&fp.process.family&&fp.process.family!=='unspecified')rows.push(['Process',esc(fp.process.family)]);
   if(fp.harvest&&fp.harvest.year)rows.push(['Harvest',esc(fp.harvest.year)]); // its own column, never a rung of the grain (MODEL_QA A5)
@@ -6986,7 +7413,10 @@ function specLot(lotId){
   if(!rows.length)rows.push(['On file',`<span class="unread">unread</span>`]);
   // ── the walk up — part of ──
   const up=[{h:'Part of',items:[
-    ...trueGrowers.map(g=>rowlink('producer',g.id,esc(g.name),g.producerKind==='station'?'the station that processed it':'the grower who grew it','')),
+    // the land first, then the hands on it — each named for what it is, never both as "the grower"
+    ...farms.map(g=>rowlink('producer',g.id,esc(g.name),prodKindLede('farm'),esc(nPl(scopeGreens('producer',g.id).length,'green')))),
+    ...hands.map(g=>rowlink('producer',g.id,esc(g.name),prodKindLede(g.producerKind),esc(nPl(scopeGreens('producer',g.id).length,'green')))),
+    ...unkind.map(g=>rowlink('producer',g.id,esc(g.name),prodKindLede(''),esc(nPl(scopeGreens('producer',g.id).length,'green')))),
     // the station has a page of its own now — the Station row above names it, this walks to it
     ...stns.map(p=>rowlink('processor',p.id,esc(p.name),'the station it passed through',esc(nPl(scopeGreens('processor',p.id).length,'green')))),
     regSubstance(fp.locality)?rowlink('locality',fp.locality,esc(fp.locality),'the town it grew by',esc(nPl(scopeGreens('locality',fp.locality).length,'green'))):'',
@@ -7079,6 +7509,8 @@ function specLot(lotId){
     title:esc(headName),qual:tail?esc(tail):'',
     lede:esc(sub||'origin unwritten'),
     rows,up,down,
+    // the three origin actors are the one thing on this card that has to be taught
+    rowsEx:['hands','Farm, grower, station'],
     covers:['hands'], // the down section names the hands with their roasts — one section per question
     // the corpus is own brews and the fold is the keeper's pen — both absent on
     // a published copy, which loses the lot page almost nothing: this is the
@@ -7516,6 +7948,7 @@ const PR={
   regions:{t:'A region is not a small country',b:'The two sit on one ladder and are opposite kinds of fact, so the map draws each by the thing the record actually holds. A country has a shape: drawn, closed, public domain, carried in this file. What it has no honest version of is a point — the centre of a country is a place no coffee is, and often not even land. So a green that proves only its country is drawn as that country’s outline. A region is the exact inverse. The record holds a point for it, roughly where the coffee grew, and no shape at all: coffee’s regions are sometimes an administrative department and sometimes a catchment nobody has ever drawn, so matching a region’s name to a polygon would be a guess, and this record does not guess. So a region draws as a point. That is why the plot looks the way it does — the shapes are the coarser claim and the points the finer one, which reads backwards until you know that the coarser claim is the one with the better drawing behind it. A region page also draws the other regions of its country as hairlines. They are there for scale, so a mark reads as somewhere in particular rather than a dot on an empty country. They are not counted in that page’s totals, never wear your ring and never fade for a hold — those say something about your own record, and a region drawn for scale is not in it.'},
   highlands:{t:'The highlands',b:'The dotted lines inside a country are contours — a thousand metres, two thousand, three. They are the shape of the land, cut from a public-domain elevation model at about five kilometres and carried in this file like the outlines, so they draw with no network at all. Weight rises with height because that is how a contour is read, and for no other reason. What they are not: a coffee’s stated height, which is the terrace lower down this page — that is a section, this is a plan, and the two answer different questions. Nor a grade. A mark inside the two-thousand line is not a finer coffee than a mark outside it; it is a coffee grown on higher ground, and the record does not sort, facet or rank by that. Where a frame is too wide for a contour to be a line rather than a smudge, none is drawn and the page says so.'},
   scene:{t:'Scenes and charts',b:'A scene is a cluster of roasters and bars close enough to move through in one outing — derived from the pins, never authored. A chart is one or more scenes under one name you give it. Membership follows the coordinates at read time: fix a pin and the chart corrects itself; a stored tag would only rot. The chart frame holds the ground you can walk; where the green came from keeps its own frame, at its own grain, joined in words — a sea route is not a line on a map.'},
+  hands:{t:'Farm, grower, station',b:'Three actors stand between the seed and the sack, and the record keeps them apart because they are not the same kind of thing. A farm is a place — a parcel of land, with a height, a soil and a name that is often the one printed on the bag. A grower is a hand: the person, the family or the association who worked it. A washing station is a mill, and it is neither — it gathers cherry from many hands and many parcels, so what leaves it is as many lots as arrived, never one blurred producer. One coffee can name all three, and each of them gets its own page: the farm page reads the hands that worked it, the grower page reads the land they grew on, the station page reads everyone who delivers there. Where the record has been given a name but nothing that says which of the three it is, it stays a producer and says so. An unmatched name buys no tier here for the same reason it buys no rung on the grain: rounding a guess up is how a record starts inventing.'},
   founderpen:{t:'The founder’s pen',b:'While the atlas settles, the shared record — the atlas and the Register — is kept by one pen: the founder’s. Everyone reads everything; everyone writes their own ledger, always. What waits is only the shared page. When the moderation ceremony ships, proposals stand for every keeper again — nothing here is taken away for good.'}
 };
 function openPrimer(key){
@@ -7794,8 +8227,8 @@ function originFieldsHTML(p,o,h,extra){o=o||{};
     ${f('country','Country','Ethiopia',2)}
     ${f('region','Region','Bench Maji',2)}
     ${f('locality','Locality','Mizan Teferi',2)}
-    ${f('producer','Producer / farm / station','free text',1)}
-    ${f('grower','Grower / co-op','the hand behind it',0)}
+    ${f('producer','Farm or station','Finca El Paraíso',1)}
+    ${f('grower','Grower','the hand behind it',0)}
     ${f('variety','Variety','Gesha 1931',1)}
     ${f('process','Process','washed',1)}
     ${f('lot','Lot no.','free text',0)}
