@@ -615,6 +615,35 @@ server/
   save path. It feeds `placeIndex` (the learned fold), `atlasGeoFill` (the pin, free), and
   the green's *Placed* row. It is **not** identity, **not** a rung, **not** a fourth column
   and **not** a stored node — see the invariant below.
+  **The rail's grammar (6.18.1).** The ladder is one fact, not three, so the tap lands all of
+  it and the column the keeper **typed in** is written through — it held the question, never
+  the answer, which is what moves `Gedeb` out of Region and into Locality. What the ladder
+  does not name is left as typed; the source column is the exception, and emptying it is the
+  move, not a loss. `repaintSug(active)` takes the id of the input being typed in and asks a
+  map about **that field only** — a sheet repaints on open, on a green pick and on a prefilled
+  amend, and firing three lookups on each made the form jump under the keeper's eye. One list
+  open at a time (`placeShut`), a *looking* state while it looks, and a plain sentence when the
+  map has never heard of the place. `placeNote(prefix)` is the placement, at full width under
+  all three columns and outside the grid: it states the ladder, names anything the map's words
+  replaced, offers *set it aside*, and says out loud when an edit has set the confirmation
+  aside — `placeCheck` is `placeHeld`'s own answer, asked of a copy so the question never
+  rewrites the form. Every rail clamps its own text and `.grid2`/`.grid3` are `minmax(0,1fr)`:
+  a grid track floors at min-content, so one un-wrappable ladder used to widen the column past
+  the sheet.
+  **The tidy sweep (6.18.1)** — the resolver pointed backwards, `docs/GEOCODE.md` §6. `placeSplit`
+  runs at entry and nowhere else, so every green entered before it landed still carries what was
+  typed. `tidyScan()` is a reading over the standing greens — derived at open, stored nowhere,
+  `reviewQueue`'s construction one kind up — flagging three things the record already has the
+  evidence for: a **run** still in one column (a comma), a **chain** blank the green's own
+  confirmed `lot.place` names, a **spelling** apart from the form the atlas prints most
+  (`tidyForms`; the one cosmetic case, ranked last and saying so). The greens nobody has placed
+  are counted apart, as an offer and not a fault. It never applies on its own — every suggestion
+  shows the columns before and after and waits for a tap — and every apply lands through
+  `lotAmendOrigin`, which is the whole of the amend's own lots branch lifted out so the two can
+  never drift: signed, dated, its own sighting, re-keyed, and stopping to offer the join when the
+  corrected key is already another green's. Pen-gated. One batch, the run split only, counting
+  aloud what it set aside. Surfaces: the desk (*Add to the atlas*), the green's corrections fold
+  (`catActsHTML`), and a derived scope's fold. `tidyForms`/`tidyScan` memoise on `catBust`.
 - **the grain** — how finely a green's origin is proven: **one spatial ladder,
   six rungs** (`country` · `region` · `locality` · `station` · `farm` ·
   `green-lot`), derived
@@ -969,7 +998,21 @@ the brew corpus (step 6) and discovery (step 7) follow.
   resemblance has no appeal. `placeSplit` runs where a record is read off a form, before
   the record exists; rewriting the words on a standing green is an amend, and an amend is
   deliberate and signed. Wherever the fold gathers more than one spelling, the page states
-  what it gathered and what folded them.
+  what it gathered and what folded them. The **sweep does not break this** — it is how the
+  rule is honoured on old records rather than an exception to it: it *suggests*, shows the
+  columns before and after, waits for a tap, and writes through `lotAmendOrigin`, so what
+  lands on a standing green is an amend and nothing else. Never add a path that applies a
+  suggestion silently, on boot, or in a merge.
+- **A run moves a word only when the line proves it is a ladder.** The downward pass reads
+  the run's own postal order — the same evidence the upward pass reads — and moves nothing
+  unless the column below is blank *and* the run has already placed one of its segments
+  somewhere else. That second guard is what tells `Pitalito, Huila, Colombia` from a region
+  whose name simply contains a comma. Loosening it turns the split into a guess, and the
+  words a keeper wrote down are the one thing the resolver may never invent over.
+- **The rail asks about the field being typed in.** `repaintSug(active)` is not a tidiness
+  preference: a rail that fires on every repaint asks the network questions nobody had, and
+  drops lists under columns the keeper never touched, which is what made the form move while
+  it was being read. A new surface passes its own input id, or it gets no map rail.
 - **The rail is never required.** Every origin column stays free text and every place
   surface must keep working with zero network: `placeSplit` and the fold's first two rungs
   need nothing but the device, the rail is simply absent offline, and no save path may ever

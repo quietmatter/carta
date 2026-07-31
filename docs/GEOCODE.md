@@ -103,14 +103,34 @@ coarser column. The country box is the one exception and it is a named one: a ke
 pastes the whole line there, so the country is the run's *last* word — reordered only
 when a later segment actually names a country.
 
+**The run also reads downward, from the region.** Two words left standing in Region after
+the parents have gone up are finest-first like every other run, so the lead belongs one
+rung *below* the box it was typed into — which is how `Pitalito, Huila, Colombia` becomes
+three columns rather than a country and a two-word region. Two guards keep it from being a
+guess, and they are what tell a ladder from a name that merely contains a comma:
+
+- the column below must be **blank** — nothing is ever overwritten; and
+- the run must have **proved itself a ladder** by placing at least one of its own segments
+  somewhere else. `Southern Nations, Nationalities and Peoples` places nothing, so nothing
+  moves and the words stay exactly where somebody wrote them.
+
+The country box has nothing coarser above it and only one column below, so a whole origin
+line pasted there hands its **remainder to the region column whole** — where the pass above
+reads it as the run it is. Before, the segments after the country fought over the single
+region slot and `Colombia, Huila` stood as a country.
+
 | typed | becomes |
 |---|---|
 | Region: `Huila, Colombia` | Region `Huila` · Country `Colombia` |
 | Country `Colombia`, Region `Huila, Colombia` | Region `Huila` — the restatement dropped |
 | Country: `Colombia, Huila` | Country `Colombia` · Region `Huila` |
-| Locality: `Pitalito, Huila, Colombia` | the whole ladder, three columns |
+| Region: `Pitalito, Huila, Colombia` | Country `Colombia` · Region `Huila` · Locality `Pitalito` |
+| Country: `Pitalito, Huila, Colombia` | the same three columns — the remainder goes down |
+| Locality: `Gedeb, Gedeo, Ethiopia` | the whole ladder, three columns |
+| Region: `Pitalito, Huila, Colombia`, Locality `Bruselas` | Country `Colombia` · Region `Pitalito, Huila` — the seam stays visible rather than overwriting a filled column |
 | Country `Brazil`, Region `Huila, Colombia` | *unchanged* — a different country is a seam, not noise |
 | Region: `Gedeb, Yirgacheffe` | *unchanged* — neither word names a country |
+| Region: `Southern Nations, Nationalities and Peoples` | *unchanged* — nothing placed, so nothing proved |
 
 ## 3 · The map rail
 
@@ -143,6 +163,61 @@ otherwise Pitalito files itself as the region of Pitalito and the ladder collaps
 Offline the rail is simply absent. The fields stay free text, the record saves exactly as
 it did before, and a green from a country the map has never heard of is still enterable.
 **It suggests; it never constrains.**
+
+### What the tap actually does
+
+The ladder is **one fact, not three**, so the tap lands all of it — and the column the
+keeper **typed in** is the one being answered. It held the question, never the answer, so
+it is written through even when it is full. That is what moves `Gedeb` out of Region,
+where a keeper who does not know Ethiopian administrative geography quite reasonably put
+it, and into Locality where the map says it belongs.
+
+Leaving the typed column alone was the bug that hollowed the whole feature out: the word
+stayed in the wrong box, the pick's own word was copied in beside it, the columns then
+disagreed with the ladder, and `placeHeld` threw the confirmation away at save. One tap,
+and nothing to show for it.
+
+What the ladder does not name is left exactly as typed. The source column is the one
+exception, and emptying it is the move rather than a loss — its word has gone up or down
+the ladder. Where the map's words replace something the keeper typed, the note **says
+which**: nothing is replaced in silence.
+
+### The rail asks about one field at a time
+
+`repaintSug(active)` takes the id of the input being typed in, and the map rail answers
+for that field and no other. Without it every repaint — and a sheet repaints on open, on
+a green pick, on a prefilled amend — fired three lookups and dropped three lists under
+three columns nobody had touched: the form jumped while it was being read, and the
+network was asked a question nobody had. The on-file rail is local and free, so it still
+repaints everywhere.
+
+One list is open at a time; the columns beside the active one put theirs away. The rail
+says **it is looking** while it looks (450 ms plus a network crossing is long enough that
+a blank box reads as a broken feature), and says so plainly when the map has never heard
+of the place — the column is free text and what was typed stands.
+
+### The placement is a sentence, not a badge
+
+`placeNote(prefix)` renders under all three columns, at full width, because a placement is
+a statement about the **record** and not about whichever column happened to be tapped. It
+states the ladder in full, names anything the map's words replaced, offers *set it aside*,
+and — this is the part that used to be invisible — says out loud when the keeper has since
+edited away from it and `placeHeld` will no longer carry the chain. Nothing here is an
+error: the record saves either way. It simply stops claiming a confirmation it no longer
+has, where the keeper can see it stop.
+
+Before, the note lived inside the tapped field's own `mapbox`, where the next keystroke in
+that column painted straight over it — so a keeper could confirm a place, edit a word, and
+have both the confirmation and any sign of it disappear without a sentence.
+
+### It stays inside its column
+
+The rail lives in a grid cell, and a grid track sizes to its content's *min-content* width
+unless told otherwise. An un-wrappable ladder — `Gedeb · Gedeo Zone · Southern Nations,
+Nationalities and Peoples Region · Ethiopia` — pushed its own column wider than the sheet
+and shoved the column beside it off the screen. `.grid2`/`.grid3` are `minmax(0,1fr)`, a
+form field is `min-width:0`, and every rail clamps its own text, so a long answer clips
+inside the column it belongs to rather than rearranging the form around itself.
 
 ## 4 · The chain, on the green
 
@@ -202,12 +277,58 @@ The whole discipline of this feature is in what it refuses.
   columns are free text, `placeSplit` is offline, and the fold's first two rungs need
   nothing but the device.
 
-## 6 · What is deliberately left
+## 6 · The tidy sweep — the resolver, pointed backwards
 
-- **The tidy sweep.** The fold is read-side, so duplicates stop *appearing* immediately
-  and no standing record is touched. A deliberate, pen-gated pass that offers to write the
-  split onto greens already standing is a later, separate act — it is an amend, and amends
-  are signed one at a time.
+`placeSplit` runs at **entry** and nowhere else. That is the right law and it leaves an
+obvious hole: every green entered before the resolver landed still carries whatever its
+keeper typed at the time. A run of three facts sits in one box, a column the green's own
+confirmed ladder could fill sits blank, one region is written four ways. None of that is
+*wrong* — it is what somebody wrote down — but it is the difference between a record and a
+clean one, and until the sweep the only way to mend it was to remember which greens needed
+it and walk to each page by hand.
+
+So the sweep **flags**. It is a reading over the standing greens, `tidyScan()`, derived at
+open and **stored nowhere**: a fresh device derives the same list, and a list that has been
+worked comes back empty. It is `reviewQueue`'s construction one kind up.
+
+Three suggestions, each backed by evidence the record already holds:
+
+| kind | what it found | the evidence |
+|---|---|---|
+| `run` | a run of place words still standing in one column | a comma — presentation, exactly as case and accents are |
+| `chain` | a blank column the green's **own confirmed** `lot.place` already names | a ladder somebody tapped on a map for this green |
+| `spell` | a column spelled apart from the form the atlas prints most | the greens themselves, folded (`tidyForms`) |
+
+The `spell` case is the only cosmetic one and it says so: those entries already *read* as
+one place, because the fold sees to that and rewrites nothing. It is ranked last.
+
+Counted apart from the three, because it is an offer and not a fault: the greens **nobody
+has placed on a map yet**. A green stating no place at all is in neither list — there is
+nothing there to tidy and nothing to look up.
+
+Four rules the sweep keeps:
+
+- **It never applies anything on its own.** Every suggestion shows the columns *before and
+  after* and waits for a tap. A correction the keeper cannot check before tapping is
+  exactly the record tidying itself behind their back that the fold refuses one layer down.
+- **A tidy is an amend.** Every apply lands through `lotAmendOrigin` — the whole of the
+  amend's own lots branch, lifted out so the two can never drift into two different writes.
+  Signed, dated, its own sighting, re-keyed off the corrected words, and stopping to offer
+  the **join** when the corrected key is already another green's.
+- **Pen-gated**, like every other write to the shared record.
+- **One batch, and only the run split.** A comma is not a guess, so that correction reads
+  the same on every green; anything that would land on a green already standing is set
+  aside and **counted out loud** rather than dragging a join sheet up over the run.
+
+Three surfaces, because a suggestion is worth most where the keeper already is: the desk
+(*Add to the atlas → Tidy the place columns*), the green's own corrections fold, and a
+derived scope's fold — a region or a town naming which of its greens carry one.
+
+`tidyForms`/`tidyScan` memoise on `catBust`, alongside `placeIndex`: the desk and every
+green's page ask on each paint.
+
+## 7 · What is deliberately left
+
 - **`placeAlt` has no comparator.** Two confirmations that disagree are both shown; which
   one *stands* is `compile()`'s rung comparator, the same pass altitude waits on.
 - **Reverse geocoding.** A pin does not currently teach the columns. It could, and the
