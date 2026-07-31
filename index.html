@@ -488,10 +488,17 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
   text-decoration:underline;text-underline-offset:3px;text-decoration-style:dotted}
 .crumb button:active{color:var(--ink)}
 .crumb i{color:var(--ink-3);font-style:normal;font-size:10px}
-/* the prefill rail — what the record already holds, one tap to fill */
-.sug{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+/* the prefill rail — what the record already holds, one tap to fill.
+   A rail lives inside a grid cell, and a grid track sizes to its content's MIN-CONTENT width
+   unless told otherwise — so an un-wrappable chip or an un-wrappable ladder ("Gedeb · Gedeo ·
+   SNNPR · Ethiopia") used to push its column wider than the sheet and shove the column beside
+   it off the screen. The track is capped at the cell (minmax(0,1fr) + min-width:0, below) and
+   every rail clamps its own text, so a long answer ellipsises inside the column it belongs to
+   rather than rearranging the form around itself. */
+.sug{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;min-width:0;max-width:100%}
 .sug .s{font-family:var(--sans);font-size:var(--s11);border:1px solid var(--line-2);
-  border-radius:var(--chipr);background:none;color:var(--ink-2);padding:4px 8px;cursor:pointer}
+  border-radius:var(--chipr);background:none;color:var(--ink-2);padding:4px 8px;cursor:pointer;
+  max-width:100%;min-width:0;overflow-wrap:anywhere}
 .sug .s:active{border-color:var(--line-strong);color:var(--ink)}
 .sug .s b{font-weight:400;color:var(--ink-3);margin-left:5px}
 .sug .lb{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);align-self:center;margin-right:2px}
@@ -500,10 +507,20 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
    to yet and the drawing should say so before the keeper taps it. */
 .sug.place{margin-top:4px;flex-direction:column;align-items:stretch;gap:4px}
 .sug.place .lb{align-self:flex-start;margin:0 0 1px}
-.sug.place .s{border-style:dashed;text-align:left;display:block;width:100%}
+/* a rail row is a tap target on a phone before it is a line of type */
+.sug.place .s{border-style:dashed;text-align:left;display:block;width:100%;padding:7px 9px;line-height:1.3}
+.sug.place .s .nm{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sug.place .s .ch{display:block;font-size:var(--s11);color:var(--ink-3);margin-top:1px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sug.place .pl{font-family:var(--sans);font-size:var(--s11);color:var(--ink-2)}
+.sug.place .lb.work{font-style:italic;font-family:var(--serif);font-size:var(--s12)}
+/* the placement — a statement about the record, not about one field, so it sits under all three
+   columns at full width rather than inside the box of whichever one happened to be tapped */
+.placenote{margin:-6px 0 14px;padding:8px 10px;border-left:2px solid var(--line-2);min-width:0}
+.placenote .k{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:2px}
+.placenote .v{font-family:var(--serif);font-size:var(--s13);color:var(--ink-2);overflow-wrap:anywhere}
+.placenote.stale{border-left-style:dashed}
 
 /* the door — the display voice, the fact chips, the binding rows, the readout */
 .door-display,.sheet h3.door-display{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.12;letter-spacing:-.02em;color:var(--ink);margin:0 0 6px;text-wrap:balance}
@@ -554,7 +571,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .btn+.btn{margin-top:8px}
 
 /* ===== forms ===== */
-label.f,div.f{display:block;margin-bottom:14px}
+/* min-width:0 — a field is a grid cell as often as not, and without it the cell is sized by its
+   widest un-breakable content (a rail row, a long producer name) rather than by the track */
+label.f,div.f{display:block;margin-bottom:14px;min-width:0}
 label.f span.l,div.f span.l{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px;font-weight:500}
 input[type=text],input[type=number],input[type=date],select,textarea{
   width:100%;font-family:var(--serif);font-size:16px;padding:9px 0;
@@ -565,8 +584,10 @@ input::placeholder,textarea::placeholder{color:var(--ink-d);font-style:italic}
 select{background:transparent}
 input:focus,select:focus,textarea:focus{outline:none;border-bottom-color:var(--ink)}
 textarea{min-height:60px;resize:vertical;border:1px solid var(--line);padding:9px 11px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px}
+/* minmax(0,…), not 1fr: a bare 1fr floors at min-content, so one long word in one cell widens
+   the whole grid past the sheet. The columns are halves of what is there, always. */
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 14px}
+.grid3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:0 12px}
 
 /* ===== dial (the field-tool scale exception) ===== */
 .dial{border:1px solid var(--line);border-radius:var(--radius);background:var(--paper-card);padding:9px 6px 11px;margin-bottom:10px;text-align:center;position:relative}
@@ -1256,7 +1277,8 @@ CAT_KINDS.forEach(k=>{CAT[k]=loadDoc(k)});
  * this returns the own array itself (not a copy), so every existing mutation
  * path keeps its object identity and nothing about a keeper's app changes. ---- */
 let _catL=null,_catLive=null;
-const catBust=()=>{_catL=null;_catLive=null;_placeIx=null}; // the learned place fold is derived from the greens, so it busts with them
+let _tidyF=null,_tidyS=null;
+const catBust=()=>{_catL=null;_catLive=null;_placeIx=null;_tidyF=null;_tidyS=null}; // the learned place fold and the tidy sweep are derived from the greens, so they bust with them
 const catLayer=(own,pub)=>{const w={...pub};Object.keys(own).forEach(k=>{if(regSubstance(own[k]))w[k]=own[k]});w._pubUnder=1;return w};
 function catRaw(kind){
   const own=(CAT[kind]&&CAT[kind].entries)||[];
@@ -1893,9 +1915,21 @@ function placeSplit(o){
   // the country box is the one that reads the other way: a bag prints "Huila, Colombia" and a
   // keeper pastes the whole line into Country, so the country is the run's LAST word, not its
   // first. Named, never positional — a segment leads only if it is a country the build knows.
+  const proved={};   // a run that named a country has PROVED it is a ladder — see the downward pass below
   const cs=placeSegs(o.originCountry);
   if(cs.length>1&&!placeCountry(cs[0])){const i=cs.findIndex(placeCountry);
-    if(i>0)o.originCountry=[cs[i],...cs.filter((_,j)=>j!==i)].join(', ')}
+    if(i>0){
+      /* The country box has nothing coarser above it and only ONE column below, so a whole origin
+       * line pasted into it used to overflow: the country was rotated to the front and the two
+       * words after it fought over the single region slot, leaving "Colombia, Huila" standing as
+       * a country. The line is finest-first like every other run, so the country is lifted out
+       * and the REST is handed to the region column whole — where the pass below reads it as the
+       * run it is, and takes it one rung further down if it earns it. */
+      o.originCountry=cs[i];
+      const rest=cs.filter((_,j)=>j!==i);
+      if(!regSubstance(o.originRegion)){o.originRegion=rest.join(', ');proved.originRegion=1}
+      else o.originCountry=[cs[i],...rest].join(', ');   // the region is spoken for; the seam stays visible rather than being dropped
+    }}
   const seen={};F.forEach(f=>{const l=placeLead(o[f]);if(l)seen[normPlace(l)]=f});
   // A run reads finest first, the postal order every origin on every bag is printed in. So a
   // segment after the lead is that lead's PARENT, and the column it wants is the coarser one.
@@ -1903,19 +1937,33 @@ function placeSplit(o){
   const up={originLocality:['originRegion','originCountry'],originRegion:['originCountry'],originCountry:['originRegion']};
   F.forEach(f=>{
     const segs=placeSegs(o[f]);if(segs.length<2)return;
-    const keep=[segs[0]];
+    const keep=[segs[0]];let placed=proved[f]?1:0;
     segs.slice(1).forEach(s=>{
       const n=normPlace(s);
-      if(seen[n])return;                                             // its parent, restated — the run's whole purpose
+      if(seen[n]){placed++;return}                                   // its parent, restated — the run's whole purpose
       const c=placeCountry(s);
       // a segment that NAMES a country is one, wherever it was typed — the only claim made by word
-      if(c&&!regSubstance(o.originCountry)){o.originCountry=c;seen[n]='originCountry';return}
-      if(c&&placeEq(c,o.originCountry))return;                       // the country already stands — a restatement in other words
+      if(c&&!regSubstance(o.originCountry)){o.originCountry=c;seen[n]='originCountry';placed++;return}
+      if(c&&placeEq(c,o.originCountry)){placed++;return}              // the country already stands — a restatement in other words
       if(c){keep.push(s);return}                                     // it names a DIFFERENT country: the seam stays visible, never quietly dropped
       const slot=(up[f]||[]).find(t=>t!=='originCountry'&&!regSubstance(o[t]));
-      if(slot){o[slot]=s;seen[n]=slot;return}
+      if(slot){o[slot]=s;seen[n]=slot;placed++;return}
       keep.push(s);                                                  // unplaceable — it stays where it was typed
     });
+    /* The run also reads DOWNWARD, and only from the region — which is where a bag's whole origin
+     * line most often gets pasted. "Pitalito, Huila, Colombia" typed into Region is a town, its
+     * region and its country: the upward pass takes the country, and the two words left over are
+     * finest-first like every other run, so the lead belongs one rung BELOW the box it was typed
+     * into. Without this the example in this section's own header only half-resolved.
+     * Two guards, and they are what keep it from being a guess. The column below must be blank
+     * (nothing is ever overwritten), and the run must have PROVED it is a ladder by having placed
+     * at least one of its own segments somewhere else. That second one is the whole difference
+     * between "Pitalito, Huila, Colombia" and a region whose name simply contains a comma —
+     * "Southern Nations, Nationalities and Peoples" places nothing, so nothing moves, and the
+     * words stay exactly where somebody wrote them. */
+    if(f==='originRegion'&&placed&&keep.length>1&&!regSubstance(o.originLocality)){
+      o.originLocality=keep.shift();seen[normPlace(o.originLocality)]='originLocality';
+    }
     o[f]=keep.join(', ');
   });
   return o;
@@ -3134,10 +3182,19 @@ function smapRetry(id){
 }
 
 /* ============ version tracker ============ */
-const APP_VERSION='6.18.0';
+const APP_VERSION='6.18.1';
 const SEEN_KEY='carta.seenVersion';
 // Newest first. Each release the record itself remembers.
 const CHANGELOG=[
+  {v:'6.18.1',date:'July 2026',title:'The map rail, made usable — and pointed backwards at what is already on file.',items:[
+    'The rail stays inside its column. A place with a long ladder behind it — “Gedeb · Gedeo Zone · Southern Nations, Nationalities and Peoples Region · Ethiopia” — pushed its own column wider than the sheet and shoved the column beside it off the screen. The form is half and half, always, and a long answer clips inside the column it belongs to.',
+    'One tap now fills the ladder it promised. Type “Gedeb” into Region, tap it on the map, and the word moves to Locality where the map says it belongs, with Gedeo Zone above it and Ethiopia above that. Before, the word you typed stayed in the box you typed it into, its own name was copied in beside it, and the confirmation was quietly thrown away at save — one tap, and nothing to show for it. Where the map’s words replace something you typed, it says which.',
+    'It asks about the field you are typing in, and no other. Opening a form used to fire three lookups and drop three lists under three columns nobody had touched, so the page jumped while you were reading it. Now the rail answers one question at a time, says it is looking while it looks, and says so plainly when the map has never heard of the place — the column is free text and what you typed stands.',
+    'Placed is a sentence now, not a badge that vanishes. It sits under all three columns, states the whole ladder, and says out loud when you have since edited away from it and the confirmation no longer applies. Set it aside whenever you like.',
+    'A pasted origin line lands in three columns instead of one. “Pitalito, Huila, Colombia” typed into any of the three boxes now reads as a town, its region and its country — the run reads downward as well as up. A region whose name simply contains a comma is left exactly as written: the split only moves a word when the line has proved itself a ladder by naming a country in it.',
+    'Tidy the place columns — the resolver, pointed backwards. Every green entered before the resolver landed still carries whatever was typed at the time. Under the desk, in Add to the atlas, is a list of the greens the record could be told something about: a run still crammed in one box, a column that the green’s own confirmed map reading already fills, a region spelled apart from the rest of the atlas. Each shows you the columns before and after, and nothing happens without your tap. The same flag appears on the green’s own page, and on a region or a town’s page beside the greens that carry it.',
+    'A tidy is an amend. It is signed, dated, keeps its own line in the record, re-keys the green so the next bag lands on it — and stops to offer the join when the corrected words read as a green already standing.',
+  ]},
   {v:'6.18.0',date:'July 2026',title:'The page folds, and it rests on the place it is about.',items:[
     'Every section is a card now. A green’s page answered nine questions in one scroll, and the corrections were at the bottom of all of them. Each section folds into a card that opens and closes, and the page opens as a stack of them — every question still asked, in the same order, none of them shouting. A closed card keeps its heading and its count on the face, so the stack reads as a table of contents rather than a row of blank drawers.',
     'It stays how you leave it. A card remembers by its name, not by its page: close “Where it sits” once and it is closed on the next green and the one after. Set the posture you want to read in and every page is the short page you asked for. Open all is one tap, and it persists too. The reading never folds — the head, the road and the resolution readout are always open, because a page that hides its answer behind a tap has stopped being a record.',
@@ -4022,7 +4079,15 @@ function catActsHTML(doc,id){
   if(!isAdmin())return `<div class="muted small" style="margin:0 2px 4px">Amending, joining and setting down are writes to the shared record, and the pen is elsewhere. Take it up under <button class="text-action" onclick="deskGo('pen')">the desk · the pen</button> and this page opens to correction.</div>`;
   const cands=nodeJoinCands(doc,id);
   const parted=((n.lineage&&n.lineage.mergedFrom)||[]).map(i=>catNode(doc,i)).filter(t=>t&&nodeTomb(t)===id);
-  return `<button class="btn btn-quiet" onclick="openNodeAmend(${jsq(doc)},${jsq(id)})">Amend this ${esc(nodeKindWord(doc))}</button>
+  // the sweep's flag, on the green itself — a suggestion a keeper meets while reading the page
+  // is worth more than the same suggestion waiting in a room they have to remember to visit
+  const fx=doc==='lots'?tidyFixes(n):[];
+  return `${fx.length?`<div class="card" style="margin:0 0 12px"><div class="row"><strong class="small">${esc(fx[0].t)}</strong><span class="n-note">suggested</span></div>
+  <div class="muted small serif" style="font-style:italic;margin-top:4px">${esc(fx[0].why)}</div>
+  ${tidyColsHTML(fx[0].cols)}
+  <button class="btn btn-quiet" style="margin-top:9px" onclick="tidyApplyHere(${jsq(id)},${jsq(fx[0].k)})">Correct it</button>
+  ${fx.length>1?`<div class="muted small" style="margin:6px 2px 0">${fx.length-1} more suggestion${fx.length===2?'':'s'} on this green, under the desk in <em>tidy the place columns</em>.</div>`:''}</div>`:''}
+  <button class="btn btn-quiet" onclick="openNodeAmend(${jsq(doc)},${jsq(id)})">Amend this ${esc(nodeKindWord(doc))}</button>
   ${cands.length?`<button class="btn btn-quiet" onclick="openNodeJoin(${jsq(doc)},${jsq(id)})">Join to another ${esc(nodeKindWord(doc))}…</button>
   <div class="muted small" style="margin:2px 2px 10px">${cands.length} other${cands.length===1?'':'s'} read${cands.length===1?'s':''} like this one. Join and every record on both follows here — undoable.</div>`:''}
   ${parted.map(t=>`<button class="btn btn-quiet" onclick="openNodePart(${jsq(doc)},${jsq(id)},${jsq(t.id)})">Part them again — restore ${esc(nodeLabel(doc,t))}</button>`).join('')}
@@ -4087,29 +4152,48 @@ function openNodeAmend(doc,id){
   <button class="btn btn-primary" onclick="saveNodeAmend(${jsq(doc)},${jsq(id)})">Save the correction</button>
   <button class="btn btn-quiet" onclick="closeSheet()">Cancel</button>`);
 }
+/* One green's origin columns, corrected and written — the whole of an amend's lots branch, lifted
+ * out so the tidy sweep below lands EXACTLY the same write rather than a second, thinner one that
+ * would drift from it. Returns 'ok', or the reason it stopped. `quiet` is for a batch: a clash
+ * with a standing green is a question for the keeper, and in a batch it is set aside and counted
+ * rather than dragging a join sheet up over the run. */
+function lotAmendOrigin(id,o,quiet){
+  const w=catWritable('lots',id);if(!w){if(!quiet)toast('Gone.');return 'gone'}
+  const who=activeName(),at=new Date().toISOString();
+  if(![o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].some(regSubstance)){
+    if(!quiet)toast('A green needs at least one origin column to stand on');return 'empty'}
+  const key=lotKeyOf(o,w.id),clash=catByKey('lots',key);
+  if(clash&&clash.id!==w.id){
+    if(quiet)return 'clash';
+    closeSheet();
+    toast('That correction reads as a green already on the atlas — join them instead');
+    openNodeJoin('lots',id);return 'clash'}
+  // the origin columns and the derived fingerprint, and deliberately nothing else: hardIds,
+  // lineage and the batch ref are the node's accumulated identity, and an amend of the words
+  // is not a licence to drop a printed code or a join somebody made
+  const f=lotFields(o,null);delete f.hardIds;delete f.lineage;delete f.processingBatchRef;
+  catUpsert('lots',w._key,f,who,{full:true,at:w.firstAt||w.createdAt});   // written THROUGH — an amend corrects, it does not fill blanks
+  w._key=key;                                                            // re-keyed off the corrected origin, so the next bag lands here and does not fork
+  lotRederive(w,o);
+  if(regSubstance(o.producer)){const p=catStampProducer(o,who,at);if(p)lotAddProducerRef(w,p.id)}
+  if(regSubstance(o.grower)){const g=catStampGrower(o,who,at);if(g)lotAddProducerRef(w,g.id)}
+  if(o.altitudeM)lotSetAltitude(w,o.altitudeM,who,'keeper');
+  if(o.place)lotSetPlace(w,o.place,who);   // a place confirmed on the map while amending — an amend runs every stamp a create runs
+  if((o.hardIds||[]).length)lotAddHardIds(w,o.hardIds,who,at);
+  w.sightings=w.sightings||[];
+  w.sightings.push({id:uid(),by:who,at,via:'amend',rung:'confirmed',evidence:{}});   // the correction is itself a record — signed, dated, strikeable
+  w.updatedAt=at;w.by=who;CAT.lots.dirty=true;saveDoc('lots');save();
+  return 'ok';
+}
 function saveNodeAmend(doc,id){
   if(penGuard())return;
   const w=catWritable(doc,id);if(!w){toast('Gone.');return}
   const who=activeName(),at=new Date().toISOString();
   if(doc==='lots'){
     const o=readOriginFields('na_',(w.hardIds||[]).filter(h=>!h.withdrawnAt)); if(o===false)return;
-    if(![o.originCountry,o.originRegion,o.producer,o.variety,o.process,o.lot].some(regSubstance)){toast('A green needs at least one origin column to stand on');return}
-    const key=lotKeyOf(o,w.id),clash=catByKey('lots',key);
-    if(clash&&clash.id!==w.id){closeSheet();
-      toast('That correction reads as a green already on the atlas — join them instead');
-      openNodeJoin('lots',id);return}
-    // the origin columns and the derived fingerprint, and deliberately nothing else: hardIds,
-    // lineage and the batch ref are the node's accumulated identity, and an amend of the words
-    // is not a licence to drop a printed code or a join somebody made
-    const f=lotFields(o,null);delete f.hardIds;delete f.lineage;delete f.processingBatchRef;
-    catUpsert('lots',w._key,f,who,{full:true,at:w.firstAt||w.createdAt});   // written THROUGH — an amend corrects, it does not fill blanks
-    w._key=key;                                                            // re-keyed off the corrected origin, so the next bag lands here and does not fork
-    lotRederive(w,o);
-    if(regSubstance(o.producer)){const p=catStampProducer(o,who,at);if(p)lotAddProducerRef(w,p.id)}
-    if(regSubstance(o.grower)){const g=catStampGrower(o,who,at);if(g)lotAddProducerRef(w,g.id)}
-    if(o.altitudeM)lotSetAltitude(w,o.altitudeM,who,'keeper');
-    if(o.place)lotSetPlace(w,o.place,who);   // a place confirmed on the map while amending — an amend runs every stamp a create runs
-    if((o.hardIds||[]).length)lotAddHardIds(w,o.hardIds,who,at);
+    const r=lotAmendOrigin(id,o);
+    if(r!=='ok')return;                       // the reason was said where it happened
+    closeSheet();toast('Corrected — the page reads it now');render();return;
   }else if(doc==='roasts'){
     const name=val('na_name');
     if(!regSubstance(name)){toast('An offering needs a name — it is how the bag read');return}
@@ -4687,6 +4771,177 @@ function queueApart(recId){
   rec.lotApart=[...new Set([...(rec.lotApart||[]),...queueCandidates(rec).map(c=>c.lot.id)])];
   save();toast('Kept apart — the safe call');afterQueueAction();
 }
+
+/* ---- the tidy sweep (docs/GEOCODE.md §6) — the resolver, pointed backwards.
+ *
+ * placeSplit runs at ENTRY and nowhere else, which is the right law and leaves an obvious hole:
+ * every green entered before the resolver landed still carries whatever its keeper typed. A run
+ * of three facts sits in one box, a column the green's own confirmed ladder could fill sits
+ * blank, one region is written four ways. None of that is wrong — it is what somebody wrote down
+ * — but it is the difference between a record and a clean one, and until now the only way to
+ * mend it was to remember which greens needed it and walk to each page by hand.
+ *
+ * So the sweep FLAGS. It is a reading over the standing greens, derived at open and stored
+ * nowhere: a fresh device derives the same list, and a list that has been worked simply comes
+ * back empty. Every suggestion states its own evidence and shows the columns before and after,
+ * because a correction the keeper cannot check before tapping is exactly the record tidying
+ * itself behind their back that the fold refuses one layer down.
+ *
+ * It never applies anything on its own, it never guesses (a comma, the green's own confirmed
+ * chain, and a spelling the atlas already carries — nothing else), and every apply lands through
+ * lotAmendOrigin, so a tidy IS an amend: signed, dated, its own sighting, re-keyed, and stopping
+ * to offer the join when the corrected words read as a green already standing. Pen-gated like
+ * every other write to the shared record. ---- */
+const TIDY_COLS=[['country','originCountry','Country'],['region','originRegion','Region'],['locality','originLocality','Locality']];
+// A green's origin in the shape the form and the resolver both speak — the same object
+// readOriginFields hands back, read off the node instead of off a sheet.
+function lotOriginRead(l){
+  const fp=l.fingerprint||{};
+  const o={originCountry:l.country||'',originRegion:l.region||'',originLocality:l.locality||'',
+    producer:l.producer||'',variety:l.variety||'',process:l.process||'',lot:l.lotName||'',
+    harvest:(fp.harvest&&fp.harvest.year)||'',grower:l.grower||'',
+    hardIds:(l.hardIds||[]).filter(h=>!h.withdrawnAt)};
+  o.producerKind=l.producerKind||actorKind(o);
+  return o;
+}
+/* fold → the form the atlas printed most, per column, with how many distinct spellings stand
+ * under it. Built over the whole catalog once per scan: the question "is this green out of step
+ * with the atlas" cannot be asked of one green alone. */
+function tidyForms(){
+  if(_tidyF)return _tidyF;
+  const m={};
+  catAll('lots').forEach(l=>{if(!lotLive(l))return;
+    TIDY_COLS.forEach(([c])=>{const v=l[c];if(!regSubstance(v)||placeSegs(v).length>1)return;
+      const f=c+'|'+placeFold(v);(m[f]=m[f]||[]).push(String(v))})});
+  const out={};Object.keys(m).forEach(f=>{out[f]={canon:canonPlace(m[f]),n:new Set(m[f]).size}});
+  return (_tidyF=out);
+}
+/* What this green could be told. Each fix carries the columns as they stand and as they would
+ * read, so the sheet can show the change rather than describe it. */
+function tidyFixes(l,forms){
+  if(!lotLive(l))return [];
+  forms=forms||tidyForms();
+  const o=lotOriginRead(l),out=[];
+  // 1 · a run of place words still standing in one column. The evidence is a comma, which is
+  // presentation exactly as case and accents are — the one split the resolver has always made.
+  const sp=placeSplit(Object.assign({},o));
+  const ran=TIDY_COLS.filter(([c,f])=>(sp[f]||'')!==(o[f]||''));
+  if(ran.length)out.push({k:'run',t:'Three facts in one column',
+    why:'A run of place words printed on one line, still sitting in the box it was typed into. Splitting it is the same read the resolver makes on every entry now — the comma is the evidence, and no word is dropped.',
+    cols:ran.map(([c,f,L])=>[L,o[f]||'—',sp[f]||'—'])});
+  // 2 · a blank a confirmed ladder already answers. The keeper tapped this place on a map; the
+  // column it states is not a guess and never was.
+  const p=l.place;
+  if(p&&p.ref){
+    const blank=TIDY_COLS.filter(([c,f])=>!regSubstance(o[f])&&regSubstance(p[c])&&!ran.some(r=>r[0]===c));
+    if(blank.length)out.push({k:'chain',t:'A column its own map reading fills',
+      why:'This green carries a ladder somebody confirmed on the map — '+p.chain.join(' · ')+'. These columns are blank, and that reading already names them. Filling them is a claim about where the coffee is from, which is why it is your tap and not the map’s.',
+      cols:blank.map(([c,f,L])=>[L,'—',p[c]])});
+  }
+  // 3 · one place, spelled out of step with the rest of the atlas. It already READS as one place
+  // (the fold does that, and rewrites nothing); this only makes the words agree, and is the one
+  // suggestion here that is cosmetic rather than structural — it is ranked last and says so.
+  const spell=TIDY_COLS.filter(([c,f])=>{const v=o[f];
+    if(!regSubstance(v)||ran.some(r=>r[0]===c))return false;
+    const e=forms[c+'|'+placeFold(v)];return e&&e.n>1&&String(v)!==e.canon});
+  if(spell.length)out.push({k:'spell',t:'Spelled apart from the rest of the atlas',
+    why:'These already read as one place — the fold sees to that and rewrites nothing. This only makes the words on this green agree with the form the record uses most.',
+    cols:spell.map(([c,f,L])=>[L,o[f],forms[c+'|'+placeFold(o[f])].canon])});
+  return out;
+}
+/* The sweep. Greens with something to correct, then — counted apart, because it is an offer and
+ * not a fault — the greens no one has placed on a map yet. A green stating no place at all is in
+ * neither: there is nothing there to tidy and nothing to look up. */
+function tidyScan(){
+  if(readOnly()||!isAdmin())return {greens:[],unplaced:[],n:0};
+  if(_tidyS)return _tidyS;   // the desk and every green's page ask on each paint; it busts with the catalog
+  const forms=tidyForms(),greens=[],unplaced=[];
+  catAll('lots').forEach(l=>{
+    if(!lotLive(l))return;
+    const fx=tidyFixes(l,forms);
+    if(fx.length)greens.push({lot:l,fixes:fx});
+    else if(!(l.place&&l.place.ref)&&TIDY_COLS.some(([c])=>regSubstance(l[c])))unplaced.push(l);
+  });
+  // the structural corrections first, and within them the greens with most to say
+  const rank=g=>g.fixes.some(f=>f.k==='run')?0:g.fixes.some(f=>f.k==='chain')?1:2;
+  greens.sort((a,b)=>rank(a)-rank(b)||b.fixes.length-a.fixes.length||String(lotLabel(a.lot)).localeCompare(String(lotLabel(b.lot))));
+  return (_tidyS={greens,unplaced,n:greens.length});
+}
+const tidyCount=()=>{try{return tidyScan().n}catch(e){return 0}};
+// the columns of one fix, shown as they stand and as they would read — the whole point is that
+// the keeper checks the correction before it happens, never after
+const tidyColsHTML=cols=>`<div class="card" style="margin:6px 0 0">${cols.map(([L,a,b])=>
+  `<div class="kv"><span class="k">${esc(L)}</span><span class="v">${esc(a)} <i style="font-style:normal;color:var(--ink-3)">→</i> <strong>${esc(b)}</strong></span></div>`).join('')}</div>`;
+function openTidy(){
+  if(penGuard())return;
+  const s=tidyScan();
+  if(!s.greens.length&&!s.unplaced.length){closeSheet();toast('Nothing to tidy — the place columns read clean');return}
+  const runs=s.greens.filter(g=>g.fixes.some(f=>f.k==='run')).length;
+  const shown=s.greens.slice(0,12);
+  openSheet(`
+  <h3>Tidy the place columns</h3>
+  <div class="sub">${s.greens.length?`${nPl(s.greens.length,'green')} the record could be told something about — each one checked here before anything is written.`:'Every green reads clean. What is left is an offer, not a fault.'}</div>
+  <div class="muted small" style="margin:2px 2px 12px">Nothing here happens on its own. A tidy is an amend: signed, dated, and one more amend from being put back the way it was.</div>
+  ${runs>1?`<button class="btn btn-quiet" onclick="tidyApplyAll('run')">Split every run — ${runs} greens</button>
+  <div class="muted small" style="margin:2px 2px 14px">The only one offered in a batch. A comma is not a guess, so this correction reads the same on every green; anything that would land on a green already standing is left for you.</div>`:''}
+  ${shown.map(g=>`<div class="wc-item" style="cursor:default;display:block">
+    <span class="tx" style="display:block"><span class="tt">${esc(lotLabel(g.lot))}</span><span class="dd">${esc(lotOriginLine(g.lot))}</span></span>
+    ${g.fixes.map(f=>`<div style="margin-top:9px">
+      <div class="small" style="font-family:var(--sans);color:var(--ink-2)">${esc(f.t)}</div>
+      <div class="muted small serif" style="font-style:italic;margin:2px 0 0">${esc(f.why)}</div>
+      ${tidyColsHTML(f.cols)}
+      <button class="btn btn-quiet" style="margin-top:8px" onclick="tidyApply(${jsq(g.lot.id)},${jsq(f.k)})">Correct it</button></div>`).join('')}
+    <button class="btn btn-quiet" style="margin-top:6px" onclick="closeSheet();nav('lot',${jsq(g.lot.id)})">Open the green instead</button>
+  </div>`).join('')}
+  ${s.greens.length>12?`<div class="muted small" style="margin:8px 2px 0">${s.greens.length-12} more behind these — the sweep re-reads itself each time you open it, so they come up as these clear.</div>`:''}
+  ${s.unplaced.length?`<h2>Not yet placed on the map</h2>
+  <div class="muted small" style="margin:0 2px 10px">${nPl(s.unplaced.length,'green')} whose columns nobody has confirmed against a map. This is not a fault — a typed town is as true as a tapped one, and confirming a spelling proves nothing about the coffee. What it does is teach the fold, so the next record spelling one of these differently lands on the same page. Amend one and the map rail is there.</div>
+  ${s.unplaced.slice(0,8).map(l=>rowlink('lot',l.id,esc(lotLabel(l)),esc(lotOriginLine(l)||'unread'),'')).join('')}
+  ${s.unplaced.length>8?`<div class="muted small" style="margin:6px 2px 0">${s.unplaced.length-8} more.</div>`:''}`:''}
+  <button class="btn btn-quiet" style="margin-top:12px" onclick="closeSheet()">Close</button>`);
+}
+// a green's place columns, as one line — the sweep's own subtitle, and the unplaced list's
+const lotOriginLine=l=>TIDY_COLS.map(([c])=>l[c]).filter(regSubstance).join(' · ');
+function tidyApply(id,k){
+  if(tidyWrite(id,k))openTidy();   // the sweep re-derives, so what was just mended is gone from it
+}
+// the same correction, taken from the green's own page — it stays on the page it was offered on
+function tidyApplyHere(id,k){if(tidyWrite(id,k))render()}
+function tidyWrite(id,k){
+  if(penGuard())return false;
+  const l=catNode('lots',id);if(!lotLive(l)){toast('Gone.');return false}
+  const o=tidyCorrected(l,k);if(!o)return false;
+  if(lotAmendOrigin(id,o)!=='ok')return false;   // a clash opened the join; the sweep steps aside for it
+  toast('Corrected — the atlas reads it now');
+  return true;
+}
+// the corrected origin for one green and one kind of fix — the ONLY place a suggestion becomes a
+// value, so what the sheet drew and what the write lands can never be two different corrections
+function tidyCorrected(l,k){
+  const o=lotOriginRead(l);
+  if(k==='run')return placeSplit(o);
+  if(k==='chain'){const p=l.place;if(!p||!p.ref)return null;
+    TIDY_COLS.forEach(([c,f])=>{if(!regSubstance(o[f])&&regSubstance(p[c]))o[f]=p[c]});return o}
+  if(k==='spell'){const forms=tidyForms();
+    TIDY_COLS.forEach(([c,f])=>{const v=o[f];if(!regSubstance(v)||placeSegs(v).length>1)return;
+      const e=forms[c+'|'+placeFold(v)];if(e&&e.n>1&&String(v)!==e.canon)o[f]=e.canon});return o}
+  return null;
+}
+// The one batch, and only for the run split. Every green that would land on a green already
+// standing is set aside and counted — a join is a question for the keeper, and a batch is the
+// wrong place to be asked it.
+function tidyApplyAll(k){
+  if(penGuard())return;
+  if(k!=='run')return;
+  let done=0,held=0;
+  tidyScan().greens.forEach(g=>{
+    if(!g.fixes.some(f=>f.k===k))return;
+    const o=tidyCorrected(g.lot,k);if(!o)return;
+    if(lotAmendOrigin(g.lot.id,o,true)==='ok')done++;else held++;
+  });
+  toast(done?`${nPl(done,'green')} split${held?` · ${held} left for you — they read as greens already standing`:''}`:'Nothing could be split on its own');
+  openTidy();
+}
 /* ---- The Chart No. 1 curation view — a read surface for the one chart (LA · Ethiopia 2025): the roasters
  * and the season's greens authored under it, the same-green cases standing on real authored data, and the
  * review queue's quiet entry point. The Act II gate made visible; reuses openLotPage, adds no new map (that
@@ -5220,7 +5475,7 @@ function vDesk(){
   const rows=rd?DESK_ROWS.filter(r=>READER_ROWS.includes(r.k))
     :DESK_ROWS.filter(r=>!['copy','keeping','signin'].includes(r.k))
       .filter(r=>!(ro&&['atlas','record','pen','sync','keepers','prefs'].includes(r.k))).filter(r=>r.k!=='struck'||sn);
-  const qn=ro?0:reviewQueue().length;
+  const qn=ro?0:reviewQueue().length+tidyCount();   // both queues are the atlas's, and the row is one door to both
   return `
   <p class="eyebrow">The desk</p>
   <h2 class="display">${rd?'The copy, and <em>the way out of reading</em>':'Everything that <em>is not a cup</em>'}</h2>
@@ -5311,6 +5566,7 @@ function deskAtlasHTML(){
   ${readOnly()?'':`<button class="rowlink" onclick="openDoor()"><span><span class="t">The door — paste a coffee</span><br><span class="m">read on the device, resolved by the same ladder a bag runs</span></span><span class="go">→</span></button>`}
   ${isAdmin()?`<button class="rowlink" onclick="openProposeSighting()"><span><span class="t">Propose a sighting</span><br><span class="m">a bag on a shelf, a roast on a bar — CARTA looks for it first</span></span><span class="go">→</span></button>
   ${qn?`<button class="rowlink" onclick="openReviewQueue()"><span><span class="t">Assisted drafts</span><br><span class="m">greens the resolver couldn’t call alone</span></span><span class="go">${qn}</span></button>`:''}
+  ${(()=>{const tn=tidyCount();return tn?`<button class="rowlink" onclick="openTidy()"><span><span class="t">Tidy the place columns</span><br><span class="m">greens entered before the resolver — checked here, corrected one tap at a time</span></span><span class="go">${tn}</span></button>`:''})()}
   ${chartRecs().length?`<button class="rowlink" onclick="openAuthoredList()"><span><span class="t">What you have authored</span><br><span class="m">every roast entered straight onto the atlas — correct one, or set it down</span></span><span class="go">${chartRecs().length}</span></button>`:''}`:''}
   <button class="rowlink" onclick="openCurate()"><span><span class="t">The chart</span><br><span class="m">scenes derive from the pins as they land — ${isAdmin()?'curate by hand':'walk the authored chart'}</span></span><span class="go">→</span></button>
   <p class="note">${isAdmin()?'The spine is curated — a proposal stands once a keeper approves it.':'The shared record is kept by the founder for now. Your own ledger is never gated.'}</p>`;
@@ -6928,8 +7184,13 @@ function nodeCorrectHTML(kind,id,gs){
   return `<details class="trace-more" style="margin-top:18px"><summary>Corrections</summary>
   <div class="muted small" style="margin:0 2px 10px">A ${esc(word)} is a reading over the greens that name it — there is no stored entry here to amend, and the record will not invent one. Correct the ${esc(word)} on a green below and this page follows at once; two spellings of one ${esc(word)} fold together on their own.</div>
   ${scopeSpellingsHTML(kind,id,gs)}
-  ${gs.slice(0,8).map(l=>rowlink('lot',l.id,esc(lotLabel(l)),'amend it on the green',''))
-    .join('')}${gs.length>8?`<div class="muted small" style="margin:6px 2px 0">${gs.length-8} more on this page above.</div>`:''}</details>`;
+  ${(()=>{ // the sweep, narrowed to this page's own greens — the flag where the reading is
+    if(!isAdmin())return '';
+    const forms=tidyForms(),flagged=gs.filter(l=>tidyFixes(l,forms).length);
+    return flagged.length?`<div class="muted small" style="margin:0 2px 10px">${nPl(flagged.length,'green')} on this page ${flagged.length===1?'carries':'carry'} a suggested correction — marked below, and gathered under the desk in <button class="text-action" onclick="openTidy()">tidy the place columns</button>.</div>`:''})()}
+  ${(()=>{const forms=isAdmin()?tidyForms():null;
+    return gs.slice(0,8).map(l=>rowlink('lot',l.id,esc(lotLabel(l)),
+      forms&&tidyFixes(l,forms).length?'a suggested correction — amend it on the green':'amend it on the green','')).join('')})()}${gs.length>8?`<div class="muted small" style="margin:6px 2px 0">${gs.length-8} more on this page above.</div>`:''}</details>`;
 }
 /* The fold, shown its work (GEOCODE.md §2). A keeper who spelled one region four ways used to
  * see four pages and could at least count them; now they see one, which is right — and would
@@ -8222,7 +8483,9 @@ function originFieldsHTML(p,o,h,extra){o=o||{};
   _placePick[p]=null;['country','region','locality'].forEach(k=>{_placeQ[p+k]=''});
   // rail 1 is the record's own rail (what is on file); rail 2 adds the map rail — the three
   // administrative columns, and only those, because only those name a place a map can answer for
-  const f=(k,label,ph,rail)=>`<label class="f"><span class="l">${label}</span><input type="text" id="${p}${k}" value="${esc(o[k]||'')}" placeholder="${esc(ph)}"${rail?' oninput="repaintSug()" autocomplete="off"':''}>${rail?`<span id="sugbox_${p}${k}"></span>`:''}${rail===2?`<span id="mapbox_${p}${k}"></span>`:''}</label>`;
+  // the input hands repaintSug its OWN id — the map rail asks the world only about the field a
+  // keeper is typing in, never about the two beside it and never about a value that was prefilled
+  const f=(k,label,ph,rail)=>`<label class="f"><span class="l">${label}</span><input type="text" id="${p}${k}" value="${esc(o[k]||'')}" placeholder="${esc(ph)}"${rail?' oninput="repaintSug(this.id)" autocomplete="off"':''}>${rail?`<span id="sugbox_${p}${k}"></span>`:''}${rail===2?`<span id="mapbox_${p}${k}"></span>`:''}</label>`;
   return `<div class="grid2">
     ${f('country','Country','Ethiopia',2)}
     ${f('region','Region','Bench Maji',2)}
@@ -8236,6 +8499,7 @@ function originFieldsHTML(p,o,h,extra){o=o||{};
     ${f('altitude','Altitude','1,800–2,000 masl',0)}
     ${extra||''}
   </div>
+  <div id="placenote_${p}"></div>
   ${hardIdRow(p+'hid',h)}`;
 }
 // The form's origin read back in the shape every save path already speaks: the six tokens, the
@@ -8818,12 +9082,25 @@ function sugHTML(inputId,field,ctx){
   ${k.rows.map(([v,n])=>`<button class="s" type="button" onclick="fillSug(${jsq(inputId)},${jsq(v)})">${esc(v)}<b class="num">${n}</b></button>`).join('')}</span>`;
 }
 function fillSug(id,v){const el=document.getElementById(id);if(el){el.value=v;repaintSug()}}
-function repaintSug(){
+/* `active` is the id of the input the keeper is actually typing in, and the map rail asks the
+ * world about that field and no other. Without it every repaint — and a sheet repaints on open,
+ * on a green pick, on a prefilled amend — fired three lookups and dropped three lists under
+ * three columns nobody had touched: the form jumped, the network was asked a question nobody
+ * had, and the answer to "which box does this go in" arrived for boxes already answered. The
+ * on-file rail is local and free, so it still repaints everywhere. */
+const PLACE_COL=/^(country|region|locality)$/;
+function repaintSug(active){
+  // the active row, resolved once: [id, field, prefix] when a PLACE column is being typed in
+  const hot=active&&SUG_FIELDS.find(r=>r[0]===active&&PLACE_COL.test(r[1]));
   SUG_FIELDS.forEach(([id,f,p])=>{const box=document.getElementById('sugbox_'+id);
     if(box)box.innerHTML=sugHTML(id,f,sugCtx(p));
     // the map rail rides the same input, one rung below: what the record holds first, then
     // what the world holds. Only the three administrative columns ask a map anything.
-    if(/^(country|region|locality)$/.test(f)&&document.getElementById('mapbox_'+id))placeRail(p,f)});
+    if(!hot||!PLACE_COL.test(f)||p!==hot[2]||!document.getElementById('mapbox_'+id))return;
+    if(id===active)placeRail(p,f);
+    else placeShut(p,f);   // one list open at a time — the columns beside it put theirs away
+  });
+  if(hot)placeNote(hot[2]);   // an edit may have set a confirmation aside; the note says so at once
 }
 
 /* ============ setup form ============ */
@@ -9425,22 +9702,32 @@ const placeDedupe=list=>{const seen=new Set();return list.filter(o=>{const k=o.r
  * keeper edits away from it; placeHeld is the check at save. */
 let _placeHits={},_placePick={},_placeT={},_placeQ={};
 const PLACE_MIN=3,PLACE_WAIT=450;
+// the rail put away, and its memory of having asked with it — so re-entering the field asks again
+function placeShut(prefix,field){const b=document.getElementById('mapbox_'+prefix+field);
+  if(b)b.innerHTML='';clearTimeout(_placeT[prefix+field]);_placeQ[prefix+field]=''}
 function placeRail(prefix,field){
   const box=document.getElementById('mapbox_'+prefix+field),key=prefix+field;if(!box)return;
   const q=(val(key)||'').trim();
-  if(q.length<PLACE_MIN){box.innerHTML='';_placeQ[key]='';return}
+  if(q.length<PLACE_MIN){box.innerHTML='';_placeQ[key]='';clearTimeout(_placeT[key]);return}
   if(_placeQ[key]===q)return;                                // already asked, already drawn
   if(!navigator.onLine){box.innerHTML='';return}             // offline the rail is simply absent — never an error the keeper cannot act on
   clearTimeout(_placeT[key]);                                // one timer PER FIELD — repaintSug walks them all, and a shared timer let the last field cancel the one being typed in
   _placeT[key]=setTimeout(async()=>{
     _placeQ[key]=q;
+    // the wait is nearly half a second and the answer crosses a network after it, so the rail
+    // says it is working. A box that stays blank for a second reads as a rail that is broken.
+    box.innerHTML='<span class="sug place"><span class="lb work">looking for it on the map…</span></span>';
     const ctx={country:field==='country'?'':val(prefix+'country'),region:field==='region'?'':val(prefix+'region')};
     const hits=await placeSearch(q,ctx);
     const b=document.getElementById('mapbox_'+prefix+field);
     if(!b||(val(prefix+field)||'').trim()!==q)return;         // the keeper moved on — never paint a stale answer
-    _placeHits[prefix+field]=hits;
+    _placeHits[key]=hits;
     b.innerHTML=hits.length?`<span class="sug place"><span class="lb">on the map</span>
-      ${hits.map((o,i)=>`<button class="s" type="button" onclick="placePick(${jsq(prefix)},${jsq(field)},${i})">${esc(o.name)}<span class="ch">${esc(o.chain.slice(1).join(' · '))}</span></button>`).join('')}</span>`:'';
+      ${hits.map((o,i)=>{const ch=o.chain.slice(1).join(' · ');
+        return `<button class="s" type="button" onclick="placePick(${jsq(prefix)},${jsq(field)},${i})"><span class="nm">${esc(o.name)}</span>${ch?`<span class="ch">${esc(ch)}</span>`:''}</button>`}).join('')}</span>`
+      // a silent map is a fact about the map, not about the record — said once, quietly, so the
+      // keeper knows the rail answered and stops waiting for it
+      :`<span class="sug place"><span class="lb work">no place by that name on the map — the column is free text, and what you typed stands.</span></span>`;
   },PLACE_WAIT);
 }
 /* The pick. It fills every column the map's own ladder states and leaves them all editable — the
@@ -9450,17 +9737,53 @@ function placeRail(prefix,field){
 function placePick(prefix,field,i){
   const o=(_placeHits[prefix+field]||[])[i];if(!o)return;
   const typed=(val(prefix+field)||'').trim();
-  const set=(k,v,force)=>{const el=document.getElementById(prefix+k);
-    if(el&&regSubstance(v)&&(force||!regSubstance(el.value)))el.value=v};
-  set('country',o.country,1);
-  set('region',o.region,o.level!=='locality');
-  set('locality',o.locality,o.level==='locality');
-  _placePick[prefix]=Object.assign({},o,{typed});
-  ['country','region','locality'].forEach(f=>{const b=document.getElementById('mapbox_'+prefix+f);if(b)b.innerHTML='';_placeQ[prefix+f]=''});
-  const note=document.getElementById('mapbox_'+prefix+field);
-  if(note)note.innerHTML=`<span class="sug place"><span class="lb">placed</span><span class="pl">${esc(o.chain.join(' · '))}</span></span>`;
-  repaintSug();
+  /* The ladder is ONE fact, not three, so the tap lands all of it — and the column the keeper
+   * TYPED IN is the one being answered. It held the question, never the answer, so it is written
+   * through even when it is full: that is what moves "Gedeb" out of Region, where a keeper who
+   * did not know Ethiopian administrative geography quite reasonably put it, and into Locality
+   * where the map says it belongs. Leaving it alone (the old rule) was the bug that hollowed the
+   * whole feature out — the typed word stayed in the wrong box, the pick's own word was copied
+   * in beside it, the columns then disagreed with the ladder, and placeHeld threw the
+   * confirmation away at save. One tap, and nothing to show for it.
+   * What the ladder does not name is left exactly as typed. The source column is the exception,
+   * and emptying it is the move rather than a loss: its word has gone up or down the ladder. */
+  const over=[];
+  const set=(k,v)=>{const el=document.getElementById(prefix+k);if(!el)return;
+    const cur=(el.value||'').trim();
+    if(!regSubstance(v)){if(k===field)el.value='';return}
+    if(!(k===field||k==='country'||k===o.level)&&regSubstance(cur))return;   // a column the keeper filled deliberately, and the map has nothing to correct in it
+    if(regSubstance(cur)&&!placeEq(cur,v))over.push(cur);                    // a word the ladder replaced — named in the note, never replaced in silence
+    el.value=v};
+  ['country','region','locality'].forEach(k=>set(k,o[k]));
+  _placePick[prefix]=Object.assign({},o,{typed,over});
+  // every rail put away, and marked as ASKED for the words now standing — the pick answered the
+  // question all three columns were asking, and a rail that re-opened over its own answer 450ms
+  // later was the whole reason the form used to jump about after a tap
+  ['country','region','locality'].forEach(f=>{placeShut(prefix,f);_placeQ[prefix+f]=(val(prefix+f)||'').trim()});
+  placeNote(prefix);
+  repaintSug();   // the on-file rail re-reads the columns the pick just filled; no map is asked again
 }
+/* The placement, said in one place. It used to live inside the mapbox of whichever column was
+ * tapped, where the next keystroke in that column painted over it — so a keeper could confirm a
+ * place, edit a word, and have both the confirmation and any sign of it disappear without a
+ * sentence. It is a statement about the RECORD, so it sits under all three columns, states the
+ * ladder in full, and says out loud when an edit has set it aside. Nothing here is an error: the
+ * record saves either way. It simply stops claiming a confirmation it no longer has. */
+function placeNote(prefix){
+  const el=document.getElementById('placenote_'+prefix);if(!el)return;
+  const p=_placePick[prefix];
+  if(!p){el.className='';el.innerHTML='';return}
+  const held=placeCheck(prefix);
+  el.className='placenote'+(held?'':' stale');
+  const over=(p.over||[]).filter(regSubstance);
+  el.innerHTML=held
+    ?`<span class="k">Placed</span><span class="v">${esc(p.chain.join(' · '))} — the green keeps this ladder, and any record spelling one of these differently reads onto it.${over.length?` The map's own words replaced ${over.map(v=>'<em>'+esc(v)+'</em>').join(' and ')}; type over any column and yours stands instead.`:''} <button class="text-action" onclick="placeUnpick(${jsq(prefix)})">Set it aside</button></span>`
+    :`<span class="k">Placed — set aside</span><span class="v">You have since edited these columns, so the map's reading of <em>${esc(p.chain.join(' · '))}</em> no longer describes them. The words you typed are what saves. <button class="text-action" onclick="placeUnpick(${jsq(prefix)})">Forget it</button></span>`;
+}
+// the columns, as save will read them — placeSplit runs on a COPY, so asking the question never
+// rewrites the form underneath the keeper
+const placeCheck=p=>placeHeld(p,placeSplit({originCountry:val(p+'country'),originRegion:val(p+'region'),originLocality:val(p+'locality')}));
+function placeUnpick(prefix){_placePick[prefix]=null;placeNote(prefix);toast('Set aside — your columns stand as you typed them')}
 /* The pick, at save. A chain is only carried if the fields STILL say what the map said — a
  * keeper who picked Gedeb and then typed over the region has corrected the map, and a chain
  * that no longer matches the record is a fact about a different place. Silent, not an error:
