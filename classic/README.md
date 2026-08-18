@@ -1,0 +1,648 @@
+# CARTA Coffee Ledger — classic (6.18.x)
+
+> **This is classic** — Carta 6.18.x, frozen whole (`docs/ARCHITECTURE.md` §2,
+> the fourth turn). It keeps working exactly as documented below, lights on,
+> no fixes, no features. The current app is the root [`index.html`](../index.html);
+> see the root [`README.md`](../README.md) for what Carta 7 is and where it's
+> headed. This file is the full record of what classic could do.
+
+A personal memory of coffee at home and in cafés.
+
+**One cup. Two contexts. Your taste is the through-line.**
+
+CARTA gives equal weight to the cup you make and the cup you are served. Home is
+measured, adjusted, and made again. Café is received, experienced, and returned to.
+Both end in the same honest record of what was in the cup and whether it was worth
+finding again.
+
+> **Design lineage.** Carta is a **sub-brand of the Quiet Matter design system**
+> (`quietmatter/quiet-matter`). It inherits Quiet Matter's typefaces, type scale,
+> label system, token architecture and voice, and overrides its palette, adds an
+> ember signal, an editorial display scale and a per-café colour engine. The full
+> charter — what is inherited, what may be overridden, how the two stay in sync —
+> is in [docs/SUBBRAND.md](docs/SUBBRAND.md).
+
+CARTA keeps **three rooms, always on the bar** — **Atlas · Record · Desk** —
+and one door, **＋ A coffee**, on the masthead of every screen. Home, Café and
+Today became channels, not rooms: the coffee in your hands is the head of the
+Atlas (its road, and the two things anyone ever does with it — open the green,
+or brew it), and the cup out rides off a place's page. Find retired into the
+**Atlas** too — search, the chart, the drawn plot, the places worth the walk.
+The ladder (Reading → Remembering → Making → Keeping) survives as the record of
+how deep you've stepped, read under **the Desk → Preferences**; nothing is ever
+taken away.
+
+- **Atlas** — the reading room: the coffee in your hands and its road; the
+  chart at its altitude; the atlas cut into plates by country, process or
+  variety; every green on it. One green traced through every hand.
+- **Record** — your overlay: your plates, the greens your own record argues
+  for (with their reasons), lately, the bookkeeping the matching writes, and
+  every reading one fold down.
+- **Desk** — everything that is not a cup: the shelf, your Setups, adding to
+  the atlas, the export that leaves with you, what you've set down, the pen,
+  sync, keepers, preferences, the manual. One row open at a time.
+
+Every café, every green, every roaster is a **page**, not a popup — reached
+from anywhere its name appears. A lot's page carries **the road** — six
+stations, grown → processed → milled → roasted → poured → read, filled where
+the record holds a station and hollow where it does not — its identity
+columns, its standing, where it pours, every hand's roast, your own brew
+corpus, and your overlay at the end of it. Every mark explains itself one tap
+away — the primers.
+
+**The door** is how a coffee comes in: one paste field. Paste the roaster's
+page or the back of the bag; CARTA reads it on the device — no key, no
+account, no network — shows what it found as facts you can strike, says how
+finely the green resolves and whether two records could ever meet on it, and
+binds it with one tap: on my shelf, poured at a bar, brewed just now, or just
+noting it. The room shapes the bind — open the door from a bar's page and it
+offers *Poured here*, the venue already bound; open it from a **green's page**
+and there is nothing to paste at all, because the green already stands: the
+door opens on its last step with the coffee named, and the bind says, in ink,
+that this is the same one. It asks once for the roast date — the one fact a
+page never states and the rest window can't do without — and never invents
+one, and it keeps a **printed lot code** when the paste carries one. The typed
+form stays one tap away and asks for exactly the same things, and every origin
+field carries a **rail** of what the record already holds — counts, one tap to
+fill, narrowing to what you've already chosen on the same screen. Never type a
+country twice.
+
+**A plate** is the atlas, cut — a country, a process, a variety, read as one
+page with the aggregate road: how many of the facet's greens reach each
+station, and where those greens grew. Greens that leave the field unread are
+counted, never quietly dropped. Find plates under **Atlas → Cut the atlas**.
+
+**The terrace** is the atlas's second projection. The map is a plan — it
+answers *where* a coffee came from, and it cannot answer how high. So a
+green's page draws a **section**: contour rules, this green's height placed
+against every other green the record holds one for, and the reading in words
+— how many grew lower, how many higher, how many overlap this band. A stated
+range draws as a band and a single figure as one line, because a lot sold as
+1,800–1,900 m never said 1,850. Height is a growing condition, never a grade:
+nothing sorts by it, no plate cuts by it, and it is never part of a coffee's
+identity or a pin on a map. Two heights that disagree are **carried, not
+resolved** — the first stands, the other is kept beside it with its author.
+Heights arrive through the door, off a paste, or typed straight into a bag or
+a cup — read the same way either way, so *1,930 masl* lands as 1,930.
+
+**The town, and the hand behind the farm.** Every origin block asks for the
+locality — Pitalito under Huila, Dipilto under Nueva Segovia — one step finer
+than the region, with its own rung on the grain ladder (a named mill still
+outranks it: naming the station proves at least the town it stands in), its own
+page, and its own place in the crumb: country › region › town. And a second
+actor field, *Grower*, keeps the other name a bag prints — "Finca
+Gascon — Felipe Contreras" no longer makes you choose. The farm stays the head;
+the person, family or association behind it gets its own page and its own edge
+onto the green. A grower buys no rung, and a name the record cannot classify
+still buys nothing.
+
+**A farm is a place. A grower is a hand. A station is neither.** Three actors
+stand between the seed and the sack, and the pages keep them apart: a green
+states its *Farm*, its *Grower* and its *Station* on separate lines, a farm's
+page reads the hands that worked it, a grower's page reads the land they grew
+on, and a washing station's page keeps naming its deliveries as deliveries —
+what leaves a mill is as many lots as arrived, never one blurred producer. The
+road's *Grown* mark names the person where the record holds one, and counts one
+kind of actor at a time: a farm and the person who works it are one origin told
+twice, not two hands. An actor the record has a name for but nothing that says
+which of the three it is stays a *producer*, and says so.
+
+**The place fills itself in.** Which box Yirgacheffe belongs in is a question
+about Ethiopian administrative geography, and you shouldn't have to answer it.
+Type into Country, Region or Locality and the map answers as you go: real
+administrative places, each showing the whole ladder it sits in — *Pitalito ·
+Huila · Colombia* — and one tap fills every column from that ladder rather than
+from a guess. A café has been findable on a map since the beginning; a coffee's
+own origin never was.
+
+It suggests, it never constrains. Every field stays free text, a green from a
+country the map has never heard of is still enterable, and with no network the
+rail is simply absent and the record saves exactly as it did before.
+
+**A run is not a place name.** "Pitalito, Huila, Colombia" is three facts a bag
+printed on one line, and it used to enter the record as one region called all of
+that — which then had a page of its own, next to the page for Huila. The columns
+are sorted out as you enter them now, on the device, with no lookup: a word is
+never dropped, a column you've filled is never overwritten, and a word becomes
+the country only because it *names* one.
+
+**One place, however it was written.** HUILA, Huila, "Huila, Colombia" and a
+spelling somebody confirmed on the map gather onto one page — and the page says
+which spellings it gathered, so a fold is never something the record did behind
+your back. Nothing is rewritten to make it work: every green keeps the words its
+own record was given. Confirm a place and the green keeps the ladder, so the next
+record spelling that town differently lands on the same page — the atlas learns
+only the places it has actually been to, and no gazetteer is downloaded or
+carried.
+
+A confirmed place is not a finer grain. It never enters a green's identity, never
+moves the traceability rung, and never becomes a page of its own: confirming a
+spelling is evidence about a word, not about the coffee.
+
+**One page, every scope.** A country, a region, a locality, a grower, a green,
+a roaster, a bar, a city, a Setup, a process, a variety — every one of them is
+the same page pointed at a different slice of one record, answering the same
+five questions in the same order: what is it, how far the record follows it (the
+road), what it can prove (the readout), where it sits and what it holds (the
+map, the terrace, the scopes above and below, the greens, the hands, the
+bars), and what you found (your overlay). Every name anywhere is a row that
+walks; the crumb above a page names the scopes over it; back always names the
+page it returns to, and a room chosen from the bar clears the walk. **The map
+has no zoom — the walk is the zoom**: two frames on every page, where it grew
+and where it is carried, drawn from the record itself. A mark is never finer
+than the grain it rests on, what cannot be placed lists rather than lies, and
+one bar is never dressed up as a scene.
+
+**Every section is a card.** A page that answers nine questions is a long
+scroll, so each section folds: tap a heading and it tucks away, tap it again
+and it opens. A closed card keeps its heading and its count on the face, so the
+page reads as a table of contents rather than a row of blank drawers, and the
+corrections at the foot are a few rows down instead of a page away. Cards
+remember by name, not by page — close *Where it sits* once and it stays closed
+on the next green and the one after, so you set the posture you want to read in
+and every page is the short page you asked for. *Open all* is one tap, and it
+persists too. What never folds is the reading itself: the title, the road and
+the resolution readout are always open, because a page that hides its answer
+behind a tap has stopped being a record.
+
+**And the page rests on the place it is about.** The same drawing the map makes
+is laid under the whole screen with its ink withheld — the streets of the city
+where a page is about a bar, a hand or a scene, the country's own outline and
+its highlands where it is about a green, a grower or a region. The cards ride
+over it; close them and the ground is simply there. Nothing on it can be
+tapped, counted or ranked: it is paper, and it is there to put a reading
+somewhere. *Hide the ground* if you would rather read on plain stock.
+
+See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the product thesis and restraint standard.
+
+## First run
+
+The first time you open CARTA it says what it is — the record of specialty
+coffee, every lot traced, your taste a wash laid over the trace — and offers
+three doors:
+
+- **I read, mostly** — the Atlas opens; keep nothing, ever.
+- **Someone else makes it** — a bar and one tap is a whole record.
+- **I make my own** — the instrument opens; begin from the last cup.
+
+The answer only sets where you land first — every room stays on the bar.
+Replay the welcome any time from **the Desk → The manual → Replay the welcome**.
+
+## Logging a brew
+
+The first brew asks only for your grinder and brewer, in plain words — the Setup
+writes itself. (The full Setup editor lives under **the Desk → Setups** for the day
+you change a burr; a grind number is only comparable within one Setup.)
+
+After that, the brew screen opens as your last brew — turn the one dial you actually changed. Each numeric dial can be driven three ways:
+
+- **Tap − / +** for one step.
+- **Press and hold** − or + to accelerate across a wide range (fly through a 0–2000 grinder, ease off for the fine end).
+- **Tap the number** to type an exact value on the numeric keypad — time accepts `m:ss`.
+
+Give each **Setup** its grinder's real **grind scale** (min / max / step — e.g. a Lido OG is 0–2000, step 5) and that Setup's grind dial moves the way the grinder does. Grind is only ever comparable within one Setup.
+
+Temperature has a **°C / °F** switch right on the dial (whole-degree steps), remembered per user and stored canonically as °C so the record stays comparable.
+
+If you time and weigh on your machine or a Bluetooth scale (e.g. the Argos app), hide CARTA's stopwatch in **the Desk → Preferences** and simply type the time and weight in. CARTA keeps the record; it doesn't need to be the timer.
+
+A bag can read itself off the web. Give it the roaster's or the bag's **website**
+and CARTA takes the roaster it states, a line, and the bag's own **colours** — the
+palette then dresses the bag's page and its place on the shelf. It fills only
+what's still blank; offline, or a silent site, you type it in by hand and it all
+still saves. No photograph is captured or stored — a brand is its colours and its
+words, kept small and offline.
+
+When a bag is finished, **put it away** from the shelf (the Atlas → *or start from
+the shelf*) — it waits under *Put away* with your best cup, and restores with
+everything you learned when you buy it again.
+
+## Correcting the record
+
+Every record answers to the same two verbs, behind one door: **amend it**, or
+**set it down**. Open any record — a cup, a brew, a coffee, a Setup, a café, an
+authored roast — and the correction sheet states what it is, names every record
+that will go with it if it goes, and offers both.
+
+- **Amend** reopens the form the record was written in. Nothing new to learn.
+- **Set it down** strikes it from the record. It leaves every reading, count,
+  average, plot and export, and waits — whole — under **the Desk → What you set
+  down**. One tap puts it back, with exactly the records that came down with it
+  and no more. **Nothing is erased by an ordinary act.**
+- **Put away / retire** is the third verb and a different thing: a finished bag,
+  a grinder you sold. It leaves the working surfaces; the record stays whole and
+  readable. A bag you *finished* is put away; a bag you typed by *mistake* is set
+  down. Collapsing those into one "delete" would make the record lie either way.
+- **Erase** is the only irreversible act in CARTA, and lives in one place — the
+  bottom of that same desk row, on records you have already set down. It is the
+  one thing wearing the red button.
+
+A strike is itself a record: signed, dated, and carrying the withdrawn body
+whole — struck rather than deleted, never erased by an ordinary act. It syncs like
+one, so a record set down on one device leaves every device, and putting it back
+puts it back everywhere, from either side, in any order.
+
+Three things the correction reaches that nothing reached before: a **brew** (a
+coffee's page lists every brew on it, including the ones whose impression you
+skipped, which no path in the app could open before); a **coffee** (removable at
+last, not merely put away); and a **café entry** on the Register (struck by the
+hand that holds the pen, so a phantom minted by a typo is no longer permanent).
+
+And a **sighting** — the line you signed on the shared record, and the model the
+whole grammar was built from — now answers the same verbs. Its sheet states what
+you saw, what the bar reads, and *what falls with it*: each fact the line carries,
+named beside whatever stands in its place, or the plain sentence that nothing
+does. A withdrawn sighting waits in the same room and stands back up with one
+tap, for every keeper. It is the one thing there that can never be erased: every
+keeper holds a copy, the merge is a union of lines, and a line deleted here would
+simply return on the next sync. Struck is the strongest honest answer.
+
+The full grammar and why it is shaped this way: [docs/CORRECTIONS.md](docs/CORRECTIONS.md).
+
+## Appearance
+
+CARTA reads like a printed record: a serif for what you tasted, a sans for what you measured, and one ember-red signal for the current action and the cup’s score. Two themes — **Paper** and **Dusk** — switch under **the Desk → Preferences**, remembered per user. A third choice, **Auto**, follows the device's own light/dark setting (iOS Settings → Display & Brightness, etc.) and moves with it live, no reload needed. The typefaces (Spectral and Libre Franklin) are served from the app's own `fonts/` directory, so nothing loads from a third party.
+
+## The Atlas, and the matching
+
+**The Atlas** opens on the coffee in your hands — its name, where it grew, the
+hand that roasted it and how many days off, then **the road** it has travelled
+so far, then two buttons: **Open the green**, or **Brew it**. That is all
+Today ever was, and it is now a paragraph at the head of the reading room
+rather than a room of its own.
+
+Below it, the Atlas is the reading room, and the matching lives there now:
+
+- **Read the season for me.** Ask, and the atlas composes the season once, in
+  front of you — the pins settle and a line draws through them, ranked only by
+  your own taste, shown with its reasons. Ask again and it composes again; it
+  never plays on its own, and under the OS reduced-motion setting it lands
+  composed instantly.
+- **Worth the walk, for you.** Every place on the register you haven't kept,
+  ranked by match, each with its reasons — plus the full map reading. Online,
+  real streets draw themselves behind the pins — OpenStreetMap, repainted in
+  CARTA's own paper and ink, keyless and untracked; offline the same pins
+  stand on the drawn plot, exact as ever.
+- **The season's lots, the hands, the stream.** Every anchored green with its
+  standing worn as chips, the roasters and bars behind them, and the circle's
+  cups.
+- **Propose a sighting.** A bag on a shelf, a roast on a bar — the chart looks
+  for it before it binds. A shared printed code binds outright; a fingerprint
+  match asks; a same-name-different-process refuses to merge on the string.
+
+**The matching** reads three things, and says so: the *traits* of the places you
+keep (their tags, weighed heavier where you scored well); the
+*distance*, only once you tap "Near you" — your location is held in memory,
+never stored; and the *circle's cups* there, weighted toward the people whose
+taste sits closest to yours. Every score opens into its signals on the café's
+page — "Why this" — and no score is ever shown without them.
+
+- **The early read.** Until you've kept three café cups the matching speaks in
+  bands — *worth a look · promising · a strong read* — not numbers. New to the
+  record entirely? The Atlas asks for **three cafés you already love**; their
+  traits become your signal, and a place the register doesn't know yet enters
+  on its name alone. At your third kept cup, the numbers arrive.
+- **Save** waits under **Want to go** — one list, a save from anywhere lands
+  there. The Record orders it by match and, when a save sits unvisited a couple
+  of weeks, asks once whether to let it go. Letting go is not a skip — no mark
+  against the place.
+- **Skip** steps a place back for two weeks, then fades on its own — never a
+  veto. At the moment you skip, one question: the place, or its kind? "Fewer
+  like it" tips the place's kind (its first tag) down on the same fading curve.
+  Every standing skip and lean is visible on the Record, each with a "clear
+  now".
+
+## Café cups
+
+Your cafés live as pages off the Atlas — a passport of every shop you log — your average, visit count, usual order, and spend, favorites first. Logging stays minimal by default: a shop, a style, and one tap on the scale is a whole record. Everything else — beans, price, the order-again verdict, traceability — waits behind one line, to add now or later.
+
+- **Every cup is editable.** Open a cup from the record and revise it — fill in what you didn't have time for at the counter. It keeps its original place and hour; only the details change. Bags and brews edit the same way (correct a dose or a time, and the cup a brew carries stays put), and any of them can be set down instead — see *Correcting the record* above.
+- **Each café wears its own colours.** Give a café its website and CARTA reads its colours straight from the brand — the logo and the palette around it — and builds a whole surface from that one signature colour: the café's page and every cup logged there take on the palette. A small design system, held in light and dusk alike. Only the palette is kept, never a hotlinked image, so the record stays offline and yours.
+- **A banner drawn from that same colour.** The café's own page opens on a gradient built from its hue — a neutral roast tone while the café is still unbranded. Just the name, on its own colour; nothing fetched, nothing photographed.
+- **One read fills the rest.** The same website read pulls more than colour — the site's own description becomes the café's line, the name it states is surfaced, and the map lookup opens on its address — so you retype nothing the site already knows. It fills only what's still blank, and offline you fill it in by hand.
+- **Pin it on the map.** Look up a café's address online and open it in Maps from its page. Typing the address by hand always works; the lookup is a convenience, not a requirement, and the app stays fully offline without it.
+- **A locator on the page.** A pinned café's page carries a small street map of where it stands. Only the pin wears the café's colour — the streets around it stay neutral, and a café with no colour worth borrowing keeps the ember. Offline the pin holds the frame alone.
+- **The neighborhood, named.** The map lookup names a neighborhood along with the pin — filled in automatically when it knows one, blanks only, typed always wins. It rides next to the city everywhere a café is shown.
+- **Tag a place your own way.** A short list of tags — however you'd describe it to a friend — rides on the café's page and joins the pooled search in Find, so "patio" or "quiet" turns up every place you've marked that way.
+- **The beans, read from the roaster.** Give a café cup the roaster's website and CARTA reads its brand the same way a café or a bag does — the roaster it states and a line fill what's blank, and the cup carries the colours it read. Less to type at the counter.
+- **Traceability, aligned to your bags.** A café cup asks for exactly the fields a bag asks for — country, region, producer, variety, process, lot, the harvest, the height, a printed code — behind one optional tap, from the same block of fields, with the same rails and the same threshold said out loud: two of the six, and this green can meet another keeper's record. Fill what you have; the rest can wait, or never come.
+- **A cup you can come back to.** Amend a café cup — the drink, the price, a line, the coffee — and it stays on the green it was on. It reads its green first, the way the shelf form always has, so a record you return to a week later is the same record.
+- **Find it on the atlas.** Name a green already on your record and the cup binds to it outright — signed and dated, the strongest thing short of a printed code. Two keepers at one bar drinking the same coffee can say so, instead of leaving two greens the words alone will never join.
+- **A printed lot code, when there is one.** A bag or a café cup can also carry a hard identifier some coffees print — a Kenya outturn, a competition-auction lot, an ICO mark. When two records carry the same code, they land on one green outright, even where the words alone read a little differently — the surest way to say "the same green, in another hand." A code that isn't an identity — a bare grade, a warehouse reference, a per-sale lot number — is turned away with a word on why, and whatever you enter only ever adds to the green, never erased.
+- **Joined or set apart by hand.** A green's page can be corrected. Two greens you've learned are one — join them, and every roast, pour and record on both follows onto the kept green, nothing lost. A conflation you've learned is two — split it back apart, and both greens stand. A string that merely reads alike never joins on its own; a join needs a shared code or a matching origin, and every correction can be undone.
+- **Kenya's outturn, as it works.** One cherry, graded into sibling export lots: AA and AB of a single outturn stand as siblings under one processing batch. A bag that names only the outturn rests on the batch until its grade surfaces, then splits to its sibling — without re-entering the code.
+- **Charting the atlas by hand.** Under **the Desk → Add to the atlas → The chart** you can author the record directly — a roaster, a green and a roast onto the atlas without logging a cup you had. Every green you author runs the same resolver a bag does, so sure ones fold onto a green already charted and look-alikes land in a quiet **review queue** — never a nag, empty when there's nothing to settle. Work each with one tap: confirm the one that's truly the same green, and the rest stay honestly apart, or keep them all apart, the safe call. The chart shows its own progress, and the page nothing else can render: one washing station, more than one roaster's reading of it.
+- **Every node a page, drilling into the next.** A green's page is no longer a dead end past its roasts. Its grower, each of its roasters, and every venue that pours it are taps now — walk from a green to the washing station behind it, to a roaster and every other green that hand has touched, to a café and what else it pours. A grower opens onto the greens traced to it — a washing station reads as the terminal node it is, its greens each their own lot, never one blurred farm. A roaster opens onto every green it's touched, with the offering and level it gave each. Nothing is a dead end, and a stranger can walk **the Desk → Add to the atlas** read-only, without the pen. Each page still says how far its green resolves and how sure its identity is — a lens, never a rank.
+- **The atlas, drawn in two frames.** One projection cannot hold a front door and a country, so the map no longer tries. The **chart frame** is the ground you can walk — roasters and bars, streets behind, the road drawn between them. **Where the green came from** keeps its own frame: origins at region or country grain, drawn hollow and dashed for coarse, joined to the chart in words — *Yirgacheffe, Ethiopia, four hands in Los Angeles* — never a line across the sea. A **scene** is a cluster of roasters and bars close enough for one outing, derived from the pins; a **chart** is one or more scenes under a name you give it, and both correct themselves the moment a pin does. Tap a scene mark to walk in; lenses narrow by scene or kind and always say what they hid. Every mark taps into its page, a stranger reads the whole scene read-only, and coordinates stay honest: a venue at its real point, a roaster at its city, a green at its region — never a farm-precise pin invented, and a node with no coordinate lists by name rather than lies. The streets are an enhancement, and they are laid *under* the drawing rather than instead of it: the plot renders first from saved positions and stands alone offline, the whole scene working — marks, taps, folds, counts — with no tiles at all, and the roads are fitted to the frame the plot already drew, so a mark and the street beneath it can never disagree about where they are. They go behind the chart frame only, and only while a frame is one ground you could cross in a morning — never behind where the green came from, where a centroid drawn over a named road would read as an address it never claimed, and never across a span too wide to have one ground, which the frame says out loud instead of quietly drawing nothing. There is nothing to pan: the walk down is the zoom in. Author a roast online and its city and origin place themselves; a wrong pin is no longer forever — correct it from the roaster's or grower's page, candidates offered, never guessed between.
+- **Where it grew has a ground of its own — the country, drawn.** A mark at six degrees north tells you nothing on an empty page, so the country's own outline is drawn beneath it and the frame opens to hold the whole of it: a region reads as *somewhere in Ethiopia* rather than somewhere. It is an outline and never a street map — a centroid over a named road would read as an address it never claimed — and it is carried inside the app, so it draws with no network at all, even for a coffee whose record holds not one coordinate. Sixty-five countries; one the record names and the app has no shape for is counted in words rather than guessed at. Nothing on the land taps or counts: it is paper, there to orient the eye, and it is a drawing rather than a ruling on anyone's borders. Inside the outline, contours at a thousand metres, two and three draw the highlands — so the ground says not only where a country is but what shape it is, and a growing region sits on terrain rather than on blank paper. That is terrain and only terrain: never a coffee's own stated height, which is the terrace and answers a different question, and never a grade. A mark above a contour is not a finer coffee than one below it, and nothing here sorts, cuts or ranks by it. Walk from a country into one of its regions and the marks narrow while the ground stays put — the country is what the comparison is made on.
+- **A region is not a small country.** The two are opposite kinds of fact, so each is drawn as the thing the record actually holds. A country has a shape — drawn, closed, carried in the app — and no honest point: the centre of a country is a place no coffee is. So where a coffee proves its country and no region, the country's own outline *is* the mark, named across itself, tappable and counted, wearing your ring as a doubled line. A region is the other way round: the record holds a point for it, roughly where the coffee grew, and no shape at all, because coffee's regions are sometimes an administrative department and sometimes a catchment nobody has ever drawn — and matching a name to a shape is a guess this record does not make. So the map draws the grain instead of describing it: the shapes are the coarser claim and the points the finer one. Walk into a region and the other regions of its country come with it as hairlines, so a mark reads as *where in Ethiopia* rather than as a point on an empty country — there for scale only, never counted on that page, never wearing your ring, and one tap walks you sideways into any of them.
+- **The washing station stands where it always worked.** A station has its own page now, like every other node: the greens it processed, the hands that deliver into it, the region above it. What leaves a station stays as many lots as arrived — never one blurred farm — and a station is never listed among the growers, on any page.
+- **The standing.** A green's page can now carry its rarity and its caliber — how scarce it is, how it has cupped — read beside how far its identity traces. Three independent facts, never merged into a verdict: none of this is your taste, which stays yours on your own cup. A cup score counts only once it names where it came from — a competition, an auction, a named cupper or lab, or your own signed cupping — and an unnamed score still saves, honestly, as a claim: "roaster-stated 92 — unverified," never printed as the read. Rarity reads the same way: a disclosed lot size, an auction price, a scarce varietal, how few hands carry it — sourced facts, never a guess. An unrated, ordinary lot still reads as a complete record; the standing is there to find, never a rank forced onto every green.
+- **How far a green traces, told truly.** Every green states how finely its origin is proven, on one ladder of five: **country · region · washing station · farm · green lot**. A green rests on the coarsest rung its record can actually prove and no finer — a washing station reads as a washing station, not as a lot; a name CARTA can't tell from a mill buys no rung at all, because guessing is the same lie as inventing. The name is still on the page; it simply doesn't claim a parcel it can't. The harvest is its own fact beside the ladder, not a rung on it — and it's what keeps one crop year from folding into the next.
+- **Home vs café.** When you've had the same beans at home, the café cup says so — your average out against your average in. The shape of how a preference travels, not a verdict.
+
+The café screen and the brew screen are deliberately the same shape: **Coffee → Preparation → Cup.** Both end in a hedonic 1–9 and what you found, so a cup out and a cup in are comparable.
+
+## The Register — one entry per café
+
+Cafés get named by many people, on many devices. The **Register** keeps a single
+canonical entry for each one — *Jane's Fighting Ships*, for cafés. It is the
+single source of truth for a café's identity: name, city, neighborhood, website,
+address and map pin, the palette derived from that website, a line for the
+record, and the tags you've given it.
+
+- **Shared, not per-user.** Every user of the device reads the same Register,
+  and a sync server extends it to every keeper on the server (`/api/cafes`). A
+  café looks the same from user to user — same colours, same pin.
+- **Compiled from sightings.** Naming a shop on any café cup enters it into the
+  Register; a sighting fills blanks and never erases, so a fast log can't strip
+  a rich entry. Everything already on the device's ledgers is seeded in
+  automatically.
+- **Anyone can amend, provenance is kept.** At this early stage every
+  contributor may edit an entry ("Amend the entry" on the café's page). The
+  entry remembers who entered it first and who amended it last.
+- **An entry can be struck, never deleted.** "Correct the Register entry" on a
+  café's page withdraws it from the shared record — the fix for a phantom café a
+  typo'd shop name minted. The entry keeps its provenance and every sighting on
+  it, waits under **the Desk → What you set down**, and any hand holding the pen
+  can stand it back up. Your own cups there stay on your own record either way:
+  a cup is yours, the entry is everyone's.
+- **Lookup and discovery.** The café cup form looks the shop up against the
+  Register as you type — "A known place — Halfpence, Portland, first entered by
+  Jane." Find surfaces Register entries you haven't been to, ranked as
+  recommendations (below). In search of better cups, the consistent record of
+  the place is the map.
+
+Cups stay personal, per ledger. Only the place is common knowledge.
+
+### Correcting the atlas
+
+The atlas is compiled from what records say, so it inherits their mistakes — and
+until now it inherited them permanently. Every node the atlas draws now answers
+the same three verbs a cup does, folded under **Corrections** at the foot of its
+page (the pen writes the shared record, so taking it up under **the Desk → The
+pen** is what opens them; a page you cannot correct says so and points there
+rather than quietly drawing nothing).
+
+- **Amend it.** A green reopens its origin columns in the same block the paste
+  door and the bag form use — correct *Acvado* to *Acevedo* and the green re-reads
+  itself: its grain, its head, its key. Every record already bound to it stays
+  bound. A grower, a station, a roaster and a roast reopen the few facts they
+  carry; correcting a name there corrects it on every green that names it.
+- **Join it.** Two greens you learn are one merge, and every roast, pour and
+  record on both follows onto the one named first — the resolver's own guard still
+  applies, so a join needs a shared printed code or a fingerprint the scorer would
+  at least propose, and a bare string coincidence never unions two greens. Growers,
+  stations and roasters join on the offered read of their names, which the keeper
+  confirms. Any join can be parted again.
+- **Set it down.** An artifact the record should never have carried — a green
+  minted from a typo, one roast entered twice, a hand that turned out to be the
+  mill — leaves the atlas: off every count, every plate, every map, and out of a
+  published copy at the next publish. Nothing is erased. It waits under **the
+  Desk → What you set down** beside everything else, and stands back up with one
+  tap. Your own bags, brews and cups are untouched throughout.
+
+**One name, however it was typed.** Behind all of it the resolver now folds case,
+accents and punctuation before it decides anything: TARRAZÚ, Tarrazú and tarrazu
+are one region, *Famille Hidalgo Umaña* is not a second grower from *FAMILLE
+HIDALGO UMANA*, and the twins already standing on your atlas are joined once, the
+earliest naming keeping the node. It folds exactly that far and no further —
+collapsing more would be a guess, and an identity key never guesses. Where two
+spellings survive on purpose, the pages print the form the record used most,
+keeping accents over losing them and never the shout of a name copied out of a
+bag's all-caps header.
+
+**A region has no entry to amend, and its page says so.** A region, a town, a
+country, a process, a variety are *readings* over the greens that name them —
+never stored, never a polygon. Their pages name the greens to correct instead of
+offering an edit that would have to invent a record to write to.
+
+### The reach, set down
+
+Older versions carried a second classification of café depth — ○ Counter ·
+◎ House · ◉ Roastery · ● Origin, compiled from signed sightings. It is set
+down: it applied to one kind of page, was attested rather than read from the
+record, and the road now answers the same question everywhere — the Roasted
+station names the hand, the Grown station names the grower, and a road that
+runs short says so. **The sightings themselves are not gone**: every line a
+keeper signed stays on its Register entry, signed and dated, carried through
+sync — unread and unrendered for now, never erased.
+
+Not everyone wants to keep a record. Some people just want to know where to go
+and what to order. The **Find** tab is for them — the room every record starts
+in, and it requires logging nothing, ever. It pools every record the active user
+can read — other keepers on this device, everyone on a connected sync server —
+plus the shared Register, and turns them into a discovery loop: *search → near
+you → whose taste matches yours → worth the walk → save it → go.*
+
+- **Search** — one field over the whole pooled record. Type a café, a city, a
+  roaster, an origin, a descriptor, a tag or a note and matching **places**,
+  **beans** and **cups** surface at once. Pinned results also plot on a small
+  map alongside the list — a filled dot for a place you keep, a dashed one for
+  a place you haven't yet. Online, the plot gains real streets behind the dots
+  (OpenStreetMap, restyled to CARTA — no key, no tracking); offline it stays
+  the drawn plot from the record's own coordinates, and nothing is missed but
+  the street names.
+- **Near you** — say where you are (optional; asked only when you tap it, and
+  kept on the device — never stored or synced) and the pinned cafés your people
+  kept sort by distance, closest first, each showing how far.
+- **Worth the walk, for you** — cafés you haven't kept, ranked by your circle's
+  scores and weighted toward the people whose taste runs closest to yours; the
+  card says who rated it and why. A city filter or the "near you" lens re-scopes
+  the list.
+- **Whose taste matches yours** — on the cafés you've both scored, how close your
+  scores land on the 1–9 scale. The shape of an agreement, not a verdict —
+  read the people who walk your streets.
+- **The stream** — every café cup your people have logged, newest first (scoped
+  to the active city lens): who, where, what they ordered, the score, their
+  words, and the beans' colours when they read them. Tap a cup for the full card,
+  including the address and an Open in Maps link when someone has pinned it.
+- **Beans worth chasing** — the roasters and origins your circle scored, best
+  average first.
+- **Want to go** — save any place from anyone's record to a shortlist that waits
+  under Find and on the Café tab, and steps aside once you've logged a cup
+  there. (The one thing Find writes to your own ledger; it syncs like the
+  rest.)
+- **How to read a cup** — a plain-words primer that decodes the hedonic 1–9
+  scale, the again/pass verdict, and the descriptors for readers who don't keep
+  a ledger of their own.
+
+The stream refreshes quietly from the server when the tab is open and falls back
+to cached copies offline. Discovery is read-only — look, don't touch — and any
+cup links through to the friend's whole record via the existing read-only view.
+
+## Multiple Users
+
+CARTA supports multiple keepers on one device. Manage them under **the Desk → Keepers on this device**:
+
+- **Add a keeper** — each keeps a fully separate ledger (setups, bags, brews, cups, cafés)
+- **Switch** the active keeper — everything you log goes to the active ledger
+- **Read another keeper's record** — browse every room in a clearly-marked read-only mode; a banner offers "Back to mine"
+- **Import as a new keeper** — a friend's exported ledger file can be imported beside your own without touching yours
+
+Existing single-user data migrates automatically on first launch — nothing to do, nothing lost. Everything lives in this browser's local storage; syncing between devices is optional (below).
+
+## The founder's pen (temporary)
+
+While the atlas settles, the **shared** record — the atlas (roasters, greens,
+roasts) and the café Register — is written by one hand: the founder's. What
+this means in practice:
+
+- **Everyone reads everything.** The chart, every page, the Register — all of
+  it stays open to every keeper.
+- **Everyone writes their own ledger, always.** Bags, brews, cups, setups,
+  cafés you've been to, your preferences — none of that is gated.
+- **Only the founder writes the shared page.** On a sync server, the first
+  account registered holds the pen and the server refuses any other. On a
+  single device, the pen is taken up once under **the Desk → The pen**.
+- **The founder's desk** (the Desk → The pen → Open the founder's desk) is the one
+  door for entering shared facts cleanly: add a roaster, author a roast, enter
+  a café's canonical entry, propose a sighting, settle the review queue.
+
+This is a stage, not a law: when the proposed→stood moderation ceremony ships,
+proposals stand for every keeper again. A few pre-redesign surfaces (the
+matching's discover map and cold-start, the circle stream, taste affinity) are
+shuttered for the same season — hidden, not removed.
+
+## The published atlas, and the reader
+
+The atlas is everyone's; the record is yours. Until 6.7.0 only the second half
+of that sentence was true for someone who never signed in.
+
+**Publishing** (the Desk → The pen → Publish the atlas) sends one **copy** of the
+shared record to the server: the greens, the hands, the bars, and the dated
+sightings of what poured where. **No ledger travels** — no cups, no brews, no
+bags, and nothing about how anything tasted. The sheet states the counts before
+it sends, in the same units the reader will see them in, and afterwards it hands
+you the address: a single `#atlas=` link, no account, no install.
+
+A copy, **not a switch**. The snapshot carries a revision and a published date,
+so a reader's copy states its own age instead of impersonating a live feed. It
+changes when you publish again, and until then it says so.
+
+**Holding a green back** (a green's page → Corrections & identity → Hold this
+green back) keeps one green out of the published copy and only out of the copy.
+The record keeps it whole — every page, every count, every reading unchanged —
+and one tap releases it into the next copy. Its roasts and its pours are held
+with it, because a green whose roasts are public and whose identity is not is a
+broken road, not a redaction. Held greens draw **faint** on your own map: a hole
+in a place is a thing only a map can show, and consent should be visible in the
+units it will be read in. Never in red — a hold is reversible.
+
+**The reader** is whoever opens that link. They get the Atlas and the Desk, the
+whole graph to walk, and everything that writes is simply absent — there is
+nothing on their device for it to write to. Two things come off, and only two:
+
+- **the road's sixth station.** It is *Read*, and it is your own cups. A reader
+  has none, so their road draws five stations rather than six with one unread.
+- **the ring.** Your overlay on the map is a ring around a mark you keep, added
+  over a mark that was already complete. Take it off and the chart is whole.
+
+They can **carry it away**: *This copy → Download this atlas* writes one
+self-contained HTML page on CARTA paper stock with the machine-readable copy
+embedded as `carta.atlas/v1` — theirs, offline, forever.
+
+If a reader starts keeping, the published copy **stays**, read-only, underneath.
+Their own record lays over it; nothing is merged and nothing is lost, and the
+day they sign in the two fold together with no duplicate green.
+
+See **[docs/READER.md](docs/READER.md)** for the full spec and
+**[server/README.md](server/README.md)** for the three endpoints.
+
+## Server Sync (optional)
+
+CARTA can synchronize ledgers through a tiny self-hosted server, so your record follows you across devices and everyone on the server can **view** (never edit) each other's ledgers — live, from **the Desk → Keepers on this device**.
+
+- Run the server: `node server/server.js` — one file, zero dependencies, JSON storage. Or skip the hardware entirely: the same server deploys serverless to Cloudflare's free plan with one command. See **[server/README.md](server/README.md)** for deployment, the HTTPS requirement, and the API.
+- Connect from the app: **the Desk → Sync → Connect to a sync server** (server URL, name, passcode).
+- Offline-first: with no server configured or reachable, nothing changes. Edits queue and sync when the app comes back to the foreground.
+- Conflicts merge by record — logging on two devices keeps both entries; a record set down on one device leaves every device, and putting it back puts it back everywhere (the strike and the restore are both dated additions, so the two sides converge in any order). Erased records stay erased (tombstones).
+- Viewed ledgers are cached locally, so a friend's record remains browsable while offline (marked as a cached copy).
+
+## What's Included
+
+- **index.html** — The complete app (self-contained, no build required)
+- **fonts/** — Self-hosted typefaces (Spectral, Libre Franklin; woff2)
+- **manifest.json** — PWA metadata for homescreen installation
+- **icon-192.svg** & **icon-512.svg** — App icons
+- **README.md** — This file
+- **docs/** — The design record: the voice standard (`VOICE.md`), the product
+  thesis (`NORTH_STAR.md`), the atlas vision, the resolver and schema specs,
+  the redesign prototype (`redesign-concept/`) and the design system copy
+
+## Hosted on GitHub Pages
+
+This app is deployed at:
+```
+https://YOUR-USERNAME.github.io/carta/
+```
+
+Replace `YOUR-USERNAME` with your actual GitHub username.
+
+## Installation on iPhone
+
+1. Open Safari on your iPhone
+2. Navigate to the URL above
+3. Tap the Share button (↗️ in bottom toolbar)
+4. Select **Add to Home Screen**
+5. Choose a name (CARTA is fine) and tap Add
+
+The app now appears as an icon on your home screen. Tap it to open in fullscreen.
+
+## Export Your Data (IMPORTANT)
+
+Everything is stored locally in your browser. **Export monthly** from **the Desk →
+The record leaves with you**. Two copies live there: **Export the ledger** — a
+self-contained page on CARTA paper stock, your overlay only, with the
+machine-readable record (`carta.ledger/v1`) embedded, which also **reads back
+in** ("Bring a ledger back" — read to you, never merged); and **the working
+copy** — JSON, everything, the one to keep as a backup. Keep backups safe. Each keeper exports their own ledger (exports are stamped with the keeper's name). A copy is self-contained: it carries the catalog alongside the ledger, so it reads every roaster, origin and roast in full even on a device that never synced. Bringing a copy back in folds that catalog into the device's own.
+
+If you clear browser data or Safari storage fills up, your ledger is gone — there is no server.
+
+## Files Explained
+
+| File | Purpose |
+|------|---------|
+| index.html | The app itself. All CSS and JavaScript included. |
+| manifest.json | Tells iOS this is a standalone app. Enables homescreen install. |
+| icon-192.svg, icon-512.svg | App icons shown on homescreen and in settings. |
+| README.md | Documentation (this file). |
+
+## Customization
+
+- **Change the app name**: Edit `"short_name"` in manifest.json (max 12 characters for homescreen)
+- **Change the icon**: Replace icon-192.svg and icon-512.svg with your own images
+- **Change the theme color**: Edit `"theme_color"` in manifest.json
+
+## Troubleshooting
+
+**Icon doesn't appear on homescreen?**
+- Make sure you're using HTTPS (GitHub Pages is always HTTPS)
+- Try waiting 30 seconds after adding
+- Refresh the page and try again
+
+**Data disappeared?**
+- Check if you accidentally opened in a Private window (data is separate)
+- If you cleared Safari data, check if you have a backup from an earlier export
+
+**Changes not showing?**
+- Reload the page with Cmd+R (or force reload: Cmd+Shift+R on desktop)
+- On iPhone, swipe down and release to refresh
+
+## Technical
+
+- No build step, no bundled dependencies — one self-contained file
+- Runs entirely in the browser
+- Uses localStorage for persistence
+- Street maps are an optional, keyless enhancement (MapLibre GL +
+  OpenFreeMap / OpenStreetMap, loaded only when online); the app is complete
+  without them
+- Country outlines and their contours are carried inside the file (Natural
+  Earth 1:110m and the public-domain Terrarium elevation tiles, simplified and
+  delta-encoded at build time) — no tiles fetched, no network
+- 100% open source
+
+---
+
+Made with ☕ for people who actually like keeping records.
