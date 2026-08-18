@@ -5,7 +5,7 @@ whether either was worth finding again.
 
 **Carta 7 is a fresh start** (`docs/PIVOT.md`), rebuilt smaller and simpler
 than the app that came before it. It ships in phases (`docs/ROADMAP.md`); this
-is **Phase 2 — the brief**.
+is **Phase 3 — the atlas**.
 
 ## What's here right now
 
@@ -33,10 +33,18 @@ is **Phase 2 — the brief**.
   you've logged one there — "already had" excludes what you've already
   found, so the answer isn't a rehash. Strictly offline; nothing here makes
   a network call.
+- **The passport.** The Atlas opens on a world frame — every country your
+  record can trace, drawn from an offline outline file (no map tiles, no
+  network): tasted countries washed and tappable, untasted ones a hairline
+  invitation. Tap a country, or a city from your own list, for its
+  **chapter** — the coffees you've had from there, grouped by region, or the
+  cafés you've been to and how they've scored — typography, not another map.
+  The footer says it plainly: the map remembers what the bags said.
 
-**Atlas** is on the tab bar as a preview of what's coming — the map (Phase 3).
-Menus, photos, shareable cards and the classic importer are later phases too;
-see `docs/ROADMAP.md` for the order and why.
+Menus, photos, shareable cards and the classic importer are later phases;
+see `docs/ROADMAP.md` for the order and why. The city frame's live street
+layer (Phase 3's other half, per `docs/ARCHITECTURE.md`) waits on the device
+having somewhere to geocode a café to — a fast-follow, not dropped.
 
 ## Classic
 
