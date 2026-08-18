@@ -1,6 +1,10 @@
 # CARTA — the fourth turn (a turn home, and a hunt)
 
-*A brainstorm and a proposal, not yet a commitment. `NORTH_STAR.md` recorded
+*Approved by the founder, 2026-08-18 — this is now the fourth turn's thesis,
+head of a suite: `ROADMAP.md` (the route), `ARCHITECTURE.md` (the kit),
+`MARKET.md` (the weather, play only), `LOGBOOK.md` (the trail), and the
+outfitter (`.claude/skills/outfitter/`), which holds all of it in session.
+`NORTH_STAR.md` recorded
 where Carta began — one cup, two contexts, your taste the through-line.
 `VISION.md` recorded the turn toward the atlas. `ECOSYSTEM.md` recorded the
 third turn — the ledger of the trade, the reference record every sale settles
