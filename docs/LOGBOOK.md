@@ -7,6 +7,32 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-18 — Phase 2 shipped: the brief
+
+- **Shipped:** `tasteModel(ledger)` per `ARCHITECTURE.md` §5 — the bar (a
+  floor, anchors at avg≥8/n≥2, your 9s as evidence) and the vector
+  (processes/origins/descriptors, each bucketed with weight + n + evidence
+  refs), plus `scope(place|city|country|route)` for exclusions. `brief()`
+  renders a plain-text cut (~1,500 chars, bounded, "already had" inline) and
+  a self-contained page embedding `carta.brief/v1`. Scout replaced its
+  Phase 1 stub with the real room; café cups can now carry a city. The taste
+  model, the brief, and the join/put-away primitives moved into a
+  `/* ==== pure ==== */` block per §9, with `test/model.test.js` (22 cases,
+  the `server/test.js` pattern) slicing it straight out of `index.html`.
+  PR #76.
+- **Verified:** by hand in a real browser — three café cups across two
+  cities plus a home cup, Scout showing the right floor and anchor, a
+  Portland-scoped brief correctly excluding the Seattle coffee, Copy landing
+  on the clipboard, Download producing a page carrying the machine block.
+- **Decision, not reopened, just made concrete:** `vector.roast` from
+  §5's shape has no data source in the Phase 1 ledger (no roast-level
+  field survived the cut from classic) — the vector ships as
+  `{processes, origins, descriptors}` and stays that way until something
+  in the record actually states a roast character. Not a reopening of
+  the data model; just declining to invent a field to fill a slot.
+- **Next:** Phase 3 — the atlas.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-18 — Phase 1 shipped: the skeleton stands
 
 - **Shipped:** a new `index.html` built clean per `ARCHITECTURE.md` — the
