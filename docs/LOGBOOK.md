@@ -7,6 +7,31 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-18 — Phase 4 shipped: the bridge
+
+- **Shipped:** take-it-home — coffees carry `home` (true the moment you brew
+  one, since beans-in-hand is the definition; false for a café-only taste),
+  the Shelf now filters to it, and **Take it home** on a cup or a coffee's
+  own page is the one-tap bridge from a café pour to the shelf. Photos on
+  cups (`PIVOT.md` decision #1) — one, optional forever, restrained: resized
+  and recompressed to a JPEG data-URI on the device, kept outside the ledger
+  in `carta7.photos.v1`. Menu capture with no OCR dependency — type a café's
+  menu one line per coffee from its own new sheet (cafés are tappable from a
+  city chapter now), optionally holding a photo up as reference while
+  typing; the photo is genuinely never saved, confirmed directly against
+  `localStorage`, not just documented. A menu line logs a cup on the spot
+  (café already known, straight to the score step) or links to an existing
+  shelf coffee. PR #78.
+- **Verified:** by hand in a real browser (photo capture and thumbnails on
+  both café and home cups, the take-it-home gate on the Shelf, the full
+  menu-capture-to-logged-cup walk, "already got it" linking) and by
+  inspecting `localStorage` after a menu capture to confirm the photo left
+  no trace anywhere.
+- **Next:** either the rest of Phase 3 (geocoding + the live street layer,
+  now that a menu's own "at this café" context makes a place worth pinning),
+  or Phase 5 — the cards.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-18 — Phase 3 shipped (in part): the passport and its chapters
 
 - **Shipped:** the passport — a world frame drawn from `LANDS` (Natural
