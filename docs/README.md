@@ -3,6 +3,22 @@
 Everything here is reference, not runtime — the app ships as `../index.html`
 alone. Cite the document, not a memory of it.
 
+## The fourth turn (current — the turn home, and the hunt)
+
+The trade-record ambition below moved to **Lotmark**; Carta returned to the
+person holding the cup. Current work steers by these, held in session by
+the outfitter (`../.claude/skills/outfitter/`):
+
+- **PIVOT.md** — the thesis: record + hunt, the seven joys, the scout
+- **ROADMAP.md** — the phases, the adopted decisions, the tripwires
+- **ARCHITECTURE.md** — the Carta 7 build: one file, six objects, the brief
+- **MARKET.md** — the landscape, framed as play (direction, never the driver)
+- **LOGBOOK.md** — the trail register: where the trip actually is
+
+Everything from here down is the earlier turns' record — still the design
+history of `../index.html` (classic) and the source of ported craft, no
+longer the steering.
+
 ## The through-line
 
 - **NORTH_STAR.md** — the record (the product thesis, the restraint standard)

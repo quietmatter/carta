@@ -1,9 +1,15 @@
 ---
 name: goal
-description: State and hold CARTA's goal. Invoke at the start of any CARTA session, or whenever a decision drifts — /goal restates the commission, the laws, and the test every feature must pass, so the work is steered by the same star every time. Use when the user types /goal, asks "what is the goal", "north star", "the commission", or when scoping any CARTA feature, document, or design decision.
+description: RETIRED — the third turn's goal, superseded by the fourth turn. Do not steer current Carta work by this skill; invoke /outfitter (.claude/skills/outfitter/) instead, which holds the fourth turn's thesis (docs/PIVOT.md). This file is kept for the record only — the trade-record ambition it states now lives at Lotmark.
 ---
 
-# The goal
+# The goal (the third turn's — superseded)
+
+> **Set down 2026-08-18.** The fourth turn (`PIVOT.md`) moved the ambition
+> below to **Lotmark**, where it is being built as a business. Carta's
+> steering skill is now **the outfitter** (`.claude/skills/outfitter/`).
+> Nothing below is deleted — this is what Carta meant to be during the
+> third turn, kept for the record.
 
 CARTA is to become the most influential nexus of specialty coffee — the
 reference record of the trade, from the cherry on the branch to the reading in
