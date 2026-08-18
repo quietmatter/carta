@@ -7,6 +7,32 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-18 — Phase 1 shipped: the skeleton stands
+
+- **Shipped:** a new `index.html` built clean per `ARCHITECTURE.md` — the
+  token layer (ported), the journal, the shelf, the door (paste-or-type → a
+  coffee card, gentle join on roaster/place names, no adjudication), the
+  dial-in loop (Setups + the dial component + a stopwatch, ported), put-away
+  + undo. Scout and Atlas sit on the tab bar as named stubs. Classic (Carta
+  6.18.x) moved whole to `classic/index.html` via `git mv` — untouched but
+  for relative asset paths and dropping its own manifest link
+  (`ARCHITECTURE.md` §2); its README travelled with it. Root `README.md`
+  rewritten for Carta 7's current state. PR #75.
+- **Verified:** the phase's done-when bar, by hand in a real browser — a
+  café cup logged through the door in a few taps, a home brew through the
+  dial-in loop (first Setup writing itself, a second brew reusing it
+  silently and carrying the last grind forward), both reading back in the
+  Journal, both coffees on the Shelf; put-away + undo on a coffee.
+- **Scope cuts, noted for the record, not decisions:** no roaster/site brand
+  read yet (no network calls at all in this phase — offline by construction,
+  matches the "no maps" cut); the gentle-join near-match prompt only fires
+  in the door and the café-cup flow, not the Shelf's direct "＋ Add a
+  coffee" form (which joins on an exact fold match only, silently) — a
+  reasonable frequency-based cut, not a law; no "What's New" sheet wired yet
+  (APP_VERSION/CHANGELOG constants exist as data for the next bump).
+- **Next:** Phase 2 — the taste model and the brief.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-18 — the boundary carried to Lotmark's side
 
 - **Carried across:** the Phase 0 desk item — Lotmark's counterpart agent
