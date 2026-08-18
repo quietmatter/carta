@@ -258,15 +258,12 @@ const blank={version:1,cups:[],coffees:[],places:[],roasters:[],setups:[],brews:
 const clone=o=>JSON.parse(JSON.stringify(o));
 let D=load();
 function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};return d}catch(e){return clone(blank)}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
+function save(){_tasteDirty=true;try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const byNew=(a,b)=>b.createdAt.localeCompare(a.createdAt);
 const live=coll=>(D[coll]||[]).filter(x=>!x.archived);
-function putAway(coll,id){const rec=D[coll].find(x=>x.id===id);if(!rec)return;
-  rec.archived=true;rec.archivedAt=new Date().toISOString();save();render();toast('Put away.',()=>restore(coll,id));}
-function restore(coll,id){const rec=D[coll].find(x=>x.id===id);if(!rec)return;
-  rec.archived=false;rec.archivedAt=null;save();render();toast('Restored.');}
+function putAway(coll,id){if(!putAwayCore(D,coll,id,new Date().toISOString()))return;save();render();toast('Put away.',()=>restore(coll,id));}
+function restore(coll,id){if(!restoreCore(D,coll,id))return;save();render();toast('Restored.');}
 function archivedFold(coll,rowFn,label){const items=D[coll].filter(x=>x.archived);
   if(!items.length)return '';
   return `<details class="more"><summary>${label||'Put away'} (${items.length})</summary>${items.map(rowFn).join('')}</details>`;}
@@ -282,7 +279,6 @@ const coffeeById=id=>D.coffees.find(c=>c.id===id);
 const setupById=id=>D.setups.find(s=>s.id===id);
 const brewById=id=>D.brews.find(b=>b.id===id);
 const cupById=id=>D.cups.find(c=>c.id===id);
-function coffeeLabel(c){if(!c)return '—';return [c.roaster,c.name].filter(Boolean).join(' — ')||'Unnamed coffee'}
 function originLine(c){if(!c||!c.origin)return '';const o=c.origin;return [o.region||o.country,o.process,o.variety].filter(Boolean).join(' · ')}
 function brewRecipe(b){return `${b.grind??'—'} grind · ${b.doseG??'—'}g → ${b.waterG??'—'}g · ${fmtTime(b.timeSec)}`}
 function fmtWhen(iso){if(!iso)return '';const d=new Date(iso);const days=Math.floor((Date.now()-d)/864e5);
@@ -302,7 +298,19 @@ const parseTime=str=>{const s=String(str).trim();if(!s)return null;
 const DESCRIPTORS=['floral','citrus','berry','stone fruit','tropical','chocolate','nutty','caramel','honey','spice','tea-like','fermented','roasted','vegetal'];
 const reducedMotion=()=>!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-/* ============ the gentle join (ARCHITECTURE.md §4) ============
+/* ==== pure ==== *
+ * ARCHITECTURE.md §9: "the taste model is the one piece of real logic whose
+ * wrongness would be invisible" — a bad brief just looks like a mediocre
+ * brief. Everything between this marker and its close is a pure function of
+ * an explicit ledger: no DOM, no localStorage, no reference to the global D.
+ * test/model.test.js slices exactly this region out of index.html and
+ * evaluates it directly against fixture ledgers. Keep it that way — a new
+ * helper that reaches for `D` or `document` belongs outside the markers. */
+
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function coffeeLabel(c){if(!c)return '—';return [c.roaster,c.name].filter(Boolean).join(' — ')||'Unnamed coffee'}
+
+/* ---- the gentle join (ARCHITECTURE.md §4) ----
  * Roasters and places are the graph's nodes: each carries aka[], other
  * spellings folded into it. fold() is case/diacritics/punctuation only —
  * never doubled letters, never aliases (that's the resolver's fuzzy licence,
@@ -316,10 +324,10 @@ function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;
     dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
   return dp[m][n];}
 function nodeNames(n){return [n.name,...(n.aka||[])]}
-function matchNode(coll,typed){
+function matchNodes(nodes,typed){
   const t=fold(typed);if(!t)return {exact:null,near:null};
   let exact=null,near=null,bestD=99;
-  for(const n of live(coll)){
+  for(const n of nodes){
     for(const nm of nodeNames(n)){
       const f=fold(nm);
       if(f===t){exact=n;break}
@@ -332,12 +340,137 @@ function matchNode(coll,typed){
 }
 function joinAlias(node,typed){if(fold(typed)!==fold(node.name)){node.aka=node.aka||[];
   if(!node.aka.some(a=>fold(a)===fold(typed)))node.aka.push(typed);}}
+
+/* ---- put-away, the core (the DOM/localStorage wrapper lives in store) ---- */
+function putAwayCore(ledger,coll,id,now){const rec=(ledger[coll]||[]).find(x=>x.id===id);if(!rec)return false;
+  rec.archived=true;rec.archivedAt=now;return true;}
+function restoreCore(ledger,coll,id){const rec=(ledger[coll]||[]).find(x=>x.id===id);if(!rec)return false;
+  rec.archived=false;rec.archivedAt=null;return true;}
+
+/* ---- the taste model + the brief (ARCHITECTURE.md §5) ----
+ * tasteModel(ledger) is a pure derivation, computed and memoized on write,
+ * never stored (classic's reviewQueue pattern: derived state cannot
+ * corrupt). Every figure carries its n and its evidence refs — a
+ * recommendation never travels without its reasons, starting with the model
+ * itself. brief(scope) renders three forms from one derivation: a page on
+ * Carta paper, an embedded machine block (carta.brief/v1), and a plain-text
+ * cut sized for pasting into a chat. Strictly offline, by construction —
+ * nothing here makes a network call. */
+function avg(a){return a.reduce((s,x)=>s+x,0)/a.length}
+function median(a){const s=[...a].sort((x,y)=>x-y);const m=Math.floor(s.length/2);return s.length%2?s[m]:avg([s[m-1],s[m]])}
+function bucket(cups,keyFn){
+  const m={};
+  cups.forEach(c=>{const k=keyFn(c);if(!k)return;(m[k]=m[k]||{value:k,scores:[],cupRefs:[]});m[k].scores.push(c.score);m[k].cupRefs.push(c.id)});
+  return Object.values(m).map(x=>({value:x.value,weight:avg(x.scores),n:x.scores.length,cupRefs:x.cupRefs})).sort((a,b)=>b.weight-a.weight||b.n-a.n);
+}
+function bucketMulti(cups,keysFn){
+  const m={};
+  cups.forEach(c=>(keysFn(c)||[]).forEach(k=>{(m[k]=m[k]||{value:k,scores:[],cupRefs:[]});m[k].scores.push(c.score);m[k].cupRefs.push(c.id)}));
+  return Object.values(m).map(x=>({value:x.value,weight:avg(x.scores),n:x.scores.length,cupRefs:x.cupRefs})).sort((a,b)=>b.weight-a.weight||b.n-a.n);
+}
+function tasteModel(ledger){
+  const coffeeOf=id=>(ledger.coffees||[]).find(c=>c.id===id);
+  const placeOf=id=>(ledger.places||[]).find(p=>p.id===id);
+  const cups=(ledger.cups||[]).filter(c=>!c.archived&&c.score!=null);
+  const barCups=cups.filter(c=>c.kind==='bar');
+
+  // the bar — a floor to judge a café by, and the roasters that earn a return trip
+  const floor=barCups.length?median(barCups.map(c=>c.score)):null;
+  const byRoaster={};
+  cups.forEach(c=>{
+    const co=coffeeOf(c.coffeeRef);if(!co)return;
+    const key=co.roasterRef||co.roaster;if(!key)return;
+    (byRoaster[key]=byRoaster[key]||{roasterRef:co.roasterRef||null,name:co.roaster||'Unnamed roaster',scores:[],cupRefs:[]});
+    byRoaster[key].scores.push(c.score);byRoaster[key].cupRefs.push(c.id);
+  });
+  const anchors=Object.values(byRoaster)
+    .map(r=>({roasterRef:r.roasterRef,name:r.name,avg:avg(r.scores),n:r.scores.length,cupRefs:r.cupRefs}))
+    .filter(r=>r.avg>=8&&r.n>=2)
+    .sort((a,b)=>b.avg-a.avg||b.n-a.n);
+  const nines=cups.filter(c=>c.score===9).map(c=>c.id);
+
+  // the vector — what earns your taste, each value carrying its own weight and n
+  const processes=bucket(cups,c=>{const co=coffeeOf(c.coffeeRef);return co&&co.origin&&co.origin.process});
+  const origins=bucket(cups,c=>{const co=coffeeOf(c.coffeeRef);return co&&co.origin&&(co.origin.country||co.origin.region)});
+  const descriptors=bucketMulti(cups,c=>c.descriptors);
+
+  function scope(kind,id){
+    let scoped=cups;
+    if(kind==='place')scoped=cups.filter(c=>c.kind==='bar'&&c.placeRef===id);
+    else if(kind==='city')scoped=cups.filter(c=>{if(c.kind!=='bar')return false;const p=placeOf(c.placeRef);return !!(p&&p.city&&fold(p.city)===fold(id))});
+    else if(kind==='country')scoped=cups.filter(c=>{const co=coffeeOf(c.coffeeRef);return !!(co&&co.origin&&fold(co.origin.country||'')===fold(id))});
+    else if(kind==='route')scoped=cups.filter(c=>{if(c.kind!=='bar')return false;const p=placeOf(c.placeRef);return !!(p&&p.city&&(id||[]).some(x=>fold(x)===fold(p.city)))});
+    const had=[...new Set(scoped.map(c=>coffeeLabel(coffeeOf(c.coffeeRef))))];
+    const knownRoasters=[...new Set(scoped.map(c=>{const co=coffeeOf(c.coffeeRef);return co&&co.roaster}).filter(Boolean))];
+    return {had,knownRoasters};
+  }
+  return {bar:{floor,anchors,nines},vector:{processes,origins,descriptors},scope};
+}
+function briefPlainText(ledger,scopeKind,scopeId,tm){
+  tm=tm||tasteModel(ledger);
+  const lines=['MY COFFEE TASTE (from Carta)'];
+  if(tm.bar.floor!=null)lines.push(`Baseline: I rate café coffee ${tm.bar.floor}+/9 as worth returning to.`);
+  if(tm.bar.anchors.length)lines.push(`Roasters I keep reaching for: ${tm.bar.anchors.slice(0,5).map(a=>`${a.name} (avg ${a.avg.toFixed(1)}, ${a.n} cups)`).join('; ')}.`);
+  if(tm.vector.processes.length)lines.push(`Processes I rate highest: ${tm.vector.processes.slice(0,4).map(p=>`${p.value} (${p.weight.toFixed(1)}/9, n=${p.n})`).join(', ')}.`);
+  if(tm.vector.origins.length)lines.push(`Origins I rate highest: ${tm.vector.origins.slice(0,4).map(p=>`${p.value} (${p.weight.toFixed(1)}/9, n=${p.n})`).join(', ')}.`);
+  if(tm.vector.descriptors.length)lines.push(`What I notice most in a 9: ${tm.vector.descriptors.slice(0,5).map(d=>d.value).join(', ')}.`);
+  if(scopeKind){
+    const s=tm.scope(scopeKind,scopeId);
+    if(s.had.length)lines.push(`Already had ${scopeKind==='city'?'in '+scopeId:'here'} — don't recommend these again: ${s.had.join('; ')}.`);
+    if(s.knownRoasters.length)lines.push(`Roasters I already know are here: ${s.knownRoasters.join(', ')}.`);
+    lines.push(`Recommend specialty coffee ${scopeKind==='city'?'in '+scopeId:scopeKind==='country'?'from '+scopeId:'here'} that matches this taste and that I haven't already had.`);
+  }else lines.push('Recommend specialty coffee that matches this taste.');
+  let text=lines.join('\n');
+  if(text.length>1500)text=text.slice(0,1497)+'…';
+  return text;
+}
+function briefPageHTML(ledger,scopeKind,scopeId){
+  const tm=tasteModel(ledger);
+  const scoped=scopeKind?tm.scope(scopeKind,scopeId):{had:[],knownRoasters:[]};
+  const heading=scopeKind==='city'?`Brief — ${scopeId}`:scopeKind==='country'?`Brief — ${scopeId}`:scopeKind==='place'?'Brief — this café':'Brief — your taste';
+  const machine={version:'carta.brief/v1',generatedAt:new Date().toISOString(),
+    scope:scopeKind?{kind:scopeKind,id:scopeId}:null,bar:tm.bar,vector:tm.vector,had:scoped.had,knownRoasters:scoped.knownRoasters};
+  const machineJson=JSON.stringify(machine).replace(/<\/script/gi,'<\\/script');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(heading)}</title>
+<style>
+body{background:#f2eee6;color:#241d18;font-family:Georgia,'Times New Roman',serif;max-width:640px;margin:40px auto;padding:0 24px;line-height:1.55}
+h1{font-size:1.8rem;font-weight:600;letter-spacing:-.01em;margin:0 0 6px}
+.eyebrow{font-family:-apple-system,'Segoe UI',sans-serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#776b60;margin-bottom:10px}
+.lede{color:#554a41;margin:0 0 24px}
+h2{font-family:-apple-system,'Segoe UI',sans-serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#776b60;border-bottom:1px solid rgba(36,29,24,.13);padding-bottom:6px;margin:26px 0 10px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid rgba(36,29,24,.13);font-size:15px}
+.kv .k{color:#776b60;font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.foot{margin-top:30px;font-style:italic;color:#776b60;font-size:13px;border-top:1px solid rgba(36,29,24,.13);padding-top:12px}
+</style></head>
+<body>
+<div class="eyebrow">Carta — the brief</div>
+<h1>${esc(heading)}</h1>
+<div class="lede">Generated ${esc(new Date().toLocaleDateString())}, argued from the record — with its reasons below, never a score without them.</div>
+<h2>The bar</h2>
+${tm.bar.floor!=null?`<div class="kv"><span class="k">Worth the walk</span><span>${tm.bar.floor}+ / 9</span></div>`:'<div class="lede" style="margin:0">Not enough café cups yet.</div>'}
+${tm.bar.anchors.map(a=>`<div class="kv"><span class="k">${esc(a.name)}</span><span>${a.avg.toFixed(1)} avg · ${a.n} cups</span></div>`).join('')}
+<h2>The vector</h2>
+${tm.vector.processes.slice(0,5).map(p=>`<div class="kv"><span class="k">${esc(p.value)}</span><span>${p.weight.toFixed(1)} avg · ${p.n}</span></div>`).join('')}
+${tm.vector.origins.slice(0,5).map(p=>`<div class="kv"><span class="k">${esc(p.value)}</span><span>${p.weight.toFixed(1)} avg · ${p.n}</span></div>`).join('')}
+${scoped.had.length?`<h2>Already had ${scopeKind==='city'?'in '+esc(scopeId):'here'}</h2><div class="lede" style="margin:0">${scoped.had.map(esc).join(', ')}</div>`:''}
+<div class="foot">Carried from Carta, offline. Nothing here called out on its own.</div>
+<script type="application/json" id="carta-brief">${machineJson}<\/script>
+</body></html>`;
+}
+/* ==== /pure ==== */
+
+/* ============ the gentle join — the thin wrappers, coupled to the live ledger ============ */
+function matchNode(coll,typed){return matchNodes(live(coll),typed)}
 function mintRoasterIfNeeded(name,ref){if(ref)return ref;name=(name||'').trim();if(!name)return null;
   const r={id:uid(),createdAt:new Date().toISOString(),name,aka:[]};D.roasters.push(r);return r.id;}
 function resolveRoaster(name){name=(name||'').trim();if(!name)return {name:'',ref:null};
   const m=matchNode('roasters',name);
   if(m.exact)return {name:m.exact.name,ref:m.exact.id};
   return {name,ref:mintRoasterIfNeeded(name,null)};}
+
+/* ============ taste model, memoized on write ============ */
+let _tasteDirty=true,_tasteCache=null;
+function tasteModelMemo(){if(_tasteDirty||!_tasteCache){_tasteCache=tasteModel(D);_tasteDirty=false;}return _tasteCache;}
 
 /* ============ router ============ */
 const TABS=[{id:'journal',label:'Journal'},{id:'scout',label:'Scout'},{id:'atlas',label:'Atlas'},{id:'shelf',label:'Shelf'}];
@@ -615,7 +748,7 @@ function doorKind(kind){
 
 /* ============ café cup (the bar path) ============ */
 let cafeCupState=null;
-function openCafeCup(coffeeId){cafeCupState={coffeeId,place:'',placeRef:null,step:'place'};paintCafeCup();}
+function openCafeCup(coffeeId){cafeCupState={coffeeId,place:'',placeRef:null,city:'',step:'place'};paintCafeCup();}
 function paintCafeCup(){
   const s=cafeCupState,coffee=coffeeById(s.coffeeId);
   if(s.step==='place'){
@@ -623,6 +756,8 @@ function paintCafeCup(){
     <div class="sub">${esc(coffeeLabel(coffee))}</div>
     <label class="f"><span class="l">Café</span><input type="text" id="p_name" value="${esc(s.place)}" placeholder="Halfpence" list="placelist"></label>
     <datalist id="placelist">${live('places').map(p=>`<option value="${esc(p.name)}">`).join('')}</datalist>
+    <label class="f"><span class="l">City <span class="opt">optional — scopes the brief later</span></span><input type="text" id="p_city" value="${esc(s.city)}" placeholder="Portland" list="citylist"></label>
+    <datalist id="citylist">${knownCities().map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
     <button class="btn btn-primary" onclick="cafeCupNext()">Continue</button>`);
     return;
   }
@@ -646,7 +781,7 @@ function paintCafeCup(){
   }
 }
 function cafeCupNext(){
-  const s=cafeCupState;s.place=val('p_name');
+  const s=cafeCupState;s.place=val('p_name');s.city=val('p_city');
   if(!s.place){toast('Name the café');return}
   const m=matchNode('places',s.place);
   if(m.exact){s.placeRef=m.exact.id;s.step='score';paintCafeCup();return}
@@ -655,19 +790,24 @@ function cafeCupNext(){
 }
 function cafeCupJoin(yes){
   const s=cafeCupState,m=s._match;
-  if(yes){joinAlias(m,s.place);s.placeRef=m.id;}
+  if(yes){joinAlias(m,s.place);s.placeRef=m.id;if(!m.city&&s.city)m.city=s.city;}
   s.step='score';paintCafeCup();
 }
 function saveCafeCup(){
   if(hedState==null){toast('A cup needs its reading — the 1–9 first.');return}
   const s=cafeCupState;
   let placeRef=s.placeRef;
-  if(!placeRef){const p={id:uid(),createdAt:new Date().toISOString(),name:s.place,aka:[]};D.places.push(p);placeRef=p.id;}
+  if(!placeRef){const p={id:uid(),createdAt:new Date().toISOString(),name:s.place,city:s.city||'',aka:[]};D.places.push(p);placeRef=p.id;}
   const cup={id:uid(),createdAt:new Date().toISOString(),at:new Date().toISOString(),kind:'bar',
     placeRef,coffeeRef:s.coffeeId,score:hedState,line:val('cc_notes'),descriptors:[...descState]};
   D.cups.push(cup);
   cafeCupState=null;hedState=null;descState=new Set();
   save();closeSheet();go('journal');toast('Kept.');
+}
+function knownCities(){
+  const seen={};
+  live('places').forEach(p=>{if(p.city){const f=fold(p.city);if(!seen[f])seen[f]=p.city}});
+  return Object.values(seen).sort();
 }
 
 /* ============ setups + the dial-in loop (home path) ============ */
@@ -889,10 +1029,69 @@ function vShelf(){
   ${items.length?items.map(coffeeRowHTML).join(''):'<div class="empty">Nothing on the shelf yet.</div>'}
   ${archivedFold('coffees',coffeeRowHTML,'Put away')}`;
 }
+/* ============ the hunt — the taste model, read; the brief, prepared ============ */
 function vScout(){
+  const cups=live('cups').filter(c=>c.score!=null);
+  if(!cups.length){
+    return `<div class="eyebrow">Scout</div>
+    <div class="display">Not <em>yet</em></div>
+    <div class="lede">The brief reads the record — log a few cups first, and there'll be something to argue from.</div>`;
+  }
+  const tm=tasteModelMemo();
+  const cities=knownCities();
   return `<div class="eyebrow">Scout</div>
-  <div class="display">Not <em>yet</em></div>
-  <div class="lede">The brief ships next — your taste, argued from the record, in a page you can paste into a chat.</div>`;
+  <div class="display">Your taste, <em>argued</em></div>
+  <div class="lede">${cups.length} cup${cups.length===1?'':'s'} on the record — here's what it argues, with its reasons.</div>
+  <h2>The bar</h2>
+  ${tm.bar.floor!=null?`<div class="kv"><span class="k">Worth the walk</span><span class="v num">${tm.bar.floor}+ / 9</span></div>`:'<div class="muted">Not enough café cups yet.</div>'}
+  ${tm.bar.anchors.length?tm.bar.anchors.slice(0,5).map(a=>`<div class="kv"><span class="k">${esc(a.name)}</span><span class="v num">${a.avg.toFixed(1)} avg · ${a.n} cups</span></div>`).join(''):'<div class="muted">No anchors yet — a roaster earns one at 8+ over two cups.</div>'}
+  <h2>Your vector</h2>
+  ${vectorRowHTML('Process',tm.vector.processes)}
+  ${vectorRowHTML('Origin',tm.vector.origins)}
+  ${vectorRowHTML('Notice',tm.vector.descriptors)}
+  <h2>The brief</h2>
+  <div class="lede" style="margin-top:0">A plain-text cut sized for pasting into a chat, and a page to keep — scoped to a city if you've logged one.</div>
+  <label class="f"><span class="l">Scope</span><select id="brief_scope">
+    <option value="">Everywhere</option>
+    ${cities.map(c=>`<option value="city:${esc(c)}">${esc(c)}</option>`).join('')}
+  </select></label>
+  <button class="btn btn-primary" onclick="openBrief()">Prepare the brief</button>`;
+}
+function vectorRowHTML(label,items){
+  if(!items.length)return '';
+  return `<div class="kv"><span class="k">${esc(label)}</span><span class="v">${items.slice(0,4).map(i=>`${esc(i.value)} (${i.weight.toFixed(1)})`).join(', ')}</span></div>`;
+}
+function openBrief(){
+  const sel=val('brief_scope');
+  let scopeKind=null,scopeId=null;
+  if(sel.startsWith('city:')){scopeKind='city';scopeId=sel.slice(5);}
+  const tm=tasteModelMemo();
+  const text=briefPlainText(D,scopeKind,scopeId,tm);
+  openSheet(`<h3>The brief</h3>
+  <div class="sub">${scopeKind==='city'?esc(scopeId):'Everywhere'} — paste this into your AI chat.</div>
+  <label class="f"><textarea id="brief_text" readonly style="min-height:220px">${esc(text)}</textarea></label>
+  <div class="btnrow">
+    <button class="btn btn-quiet" onclick="downloadBriefPage('${scopeKind||''}','${esc(scopeId||'')}')">Download the page</button>
+    <button class="btn btn-primary" onclick="copyBrief()">Copy</button>
+  </div>
+  <div class="muted small" style="margin-top:10px">${text.length} characters. Strictly offline — nothing here calls out on its own.</div>`);
+}
+function copyBrief(){
+  const t=document.getElementById('brief_text');
+  t.focus();t.select();
+  const done=()=>toast('Copied — paste it into your chat.');
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value).then(done,()=>{document.execCommand('copy');done();});
+  else{document.execCommand('copy');done();}
+}
+function downloadBriefPage(scopeKind,scopeId){
+  const html=briefPageHTML(D,scopeKind||null,scopeId||null);
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`carta-brief${scopeId?'-'+fold(scopeId).replace(/\s+/g,'-'):''}.html`;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  toast('Downloaded — open it anywhere, forever.');
 }
 function vAtlas(){
   return `<div class="eyebrow">Atlas</div>
@@ -910,8 +1109,11 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.0.0';
-const CHANGELOG=[{v:'7.0.0',d:"The skeleton. Carta 7 begins: the journal, the shelf, the door, the dial-in loop. Classic moved whole to classic/."}];
+const APP_VERSION='7.1.0';
+const CHANGELOG=[
+  {v:'7.1.0',d:"The brief. Scout reads your taste back — the bar, the vector, the anchors, always with their reasons — and prepares a brief: a plain-text cut to paste into a chat, and a page to keep. A café cup can now carry a city, so a brief can scope to one."},
+  {v:'7.0.0',d:"The skeleton. Carta 7 begins: the journal, the shelf, the door, the dial-in loop. Classic moved whole to classic/."},
+];
 
 /* ============ boot ============ */
 applyTheme();
