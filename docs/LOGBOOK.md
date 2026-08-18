@@ -7,6 +7,40 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-18 — Phase 3 shipped (in part): the passport and its chapters
+
+- **Shipped:** the passport — a world frame drawn from `LANDS` (Natural
+  Earth outlines, 65 countries, ~8KB) ported verbatim from classic, tasted
+  countries washed and tappable, untasted ones a hairline invitation;
+  highland contours (`LAND_TOPO`, 48 countries, ~20KB) ported and wired
+  through classic's own `TOPO_KM` gate, honestly withheld at true world
+  width rather than drawn illegibly — a faithful port of the rule, not a
+  cut. Country and city chapters, as typography per `ROADMAP.md`'s own
+  framing: a country's coffees by region, a city's cafés with their
+  average score, reached via a new one-level page overlay (`pageView`) in
+  the router. `passportSVG()` is new and purpose-built for a single
+  always-on world frame, not a port of classic's general-purpose
+  `plotSVG` (which carries lens laws, rung gating and scene clustering —
+  the "law" `ARCHITECTURE.md` §1's porting rule excludes). Country lookup
+  goes through `fold()` + a ported `LAND_AKA` alias table, not classic's
+  `normPlace`/`genFold`. PR #77.
+- **Not shipped, and not silently dropped:** the city frame's live street
+  layer (MapLibre + OpenFreeMap) from `ARCHITECTURE.md`'s "maps" list.
+  It needs place geocoding (lat/lon) to plot anything, and nothing in
+  Carta 7 captures coordinates yet — building geocoding as a side effect
+  of a map feature felt backwards. The city chapter ships as the
+  spec's own sanctioned degrade (§7: "the drawn plot") in the meantime —
+  a typographic reading of your cafés there, no map.
+- **Verified:** by hand in a real browser and by decode-correctness
+  checks against the ported data directly in Node (country/topo counts,
+  a sample decode, the world bbox confirming the contour gate fires
+  correctly) before any UI was wired to it. Screenshotted in both paper
+  and dusk.
+- **Next:** either the city frame's geocoding + live street layer (the
+  rest of Phase 3), or Phase 4 — the bridge — depending which the
+  founder would rather walk into next.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-18 — Phase 2 shipped: the brief
 
 - **Shipped:** `tasteModel(ledger)` per `ARCHITECTURE.md` §5 — the bar (a
