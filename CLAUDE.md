@@ -2,6 +2,17 @@
 
 Guidance for AI assistants working in this repository.
 
+## Model & effort recommendation
+
+At the start of every new message, before doing any other work, briefly state
+which model (Sonnet/Opus/Fable) and effort level (low/medium/high/max) you'd
+recommend for that specific task, with one line of reasoning. Base this on
+task complexity — routine/mechanical work warrants a smaller model and lower
+effort, while subtle bugs, unfamiliar domains, or architectural decisions
+warrant a larger model and higher effort. This is a recommendation only —
+don't switch models or effort yourself; run `/model` or `/effort` if you want
+to act on it.
+
 ## What CARTA is
 
 CARTA is a **coffee brewing journal** — a single-page, offline-first PWA for

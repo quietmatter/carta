@@ -7,6 +7,20 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-18 — the boundary carried to Lotmark's side
+
+- **Carried across:** the Phase 0 desk item — Lotmark's counterpart agent
+  learning the mirror-image boundary — landed as lotmark PR #186:
+  `docs/carta.md` (the charter), a `CLAUDE.md` Carta section, and the
+  `/ceo-brief` skill's *Carta desk* (reads this logbook's "For Lotmark's
+  desk" list every run; refers consumer/taste-side ideas back here as
+  one-line `Carta-scope, referred` entries).
+- **Protocol now live both ways:** items under "For Lotmark's desk" below
+  are read by Lotmark's daily brief; Lotmark's briefs refer Carta-shaped
+  ideas here for the outfitter to author.
+- **For Lotmark's desk:** nothing new this entry (the standing items from
+  Phase 0 remain: honor `carta.brief/v1`; the published atlas read).
+
 ## 2026-08-18 — the turn recorded; Phase 0 complete
 
 - **Shipped:** the fourth-turn suite — `PIVOT.md` (approved by the founder,
