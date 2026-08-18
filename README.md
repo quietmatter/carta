@@ -5,7 +5,7 @@ whether either was worth finding again.
 
 **Carta 7 is a fresh start** (`docs/PIVOT.md`), rebuilt smaller and simpler
 than the app that came before it. It ships in phases (`docs/ROADMAP.md`); this
-is **Phase 4 — the bridge**.
+is **Phase 5 — the share**.
 
 ## What's here right now
 
@@ -49,11 +49,20 @@ is **Phase 4 — the bridge**.
   do (never sent anywhere, never saved — no OCR, no dependency). Tap a line
   to log a cup on the spot, prefilled with the café already known, or to
   point it at a coffee already on your shelf.
+- **The cards.** A coffee, a café, the passport, or the year — each renders
+  as a self-contained page on Carta paper with a live preview before it
+  goes anywhere. **Share** hits the OS share sheet where the browser offers
+  one (a text, AirDrop, anywhere) and falls back to a plain download
+  everywhere else — the actual point being a friend on the other end, not a
+  file in your own Downloads. A coffee or a café card carries its own data
+  back in (`carta.card/v1`): open one on another Carta and **Import a card**
+  (on the Shelf) is one tap to add it — no account, no server, no touching
+  the sender's record.
 
-Shareable cards and the classic importer are later phases; see
-`docs/ROADMAP.md` for the order and why. The city frame's live street layer
-(from Phase 3, per `docs/ARCHITECTURE.md`) still waits on the device having
-somewhere to geocode a café to — a fast-follow, not dropped.
+The classic importer is a later phase; see `docs/ROADMAP.md` for the order
+and why. The city frame's live street layer (from Phase 3, per
+`docs/ARCHITECTURE.md`) still waits on the device having somewhere to
+geocode a café to — a fast-follow, not dropped.
 
 ## Classic
 
