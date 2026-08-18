@@ -1204,8 +1204,27 @@ The test scripts are the frontend-less part's safety net. **If you change
 `server/server.js` or `server/worker.mjs`, run `node server/test.js` and
 `node server/test-worker.js` and keep both passing**; add cases for new
 endpoints or behaviors — to both suites, since the two servers must stay
-in lockstep. There is no automated test harness for the app
-itself — verify frontend changes by loading the page.
+in lockstep.
+
+**Carta 7's taste model** (`docs/ARCHITECTURE.md` §5, §9) is the one piece of
+real logic in the app whose wrongness would be invisible — a bad brief just
+looks like a mediocre brief — so it has a test harness even though nothing
+else in the app does:
+
+```bash
+node test/model.test.js        # zero deps, the server/test.js pattern
+```
+
+It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
+out of the root `index.html` and evaluates it against fixture ledgers — no
+DOM, no localStorage. **If you touch `tasteModel`, `brief*`, `matchNodes`,
+`joinAlias`, `putAwayCore`, or `restoreCore` in the root `index.html`, run
+this test and keep it passing**; add cases for new taste-model behavior.
+Anything that reaches for `D` or `document` does not belong inside the
+markers — move it outside them, next to its DOM/localStorage-coupled
+wrapper, the way `matchNode`/`putAway` wrap `matchNodes`/`putAwayCore`.
+Everything else painted by the root `index.html` — and all of `classic/`
+— has no automated test harness; verify by loading the page.
 
 ### HTTPS constraint (server)
 
