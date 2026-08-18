@@ -485,14 +485,15 @@ function briefPlainText(ledger,scopeKind,scopeId,tm){
   if(text.length>1500)text=text.slice(0,1497)+'…';
   return text;
 }
-function briefPageHTML(ledger,scopeKind,scopeId){
-  const tm=tasteModel(ledger);
-  const scoped=scopeKind?tm.scope(scopeKind,scopeId):{had:[],knownRoasters:[]};
-  const heading=scopeKind==='city'?`Brief — ${scopeId}`:scopeKind==='country'?`Brief — ${scopeId}`:scopeKind==='place'?'Brief — this café':'Brief — your taste';
-  const machine={version:'carta.brief/v1',generatedAt:new Date().toISOString(),
-    scope:scopeKind?{kind:scopeKind,id:scopeId}:null,bar:tm.bar,vector:tm.vector,had:scoped.had,knownRoasters:scoped.knownRoasters};
-  const machineJson=JSON.stringify(machine).replace(/<\/script/gi,'<\\/script');
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(heading)}</title>
+/* ---- the export shell — one shape for every self-contained page Carta hands
+ * out (a brief, a card): Carta paper, a headline, sections, and its own
+ * machine-readable data embedded as a script-close-escaped JSON island. Pure —
+ * a string in, a string out — so every export renderer can live wherever it
+ * needs to (this one's inside the pure block because briefPageHTML is; the
+ * cards' renderers call it from outside, same function, same shape). */
+function exportPageHTML(opts){
+  const machineJson=JSON.stringify(opts.embedData).replace(/<\/script/gi,'<\\/script');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(opts.title)}</title>
 <style>
 body{background:#f2eee6;color:#241d18;font-family:Georgia,'Times New Roman',serif;max-width:640px;margin:40px auto;padding:0 24px;line-height:1.55}
 h1{font-size:1.8rem;font-weight:600;letter-spacing:-.01em;margin:0 0 6px}
@@ -501,22 +502,47 @@ h1{font-size:1.8rem;font-weight:600;letter-spacing:-.01em;margin:0 0 6px}
 h2{font-family:-apple-system,'Segoe UI',sans-serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#776b60;border-bottom:1px solid rgba(36,29,24,.13);padding-bottom:6px;margin:26px 0 10px}
 .kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid rgba(36,29,24,.13);font-size:15px}
 .kv .k{color:#776b60;font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.kv .v.score{color:#a63f2b;font-weight:600}
 .foot{margin-top:30px;font-style:italic;color:#776b60;font-size:13px;border-top:1px solid rgba(36,29,24,.13);padding-top:12px}
+img.card-photo{width:100%;max-height:320px;object-fit:cover;margin:4px 0 20px;border:1px solid rgba(36,29,24,.13)}
+.plot-box{border:1px solid rgba(36,29,24,.13);background:#f8f5ee;margin:4px 0 20px;overflow:hidden}
+.plot-box svg{display:block;width:100%}
+.plot-box .land{fill:#f2eee6;fill-opacity:.6;stroke:#ddd5c7;stroke-width:1}
+.plot-box .topo{fill:none;stroke:#776b60}
+.plot-box .topo.t1{stroke-width:.7;stroke-dasharray:1.4 2.4;opacity:.5}
+.plot-box .topo.t2{stroke-width:.8;stroke-dasharray:2.6 2;opacity:.62}
+.plot-box .topo.t3{stroke-width:.9;opacity:.72}
+.plot-box .mk-land{fill:#f2eee6;fill-opacity:.9;stroke:#554a41;stroke-width:1.3}
+.mk-lbl{font-family:-apple-system,sans-serif;font-size:9px;fill:#776b60}
+.mk-lbl.onland{paint-order:stroke;stroke:#f8f5ee;stroke-width:2.8px;fill:#554a41}
 </style></head>
 <body>
-<div class="eyebrow">Carta — the brief</div>
-<h1>${esc(heading)}</h1>
-<div class="lede">Generated ${esc(new Date().toLocaleDateString())}, argued from the record — with its reasons below, never a score without them.</div>
-<h2>The bar</h2>
+<div class="eyebrow">Carta${opts.eyebrow?' — '+esc(opts.eyebrow):''}</div>
+<h1>${esc(opts.title)}</h1>
+${opts.lede?`<div class="lede">${esc(opts.lede)}</div>`:''}
+${opts.bodyHTML||''}
+<div class="foot">${esc(opts.footNote||'Carried from Carta, offline.')}</div>
+<script type="application/json" id="${opts.embedId}">${machineJson}<\/script>
+</body></html>`;
+}
+function briefPageHTML(ledger,scopeKind,scopeId){
+  const tm=tasteModel(ledger);
+  const scoped=scopeKind?tm.scope(scopeKind,scopeId):{had:[],knownRoasters:[]};
+  const heading=scopeKind==='city'?`Brief — ${scopeId}`:scopeKind==='country'?`Brief — ${scopeId}`:scopeKind==='place'?'Brief — this café':'Brief — your taste';
+  const body=`<h2>The bar</h2>
 ${tm.bar.floor!=null?`<div class="kv"><span class="k">Worth the walk</span><span>${tm.bar.floor}+ / 9</span></div>`:'<div class="lede" style="margin:0">Not enough café cups yet.</div>'}
 ${tm.bar.anchors.map(a=>`<div class="kv"><span class="k">${esc(a.name)}</span><span>${a.avg.toFixed(1)} avg · ${a.n} cups</span></div>`).join('')}
 <h2>The vector</h2>
 ${tm.vector.processes.slice(0,5).map(p=>`<div class="kv"><span class="k">${esc(p.value)}</span><span>${p.weight.toFixed(1)} avg · ${p.n}</span></div>`).join('')}
 ${tm.vector.origins.slice(0,5).map(p=>`<div class="kv"><span class="k">${esc(p.value)}</span><span>${p.weight.toFixed(1)} avg · ${p.n}</span></div>`).join('')}
-${scoped.had.length?`<h2>Already had ${scopeKind==='city'?'in '+esc(scopeId):'here'}</h2><div class="lede" style="margin:0">${scoped.had.map(esc).join(', ')}</div>`:''}
-<div class="foot">Carried from Carta, offline. Nothing here called out on its own.</div>
-<script type="application/json" id="carta-brief">${machineJson}<\/script>
-</body></html>`;
+${scoped.had.length?`<h2>Already had ${scopeKind==='city'?'in '+esc(scopeId):'here'}</h2><div class="lede" style="margin:0">${scoped.had.map(esc).join(', ')}</div>`:''}`;
+  return exportPageHTML({
+    title:heading,eyebrow:'the brief',
+    lede:`Generated ${new Date().toLocaleDateString()}, argued from the record — with its reasons below, never a score without them.`,
+    bodyHTML:body,footNote:'Carried from Carta, offline. Nothing here called out on its own.',
+    embedId:'carta-brief',
+    embedData:{version:'carta.brief/v1',generatedAt:new Date().toISOString(),
+      scope:scopeKind?{kind:scopeKind,id:scopeId}:null,bar:tm.bar,vector:tm.vector,had:scoped.had,knownRoasters:scoped.knownRoasters}});
 }
 /* ==== /pure ==== */
 
@@ -1079,6 +1105,7 @@ function openPlaceSheet(placeId){
   openSheet(`<h3>${esc(p.name)}</h3>
   ${p.city?`<div class="sub">${esc(p.city)}</div>`:''}
   <button class="btn btn-primary" onclick="closeSheet();openMenuCapture('${placeId}')">＋ Add a menu</button>
+  <button class="btn btn-quiet" onclick="closeSheet();sharePlaceCard('${placeId}')">Share this café</button>
   ${menus.length?`<h2>Menus captured here</h2>${menus.map(m=>`<button class="rowlink" onclick="openMenuPage('${m.id}')">
     <span><span class="t">${esc(fmtWhen(m.createdAt))}</span><br><span class="m">${m.items.length} item${m.items.length===1?'':'s'}</span></span>
     <span class="go">→</span></button>`).join('')}`:'<div class="muted">No menus captured yet.</div>'}`);
@@ -1336,7 +1363,8 @@ function tastedCountryMap(){
  * refusal that keeps a street layer off a frame too wide to read at (never a
  * scope cut — the rule simply says no at this frame, faithfully). */
 let _passportCache=null;
-function passportSVG(){
+function passportSVG(interactive){
+  interactive=interactive!==false;
   const tasted=tastedCountryMap();
   const keys=Object.keys(LANDS);
   const allPts=[];
@@ -1364,7 +1392,7 @@ function passportSVG(){
       const lx=a?n(X(a)):n(W/2),ly=a?n(Y(a)):n(H/2);
       const topo=drawTopo?landTopoRaw(k):null;
       const topoHTML=topo?topo.map((lv,i)=>lv.map(r=>{const dd=path(r);return dd?`<path class="topo t${i+1}" d="${dd}"/>`:''}).join('')).join(''):'';
-      markHTML+=`<g class="mk" onclick="openCountryChapter(${jsq(t.label)})">
+      markHTML+=`<g class="mk"${interactive?` onclick="openCountryChapter(${jsq(t.label)})"`:''}>
         <path class="mk-land" d="${d}"/>${topoHTML}
         <text class="mk-lbl onland" x="${lx}" y="${ly}" text-anchor="middle">${esc(t.label)}</text>
       </g>`;
@@ -1437,6 +1465,7 @@ function openCoffeeDetail(id){
   <button class="btn btn-quiet" onclick="closeSheet();openCafeCup('${id}')">Had it at a café</button>
   ${c.home?'':`<button class="btn btn-quiet" onclick="takeItHome('${id}');closeSheet()">Take it home</button>`}
   <button class="btn btn-quiet" onclick="closeSheet();openCoffeeForm('${id}')">Edit</button>
+  <button class="btn btn-quiet" onclick="closeSheet();shareCoffeeCard('${id}')">Share this coffee</button>
   ${c.archived
     ?`<button class="btn btn-quiet" onclick="restore('coffees','${id}');closeSheet()">Restore</button>`
     :`<button class="btn btn-quiet" onclick="putAway('coffees','${id}');closeSheet()">Put away</button>`}`);
@@ -1454,7 +1483,10 @@ function vShelf(){
   return `<div class="eyebrow">Shelf</div>
   <div class="display">What you've <em>got</em></div>
   <div class="lede">Every coffee on hand — tap one to dial it in, or add what's not logged yet.</div>
-  <button class="btn btn-quiet" style="margin-bottom:16px" onclick="openCoffeeForm()">＋ Add a coffee</button>
+  <div class="btnrow" style="margin-bottom:16px">
+    <button class="btn btn-quiet" onclick="openCoffeeForm()">＋ Add a coffee</button>
+    <button class="btn btn-quiet" onclick="openImportCard()">Import a card</button>
+  </div>
   ${items.length?items.map(coffeeRowHTML).join(''):'<div class="empty">Nothing on the shelf yet. A home brew lands here on its own — or take a café coffee home from its cup.</div>'}
   ${archived.length?`<details class="more"><summary>Put away (${archived.length})</summary>${archived.map(coffeeRowHTML).join('')}</details>`:''}`;
 }
@@ -1484,7 +1516,18 @@ function vScout(){
     <option value="">Everywhere</option>
     ${cities.map(c=>`<option value="city:${esc(c)}">${esc(c)}</option>`).join('')}
   </select></label>
-  <button class="btn btn-primary" onclick="openBrief()">Prepare the brief</button>`;
+  <button class="btn btn-primary" onclick="openBrief()">Prepare the brief</button>
+  ${yearSectionHTML()}`;
+}
+function yearSectionHTML(){
+  const years=knownYears();
+  if(!years.length)return '';
+  return `<h2>The year</h2>
+  <div class="lede" style="margin-top:0">A card for the year — cups kept, the roasters you kept reaching for.</div>
+  <label class="f"><span class="l">Year</span><select id="year_pick">
+    ${years.map(y=>`<option value="${y}">${y}</option>`).join('')}
+  </select></label>
+  <button class="btn btn-quiet" onclick="shareYearCard(Number(val('year_pick')))">Share this year</button>`;
 }
 function vectorRowHTML(label,items){
   if(!items.length)return '';
@@ -1500,7 +1543,7 @@ function openBrief(){
   <div class="sub">${scopeKind==='city'?esc(scopeId):'Everywhere'} — paste this into your AI chat.</div>
   <label class="f"><textarea id="brief_text" readonly style="min-height:220px">${esc(text)}</textarea></label>
   <div class="btnrow">
-    <button class="btn btn-quiet" onclick="downloadBriefPage('${scopeKind||''}','${esc(scopeId||'')}')">Download the page</button>
+    <button class="btn btn-quiet" onclick="downloadBriefPage('${scopeKind||''}','${esc(scopeId||'')}')">Share the page</button>
     <button class="btn btn-primary" onclick="copyBrief()">Copy</button>
   </div>
   <div class="muted small" style="margin-top:10px">${text.length} characters. Strictly offline — nothing here calls out on its own.</div>`);
@@ -1512,15 +1555,166 @@ function copyBrief(){
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value).then(done,()=>{document.execCommand('copy');done();});
   else{document.execCommand('copy');done();}
 }
-function downloadBriefPage(scopeKind,scopeId){
-  const html=briefPageHTML(D,scopeKind||null,scopeId||null);
-  const blob=new Blob([html],{type:'text/html'});
+/* ============ sharing an exported page — a friend's phone, or a download ============
+ * One door for every card and the brief alike. navigator.share with a real
+ * File hits the OS share sheet where it exists (texts, AirDrop, anywhere) —
+ * that's PIVOT.md's actual done-when, not a file sitting in Downloads. Falls
+ * back to a plain download wherever share isn't offered, or is cancelled. */
+function downloadBlob(blob,filename){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=`carta-brief${scopeId?'-'+fold(scopeId).replace(/\s+/g,'-'):''}.html`;
+  a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+async function shareOrDownload(html,filename,title){
+  const blob=new Blob([html],{type:'text/html'});
+  try{
+    const file=new File([blob],filename,{type:'text/html'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:title||'Carta'});
+      return;
+    }
+  }catch(e){if(e&&e.name==='AbortError')return}   // the keeper cancelled the share sheet — not a failure
+  downloadBlob(blob,filename);
   toast('Downloaded — open it anywhere, forever.');
+}
+function downloadBriefPage(scopeKind,scopeId){
+  const html=briefPageHTML(D,scopeKind||null,scopeId||null);
+  const name=`carta-brief${scopeId?'-'+fold(scopeId).replace(/\s+/g,'-'):''}.html`;
+  shareOrDownload(html,name,'The brief');
+}
+
+/* ============ the cards — the share (ROADMAP.md Phase 5) ============
+ * Each kind renders through the same exportPageHTML shell the brief uses,
+ * embedding carta.card/v1 so "add this to my Carta" is one tap on the other
+ * end (see the import door below) — never a rank, never a network call, a
+ * page on Carta paper either way. Coffee and place cards carry a real
+ * record to add; the passport and the year are readings over your own
+ * record and have nothing a stranger could import. */
+function coffeeCardHTML(coffeeId){
+  const c=coffeeById(coffeeId);if(!c)return null;
+  const cups=D.cups.filter(x=>!x.archived&&x.coffeeRef===coffeeId&&x.score!=null);
+  const avg=cups.length?cups.reduce((s,x)=>s+x.score,0)/cups.length:null;
+  const best=cups.slice().sort((a,b)=>(b.score-a.score)||byNew(a,b))[0];
+  const photo=best&&best.photo?getCupPhoto(best.id):null;
+  const body=`${photo?`<img class="card-photo" src="${photo}" alt="">`:''}
+${c.roaster?`<div class="kv"><span class="k">Roaster</span><span>${esc(c.roaster)}</span></div>`:''}
+${originLine(c)?`<div class="kv"><span class="k">Origin</span><span>${esc(originLine(c))}</span></div>`:''}
+${avg!=null?`<div class="kv"><span class="k">Score</span><span class="v score">${avg.toFixed(1)} / 9 · ${cups.length} cup${cups.length===1?'':'s'}</span></div>`:''}
+${c.notes?`<h2>Notes</h2><div class="lede" style="margin:0">${esc(c.notes)}</div>`:''}`;
+  return exportPageHTML({title:coffeeLabel(c),eyebrow:'a coffee',lede:'A coffee from my Carta.',bodyHTML:body,
+    footNote:'Add this to your own Carta — open it there and tap the link.',embedId:'carta-card',
+    embedData:{version:'carta.card/v1',kind:'coffee',generatedAt:new Date().toISOString(),
+      data:{roaster:c.roaster||'',name:c.name||'',origin:c.origin||{},notes:c.notes||''}}});
+}
+function placeCardHTML(placeId){
+  const p=placeById(placeId);if(!p)return null;
+  const cups=D.cups.filter(x=>!x.archived&&x.kind==='bar'&&x.placeRef===placeId&&x.score!=null);
+  const avg=cups.length?cups.reduce((s,x)=>s+x.score,0)/cups.length:null;
+  const body=`${p.city?`<div class="kv"><span class="k">City</span><span>${esc(p.city)}</span></div>`:''}
+${avg!=null?`<div class="kv"><span class="k">Score</span><span class="v score">${avg.toFixed(1)} / 9 · ${cups.length} cup${cups.length===1?'':'s'}</span></div>`:''}`;
+  return exportPageHTML({title:p.name,eyebrow:'a café',lede:'A café from my Carta.',bodyHTML:body,
+    footNote:'Add this to your own Carta — open it there and tap the link.',embedId:'carta-card',
+    embedData:{version:'carta.card/v1',kind:'place',generatedAt:new Date().toISOString(),
+      data:{name:p.name||'',city:p.city||''}}});
+}
+function passportCardHTML(){
+  const tasted=tastedCountryMap();
+  const countries=Object.values(tasted).sort((a,b)=>a.label.localeCompare(b.label));
+  const body=`${passportSVG(false)}
+<h2>Tasted</h2>
+<div class="lede" style="margin:0">${countries.length?countries.map(c=>esc(c.label)).join(', '):'Nothing yet.'}</div>`;
+  return exportPageHTML({title:'My passport',eyebrow:'the passport',
+    lede:`${countries.length} countr${countries.length===1?'y':'ies'} tasted. The map remembers what the bags said.`,
+    bodyHTML:body,footNote:'Carried from Carta, offline.',embedId:'carta-card',
+    embedData:{version:'carta.card/v1',kind:'passport',generatedAt:new Date().toISOString(),
+      data:{countries:countries.map(c=>c.label)}}});
+}
+function knownYears(){
+  const years=new Set();
+  live('cups').forEach(c=>{if(c.at)years.add(new Date(c.at).getFullYear())});
+  return [...years].sort((a,b)=>b-a);
+}
+function yearCardHTML(year){
+  const yearCups=D.cups.filter(c=>!c.archived&&c.score!=null&&c.at&&new Date(c.at).getFullYear()===year);
+  const tm=tasteModel({coffees:D.coffees,places:D.places,cups:yearCups});
+  const bar=yearCups.filter(c=>c.kind==='bar').length,home=yearCups.filter(c=>c.kind==='home').length;
+  const body=`<div class="kv"><span class="k">Cups</span><span>${yearCups.length} (${home} home · ${bar} out)</span></div>
+<div class="kv"><span class="k">Nines</span><span class="v score">${tm.bar.nines.length}</span></div>
+${tm.bar.anchors.length?`<h2>Roasters you kept reaching for</h2>${tm.bar.anchors.slice(0,5).map(a=>`<div class="kv"><span class="k">${esc(a.name)}</span><span>${a.avg.toFixed(1)} avg · ${a.n} cups</span></div>`).join('')}`:''}
+${tm.vector.origins.length?`<h2>Where it came from</h2><div class="lede" style="margin:0">${tm.vector.origins.slice(0,6).map(o=>esc(o.value)).join(', ')}</div>`:''}`;
+  return exportPageHTML({title:`${year} in cups`,eyebrow:'the year',
+    lede:`${yearCups.length} cup${yearCups.length===1?'':'s'} kept in ${year}.`,
+    bodyHTML:body,footNote:'Carried from Carta, offline.',embedId:'carta-card',
+    embedData:{version:'carta.card/v1',kind:'year',generatedAt:new Date().toISOString(),
+      data:{year,cups:yearCups.length,nines:tm.bar.nines.length,anchors:tm.bar.anchors.map(a=>a.name)}}});
+}
+let cardPending=null;
+function openCardPreview(html,filename,title){
+  cardPending={html,filename,title};
+  openSheet(`<h3>${esc(title)}</h3>
+  <div class="sub">A self-contained page — the exact file that goes out.</div>
+  <iframe srcdoc="${esc(html)}" style="width:100%;height:360px;border:1px solid var(--line);margin-bottom:14px;background:var(--paper)"></iframe>
+  <button class="btn btn-primary" onclick="shareCardPending()">Share this card</button>`);
+}
+function shareCardPending(){if(cardPending)shareOrDownload(cardPending.html,cardPending.filename,cardPending.title)}
+function shareCoffeeCard(coffeeId){
+  const c=coffeeById(coffeeId),html=coffeeCardHTML(coffeeId);if(!html)return;
+  openCardPreview(html,`carta-coffee-${fold(coffeeLabel(c)).replace(/\s+/g,'-').slice(0,40)}.html`,coffeeLabel(c));
+}
+function sharePlaceCard(placeId){
+  const p=placeById(placeId),html=placeCardHTML(placeId);if(!html)return;
+  openCardPreview(html,`carta-cafe-${fold(p.name).replace(/\s+/g,'-').slice(0,40)}.html`,p.name);
+}
+function sharePassportCard(){openCardPreview(passportCardHTML(),'carta-passport.html','My passport')}
+function shareYearCard(year){openCardPreview(yearCardHTML(year),`carta-${year}.html`,`${year} in cups`)}
+
+/* ---- the import door — a coffee or a café card, read back in ---- */
+let importPending=null;
+function openImportCard(){
+  importPending=null;
+  openSheet(`<h3>Import a card</h3>
+  <div class="sub">A coffee or a café someone sent you from their Carta.</div>
+  <label class="f"><span class="l">The file</span><input type="file" accept=".html,text/html" id="import_file" onchange="importCardPicked(event)"></label>
+  <div id="import_preview"></div>`);
+}
+function importCardPicked(e){
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const text=String(reader.result);
+    const m=text.match(/<script type="application\/json" id="carta-card">([\s\S]*?)<\/script>/);
+    if(!m){toast('That file doesn\'t look like a Carta card');return}
+    let data;try{data=JSON.parse(m[1])}catch(err){toast('Could not read that card');return}
+    if(!data||data.version!=='carta.card/v1'||(data.kind!=='coffee'&&data.kind!=='place')){
+      toast('That card isn\'t a coffee or a café — nothing to add');return}
+    importPending=data;
+    const el=document.getElementById('import_preview');if(!el)return;
+    el.innerHTML=data.kind==='coffee'
+      ?`<div class="card"><div class="kv"><span class="k">Roaster</span><span class="v">${esc(data.data.roaster||'—')}</span></div><div class="kv"><span class="k">Name</span><span class="v">${esc(data.data.name||'—')}</span></div></div>
+        <button class="btn btn-primary" onclick="confirmImportCard()">Add to my Carta</button>`
+      :`<div class="card"><div class="kv"><span class="k">Café</span><span class="v">${esc(data.data.name||'—')}</span></div>${data.data.city?`<div class="kv"><span class="k">City</span><span class="v">${esc(data.data.city)}</span></div>`:''}</div>
+        <button class="btn btn-primary" onclick="confirmImportCard()">Add to my Carta</button>`;
+  };
+  reader.onerror=()=>toast('Could not read that file');
+  reader.readAsText(f);
+}
+function confirmImportCard(){
+  if(!importPending)return;
+  const d=importPending;
+  if(d.kind==='coffee'){
+    const rr=resolveRoaster(d.data.roaster||'');
+    D.coffees.push({id:uid(),createdAt:new Date().toISOString(),roaster:rr.name||d.data.roaster||'',roasterRef:rr.ref,
+      name:d.data.name||'',origin:d.data.origin||{},notes:d.data.notes||'',home:true});
+    toast('Added to your shelf.');
+  }else{
+    const m=matchNode('places',d.data.name||'');
+    if(m.exact){if(!m.exact.city&&d.data.city)m.exact.city=d.data.city}
+    else D.places.push({id:uid(),createdAt:new Date().toISOString(),name:d.data.name||'',city:d.data.city||'',aka:[]});
+    toast('Added to your record.');
+  }
+  importPending=null;save();closeSheet();render();
 }
 function vAtlas(){
   const tasted=tastedCountryMap();
@@ -1535,6 +1729,7 @@ function vAtlas(){
   <div class="display">The <em>passport</em></div>
   <div class="lede">${countries.length?`Tasted ${countries.length} countr${countries.length===1?'y':'ies'} so far.`:'Nothing tasted yet — the ground is drawn, waiting.'} The map remembers what the bags said.</div>
   ${passportSVG()}
+  ${countries.length?`<button class="btn btn-quiet" style="margin-bottom:16px" onclick="sharePassportCard()">Share the passport</button>`:''}
   ${countries.length?`<h2>Tasted so far</h2>${countries.map(c=>`<button class="rowlink" onclick="openCountryChapter(${jsq(c.label)})"><span><span class="t">${esc(c.label)}</span></span><span class="go">→</span></button>`).join('')}`:''}
   ${cities.length?`<h2>Your cities</h2>${cities.map(c=>`<button class="rowlink" onclick="openCityChapter(${jsq(c)})"><span><span class="t">${esc(c)}</span></span><span class="go">→</span></button>`).join('')}`:''}`;
 }
@@ -1592,8 +1787,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.3.0';
+const APP_VERSION='7.4.0';
 const CHANGELOG=[
+  {v:'7.4.0',d:"The share. A coffee, a café, the passport, or the year — each a self-contained page on Carta paper, one tap to send (the OS share sheet where it's offered, a download everywhere else). A coffee or a café card carries itself back in: open one on another Carta and “add to my Carta” is one tap, no account, no server."},
   {v:'7.3.0',d:"The bridge. Take a café coffee home in one tap — the Shelf is now what you've actually got, not everything you've tasted. Photos on cups, one each, restrained. Capture a café's menu (paste, or a photo held up as a reference while you type — never saved) and walk a line straight into a logged cup or a link to what's already on your shelf."},
   {v:'7.2.0',d:"The passport. Every country your record can trace draws on the world frame — tasted ones washed and tappable into a chapter, untasted ones a hairline invitation. Tap a country or a city for its chapter — the coffees, the regions, the cafés — read straight from the record, no map tiles, no network."},
   {v:'7.1.0',d:"The brief. Scout reads your taste back — the bar, the vector, the anchors, always with their reasons — and prepares a brief: a plain-text cut to paste into a chat, and a page to keep. A café cup can now carry a city, so a brief can scope to one."},
