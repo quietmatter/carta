@@ -7,6 +7,33 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-18 — Phase 5 shipped: the share
+
+- **Shipped:** all five named card kinds — Coffee, Place, the Passport, the
+  Year, and the friend-brief (already this shape since Phase 2) — through a
+  new shared `exportPageHTML` shell factored out of `briefPageHTML`. Every
+  card embeds `carta.card/v1`. `shareOrDownload()` tries the OS share sheet
+  via `navigator.share`+`File` first (a friend's phone, not your own
+  Downloads) and falls back to a download. The import door (Shelf → "Import
+  a card") reads a coffee or café card back in — the passport and the year
+  are readings over your own record, nothing to import. PR #79.
+- **A real bug, caught by an actual browser, not by `node --check`:** a code
+  comment containing the literal text `</script>` truncated the app's own
+  inline script for any real browser parsing the HTML — the tokenizer
+  doesn't parse JS, it just looks for that byte sequence. `node --check`
+  never saw it because it only checks whatever a regex extraction hands it.
+  Fixed, and swept the whole file for the same trap. Worth remembering: the
+  syntax check is necessary, never sufficient — a real browser load is the
+  only thing that actually proves the file boots.
+- **Verified:** by hand, and by a full round trip — shared a coffee card,
+  downloaded it (headless Chromium has no `navigator.share`, so this
+  exercised the fallback), imported it back in, watched it land on the
+  Shelf. Screenshotted the card preview and the standalone exported page.
+- **Next:** either Phase 6 (the classic importer, and GitHub Pages serving
+  Carta 7 at the root) or the rest of Phase 3 (geocoding + the live street
+  layer).
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-18 — Phase 4 shipped: the bridge
 
 - **Shipped:** take-it-home — coffees carry `home` (true the moment you brew
