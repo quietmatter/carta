@@ -117,6 +117,11 @@ h2:first-child{margin-top:2px}
 .rowlink .t{font-family:var(--serif);font-size:var(--s16);color:var(--ink)}
 .rowlink .m{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);letter-spacing:.02em;line-height:1.5}
 .rowlink .go{flex:none;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11)}
+.rowlink .row-main{display:flex;align-items:center;gap:10px;min-width:0}
+/* one photo, optional forever, presentation governed by restraint (PIVOT.md
+   decision #1) — a small square, never a hero, never blown up */
+.thumb{width:36px;height:36px;object-fit:cover;border:1px solid var(--line);flex:none;border-radius:var(--radius)}
+.thumb.big{width:100%;height:auto;max-height:260px;margin:0 0 12px}
 .btnrow{display:flex;gap:8px;align-items:stretch}
 .btnrow .btn,.btnrow .btn+.btn{margin-top:0;flex:1}
 
@@ -272,11 +277,46 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 
 /* ============ store ============ */
 const KEY='carta7.v1';
-const blank={version:1,cups:[],coffees:[],places:[],roasters:[],setups:[],brews:[],prefs:{}};
+const blank={version:1,cups:[],coffees:[],places:[],roasters:[],setups:[],brews:[],menus:[],prefs:{}};
 const clone=o=>JSON.parse(JSON.stringify(o));
 let D=load();
-function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};return d}catch(e){return clone(blank)}}
+function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};d.menus=d.menus||[];return d}catch(e){return clone(blank)}}
 function save(){_tasteDirty=true;try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
+
+/* photos — one per cup, optional, kept OUT of the ledger (ARCHITECTURE.md §2:3)
+ * so the ledger itself stays light enough to export and diff as text. Cached
+ * in memory after first read; every write flushes straight back to disk. */
+const PHOTOS_KEY='carta7.photos.v1';
+let _photosCache=null;
+function loadPhotos(){if(_photosCache)return _photosCache;
+  try{_photosCache=JSON.parse(localStorage.getItem(PHOTOS_KEY)||'{}')}catch(e){_photosCache={}}
+  return _photosCache;}
+function savePhotos(){try{localStorage.setItem(PHOTOS_KEY,JSON.stringify(_photosCache||{}))}catch(e){toast('Could not save the photo — storage full?')}}
+function setCupPhoto(cupId,dataUri){loadPhotos();_photosCache[cupId]=dataUri;savePhotos()}
+function getCupPhoto(cupId){return loadPhotos()[cupId]}
+function deleteCupPhoto(cupId){loadPhotos();delete _photosCache[cupId];savePhotos()}
+// resize+recompress in the browser — canvas only, no library. Steps down the
+// quality a few times if a big photo still won't fit under the target.
+function compressPhoto(file,maxEdge,targetBytes){
+  maxEdge=maxEdge||1000;targetBytes=targetBytes||150*1024;
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let w=img.width,h=img.height;
+      const scale=Math.min(1,maxEdge/Math.max(w,h));
+      w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      let q=0.75,out=cv.toDataURL('image/jpeg',q);
+      for(let i=0;i<4&&out.length*0.75>targetBytes&&q>0.25;i++){q-=0.15;out=cv.toDataURL('image/jpeg',q)}
+      resolve(out);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('could not read that photo'))};
+    img.src=url;
+  });
+}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const byNew=(a,b)=>b.createdAt.localeCompare(a.createdAt);
 const live=coll=>(D[coll]||[]).filter(x=>!x.archived);
@@ -668,6 +708,26 @@ function descRow(init){descState=new Set(init||[]);return `<div class="desc" id=
 function descPick(d){if(descState.has(d))descState.delete(d);else descState.add(d);
   document.getElementById('desc').querySelectorAll('button').forEach(b=>b.classList.toggle('on',descState.has(b.textContent)));}
 
+/* ============ the cup's photo — one, optional forever (PIVOT.md #1) ============
+ * Compressed client-side and held in cupPhotoPending until the cup itself
+ * gets an id at save; the photo body never touches the ledger (§2). Shared
+ * by both cup-logging flows — café and home — one field, one id, since only
+ * one is ever open at a time. */
+let cupPhotoPending=null;
+function photoFieldHTML(){
+  return `<label class="f"><span class="l">A photo <span class="opt">optional</span></span>
+    <input type="file" accept="image/*" id="cup_photo" onchange="photoPicked(event)"></label>
+    <div id="photopreview"></div>`;
+}
+function photoPicked(e){
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  compressPhoto(f).then(dataUri=>{
+    cupPhotoPending=dataUri;
+    const el=document.getElementById('photopreview');
+    if(el)el.innerHTML=`<img class="thumb big" src="${dataUri}" alt="">`;
+  }).catch(()=>toast('Could not read that photo'));
+}
+
 /* ============ timer ============ */
 let tInt=null,tStart=null,tElapsed=0;
 function timerHTML(){return `<div class="timer">
@@ -770,8 +830,10 @@ function doorJoin(yes){
 function doorKind(kind){
   const s=doorState;
   const roasterRef=mintRoasterIfNeeded(s.roaster,s.roasterRef);
+  // brewing it at home means beans in hand — the shelf; a café pour is only
+  // tasted until "take it home" says otherwise (ROADMAP.md Phase 4)
   const c={id:uid(),createdAt:new Date().toISOString(),
-    roaster:s.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:s.name,origin:s.o};
+    roaster:s.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:s.name,origin:s.o,home:kind==='home'};
   D.coffees.push(c);save();
   doorState=null;
   if(kind==='bar')openCafeCup(c.id);else openBrewFlow(c.id);
@@ -779,7 +841,14 @@ function doorKind(kind){
 
 /* ============ café cup (the bar path) ============ */
 let cafeCupState=null;
-function openCafeCup(coffeeId){cafeCupState={coffeeId,place:'',placeRef:null,city:'',step:'place'};paintCafeCup();}
+// preset carries {placeRef,place,city} when the café is already known — a
+// menu item's "log a cup" hands this off, skipping the place step entirely
+function openCafeCup(coffeeId,preset){
+  cupPhotoPending=null;
+  cafeCupState={coffeeId,place:(preset&&preset.place)||'',placeRef:(preset&&preset.placeRef)||null,
+    city:(preset&&preset.city)||'',step:(preset&&preset.placeRef)?'score':'place'};
+  paintCafeCup();
+}
 function paintCafeCup(){
   const s=cafeCupState,coffee=coffeeById(s.coffeeId);
   if(s.step==='place'){
@@ -808,6 +877,7 @@ function paintCafeCup(){
     <label class="f"><span class="l">The cup</span>${hedonicRow()}</label>
     <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow()}</label>
     <label class="f"><span class="l">One honest line <span class="opt">optional</span></span><input type="text" id="cc_notes" placeholder="what you found"></label>
+    ${photoFieldHTML()}
     <button class="btn btn-primary" onclick="saveCafeCup()">Keep the cup</button>`);
   }
 }
@@ -831,6 +901,7 @@ function saveCafeCup(){
   if(!placeRef){const p={id:uid(),createdAt:new Date().toISOString(),name:s.place,city:s.city||'',aka:[]};D.places.push(p);placeRef=p.id;}
   const cup={id:uid(),createdAt:new Date().toISOString(),at:new Date().toISOString(),kind:'bar',
     placeRef,coffeeRef:s.coffeeId,score:hedState,line:val('cc_notes'),descriptors:[...descState]};
+  if(cupPhotoPending){cup.photo=true;setCupPhoto(cup.id,cupPhotoPending);cupPhotoPending=null}
   D.cups.push(cup);
   cafeCupState=null;hedState=null;descState=new Set();
   save();closeSheet();go('journal');toast('Kept.');
@@ -933,6 +1004,7 @@ function saveBrewFlow(coffeeId,editId){
   openImpression(brew);
 }
 function openImpression(brew){
+  cupPhotoPending=null;
   const coffee=coffeeById(brew.coffeeRef),setup=setupById(brew.setupId);
   openSheet(`<h3>What was in the cup?</h3>
   <div class="card">
@@ -943,6 +1015,7 @@ function openImpression(brew){
   <label class="f"><span class="l">The cup</span>${hedonicRow()}</label>
   <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow()}</label>
   <label class="f"><span class="l">One honest line <span class="opt">optional</span></span><input type="text" id="ic_notes" placeholder="what you found"></label>
+  ${photoFieldHTML()}
   <button class="btn btn-primary" onclick="saveHomeCup('${brew.id}')">Keep the cup</button>
   <button class="btn btn-quiet" onclick="saveHomeCup('${brew.id}',true)">Skip — the brew still counts</button>`);
 }
@@ -951,6 +1024,8 @@ function saveHomeCup(brewId,skip){
   const brew=brewById(brewId);
   const cup={id:uid(),createdAt:new Date().toISOString(),at:new Date().toISOString(),kind:'home',
     coffeeRef:brew.coffeeRef,brewRef:brew.id,score:skip?null:hedState,line:skip?'':val('ic_notes'),descriptors:skip?[]:[...descState]};
+  if(!skip&&cupPhotoPending){cup.photo=true;setCupPhoto(cup.id,cupPhotoPending)}
+  cupPhotoPending=null;
   D.cups.push(cup);
   hedState=null;descState=new Set();
   save();closeSheet();go('journal');toast(skip?'The brew is on the record.':'Kept.');
@@ -985,8 +1060,103 @@ function saveCoffeeForm(id){
   if(!fields.roaster&&!fields.name){toast('Name the roaster or the coffee');return}
   const rr=resolveRoaster(fields.roaster);fields.roasterRef=rr.ref;if(rr.name)fields.roaster=rr.name;
   if(id){Object.assign(coffeeById(id),fields,{updatedAt:new Date().toISOString()})}
-  else{D.coffees.push({id:uid(),createdAt:new Date().toISOString(),...fields})}
+  else{D.coffees.push({id:uid(),createdAt:new Date().toISOString(),...fields,home:true})}
   save();closeSheet();render();toast('Saved to the shelf');
+}
+
+/* ============ the menu — capture, read, and the walk from a line to a cup ============
+ * A café's menu, typed while you read it (ROADMAP.md Phase 4: "no OCR
+ * dependency" — a photo is a reference to type against, never sent
+ * anywhere and never stored; only the words you typed persist). Each line
+ * becomes an item; tap one to log a cup on the spot (the coffee is minted
+ * and the item points at it before the café-cup form even opens, so the
+ * link survives whether or not the cup itself gets finished) or to point
+ * at a coffee already on the shelf. */
+const menuById=id=>D.menus.find(m=>m.id===id);
+function openPlaceSheet(placeId){
+  const p=placeById(placeId);if(!p)return;
+  const menus=D.menus.filter(m=>m.placeRef===placeId).sort(byNew);
+  openSheet(`<h3>${esc(p.name)}</h3>
+  ${p.city?`<div class="sub">${esc(p.city)}</div>`:''}
+  <button class="btn btn-primary" onclick="closeSheet();openMenuCapture('${placeId}')">＋ Add a menu</button>
+  ${menus.length?`<h2>Menus captured here</h2>${menus.map(m=>`<button class="rowlink" onclick="openMenuPage('${m.id}')">
+    <span><span class="t">${esc(fmtWhen(m.createdAt))}</span><br><span class="m">${m.items.length} item${m.items.length===1?'':'s'}</span></span>
+    <span class="go">→</span></button>`).join('')}`:'<div class="muted">No menus captured yet.</div>'}`);
+}
+let menuPhotoPreview=null;
+function openMenuCapture(placeId){menuPhotoPreview=null;paintMenuCapture(placeId);}
+function paintMenuCapture(placeId){
+  const p=placeById(placeId);
+  openSheet(`<h3>Capture the menu</h3>
+  <div class="sub">${esc(p?p.name:'')}</div>
+  <label class="f"><span class="l">Photo <span class="opt">optional — a reference while you type, never saved</span></span>
+    <input type="file" accept="image/*" capture="environment" id="mc_photo" onchange="menuPhotoPicked(event)"></label>
+  <div id="mc_preview">${menuPhotoPreview?`<img class="thumb big" src="${menuPhotoPreview}" alt="">`:''}</div>
+  <label class="f"><span class="l">The menu, one coffee per line</span>
+    <textarea id="mc_text" style="min-height:140px" placeholder="Sey's — Ethiopia Gedeb, washed
+Onyx — Colombia Pink Bourbon"></textarea></label>
+  <button class="btn btn-primary" onclick="saveMenuCapture('${placeId}')">Save the menu</button>`);
+}
+function menuPhotoPicked(e){
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  if(menuPhotoPreview)URL.revokeObjectURL(menuPhotoPreview);
+  menuPhotoPreview=URL.createObjectURL(f);
+  const el=document.getElementById('mc_preview');
+  if(el)el.innerHTML=`<img class="thumb big" src="${menuPhotoPreview}" alt="">`;
+}
+function saveMenuCapture(placeId){
+  const lines=val('mc_text').split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){toast('Type at least one line');return}
+  const items=lines.map(line=>{const p=doorParse(line);return {text:line,roaster:p.roaster,name:p.name}});
+  const menu={id:uid(),createdAt:new Date().toISOString(),placeRef:placeId,at:new Date().toISOString(),items};
+  D.menus.push(menu);
+  if(menuPhotoPreview){URL.revokeObjectURL(menuPhotoPreview);menuPhotoPreview=null}
+  save();closeSheet();toast('Menu captured.');
+  openMenuPage(menu.id);
+}
+function openMenuPage(menuId){
+  const m=menuById(menuId);if(!m)return;
+  const p=placeById(m.placeRef);
+  openSheet(`<h3>The menu</h3>
+  <div class="sub">${esc(p?p.name:'')} · ${esc(fmtWhen(m.createdAt))}</div>
+  ${m.items.map((it,i)=>{
+    const coffee=it.coffeeRef?coffeeById(it.coffeeRef):null;
+    return `<div class="card">
+      <div class="row"><span>${esc(it.text)}</span></div>
+      ${coffee?`<div class="muted small" style="margin-top:4px">On your shelf: ${esc(coffeeLabel(coffee))}</div>`
+        :`<div class="btnrow" style="margin-top:8px">
+          <button class="btn mini btn-quiet" onclick="menuItemLogCup('${m.id}',${i})">Log a cup</button>
+          <button class="btn mini btn-quiet" onclick="menuItemGotIt('${m.id}',${i})">Already got it</button>
+        </div>`}
+    </div>`;
+  }).join('')}`);
+}
+function menuItemLogCup(menuId,i){
+  const m=menuById(menuId);if(!m)return;
+  const item=m.items[i];
+  const place=placeById(m.placeRef);
+  const parsed=doorParse(item.text);
+  const mt=matchNode('roasters',parsed.roaster);
+  const roasterRef=mt.exact?mt.exact.id:mintRoasterIfNeeded(parsed.roaster,null);
+  const coffee={id:uid(),createdAt:new Date().toISOString(),
+    roaster:parsed.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:parsed.name,origin:{},home:false};
+  D.coffees.push(coffee);
+  item.coffeeRef=coffee.id;
+  save();closeSheet();
+  openCafeCup(coffee.id,{placeRef:m.placeRef,place:place?place.name:'',city:place?place.city:''});
+}
+function menuItemGotIt(menuId,i){
+  const coffees=live('coffees').filter(c=>c.home);
+  if(!coffees.length){toast('Nothing on your shelf yet — try "Log a cup" instead.');return}
+  openSheet(`<h3>Which one?</h3>
+  <div class="sub">Point this line at what you've already got.</div>
+  ${coffees.sort(byNew).map(c=>`<button class="rowlink" onclick="linkMenuItem('${menuId}',${i},'${c.id}')">
+    <span><span class="t">${esc(coffeeLabel(c))}</span></span><span class="go">→</span></button>`).join('')}`);
+}
+function linkMenuItem(menuId,i,coffeeId){
+  const m=menuById(menuId);if(!m)return;
+  m.items[i].coffeeRef=coffeeId;
+  save();closeSheet();toast('Linked.');openMenuPage(menuId);
 }
 
 /* ============ the passport's ground — the world frame ============
@@ -1209,8 +1379,9 @@ function cupRowHTML(cup){
   const place=cup.kind==='bar'?placeById(cup.placeRef):null;
   const title=cup.kind==='bar'?(place?place.name:'A café'):coffeeLabel(coffee);
   const meta=[cup.kind==='bar'?coffeeLabel(coffee):'',fmtWhen(cup.at)].filter(Boolean).join(' · ');
+  const thumb=cup.photo?`<img class="thumb" src="${getCupPhoto(cup.id)||''}" alt="">`:'';
   return `<button class="rowlink" onclick="openCupDetail('${cup.id}')">
-    <span><span class="t">${esc(title)}</span><br><span class="m">${esc(meta)}</span></span>
+    <span class="row-main">${thumb}<span><span class="t">${esc(title)}</span><br><span class="m">${esc(meta)}</span></span></span>
     <span class="go score">${cup.score??'—'}</span></button>`;
 }
 function openCupDetail(id){
@@ -1219,8 +1390,10 @@ function openCupDetail(id){
   const place=cup.kind==='bar'?placeById(cup.placeRef):null;
   const brew=cup.brewRef?brewById(cup.brewRef):null;
   const setup=brew?setupById(brew.setupId):null;
+  const photo=cup.photo?getCupPhoto(cup.id):null;
   openSheet(`<h3>${cup.kind==='bar'?'A cup, out':'A cup, at home'}</h3>
   <div class="sub">${esc(fmtWhen(cup.at))}</div>
+  ${photo?`<img class="thumb big" src="${photo}" alt="">`:''}
   <div class="card">
     <div class="kv"><span class="k">Coffee</span><span class="v">${esc(coffeeLabel(coffee))}</span></div>
     ${place?`<div class="kv"><span class="k">Café</span><span class="v">${esc(place.name)}</span></div>`:''}
@@ -1230,6 +1403,7 @@ function openCupDetail(id){
     ${cup.descriptors&&cup.descriptors.length?`<div class="kv"><span class="k">Found</span><span class="v">${esc(cup.descriptors.join(', '))}</span></div>`:''}
   </div>
   ${cup.line?`<div class="note">${esc(cup.line)}</div>`:''}
+  ${cup.kind==='bar'&&coffee&&!coffee.home?`<button class="btn btn-primary" onclick="takeItHome('${coffee.id}');closeSheet()">Take it home</button>`:''}
   ${cup.archived
     ?`<button class="btn btn-quiet" onclick="restore('cups','${cup.id}');closeSheet()">Restore this cup</button>`
     :`<button class="btn btn-quiet" onclick="putAway('cups','${cup.id}');closeSheet()">Put away this cup</button>`}`);
@@ -1258,21 +1432,31 @@ function openCoffeeDetail(id){
     ${c.notes?`<div class="kv"><span class="k">Notes</span><span class="v">${esc(c.notes)}</span></div>`:''}
     <div class="kv"><span class="k">Cups so far</span><span class="v num">${cups.length}</span></div>
   </div>
+  ${c.home?'':'<div class="muted small" style="margin:-4px 2px 12px">Tasted, not yet on the shelf.</div>'}
   <button class="btn btn-primary" onclick="closeSheet();openBrewFlow('${id}')">Brew it</button>
   <button class="btn btn-quiet" onclick="closeSheet();openCafeCup('${id}')">Had it at a café</button>
+  ${c.home?'':`<button class="btn btn-quiet" onclick="takeItHome('${id}');closeSheet()">Take it home</button>`}
   <button class="btn btn-quiet" onclick="closeSheet();openCoffeeForm('${id}')">Edit</button>
   ${c.archived
     ?`<button class="btn btn-quiet" onclick="restore('coffees','${id}');closeSheet()">Restore</button>`
     :`<button class="btn btn-quiet" onclick="putAway('coffees','${id}');closeSheet()">Put away</button>`}`);
 }
+// café cup → shelf card, one tap (ROADMAP.md Phase 4): a coffee only tasted
+// at a café isn't on the shelf until this says it is — a brew always is.
+function takeItHome(coffeeId){
+  const c=coffeeById(coffeeId);if(!c||c.home)return;
+  c.home=true;c.updatedAt=new Date().toISOString();
+  save();render();toast('Added to the shelf — brew it whenever.');
+}
 function vShelf(){
-  const items=live('coffees').sort(byNew);
+  const items=live('coffees').filter(c=>c.home).sort(byNew);
+  const archived=D.coffees.filter(c=>c.archived&&c.home);
   return `<div class="eyebrow">Shelf</div>
   <div class="display">What you've <em>got</em></div>
   <div class="lede">Every coffee on hand — tap one to dial it in, or add what's not logged yet.</div>
   <button class="btn btn-quiet" style="margin-bottom:16px" onclick="openCoffeeForm()">＋ Add a coffee</button>
-  ${items.length?items.map(coffeeRowHTML).join(''):'<div class="empty">Nothing on the shelf yet.</div>'}
-  ${archivedFold('coffees',coffeeRowHTML,'Put away')}`;
+  ${items.length?items.map(coffeeRowHTML).join(''):'<div class="empty">Nothing on the shelf yet. A home brew lands here on its own — or take a café coffee home from its cup.</div>'}
+  ${archived.length?`<details class="more"><summary>Put away (${archived.length})</summary>${archived.map(coffeeRowHTML).join('')}</details>`:''}`;
 }
 /* ============ the hunt — the taste model, read; the brief, prepared ============ */
 function vScout(){
@@ -1392,7 +1576,9 @@ function vCityChapter(city){
   ${places.length?places.map(p=>{
     const pc=byPlace[p.id]||[];
     const avg=pc.length?(pc.reduce((s,c)=>s+c.score,0)/pc.length).toFixed(1):null;
-    return `<div class="kv"><span class="k">${esc(p.name)}</span><span class="v num">${avg?avg+' avg · '+pc.length+' cup'+(pc.length===1?'':'s'):'not scored yet'}</span></div>`;
+    return `<button class="rowlink" onclick="openPlaceSheet('${p.id}')">
+      <span><span class="t">${esc(p.name)}</span><br><span class="m">${avg?avg+' avg · '+pc.length+' cup'+(pc.length===1?'':'s'):'not scored yet'}</span></span>
+      <span class="go">→</span></button>`;
   }).join(''):'<div class="empty">No cafés logged here yet.</div>'}`;
 }
 
@@ -1406,8 +1592,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.2.0';
+const APP_VERSION='7.3.0';
 const CHANGELOG=[
+  {v:'7.3.0',d:"The bridge. Take a café coffee home in one tap — the Shelf is now what you've actually got, not everything you've tasted. Photos on cups, one each, restrained. Capture a café's menu (paste, or a photo held up as a reference while you type — never saved) and walk a line straight into a logged cup or a link to what's already on your shelf."},
   {v:'7.2.0',d:"The passport. Every country your record can trace draws on the world frame — tasted ones washed and tappable into a chapter, untasted ones a hairline invitation. Tap a country or a city for its chapter — the coffees, the regions, the cafés — read straight from the record, no map tiles, no network."},
   {v:'7.1.0',d:"The brief. Scout reads your taste back — the bar, the vector, the anchors, always with their reasons — and prepares a brief: a plain-text cut to paste into a chat, and a page to keep. A café cup can now carry a city, so a brief can scope to one."},
   {v:'7.0.0',d:"The skeleton. Carta 7 begins: the journal, the shelf, the door, the dial-in loop. Classic moved whole to classic/."},

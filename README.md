@@ -5,14 +5,15 @@ whether either was worth finding again.
 
 **Carta 7 is a fresh start** (`docs/PIVOT.md`), rebuilt smaller and simpler
 than the app that came before it. It ships in phases (`docs/ROADMAP.md`); this
-is **Phase 3 — the atlas**.
+is **Phase 4 — the bridge**.
 
 ## What's here right now
 
 - **The journal.** Every cup, newest first — a café cup or a home brew, its
   score, what you found.
-- **The shelf.** Every coffee you've got. Tap one to dial it in, or add what's
-  not logged yet.
+- **The shelf.** Every coffee you've actually got — a home brew lands here on
+  its own; a café coffee joins it only once you say **Take it home**, one tap
+  from the cup. Tap a coffee to dial it in, or add what's not logged yet.
 - **The door** (＋ A cup, on every screen). Paste the bag or just type it —
   "Sey's — Ethiopia Gedeb" — and Carta reads a roaster and a coffee out of it.
   Type a roaster you've named before and it offers to join them rather than
@@ -40,11 +41,19 @@ is **Phase 3 — the atlas**.
   **chapter** — the coffees you've had from there, grouped by region, or the
   cafés you've been to and how they've scored — typography, not another map.
   The footer says it plainly: the map remembers what the bags said.
+- **A photo on a cup.** One, optional, forever — never a hero, a small
+  square next to the cup in the Journal and a modest image on its own page.
+  Compressed on the device to a reasonable size; nothing leaves it.
+- **The menu.** From a café's page (tap it from a city chapter), capture what
+  it's pouring — type each line, or hold a photo up as reference while you
+  do (never sent anywhere, never saved — no OCR, no dependency). Tap a line
+  to log a cup on the spot, prefilled with the café already known, or to
+  point it at a coffee already on your shelf.
 
-Menus, photos, shareable cards and the classic importer are later phases;
-see `docs/ROADMAP.md` for the order and why. The city frame's live street
-layer (Phase 3's other half, per `docs/ARCHITECTURE.md`) waits on the device
-having somewhere to geocode a café to — a fast-follow, not dropped.
+Shareable cards and the classic importer are later phases; see
+`docs/ROADMAP.md` for the order and why. The city frame's live street layer
+(from Phase 3, per `docs/ARCHITECTURE.md`) still waits on the device having
+somewhere to geocode a café to — a fast-follow, not dropped.
 
 ## Classic
 
