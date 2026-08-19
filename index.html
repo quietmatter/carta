@@ -195,12 +195,13 @@ details.more[open] summary{margin-bottom:10px}
 .timer .ctl button.go{background:var(--ink);border-color:var(--ink);color:var(--accent-ink)}
 
 /* ===== tab bar — four rooms, typographic, no icons ===== */
-nav.tabs{flex:none;background:var(--surface-card);display:grid;grid-template-columns:repeat(4,1fr);z-index:30;
+nav.tabs{flex:none;background:var(--surface-card);display:flex;z-index:30;
   padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line)}
-nav.tabs button{padding:13px 4px 15px;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11);
-  letter-spacing:var(--track-label);text-transform:uppercase;font-weight:400;min-height:44px;border-right:1px solid var(--line)}
-nav.tabs button:last-child{border-right:0}
-nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
+nav.tabs button{flex:1;appearance:none;-webkit-appearance:none;background:none;padding:13px 4px 15px;
+  color:var(--ink-3);font-family:var(--sans);font-size:var(--s11);
+  letter-spacing:var(--track-label);text-transform:uppercase;font-weight:500;min-height:44px;
+  border:none;border-top:2px solid transparent;margin-top:-1px}
+nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 
 /* ===== the settle — plays on a screen change, stilled under reduced motion ===== */
 @keyframes ca-settle{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -2454,8 +2455,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.8.0';
+const APP_VERSION='7.8.1';
 const CHANGELOG=[
+  {v:'7.8.1',d:"The bar, back in ink. The four rooms at the bottom had drifted into the browser's own gray buttons — fixed, and the tab you're standing in is marked by a plain line again, the way the rest of the page speaks."},
   {v:'7.8.0',d:"Read it for me. Hold a menu's photo up and Carta can read it now — the same key the ask uses, the same one tap, never required. Check the lines it found, edit anything, save same as always. The photo itself still never leaves this reading, and still never gets kept."},
   {v:'7.7.0',d:"Streets. A city's chapter draws your cafés now — a plain dot per café at first, its position confirmed quietly the first time you open the chapter, then real streets fading in underneath where the network reaches them. Offline, or where it can't, the drawn plot simply stands and says so once. Finishes what Phase 3 started."},
   {v:'7.6.0',d:"The ask. Scout can ask on your behalf now — a city, a neighborhood, a country, a route or a friend's taste, sent with your brief to a model you bring your own key for. Every café it names is checked against a real place before it's ever drawn as a pin; what can't be confirmed is listed, never guessed. No key, or the call fails, and it's the plain brief, copied, same as before. Been, Booked or Skip on a result feeds it back into your record."},
