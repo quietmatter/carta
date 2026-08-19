@@ -7,6 +7,45 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-19 — Phase 7 shipped: the scout, stage two
+
+- **Shipped:** the ask — Scout can now send the brief on the keeper's own
+  behalf, scoped city/neighborhood/country/route/friend plus an optional
+  question, to a model via BYO-key (Anthropic's Messages API, called direct
+  from the browser, the key kept in prefs on-device only — the one
+  sanctioned outbound call, per `ARCHITECTURE.md` §7). Degrades to the
+  plain brief, copied, both with no key set and on a failed call. Every
+  named café is checked against Nominatim before it's ever drawn as a pin;
+  what can't be confirmed is listed, marked "not confirmed," never guessed
+  onto the frame. Pins draw on a new small honest box (`cityPinsSVG`) fit
+  to the handful of points one ask returns — monochrome, the passport's own
+  law held here too. Been/Booked/Skip on a result feeds the loop: Been or
+  Booked joins or mints a `places` record carrying the confirmed lat/lon,
+  so the café is already known the next time it's typed into the door;
+  Skip only sets the status, nothing written, matching the shuttered
+  matching's "a skip fades, it's never a veto." Past asks live on Scout,
+  reopenable. PR #81.
+- **Pure and tested:** `askPromptText` (the prompt, asking for exactly one
+  JSON shape) and `parseAskJSON` (fenced or bare, tolerant of prose around
+  it, degrades to empty rather than throwing) — a model's wrongness here
+  would be as invisible as a bad taste-model read, so it gets the same
+  treatment. 7 new cases, 37/37 passing.
+- **Not touched, on purpose:** the city chapter's own live street layer
+  (Phase 3) — the ask's pin frame is a small thing of its own, not that.
+  The concierge tier (`MARKET.md` §5) — BYO-key only, as the roadmap named.
+- **Verified:** `node test/model.test.js` at 37/37; a full sweep for a
+  stray `</script>` inside a comment; a real-browser Playwright run with
+  both `api.anthropic.com` and Nominatim mocked — the no-key degrade,
+  saving a key, a full ask round-trip (a grounded café with its pin and
+  reason, an ungrounded one listed and marked not confirmed), Been minting
+  a place record, and the ask's history and status both surviving a full
+  page reload.
+- **Next:** nothing left named on `ROADMAP.md`'s scheduled phases — next up
+  is the horizon list (the Lotmark loop, sync-as-backup, OCR for menus,
+  community menus, the concierge tier) or the rest of Phase 3's live street
+  layer, whichever the founder would rather walk into.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-19 — Phase 6 shipped: the migration, and the handover
 
 - **Shipped:** `importClassicMap(json, existing)` — classic's own JSON
