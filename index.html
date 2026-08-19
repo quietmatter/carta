@@ -2192,7 +2192,7 @@ function cafePlotSVG(places,city){
 // blanks only, tries each place at most once ever (`geocoded`), and paces
 // itself a second apart per Nominatim's own usage policy — a city chapter
 // is a handful of cafés, never a bulk job.
-let _geocoding=new Set();
+let _geocoding=new Set(),_geoRenderT=null;
 async function geocodeCityPlaces(city){
   const targets=live('places').filter(p=>p.city&&fold(p.city)===fold(city)&&p.lat==null&&!p.geocoded&&!_geocoding.has(p.id));
   for(const p of targets){
@@ -2202,7 +2202,17 @@ async function geocodeCityPlaces(city){
     if(geo){p.lat=geo.lat;p.lon=geo.lon}
     _geocoding.delete(p.id);
     save();
-    if(pageView&&pageView.kind==='city'&&fold(pageView.id)===fold(city))render();
+    // one repaint once the batch settles, not one per café: render() tears the
+    // live street layer down and remounts it (smapDestroy/smapMount), so a
+    // render per resolution turned "confirms quietly" into a map that flickers
+    // and refetches its tiles every ~1.1s for any city with more than one
+    // un-placed café. The debounce outlives the loop's own pacing, so a steady
+    // drip of resolutions keeps pushing it out and it only fires once, after
+    // the last one.
+    if(pageView&&pageView.kind==='city'&&fold(pageView.id)===fold(city)){
+      clearTimeout(_geoRenderT);
+      _geoRenderT=setTimeout(render,1400);
+    }
     await new Promise(r=>setTimeout(r,1100));
   }
 }
@@ -2455,8 +2465,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.8.1';
+const APP_VERSION='7.8.2';
 const CHANGELOG=[
+  {v:'7.8.2',d:"Streets, calmer. A city with more than one café waiting to be placed used to rebuild the live map from scratch every second or so as each one resolved — tiles refetched, the fade-in restarting, over and over. It settles once now, after the whole handful is placed, the way it was always meant to."},
   {v:'7.8.1',d:"The bar, back in ink. The four rooms at the bottom had drifted into the browser's own gray buttons — fixed, and the tab you're standing in is marked by a plain line again, the way the rest of the page speaks."},
   {v:'7.8.0',d:"Read it for me. Hold a menu's photo up and Carta can read it now — the same key the ask uses, the same one tap, never required. Check the lines it found, edit anything, save same as always. The photo itself still never leaves this reading, and still never gets kept."},
   {v:'7.7.0',d:"Streets. A city's chapter draws your cafés now — a plain dot per café at first, its position confirmed quietly the first time you open the chapter, then real streets fading in underneath where the network reaches them. Offline, or where it can't, the drawn plot simply stands and says so once. Finishes what Phase 3 started."},
