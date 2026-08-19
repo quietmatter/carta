@@ -7,6 +7,34 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-19 — Phase 8 shipped: durability, without a server
+
+- **Shipped:** the first phase of Act Two. `exportLedgerJSON()` — Carta 7's
+  first way to back up its own record at all (only classic's export
+  *format* existed before, and only as an import source). The Shelf now
+  states how stale the last one is, same flat register as a bag's rest
+  window ("Last backed up — n weeks ago" / "Never backed up yet."), with
+  a button right there. `photoPicked` gets a proactive storage-quota
+  check — a quiet note before a save is even attempted, not only
+  `savePhotos()`'s existing after-the-fact catch. An opt-in, off-by-
+  default fortnightly auto-export, checked on every tab switch so it's
+  always inside a real user gesture (a bare timer-triggered download is
+  liable to be silently blocked with no gesture behind it). PR #91.
+- **Not in it, on purpose:** any server, account, or sync protocol — the
+  horizon's "sync-as-backup" item stands unchanged; this is the floor
+  under it, not a replacement.
+- **Verified:** by hand in a real browser, not just the threshold math —
+  a real download parsed back as valid JSON with the ledger's expected
+  keys, the Shelf's readout updating immediately; a simulated stale
+  timestamp actually crossing the 14-day line and firing a real second
+  download with the toggle on, silent with it off; the photo guard wired
+  through a genuine file-input change event, appearing only once
+  simulated storage was actually near the ceiling. `node test/model.test.js`
+  44/44 (unaffected — this phase's code is DOM/localStorage-coupled,
+  outside the pure block).
+- **Next:** Phase 9 — roast joins the taste model.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-19 — the city map, actually working (four PRs off a bug report)
 
 - **Why:** the founder reported the map "not working as intended," then —
