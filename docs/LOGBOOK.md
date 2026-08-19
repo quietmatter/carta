@@ -7,6 +7,47 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-19 — Act Two drafted: the roadmap, refined against a shipped app
+
+- **Why now:** with Phases 1–7 shipped plus OCR (v7.8.1, 43/43 pure tests),
+  the horizon list was the only forward-looking text left, and every item
+  on it is gated on something outside Carta — Lotmark's atlas, felt
+  multi-device pain, outside demand for a paid tier. Re-read the shipped
+  code and the shipped market framing against each other instead of
+  against the original brainstorm, and drafted a second act from what that
+  turned up. `ROADMAP.md` rewritten: Act One condensed to a table (full
+  prose stays in this file, unrepeated), a new §0 naming the findings, and
+  Phases 8–12.
+- **Two findings drove it:** (1) `tasteModel()`'s vector has no roast
+  axis — no `roastLevel` field survived Phase 1's cut, and Phase 2 had
+  explicitly declined to invent one — yet `MARKET.md` §3 states the app's
+  own identity as *"the absolute best light roast in the world."* The
+  model can't currently back up the sentence the market doc puts in its
+  mouth. (2) `save()`'s only response to a full quota is an after-the-fact
+  toast; there is no export reminder and no proactive quota guard, despite
+  the whole journal living in one `localStorage` key on one device by
+  design. Neither finding changes a joy or a law in `PIVOT.md`; both
+  change what ships next.
+- **Decision reopened, logged as the roadmap's own rule requires:** the old
+  horizon item "sync-as-backup, gated on felt multi-device pain" conflated
+  two problems. Split: **durability** (Phase 8 — an export reminder, a
+  quota guard, zero infrastructure) no longer waits on multi-device pain
+  being felt, because the risk it closes is present on day one, single
+  device, no sync at all. **True multi-device sync** stays exactly as
+  gated as before, on the horizon, unchanged.
+- **New phases, in joy-per-effort-*and*-urgency order:** 8 durability
+  (closes an irreversible risk first) · 9 roast joins the taste model
+  (cheap, sharpens the founding claim) · 10 a PWA shortcut straight to the
+  door (cheap, tightens the "under twenty seconds" bar) · 11 a return loop
+  built from stated facts, not scores or streaks (the first phase to test
+  `MARKET.md`'s no-gamification rule against a real feature, hence a new
+  fifth tripwire) · 12 tuning the scout against real ask history,
+  deliberately last because the data to tune against didn't exist before
+  Phase 7 shipped.
+- **Parked, unchanged:** the Lotmark loop, community menus, the concierge
+  tier — all still gated on something outside Carta, all re-affirmed as-is.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-19 — off the horizon list: OCR for menus
 
 - **Picked, and why:** with every scheduled phase shipped, the horizon

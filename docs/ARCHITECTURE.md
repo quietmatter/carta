@@ -57,6 +57,11 @@ the turn.
   include or omit them (two buttons, sizes stated).
 - Classic's keys are never touched. Import reads them (or an export file);
   it never writes them.
+- **Act Two, Phase 8 (durability):** the storage laws above don't change —
+  still one key, still one device, still no sync. What Phase 8 adds sits
+  entirely in front of them: a quota guard that warns before a photo save
+  fails instead of after, and a factual "last exported" read stated on the
+  Shelf. Neither is a new key, and neither is sync.
 
 ## 4. The data model (the six objects, specified)
 
@@ -76,6 +81,9 @@ D = {
               roasterRef?, name,
               origin:{ country?, region?, farm?, producer?, variety?,
                        process?, altitude? },          // story fields, free text
+              roastLevel?,                            // Act Two, Phase 9 — light..dark,
+                                                        // optional, same law as process/origin:
+                                                        // never a rung, never required (§4 below)
               roastDate?, notes?, site?, palette?, archived? }],
   places:  [{ id, createdAt, name, aka?[], city?, lat?, lon?,
               roasterRefs?[], notes?, site?, palette?, archived? }],
