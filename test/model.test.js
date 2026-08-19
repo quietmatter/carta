@@ -27,7 +27,8 @@ const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
-  putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap };
+  putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
+  askPromptText, parseAskJSON };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -292,5 +293,44 @@ const twoCupExport = { ...classicExport, bags: [], authored: [], brews: [],
 out = M.importClassicMap(twoCupExport, emptyLedger());
 assert.equal(out.newPlaces.length, 1, 'the same café, cased differently, must join to one place via fold()');
 ok('the gentle join applies within a single import pass, not just against pre-existing records');
+
+// ---- the ask (ROADMAP.md Phase 7): the prompt text, and the parse of what comes back ----
+const promptCity = M.askPromptText('MY COFFEE TASTE (from Carta)\n...', 'city', 'Lisbon', 'Three days, mostly on foot');
+assert.ok(promptCity.includes('MY COFFEE TASTE'), 'the prompt carries the brief text verbatim');
+assert.ok(promptCity.includes("asking about the city: Lisbon"), 'the scope kind names itself in the prompt');
+assert.ok(promptCity.includes('Three days, mostly on foot'), 'the optional question rides along');
+assert.ok(promptCity.includes('ONLY a JSON object') && promptCity.includes('"cafes"'), 'the model is told exactly what shape to answer in');
+ok('askPromptText embeds the brief, the scope, and the question into one prompt asking for strict JSON');
+
+const promptFriend = M.askPromptText('brief', 'friend', 'she likes what I like but darker', '');
+assert.ok(promptFriend.includes('on behalf of a friend'), 'friend scope reads as a delegated ask, not a city');
+ok('askPromptText phrases a friend-scoped ask differently from a place-scoped one');
+
+let parsed = M.parseAskJSON('{"cafes":[{"name":"Copper Bean","neighborhood":"Alfama","city":"Lisbon","why":"washed process, like your anchors"}]}');
+assert.equal(parsed.ok, true);
+assert.equal(parsed.findings.length, 1);
+assert.equal(parsed.findings[0].name, 'Copper Bean');
+assert.equal(parsed.findings[0].neighborhood, 'Alfama');
+ok('parseAskJSON reads a clean JSON answer straight');
+
+parsed = M.parseAskJSON('Sure, here you go:\n```json\n{"cafes":[{"name":"Fabrica","city":"Lisbon","why":"anchor roaster on the menu"}]}\n```\nEnjoy!');
+assert.equal(parsed.findings.length, 1);
+assert.equal(parsed.findings[0].name, 'Fabrica');
+ok('parseAskJSON reads the JSON out of a markdown-fenced answer with prose around it');
+
+parsed = M.parseAskJSON('{"cafes":[{"name":"Real Place","why":"good"},{"neighborhood":"no name here","why":"skip me"}]}');
+assert.equal(parsed.findings.length, 1, 'an entry with no name is never a suggestion Carta can ground or draw');
+assert.equal(parsed.findings[0].name, 'Real Place');
+ok('parseAskJSON drops any entry the model names nothing for');
+
+parsed = M.parseAskJSON('I don\'t have enough information to recommend anything specific here.');
+assert.equal(parsed.ok, false);
+assert.deepEqual(parsed.findings, []);
+ok('parseAskJSON degrades to empty, never throws, on a non-JSON answer');
+
+parsed = M.parseAskJSON('{"cafes": [ this is not valid json');
+assert.equal(parsed.ok, false);
+assert.deepEqual(parsed.findings, []);
+ok('parseAskJSON degrades to empty, never throws, on truncated or malformed JSON');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);

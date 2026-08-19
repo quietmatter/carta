@@ -5,7 +5,7 @@ whether either was worth finding again.
 
 **Carta 7 is a fresh start** (`docs/PIVOT.md`), rebuilt smaller and simpler
 than the app that came before it. It ships in phases (`docs/ROADMAP.md`); this
-is **Phase 6 — the migration, and the handover**.
+is **Phase 7 — the scout, stage two**.
 
 ## What's here right now
 
@@ -34,6 +34,16 @@ is **Phase 6 — the migration, and the handover**.
   you've logged one there — "already had" excludes what you've already
   found, so the answer isn't a rehash. Strictly offline; nothing here makes
   a network call.
+- **The ask.** Scout can send the brief on your own behalf — a city, a
+  neighborhood, a country, a route, or a friend's taste, plus anything else
+  worth knowing — to a model you bring your own key for. This is the one
+  thing in Carta that calls out, and only when you tap **Ask Carta**; the
+  key lives on this device and nowhere else. Every café it names is checked
+  against a real place lookup before it's ever drawn as a pin — what can't
+  be confirmed is listed, never guessed onto the map. No key, or the call
+  fails, and Carta falls back to the same plain-text brief, copied. **Been
+  · Booked · Skip** on each result feeds back into your record — a café you
+  mark Been or Booked is on file the next time you type its name.
 - **The passport.** The Atlas opens on a world frame — every country your
   record can trace, drawn from an offline outline file (no map tiles, no
   network): tasted countries washed and tappable, untasted ones a hairline
@@ -69,9 +79,10 @@ is **Phase 6 — the migration, and the handover**.
   export again — on this device or another — adds nothing a second time.
   Nothing is deleted or altered on the classic side; it's a one-way read.
 
-The city frame's live street layer (from Phase 3, per `docs/ARCHITECTURE.md`)
-still waits on the device having somewhere to geocode a café to — a
-fast-follow, not dropped.
+The city chapter's own live street layer (from Phase 3, per
+`docs/ARCHITECTURE.md`) still waits — a fast-follow, not dropped. The ask's
+results draw on a much smaller frame of their own: a plain box fit to the
+handful of pins one ask returns, not the city itself.
 
 ## Classic
 
@@ -88,9 +99,11 @@ long as you want it.
 
 One file, `index.html` — all CSS and JS inline, self-contained, zero
 dependencies, zero build. Everything lives in this browser's `localStorage`
-(`carta7.v1`). No account, no server, fully offline. See
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full technical spec and
-[`docs/ROADMAP.md`](docs/ROADMAP.md) for the build order.
+(`carta7.v1`). No account, no server — the ask (above) is the one deliberate,
+keeper-initiated exception to offline, and it's opt-in: bring your own key or
+never touch it. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
+full technical spec and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the build
+order.
 
 ## Running it
 
