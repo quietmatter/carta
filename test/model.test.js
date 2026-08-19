@@ -28,7 +28,8 @@ vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
-  askPromptText, parseAskJSON, menuOCRPrompt, parseMenuOCR, extractJSON };
+  askPromptText, parseAskJSON, menuOCRPrompt, parseMenuOCR, extractJSON,
+  ROAST_LEVELS, parseRoastLevel };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -38,9 +39,9 @@ const ok = name => console.log(`PASS  ${++n}. ${name}`);
 // ---- fixture ledger: two roasters, two cities, home + café cups ----
 const ledger = () => ({
   coffees: [
-    { id: 'c1', roaster: "Sey's", roasterRef: 'r1', name: 'Gedeb', origin: { country: 'Ethiopia', process: 'Washed' } },
-    { id: 'c2', roaster: "Sey's", roasterRef: 'r1', name: 'Yirg', origin: { country: 'Ethiopia', process: 'Natural' } },
-    { id: 'c3', roaster: 'Onyx', roasterRef: 'r2', name: 'Pink Bourbon', origin: { country: 'Colombia', process: 'Washed' } },
+    { id: 'c1', roaster: "Sey's", roasterRef: 'r1', name: 'Gedeb', origin: { country: 'Ethiopia', process: 'Washed' }, roastLevel: 'Light' },
+    { id: 'c2', roaster: "Sey's", roasterRef: 'r1', name: 'Yirg', origin: { country: 'Ethiopia', process: 'Natural' }, roastLevel: 'Light' },
+    { id: 'c3', roaster: 'Onyx', roasterRef: 'r2', name: 'Pink Bourbon', origin: { country: 'Colombia', process: 'Washed' }, roastLevel: 'Medium-dark' },
   ],
   places: [
     { id: 'p1', name: 'Halfpence', city: 'Portland' },
@@ -84,6 +85,11 @@ const floral = tm.vector.descriptors.find(d => d.value === 'floral');
 assert.ok(floral && floral.n === 2 && Math.abs(floral.weight - 9) < 1e-9);
 ok('vector.descriptors buckets a cup under every descriptor it carries (multi-bucket)');
 
+const light = tm.vector.roast.find(r => r.value === 'Light');
+assert.ok(light && light.n === 3 && Math.abs(light.weight - (9 + 8 + 9) / 3) < 1e-9);
+assert.equal(tm.vector.roast[0].value, 'Light', 'Light (weight ~8.67, n=3) outranks Medium-dark (weight 6, n=1)');
+ok('vector.roast buckets by Coffee.roastLevel, ranked the same way processes/origins are (ROADMAP.md Phase 9)');
+
 // ---- scope: had + knownRoasters, city-scoped, fold-insensitive ----
 let scoped = tm.scope('city', 'Portland');
 assert.deepEqual(new Set(scoped.had), new Set(["Sey's — Gedeb", "Sey's — Yirg"]));
@@ -118,6 +124,11 @@ assert.ok(text.includes("Sey's — Gedeb"));
 assert.ok(!text.includes('Pink Bourbon'), 'a Seattle cup must not leak into a Portland brief\'s exclusions');
 assert.ok(text.length <= 1500);
 ok('briefPlainText states scope exclusions inline ("already had") and stays scoped');
+
+assert.ok(text.includes('Roast levels I rate highest:'));
+assert.ok(text.includes('Light (8.7/9, n=3)'), 'the clause carries the same weight+n evidence every other vector line does');
+assert.ok(text.indexOf('Roast levels') < text.indexOf('Processes I rate'), 'roast leads the vector, ahead of process (ROADMAP.md §0: the founding claim, sharpened first)');
+ok('briefPlainText gains the roast clause for free — askPromptText embeds this same text, so the ask inherits it too');
 
 // a ledger with enough vector spread to blow past 1500 chars unbounded
 const bigLedger = { coffees: [], places: [], cups: [] };
@@ -391,5 +402,23 @@ ok('parseMenuOCR degrades to empty, never throws, on a non-JSON answer — never
 assert.deepEqual(M.extractJSON('{"a":1}'), { a: 1 });
 assert.equal(M.extractJSON('not json at all'), null);
 ok('extractJSON is the one shape-reading door shared by every "ask the model for JSON" caller');
+
+// ---- parseRoastLevel (ROADMAP.md Phase 9): the door/menu-capture parsing ----
+assert.equal(M.parseRoastLevel("Sey's — Ethiopia Gedeb, light roast"), 'Light');
+assert.equal(M.parseRoastLevel('Roast: Medium-Light'), 'Medium-light', 'reads either ordering, "<level> roast" or "roast: <level>"');
+assert.equal(M.parseRoastLevel('A DARK ROAST from a favorite roaster'), 'Dark', 'case-insensitive, via the same fold() every other parser reads through');
+assert.equal(M.parseRoastLevel('Medium roast, washed, Huila'), 'Medium');
+assert.equal(M.parseRoastLevel('medium-dark roast'), 'Medium-dark', 'the compound level checked before the bare "medium" so it never gets shadowed');
+ok('parseRoastLevel reads a stated level off a pasted bag or a menu line, either word order, case-insensitive');
+
+assert.equal(M.parseRoastLevel("Sey's — Ethiopia Gedeb, washed"), '', 'no roast word at all — the ordinary case for a door paste or a menu line');
+assert.equal(M.parseRoastLevel('Light, floral, citrus — a bright cup'), '', 'a tasting note is not a roast level: "light" alone, with no adjacent "roast", must not match');
+assert.equal(M.parseRoastLevel('Dark chocolate and stone fruit'), '', 'same refusal for "dark" as a flavor word, not a roast word');
+assert.equal(M.parseRoastLevel(''), '');
+assert.equal(M.parseRoastLevel(undefined), '', 'never throws on a missing line');
+ok('parseRoastLevel refuses everywhere the word "roast" isn\'t adjacent — never mistakes a tasting note for a roast level');
+
+assert.deepEqual(M.ROAST_LEVELS, ['Light', 'Medium-light', 'Medium', 'Medium-dark', 'Dark']);
+ok('ROAST_LEVELS is the fixed short scale the phase names — no rung, no ladder, just five words (ROADMAP.md\'s own tripwire)');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);
