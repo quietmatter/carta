@@ -38,8 +38,9 @@ finished too.
   a network call.
 - **The ask.** Scout can send the brief on your own behalf — a city, a
   neighborhood, a country, a route, or a friend's taste, plus anything else
-  worth knowing — to a model you bring your own key for. This is the one
-  thing in Carta that calls out, and only when you tap **Ask Carta**; the
+  worth knowing — to a model you bring your own key for. This is the door
+  that calls out in Carta, and only when you tap **Ask Carta** (the menu's
+  **Read it for me**, below, is the same door, opened a second way); the
   key lives on this device and nowhere else. Every café it names is checked
   against a real place lookup before it's ever drawn as a pin — what can't
   be confirmed is listed, never guessed onto the map. No key, or the call
@@ -65,9 +66,12 @@ finished too.
   Compressed on the device to a reasonable size; nothing leaves it.
 - **The menu.** From a café's page (tap it from a city chapter), capture what
   it's pouring — type each line, or hold a photo up as reference while you
-  do (never sent anywhere, never saved — no OCR, no dependency). Tap a line
-  to log a cup on the spot, prefilled with the café already known, or to
-  point it at a coffee already on your shelf.
+  do. **Read it for me** can read that same photo for you, one tap, through
+  the ask's own BYO-key door — never required, never automatic, and the
+  photo travels only that once and is never kept either way; the lines it
+  finds land in the box for you to check and edit before anything saves.
+  Tap a line to log a cup on the spot, prefilled with the café already
+  known, or to point it at a coffee already on your shelf.
 - **The cards.** A coffee, a café, the passport, or the year — each renders
   as a self-contained page on Carta paper with a live preview before it
   goes anywhere. **Share** hits the OS share sheet where the browser offers
