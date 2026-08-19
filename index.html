@@ -793,7 +793,7 @@ function openCityChapter(city){pageView={kind:'city',id:city};render();window.sc
 function closePage(){pageView=null;render()}
 let _lastScreenKey=null;
 function render(){
-  smapDestroy();   // live maps die with the DOM they sit in — give the contexts back first
+  smapDestroy(document.getElementById('main'));   // live maps die with the DOM they sit in — give the contexts back first; a sheet open over this screen keeps its own, unrelated to #main's repaint
   const lit=pageView?'atlas':tab;
   document.getElementById('who').textContent=pageView?SUBS[pageView.kind]:(SUBS[tab]||'');
   document.getElementById('tabs').innerHTML=TABS.map(t=>
@@ -811,11 +811,16 @@ function render(){
 
 /* ============ sheet plumbing (ported wholesale) ============ */
 function openSheet(html){const s=document.getElementById('sheet');
+  smapDestroy(s);   // give back a map from whatever this sheet held before, same as render() does for #main
   s.innerHTML='<div class="grab" aria-hidden="true"></div>'+html;
   s.classList.remove('dragging');s.style.transform='';document.getElementById('sheetbg').style.opacity='';
   s.classList.add('open');document.getElementById('sheetbg').classList.add('open');
-  s.scrollTop=0;}
-function closeSheet(){document.getElementById('sheet').classList.remove('open');document.getElementById('sheetbg').classList.remove('open');stopTimer(false)}
+  s.scrollTop=0;
+  smapMount();}
+function closeSheet(){const s=document.getElementById('sheet');
+  s.classList.remove('open');document.getElementById('sheetbg').classList.remove('open');stopTimer(false);
+  smapDestroy(s);   // a sheet's own map dies with the sheet — it stays connected (just hidden) otherwise, and would sit there live
+}
 (function initSheetDrag(){
   const sheet=document.getElementById('sheet');
   const bg=document.getElementById('sheetbg');
@@ -1333,6 +1338,7 @@ function openPlaceSheet(placeId){
   const menus=D.menus.filter(m=>m.placeRef===placeId).sort(byNew);
   openSheet(`<h3>${esc(p.name)}</h3>
   ${p.city?`<div class="sub">${esc(p.city)}</div>`:''}
+  ${cafeSheetMapHTML(p)}
   <button class="btn btn-primary" onclick="closeSheet();openMenuCapture('${placeId}')">＋ Add a menu</button>
   <button class="btn btn-quiet" onclick="closeSheet();sharePlaceCard('${placeId}')">Share this café</button>
   ${menus.length?`<h2>Menus captured here</h2>${menus.map(m=>`<button class="rowlink" onclick="openMenuPage('${m.id}')">
@@ -2051,15 +2057,33 @@ function plotBox(points){
   const s=Math.min((W-2*P)/Math.max(0.001,x1-x0),(H-2*P)/Math.max(0.001,y1-y0)),cx=(x0+x1)/2,cy=(y0+y1)/2;
   return {W,H,X:p=>W/2+(px(p)-cx)*s,Y:p=>H/2-(py(p)-cy)*s};
 }
+// the drawn plot's live layer, shared by every caller of plotBox: the same
+// smap registration, the same collapse-proof aspect-ratio (a box has no
+// height of its own — see cafePlotSVG's own note, first written where this
+// was fixed) — one wiring, not a third copy of it. camKey is optional; a
+// plot with no camKey (nothing worth remembering a camera for) still gets
+// the live layer, it just always fits fresh to its own points. onTap is
+// optional too — a plot that's just "where you already are" needs no tap.
+function plotBoxHTML(pts,marksOf,o){
+  o=o||{};
+  const box=plotBox(pts);
+  const smapId=smapReg(smapView({camKey:o.camKey,marks:()=>pts.map(p=>{
+    const el=smapPinEl({aria:o.aria?o.aria(p):''});
+    if(o.onTap)el.onclick=()=>o.onTap(p);
+    return {lat:p.lat,lon:p.lon,el};
+  })},pts));
+  return `<div class="plot-box" data-smap="${smapId}"${o.id?` id="${o.id}"`:''} style="aspect-ratio:${box.W}/${box.H}"><svg viewBox="0 0 ${box.W} ${box.H}">${marksOf(box)}</svg></div>`;
+}
 /* the ask's pins — a suggestion is a ring until it's lived. A ring until a
  * status is set, filled once you've been, doubled once it's booked, faded
  * once skipped — never the ember, the passport's own law held here too. */
 function cityPinsSVG(points,askId){
   const pts=(points||[]).filter(p=>p.lat!=null&&p.lon!=null&&isFinite(p.lat)&&isFinite(p.lon));
   if(!pts.length)return '';
-  const box=plotBox(pts),n=v=>v.toFixed(1);
-  const marks=pts.map(p=>`<g class="ask-pin${p.status?' st-'+p.status:''}" onclick="openAskFinding('${p.id}')"><circle cx="${n(box.X(p))}" cy="${n(box.Y(p))}" r="6"></circle></g>`).join('');
-  return `<div class="plot-box"${askId?` id="ask_pins_${askId}"`:''}><svg viewBox="0 0 ${box.W} ${box.H}">${marks}</svg></div>`;
+  const n=v=>v.toFixed(1);
+  return plotBoxHTML(pts,box=>pts.map(p=>
+    `<g class="ask-pin${p.status?' st-'+p.status:''}" onclick="openAskFinding('${p.id}')"><circle cx="${n(box.X(p))}" cy="${n(box.Y(p))}" r="6"></circle></g>`).join(''),
+    {camKey:askId?'ask|'+askId:null,aria:p=>p.name,onTap:p=>openAskFinding(p.id),id:askId?`ask_pins_${askId}`:null});
 }
 
 /* ============ the city frame's street layer (ROADMAP.md Phase 3, finished) ============
@@ -2146,11 +2170,16 @@ function smapMount(){
     });
   },250);
 }
-function smapDestroy(){
-  Object.keys(_smaps).forEach(k=>{const s=_smaps[k];
+// scoped to root so closing a sheet never kills a map still standing on the
+// screen underneath it — render() destroys everything (root defaults to the
+// whole document) because a repainted #main owns every map it carried
+function smapDestroy(root){
+  root=root||document;
+  Object.keys(_smaps).forEach(k=>{const s=_smaps[k];if(!root.contains(s.el))return;
     if(s.camKey)try{_smapCam[s.camKey]={center:s.map.getCenter(),zoom:s.map.getZoom()}}catch(e){}
-    try{s.map.remove()}catch(e){}});
-  _smaps={};_smapCfg={};
+    try{s.map.remove()}catch(e){}
+    delete _smaps[k];delete _smapCfg[k];
+  });
 }
 function smapRestyle(){Object.keys(_smaps).forEach(k=>{try{_smaps[k].map.setStyle(smapStyle())}catch(e){}})}
 function smapBoot(el,cfg){
@@ -2208,19 +2237,20 @@ function smapRetry(id){
 function cafePlotSVG(places,city){
   const pts=(places||[]).filter(p=>p.lat!=null&&p.lon!=null&&isFinite(p.lat)&&isFinite(p.lon));
   if(!pts.length)return '';
-  const box=plotBox(pts),n=v=>v.toFixed(1);
-  const marks=pts.map(p=>`<g class="cafe-mark" onclick="openPlaceSheet('${p.id}')"><circle cx="${n(box.X(p))}" cy="${n(box.Y(p))}" r="6"></circle></g>`).join('');
-  const smapId=smapReg(smapView({camKey:'city|'+fold(city),marks:()=>pts.map(p=>{
-    const el=smapPinEl({aria:p.name});el.onclick=()=>openPlaceSheet(p.id);
-    return {lat:p.lat,lon:p.lon,el};
-  })},pts));
-  // the box has no height of its own — it comes entirely from the svg's viewBox
-  // aspect ratio. The live layer takes over by DELETING that svg once tiles land
-  // (`smapBoot`'s `map.on('load', ...)`), and `.smap-live` is absolutely
-  // positioned so it never feeds height back to its parent — with nothing left
-  // in normal flow, the box collapsed to its border the instant the map finished
-  // loading. Pin the ratio on the box itself so it holds with either child.
-  return `<div class="plot-box" data-smap="${smapId}" style="aspect-ratio:${box.W}/${box.H}"><svg viewBox="0 0 ${box.W} ${box.H}">${marks}</svg></div>`;
+  const n=v=>v.toFixed(1);
+  return plotBoxHTML(pts,box=>pts.map(p=>
+    `<g class="cafe-mark" onclick="openPlaceSheet('${p.id}')"><circle cx="${n(box.X(p))}" cy="${n(box.Y(p))}" r="6"></circle></g>`).join(''),
+    {camKey:'city|'+fold(city),aria:p=>p.name,onTap:p=>openPlaceSheet(p.id)});
+}
+// a café's own sheet, one dot: the same live layer, its own camera (never the
+// city's — a single confirmed point deserves a close, settled view, not
+// whatever the city chapter's map last happened to be panned to). Nothing to
+// tap: the sheet you're already reading is not a place to navigate to again.
+function cafeSheetMapHTML(p){
+  if(p.lat==null||p.lon==null||!isFinite(p.lat)||!isFinite(p.lon))return '';
+  const pts=[p];
+  return plotBoxHTML(pts,box=>`<g class="cafe-mark"><circle cx="${box.X(p).toFixed(1)}" cy="${box.Y(p).toFixed(1)}" r="6"></circle></g>`,
+    {camKey:'place|'+p.id,aria:()=>p.name});
 }
 // geocoding a café is the same lookup the ask already grounds its suggestions
 // with (geocodeCafe, Phase 7) — one keyless Nominatim door, two callers. Fills
@@ -2500,8 +2530,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.8.4';
+const APP_VERSION='7.9.0';
 const CHANGELOG=[
+  {v:'7.9.0',d:"Two more places the streets can reach. A café's own sheet now draws its position, same live layer as its city — a settled view of the one place, not the whole neighborhood. And Scout's asks got the same treatment: a grounded café it names draws on real streets now, not just a plain dot. A sheet's own map dies when the sheet closes, and never disturbs a map still standing on the screen underneath it."},
   {v:'7.8.4',d:"The streets, actually there. A city's live map would open, show a pin or two, and collapse to a hairline right as the streets should have faded in — the map area had no height of its own once its stand-in dots stepped aside, and the layer meant to fill that space was quietly losing a styling tie to the map library's own stylesheet. Both fixed; the frame now holds its shape start to finish."},
   {v:'7.8.3',d:"Classic's cafés, carried whole. Importing from classic used to leave every café's position behind — even the ones classic had already confirmed on a map — so every city needed a fresh round of geocoding after crossing over, and a café's own city could come up blank if the cup that mentioned it hadn't carried one. The importer now reads classic's café register by name and carries its position, city, neighborhood and palette straight across, same as it always meant to."},
   {v:'7.8.2',d:"Streets, calmer. A city with more than one café waiting to be placed used to rebuild the live map from scratch every second or so as each one resolved — tiles refetched, the fade-in restarting, over and over. It settles once now, after the whole handful is placed, the way it was always meant to."},
