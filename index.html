@@ -609,11 +609,32 @@ function importClassicMap(json,existing){
     const r={id:uid(),createdAt:new Date().toISOString(),name,aka:[]};newRoasters.push(r);
     return {name,ref:r.id};
   }
+  // classic's café Register carries the confirmed position, the neighborhood and the
+  // palette (ARCHITECTURE.md §8 promises all three cross), but a cup only ever carried
+  // a shop name and a city string, sometimes blank even when the café's own profile
+  // wasn't — so joinPlace reads the Register entry by name, blanks-only, same as its
+  // own gentle join
+  const cafesByFold={};
+  (json.cafes||[]).forEach(cf=>{if(cf&&cf.name)cafesByFold[fold(cf.name)]=cf});
   function joinPlace(name,cityHint){
     name=(name||'').trim();if(!name)return null;
+    const profile=cafesByFold[fold(name)];
+    const city=cityHint||(profile&&profile.city)||'';
     const m=matchNodes([...existing.places,...newPlaces],name);
-    if(m.exact){if(!m.exact.city&&cityHint)m.exact.city=cityHint;return m.exact.id}
-    const p={id:uid(),createdAt:new Date().toISOString(),name,city:cityHint||'',aka:[]};newPlaces.push(p);
+    if(m.exact){
+      if(!m.exact.city&&city)m.exact.city=city;
+      if(m.exact.lat==null&&profile&&profile.lat!=null){m.exact.lat=profile.lat;m.exact.lon=profile.lon;m.exact.geocoded=true}
+      if(!m.exact.neighborhood&&profile&&profile.neighborhood)m.exact.neighborhood=profile.neighborhood;
+      if(!m.exact.palette&&profile&&profile.palette)m.exact.palette=profile.palette;
+      return m.exact.id;
+    }
+    const p={id:uid(),createdAt:new Date().toISOString(),name,city,aka:[]};
+    if(profile){
+      if(profile.lat!=null){p.lat=profile.lat;p.lon=profile.lon;p.geocoded=true}
+      if(profile.neighborhood)p.neighborhood=profile.neighborhood;
+      if(profile.palette)p.palette=profile.palette;
+    }
+    newPlaces.push(p);
     return p.id;
   }
   const already=(coll,src)=>existing[coll].some(x=>x.sourceId===src)||({setups:newSetups,coffees:newCoffees,brews:newBrews,cups:newCups})[coll].some(x=>x.sourceId===src);
@@ -2465,8 +2486,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.8.2';
+const APP_VERSION='7.8.3';
 const CHANGELOG=[
+  {v:'7.8.3',d:"Classic's cafés, carried whole. Importing from classic used to leave every café's position behind — even the ones classic had already confirmed on a map — so every city needed a fresh round of geocoding after crossing over, and a café's own city could come up blank if the cup that mentioned it hadn't carried one. The importer now reads classic's café register by name and carries its position, city, neighborhood and palette straight across, same as it always meant to."},
   {v:'7.8.2',d:"Streets, calmer. A city with more than one café waiting to be placed used to rebuild the live map from scratch every second or so as each one resolved — tiles refetched, the fade-in restarting, over and over. It settles once now, after the whole handful is placed, the way it was always meant to."},
   {v:'7.8.1',d:"The bar, back in ink. The four rooms at the bottom had drifted into the browser's own gray buttons — fixed, and the tab you're standing in is marked by a plain line again, the way the rest of the page speaks."},
   {v:'7.8.0',d:"Read it for me. Hold a menu's photo up and Carta can read it now — the same key the ask uses, the same one tap, never required. Check the lines it found, edit anything, save same as always. The photo itself still never leaves this reading, and still never gets kept."},

@@ -262,6 +262,34 @@ assert.ok(halfpence && halfpence.city === 'Portland');
 assert.equal(cafeCup.placeRef, halfpence.id);
 ok('a café cup mints its coffee and joins/mints its place, city carried from the cup');
 
+// classic's café Register carries the confirmed position, the neighborhood and the
+// palette — a cup alone never did, and its own city string can be blank even when
+// the Register entry isn't (ARCHITECTURE.md §8 promises the profile crosses too)
+const registerExport = {
+  ...classicExport,
+  cups: [
+    ...classicExport.cups,
+    { id: 'cc3', createdAt: '2025-01-11T00:00:00Z', kind: 'cafe', shop: 'Halfpence', city: '',
+      drink: 'Espresso', roaster: "Sey's", hedonic: 7, descriptors: [], notes: '' },
+  ],
+  cafes: [
+    { id: 'reg1', name: 'Halfpence', city: 'Portland', neighborhood: 'Alberta Arts',
+      lat: 45.5581, lon: -122.6295, palette: { h: 20, s: 40, l: 50, brand: 'hsl(20,40%,50%)', dark: false } },
+  ],
+};
+const regOut = M.importClassicMap(registerExport, emptyLedger());
+const halfpenceReg = regOut.newPlaces.find(p => p.name === 'Halfpence');
+assert.ok(halfpenceReg, 'one place, joined across both cups even though the second cup\'s own city is blank');
+assert.equal(halfpenceReg.city, 'Portland', 'the blank cup city must not overwrite what the Register already knew');
+assert.equal(halfpenceReg.lat, 45.5581);
+assert.equal(halfpenceReg.lon, -122.6295);
+assert.equal(halfpenceReg.geocoded, true, 'a position carried from classic needs no re-geocoding');
+assert.equal(halfpenceReg.neighborhood, 'Alberta Arts');
+assert.equal(halfpenceReg.palette.brand, 'hsl(20,40%,50%)');
+const cc3Cup = regOut.newCups.find(c => c.sourceId === 'classic:cup:cc3');
+assert.equal(cc3Cup.placeRef, halfpenceReg.id, 'the blank-city cup still joins the same place as the first');
+ok('joinPlace reads the café Register by name and carries its position, neighborhood and palette — blanks-only, never overwriting a typed city');
+
 const homeCup = out.newCups.find(c => c.sourceId === 'classic:cup:cc1');
 assert.equal(homeCup.kind, 'home');
 assert.equal(homeCup.coffeeRef, bag1Coffee.id);
