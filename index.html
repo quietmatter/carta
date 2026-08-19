@@ -150,7 +150,7 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
 
 label.f,div.f{display:block;margin-bottom:14px;min-width:0}
 label.f span.l,div.f span.l{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px;font-weight:500}
-input[type=text],input[type=number],input[type=date],select,textarea{
+input[type=text],input[type=password],input[type=number],input[type=date],select,textarea{
   width:100%;font-family:var(--serif);font-size:16px;padding:9px 0;border:none;border-bottom:1px solid var(--ink-3);
   border-radius:0;background:transparent;color:var(--ink);appearance:none;-webkit-appearance:none}
 input::placeholder,textarea::placeholder{color:var(--ink-d);font-style:italic}
@@ -255,6 +255,13 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 .mk-lbl{font-family:var(--sans);font-size:9px;fill:var(--ink-3);pointer-events:none}
 .mk-lbl.onland{paint-order:stroke;stroke:var(--paper);stroke-width:2.8px;stroke-linejoin:round;fill:var(--ink-2)}
 
+/* ===== the ask's pins — a suggestion is a ring until it's lived, same law: monochrome,
+   never the ember; what couldn't be confirmed is never drawn here at all ===== */
+.plot-box .ask-pin circle{fill:none;stroke:var(--ink-3);stroke-width:1.6;cursor:pointer}
+.plot-box .ask-pin.st-booked circle{stroke:var(--ink);stroke-width:2}
+.plot-box .ask-pin.st-been circle{fill:var(--ink);stroke:var(--ink)}
+.plot-box .ask-pin.st-skip circle{opacity:.35;stroke-dasharray:2 2}
+
 </style>
 </head>
 <body>
@@ -277,10 +284,10 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 
 /* ============ store ============ */
 const KEY='carta7.v1';
-const blank={version:1,cups:[],coffees:[],places:[],roasters:[],setups:[],brews:[],menus:[],prefs:{}};
+const blank={version:1,cups:[],coffees:[],places:[],roasters:[],setups:[],brews:[],menus:[],asks:[],prefs:{}};
 const clone=o=>JSON.parse(JSON.stringify(o));
 let D=load();
-function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};d.menus=d.menus||[];return d}catch(e){return clone(blank)}}
+function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};d.menus=d.menus||[];d.asks=d.asks||[];return d}catch(e){return clone(blank)}}
 function save(){_tasteDirty=true;try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
 
 /* photos — one per cup, optional, kept OUT of the ledger (ARCHITECTURE.md §2:3)
@@ -652,6 +659,42 @@ function importClassicMap(json,existing){
     }
   });
   return {newRoasters,newPlaces,newCoffees,newCups,newSetups,newBrews};
+}
+
+/* ---- the ask (ROADMAP.md Phase 7) — the brief, plus a scope and a question,
+ * sent to a model the keeper brought their own key for. Both halves that can
+ * go wrong live here, pure and tested: the prompt text (so the model is asked
+ * for exactly one shape) and the parse (a model's wrongness here is invisible
+ * otherwise — a bad parse just looks like Carta finding nothing). Grounding
+ * (a real place lookup) and the call itself are network, and stay outside. */
+function askKindLabel(k){return {city:'A city',neighborhood:'A neighborhood',country:'A country',route:'A route',friend:'A friend'}[k]||'Somewhere'}
+function askPromptText(briefText,scopeKind,destination,question){
+  const kindLine={
+    city:`I'm asking about the city: ${destination}.`,
+    neighborhood:`I'm asking about this specific area: ${destination}.`,
+    country:`I'm asking about the whole country or region: ${destination}.`,
+    route:`I'm asking about this route or road trip: ${destination}.`,
+    friend:`I'm asking on behalf of a friend, whose taste differs from mine like this: ${destination}.`,
+  }[scopeKind]||`I'm asking about: ${destination}.`;
+  const askLine=question?`\nSomething else worth knowing: ${question}`:'';
+  return `${briefText}\n\n${kindLine}${askLine}\n\nRecommend specialty coffee cafés that match this taste. Reply with ONLY a JSON object, no other text, no markdown fences, in exactly this shape:\n{"cafes":[{"name":"...","neighborhood":"...","city":"...","why":"one sentence, tied to my taste above"}]}\nList at most 8. If you don't know real cafés here, return {"cafes":[]} rather than inventing one.`;
+}
+function parseAskJSON(text){
+  const raw=String(text||'');
+  const fence=raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const body=fence?fence[1]:raw;
+  const start=body.indexOf('{'),end=body.lastIndexOf('}');
+  if(start===-1||end===-1||end<start)return {ok:false,findings:[]};
+  let data;
+  try{data=JSON.parse(body.slice(start,end+1))}catch(e){return {ok:false,findings:[]}}
+  const list=Array.isArray(data&&data.cafes)?data.cafes:[];
+  const findings=list.map(c=>({
+    name:String((c&&c.name)||'').trim(),
+    neighborhood:String((c&&c.neighborhood)||'').trim(),
+    city:String((c&&c.city)||'').trim(),
+    why:String((c&&c.why)||'').trim(),
+  })).filter(f=>f.name);
+  return {ok:true,findings};
 }
 /* ==== /pure ==== */
 
@@ -1632,7 +1675,18 @@ function vScout(){
     ${cities.map(c=>`<option value="city:${esc(c)}">${esc(c)}</option>`).join('')}
   </select></label>
   <button class="btn btn-primary" onclick="openBrief()">Prepare the brief</button>
+  ${askSectionHTML()}
   ${yearSectionHTML()}`;
+}
+function askSectionHTML(){
+  const asks=D.asks.slice().sort(byNew);
+  return `<h2>The ask</h2>
+  <div class="lede" style="margin-top:0">Carta sends the brief on your behalf — every café it names checked against a real place before it's ever drawn.</div>
+  <button class="btn btn-quiet" style="margin-bottom:${asks.length?'0':'16px'}" onclick="openAsk()">Ask Carta</button>
+  ${asks.length?asks.map(a=>{
+    const n=a.findings.filter(f=>f.grounded).length;
+    return `<button class="rowlink" onclick="openAskResult('${a.id}')"><span><span class="t">${esc(a.destination)}</span><br><span class="m">${askKindLabel(a.kind)} · ${n} café${n===1?'':'s'} placed · ${fmtWhen(a.createdAt)}</span></span><span class="go">→</span></button>`;
+  }).join(''):''}`;
 }
 function yearSectionHTML(){
   const years=knownYears();
@@ -1698,6 +1752,194 @@ function downloadBriefPage(scopeKind,scopeId){
   const html=briefPageHTML(D,scopeKind||null,scopeId||null);
   const name=`carta-brief${scopeId?'-'+fold(scopeId).replace(/\s+/g,'-'):''}.html`;
   shareOrDownload(html,name,'The brief');
+}
+function copyPlainText(str,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(str).then(()=>toast(msg||'Copied.'));return}
+  const ta=document.createElement('textarea');ta.value=str;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy')}catch(e){}
+  ta.remove();toast(msg||'Copied.');
+}
+
+/* ============ the ask — scout, stage two (ROADMAP.md Phase 7) ============
+ * The one sanctioned outbound call (ARCHITECTURE.md §7): the keeper's own
+ * Anthropic key, kept in prefs on this device only, sent to nobody but
+ * Anthropic and only when "Ask Carta" is tapped. No key, or the call fails —
+ * the degrade is the brief, copied, exactly like stage one. Every café the
+ * model names is checked against a real place lookup (Nominatim, keyless)
+ * before it's ever drawn as a pin — what can't be confirmed is listed, never
+ * guessed onto the frame (the grounding rule, non-negotiable). */
+const ASK_MODEL_DEFAULT='claude-haiku-4-5-20251001';
+const askKey=()=>getPref('askKey','');
+const askModel=()=>getPref('askModel','')||ASK_MODEL_DEFAULT;
+function openAskKey(){
+  openSheet(`<h3>Your key</h3>
+  <div class="sub">An Anthropic API key, kept on this device only — nothing else ever reads it, and it's never sent anywhere but Anthropic, only when you tap Ask.</div>
+  <label class="f"><span class="l">API key</span><input type="password" id="ask_key_input" value="${esc(askKey())}" placeholder="sk-ant-…"></label>
+  <label class="f"><span class="l">Model <span class="opt">optional</span></span><input type="text" id="ask_model_input" value="${esc(getPref('askModel',''))}" placeholder="${ASK_MODEL_DEFAULT}"></label>
+  <div class="btnrow">
+    ${askKey()?`<button class="btn btn-quiet" onclick="clearAskKey()">Remove key</button>`:''}
+    <button class="btn btn-primary" onclick="saveAskKey()">Save</button>
+  </div>`);
+}
+function saveAskKey(){
+  setPref('askKey',val('ask_key_input'));
+  setPref('askModel',val('ask_model_input'));
+  toast('Saved — on this device only.');
+  openAsk();
+}
+function clearAskKey(){setPref('askKey','');setPref('askModel','');openAskKey();}
+function openAsk(){
+  if(!askKey()){
+    openSheet(`<h3>Ask Carta</h3>
+    <div class="sub">Carta sends your brief and a question to a model, on your behalf — this is the one thing here that calls out, and it needs your own key first.</div>
+    <div class="empty">No key set yet.</div>
+    <div class="btnrow">
+      <button class="btn btn-quiet" onclick="copyPlainText(briefPlainText(D,null,null,tasteModelMemo()),'Copied — paste it into your chat.')">Copy the brief instead</button>
+      <button class="btn btn-primary" onclick="openAskKey()">Set your key</button>
+    </div>`);
+    return;
+  }
+  openSheet(`<h3>Ask Carta</h3>
+  <div class="sub">Sent with your taste, scoped the way you're actually asking.</div>
+  <label class="f"><span class="l">Kind</span><select id="ask_kind">
+    <option value="city">A city</option>
+    <option value="neighborhood">A neighborhood</option>
+    <option value="country">A country</option>
+    <option value="route">A route</option>
+    <option value="friend">A friend</option>
+  </select></label>
+  <label class="f"><span class="l">Where</span><input type="text" id="ask_dest" placeholder="Lisbon — or &quot;she likes what I like but darker&quot;"></label>
+  <label class="f"><span class="l">Anything else? <span class="opt">optional</span></span><textarea id="ask_question" placeholder="Three days, mostly on foot…"></textarea></label>
+  <button class="btn btn-primary" onclick="runAsk()">Ask Carta</button>
+  <div id="ask_result"></div>
+  <div class="muted small" style="margin-top:10px"><span onclick="openAskKey()" style="text-decoration:underline;cursor:pointer">Change your key</span></div>`);
+}
+async function callAskModel(prompt){
+  const key=askKey();if(!key)throw new Error('Set your key first.');
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:askModel(),max_tokens:1024,messages:[{role:'user',content:prompt}]}),
+  });
+  if(!r.ok){
+    let msg=`The model call failed (${r.status}).`;
+    try{const j=await r.json();if(j&&j.error&&j.error.message)msg=j.error.message}catch(e){}
+    throw new Error(msg);
+  }
+  const j=await r.json();
+  return (j.content||[]).map(b=>b.text||'').join('');
+}
+async function geocodeCafe(name,neighborhood,city){
+  const q=[name,neighborhood,city].filter(Boolean).join(', ');
+  if(!q)return null;
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+    if(!r.ok)return null;
+    const list=await r.json();
+    if(!list||!list.length)return null;
+    const lat=Number(list[0].lat),lon=Number(list[0].lon);
+    return (isFinite(lat)&&isFinite(lon))?{lat,lon}:null;
+  }catch(e){return null}
+}
+let _askBusy=false;
+async function runAsk(){
+  if(_askBusy)return;
+  const kind=val('ask_kind')||'city';
+  const destination=val('ask_dest');
+  const question=val('ask_question');
+  if(!destination){toast('Where should Carta ask about?');return}
+  const box=document.getElementById('ask_result');if(!box)return;
+  _askBusy=true;
+  box.innerHTML='<div class="muted" style="margin-top:12px">Asking…</div>';
+  try{
+    const tm=tasteModelMemo();
+    let scopeKind=null,scopeId=null;
+    const knownCity=knownCities().find(c=>fold(c)===fold(destination));
+    if(kind==='city'&&knownCity){scopeKind='city';scopeId=knownCity}
+    else if(kind==='country'){scopeKind='country';scopeId=destination}
+    const briefText=briefPlainText(D,scopeKind,scopeId,tm);
+    const prompt=askPromptText(briefText,kind,destination,question);
+    const raw=await callAskModel(prompt);
+    const parsed=parseAskJSON(raw);
+    const findings=[];
+    for(const f of parsed.findings){
+      const geo=await geocodeCafe(f.name,f.neighborhood,f.city||(kind==='city'?destination:''));
+      findings.push({id:uid(),name:f.name,neighborhood:f.neighborhood,city:f.city||(kind==='city'?destination:''),
+        why:f.why,lat:geo?geo.lat:null,lon:geo?geo.lon:null,grounded:!!geo,status:null,placeRef:null});
+    }
+    const ask={id:uid(),createdAt:new Date().toISOString(),kind,destination,question,model:askModel(),findings};
+    D.asks.unshift(ask);save();
+    _askBusy=false;
+    openAskResult(ask.id);
+  }catch(e){
+    _askBusy=false;
+    const msg=(e&&e.message)||'Could not reach the model.';
+    box.innerHTML=`<div class="empty">${esc(msg)}</div>
+    <button class="btn btn-quiet" onclick="copyPlainText(briefPlainText(D,null,null,tasteModelMemo()),'Copied — paste it into your chat.')">Copy the brief instead</button>`;
+  }
+}
+function findingRowHTML(f){
+  return `<div class="card" id="find_${f.id}">
+    <div class="row"><span class="serif" style="font-size:16px">${esc(f.name)}</span>${f.grounded?'':'<span class="muted small">not confirmed</span>'}</div>
+    ${f.neighborhood||f.city?`<div class="muted small">${esc([f.neighborhood,f.city].filter(Boolean).join(', '))}</div>`:''}
+    ${f.why?`<div class="small" style="margin-top:6px">${esc(f.why)}</div>`:''}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+      <button class="chip${f.status==='been'?' on':''}" onclick="setFindStatus('${f.id}','been')">Been</button>
+      <button class="chip${f.status==='booked'?' on':''}" onclick="setFindStatus('${f.id}','booked')">Booked</button>
+      <button class="chip${f.status==='skip'?' on':''}" onclick="setFindStatus('${f.id}','skip')">Skip</button>
+    </div>
+  </div>`;
+}
+function askOf(findId){for(const a of D.asks){const f=a.findings.find(x=>x.id===findId);if(f)return {a,f}}return null}
+function setFindStatus(findId,status){
+  const hit=askOf(findId);if(!hit)return;
+  const {a,f}=hit;
+  f.status=f.status===status?null:status;
+  if(f.status&&(f.status==='been'||f.status==='booked')&&!f.placeRef){
+    const m=matchNode('places',f.name);
+    if(m.exact)f.placeRef=m.exact.id;
+    else{const p={id:uid(),createdAt:new Date().toISOString(),name:f.name,city:f.city||'',lat:f.lat,lon:f.lon,aka:[]};D.places.push(p);f.placeRef=p.id;}
+  }
+  save();
+  const row=document.getElementById('find_'+findId);if(row)row.outerHTML=findingRowHTML(f);
+  const plot=document.getElementById('ask_pins_'+a.id);
+  if(plot)plot.outerHTML=cityPinsSVG(a.findings.filter(x=>x.grounded),a.id);
+}
+function openAskFinding(findId){
+  const row=document.getElementById('find_'+findId);
+  if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function askResultHTML(id){
+  const a=D.asks.find(x=>x.id===id);if(!a)return '<h3>Gone</h3>';
+  const grounded=a.findings.filter(f=>f.grounded);
+  return `<h3>${esc(a.destination)}</h3>
+  <div class="sub">${askKindLabel(a.kind)} · ${a.findings.length} café${a.findings.length===1?'':'s'} named${a.question?' — '+esc(a.question):''}</div>
+  ${grounded.length?cityPinsSVG(grounded,a.id):''}
+  ${a.findings.length?a.findings.map(findingRowHTML).join(''):'<div class="empty">Carta didn\'t name anything it could stand behind here.</div>'}
+  <button class="btn btn-quiet" style="margin-top:14px" onclick="openAsk()">Ask again</button>`;
+}
+function openAskResult(id){openSheet(askResultHTML(id));}
+/* the drawn plot for a handful of pins — no lands, no topo, just a box fit to
+ * hold them (§7's own fallback name for exactly this shape). A ring until a
+ * status is set, filled once you've been, doubled once it's booked, faded
+ * once skipped — never the ember, the passport's own law held here too. */
+function cityPinsSVG(points,askId){
+  const pts=(points||[]).filter(p=>p.lat!=null&&p.lon!=null&&isFinite(p.lat)&&isFinite(p.lon));
+  if(!pts.length)return '';
+  const la0=pts.reduce((a,p)=>a+p.lat,0)/pts.length;
+  const px=p=>KMX(p.lon,la0),py=p=>KMY(p.lat);
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  pts.forEach(p=>{const x=px(p),y=py(p);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)});
+  const pad=Math.max(0.6,(x1-x0)*0.18,(y1-y0)*0.18);
+  x0-=pad;x1+=pad;y0-=pad;y1+=pad;
+  const W=336,P=4;
+  const H=Math.max(160,Math.round((W-2*P)*(y1-y0)/Math.max(0.001,(x1-x0)))+2*P);
+  const s=Math.min((W-2*P)/Math.max(0.001,x1-x0),(H-2*P)/Math.max(0.001,y1-y0)),cx=(x0+x1)/2,cy=(y0+y1)/2;
+  const X=p=>W/2+(px(p)-cx)*s,Y=p=>H/2-(py(p)-cy)*s;
+  const n=v=>v.toFixed(1);
+  const marks=pts.map(p=>`<g class="ask-pin${p.status?' st-'+p.status:''}" onclick="openAskFinding('${p.id}')"><circle cx="${n(X(p))}" cy="${n(Y(p))}" r="6"></circle></g>`).join('');
+  return `<div class="plot-box"${askId?` id="ask_pins_${askId}"`:''}><svg viewBox="0 0 ${W} ${H}">${marks}</svg></div>`;
 }
 
 /* ============ the cards — the share (ROADMAP.md Phase 5) ============
@@ -1946,8 +2188,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.5.0';
+const APP_VERSION='7.6.0';
 const CHANGELOG=[
+  {v:'7.6.0',d:"The ask. Scout can ask on your behalf now — a city, a neighborhood, a country, a route or a friend's taste, sent with your brief to a model you bring your own key for. Every café it names is checked against a real place before it's ever drawn as a pin; what can't be confirmed is listed, never guessed. No key, or the call fails, and it's the plain brief, copied, same as before. Been, Booked or Skip on a result feeds it back into your record."},
   {v:'7.5.0',d:"The migration. Bring your record across from classic — read its export straight in (roasters, cafés, coffees, brews, cups, mapped node-first so nothing's lost to a retired flat field), safe to run twice, nothing duplicated. Classic itself stays one tap away from the Shelf, lights on, for as long as you want it."},
   {v:'7.4.0',d:"The share. A coffee, a café, the passport, or the year — each a self-contained page on Carta paper, one tap to send (the OS share sheet where it's offered, a download everywhere else). A coffee or a café card carries itself back in: open one on another Carta and “add to my Carta” is one tap, no account, no server."},
   {v:'7.3.0',d:"The bridge. Take a café coffee home in one tap — the Shelf is now what you've actually got, not everything you've tasted. Photos on cups, one each, restrained. Capture a café's menu (paste, or a photo held up as a reference while you type — never saved) and walk a line straight into a logged cup or a link to what's already on your shelf."},
