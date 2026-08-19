@@ -27,7 +27,7 @@ const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
-  putAwayCore, restoreCore, fold, lev, esc, coffeeLabel };
+  putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -178,5 +178,119 @@ ok('restoreCore is the exact undo — archived false, archivedAt cleared');
 assert.equal(M.putAwayCore(l2, 'cups', 'missing', 'now'), false);
 assert.equal(M.restoreCore(l2, 'cups', 'missing'), false);
 ok('put-away/restore on a missing id is a no-op that reports failure, never throws');
+
+// ---- the classic importer: a synthetic classic export, mapped onto Carta 7 ----
+const emptyLedger = () => ({ roasters: [], places: [], coffees: [], cups: [], setups: [], brews: [] });
+
+const classicExport = {
+  setups: [
+    { id: 'cs1', createdAt: '2025-01-01T00:00:00Z', name: 'Home V60', grinder: 'Comandante', brewer: 'V60',
+      grindMin: 0, grindMax: 40, grindStep: 1 },
+  ],
+  bags: [
+    // flat fields only — no catalog refs
+    { id: 'cb1', createdAt: '2025-01-02T00:00:00Z', roaster: "Sey's", name: 'Ethiopia Gedeb',
+      originCountry: 'Ethiopia', originRegion: 'Gedeb', producer: 'Worka Cooperative', variety: 'Heirloom',
+      process: 'Washed', roastDate: '2025-01-01', notes: 'Bright, jammy.', archived: false },
+    // flat fields RETIRED (blank) — must read through the catalog node instead
+    { id: 'cb2', createdAt: '2025-02-01T00:00:00Z', roaster: '', name: '', roasterRef: 'r1', lotRef: 'l1',
+      roastRef: 'ro1', originCountry: '', originRegion: '', producer: '', variety: '', process: '',
+      roastDate: '', archived: true, updatedAt: '2025-02-05T00:00:00Z' },
+  ],
+  authored: [
+    { id: 'ca1', createdAt: '2025-03-01T00:00:00Z', roaster: 'Onyx', origin: {}, originCountry: 'Colombia',
+      originRegion: 'Huila', variety: 'Castillo', process: 'Natural',
+      roast: { name: 'Colombia Pink Bourbon', roastDate: '2025-03-01' } },
+  ],
+  brews: [
+    { id: 'cr1', createdAt: '2025-01-03T00:00:00Z', bagId: 'cb1', setupId: 'cs1', technique: 'V60',
+      grind: 22, doseG: 18, waterG: 300, tempC: 94, timeSec: 180, instrumentation: 'measured' },
+    // orphan brew — its bag isn't in this export at all; must be skipped, not throw
+    { id: 'cr-orphan', createdAt: '2025-01-04T00:00:00Z', bagId: 'nonexistent-bag', setupId: 'cs1' },
+  ],
+  cups: [
+    { id: 'cc1', createdAt: '2025-01-03T00:10:00Z', kind: 'home', bagId: 'cb1', brewId: 'cr1',
+      hedonic: 9, descriptors: ['floral', 'citrus'], notes: 'Best cup yet.' },
+    { id: 'cc2', createdAt: '2025-01-10T00:00:00Z', kind: 'cafe', shop: 'Halfpence', city: 'Portland',
+      drink: 'Pour over', roaster: "Sey's", hedonic: 8, descriptors: ['citrus'], notes: '' },
+  ],
+  catalog: {
+    roasters: { entries: [{ id: 'r1', name: "Sey's" }] },
+    lots: { entries: [{ id: 'l1', country: 'Ethiopia', region: 'Yirgacheffe', locality: 'Gedeb town',
+      producer: 'Worka Cooperative', variety: 'Heirloom', process: 'Washed' }] },
+    roasts: { entries: [{ id: 'ro1', level: 'Light', roastDate: '2025-02-01' }] },
+  },
+};
+
+let out = M.importClassicMap(classicExport, emptyLedger());
+assert.equal(out.newSetups.length, 1);
+assert.equal(out.newCoffees.length, 4, 'cb1, cb2, ca1, and cc2\'s minted café coffee');
+assert.equal(out.newCups.length, 2);
+assert.equal(out.newBrews.length, 1, 'the orphan brew (unknown bagId) must be silently skipped, not thrown');
+ok('importClassicMap maps setups, bags, authored, cups and brews from a synthetic classic export');
+
+const bag1Coffee = out.newCoffees.find(c => c.sourceId === 'classic:bag:cb1');
+assert.equal(bag1Coffee.roaster, "Sey's");
+assert.equal(bag1Coffee.origin.country, 'Ethiopia');
+assert.equal(bag1Coffee.origin.farm, 'Worka Cooperative');
+assert.equal(bag1Coffee.home, true);
+assert.equal(bag1Coffee.archived, false);
+ok('a bag with only flat fields maps them straight across, and lands home:true');
+
+const bag2Coffee = out.newCoffees.find(c => c.sourceId === 'classic:bag:cb2');
+assert.equal(bag2Coffee.roaster, "Sey's", 'roaster must read through roasterRef once the flat field is retired');
+assert.equal(bag2Coffee.origin.country, 'Ethiopia', 'origin must read through lotRef once flat fields are retired');
+assert.equal(bag2Coffee.origin.region, 'Gedeb town, Yirgacheffe', 'locality folds in ahead of region');
+assert.equal(bag2Coffee.roastDate, '2025-02-01', 'roast date must read through roastRef');
+assert.equal(bag2Coffee.archived, true);
+ok('a bag with retired flat fields reads roaster/origin/roast NODE-FIRST, exactly as classic itself does');
+
+const authoredCoffee = out.newCoffees.find(c => c.sourceId === 'classic:authored:ca1');
+assert.equal(authoredCoffee.name, 'Colombia Pink Bourbon');
+assert.equal(authoredCoffee.home, false, 'an authored record was never on classic\'s own shelf');
+ok('authored records become coffees too, but never home:true');
+
+const cafeCoffee = out.newCoffees.find(c => c.sourceId === 'classic:cup:cc2:coffee');
+assert.ok(cafeCoffee, 'a café cup with no bag behind it still mints its own coffee');
+assert.equal(cafeCoffee.home, false);
+const cafeCup = out.newCups.find(c => c.sourceId === 'classic:cup:cc2');
+assert.equal(cafeCup.kind, 'bar');
+assert.equal(cafeCup.coffeeRef, cafeCoffee.id);
+const halfpence = out.newPlaces.find(p => p.name === 'Halfpence');
+assert.ok(halfpence && halfpence.city === 'Portland');
+assert.equal(cafeCup.placeRef, halfpence.id);
+ok('a café cup mints its coffee and joins/mints its place, city carried from the cup');
+
+const homeCup = out.newCups.find(c => c.sourceId === 'classic:cup:cc1');
+assert.equal(homeCup.kind, 'home');
+assert.equal(homeCup.coffeeRef, bag1Coffee.id);
+assert.equal(homeCup.brewRef, out.newBrews[0].id);
+assert.equal(homeCup.score, 9);
+assert.deepEqual(homeCup.descriptors, ['floral', 'citrus']);
+ok('a home cup resolves its coffeeRef through the bag mapping and its brewRef through the brew mapping');
+
+// idempotency: merge the first run's output into `existing`, map the SAME export again — nothing new
+const merged = {
+  roasters: out.newRoasters, places: out.newPlaces, coffees: out.newCoffees,
+  cups: out.newCups, setups: out.newSetups, brews: out.newBrews,
+};
+const second = M.importClassicMap(classicExport, merged);
+assert.equal(second.newCoffees.length, 0);
+assert.equal(second.newCups.length, 0);
+assert.equal(second.newSetups.length, 0);
+assert.equal(second.newBrews.length, 0);
+assert.equal(second.newPlaces.length, 0);
+assert.equal(second.newRoasters.length, 0);
+ok('importClassicMap is idempotent — re-mapping the same export against its own prior output adds nothing');
+
+// gentle join still applies within the import: two cups at the same café must join to one place
+const twoCupExport = { ...classicExport, bags: [], authored: [], brews: [],
+  cups: [
+    { id: 'x1', createdAt: '2025-01-01T00:00:00Z', kind: 'cafe', shop: 'Halfpence', city: 'Portland', hedonic: 9 },
+    { id: 'x2', createdAt: '2025-01-02T00:00:00Z', kind: 'cafe', shop: "HALFPENCE", hedonic: 7 },
+  ] };
+out = M.importClassicMap(twoCupExport, emptyLedger());
+assert.equal(out.newPlaces.length, 1, 'the same café, cased differently, must join to one place via fold()');
+ok('the gentle join applies within a single import pass, not just against pre-existing records');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);

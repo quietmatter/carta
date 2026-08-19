@@ -317,7 +317,6 @@ function compressPhoto(file,maxEdge,targetBytes){
     img.src=url;
   });
 }
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const byNew=(a,b)=>b.createdAt.localeCompare(a.createdAt);
 const live=coll=>(D[coll]||[]).filter(x=>!x.archived);
 function putAway(coll,id){if(!putAwayCore(D,coll,id,new Date().toISOString()))return;save();render();toast('Put away.',()=>restore(coll,id));}
@@ -365,6 +364,7 @@ const reducedMotion=()=>!!(window.matchMedia&&window.matchMedia('(prefers-reduce
  * evaluates it directly against fixture ledgers. Keep it that way — a new
  * helper that reaches for `D` or `document` belongs outside the markers. */
 
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // a free-text value passed as a JS string argument inside an onclick="..." attribute —
 // esc() alone protects the HTML attribute but not the quotes JS itself needs escaped
@@ -543,6 +543,115 @@ ${scoped.had.length?`<h2>Already had ${scopeKind==='city'?'in '+esc(scopeId):'he
     embedId:'carta-brief',
     embedData:{version:'carta.brief/v1',generatedAt:new Date().toISOString(),
       scope:scopeKind?{kind:scopeKind,id:scopeId}:null,bar:tm.bar,vector:tm.vector,had:scoped.had,knownRoasters:scoped.knownRoasters}});
+}
+
+/* ---- the classic importer (ARCHITECTURE.md §8) ----
+ * classic's working-copy JSON export, mapped onto Carta 7's ledger. Pure: a
+ * parsed export + a read-only snapshot of what already exists in, a set of
+ * NEW records out — nothing is written here, so the same export can be
+ * mapped twice (a preview, then the real run) or run again next month
+ * without asking the caller to remember what it already did. Idempotency
+ * is a sourceId stamped on every record this function mints
+ * ('classic:<kind>:<id>') — the wrapper outside the pure block checks it
+ * against the live ledger before ever calling this, and a second run over
+ * the same export naturally produces nothing new once those land in
+ * `existing`. Reads roaster/origin/roast NODE-FIRST exactly as classic's own
+ * bagRoaster/lotRead/roastRead do, because a bag or a café cup's flat text
+ * goes legacy the moment a catalog node stands for it — the export still
+ * holds the node, never just the retired blank. Deliberately narrow per the
+ * migration table: pours, holds, struck records, sightings, the standing,
+ * hard-IDs, prices, roast levels, growers and café addresses/colours are
+ * not carried — they're the trade's record (or not yet a field Carta 7
+ * renders), and the uploaded file still holds all of it, untouched. */
+function importClassicMap(json,existing){
+  const catalog=json.catalog||{};
+  const catNode=(kind,id)=>id&&catalog[kind]&&(catalog[kind].entries||[]).find(e=>e.id===id)||null;
+  const roasterName=rec=>{const n=rec.roasterRef&&catNode('roasters',rec.roasterRef);return (n&&n.name)||rec.roaster||''};
+  const origin=rec=>{const n=rec.lotRef&&catNode('lots',rec.lotRef);
+    const f=(flat,nk)=>(n&&n[nk])||rec[flat]||'';
+    return {country:f('originCountry','country'),region:f('originRegion','region'),locality:f('originLocality','locality'),
+      producer:f('producer','producer'),variety:f('variety','variety'),process:f('process','process')};};
+  const roastDateOf=rec=>{const n=rec.roastRef&&catNode('roasts',rec.roastRef);return rec.roastDate||(n&&n.roastDate)||''};
+  const toFields=o=>({country:o.country,region:[o.locality,o.region].filter(Boolean).join(', '),farm:o.producer,variety:o.variety,process:o.process});
+
+  const newRoasters=[],newPlaces=[],newCoffees=[],newCups=[],newSetups=[],newBrews=[];
+  function joinRoaster(name){
+    name=(name||'').trim();if(!name)return {name:'',ref:null};
+    const m=matchNodes([...existing.roasters,...newRoasters],name);
+    if(m.exact)return {name:m.exact.name,ref:m.exact.id};
+    const r={id:uid(),createdAt:new Date().toISOString(),name,aka:[]};newRoasters.push(r);
+    return {name,ref:r.id};
+  }
+  function joinPlace(name,cityHint){
+    name=(name||'').trim();if(!name)return null;
+    const m=matchNodes([...existing.places,...newPlaces],name);
+    if(m.exact){if(!m.exact.city&&cityHint)m.exact.city=cityHint;return m.exact.id}
+    const p={id:uid(),createdAt:new Date().toISOString(),name,city:cityHint||'',aka:[]};newPlaces.push(p);
+    return p.id;
+  }
+  const already=(coll,src)=>existing[coll].some(x=>x.sourceId===src)||({setups:newSetups,coffees:newCoffees,brews:newBrews,cups:newCups})[coll].some(x=>x.sourceId===src);
+  const bagCoffeeId={},setupIdMap={},brewIdMap={};
+
+  (json.setups||[]).forEach(s=>{
+    const src='classic:setup:'+s.id;
+    const ex=existing.setups.find(x=>x.sourceId===src)||newSetups.find(x=>x.sourceId===src);
+    if(ex){setupIdMap[s.id]=ex.id;return}
+    const ns={id:uid(),createdAt:s.createdAt||new Date().toISOString(),sourceId:src,
+      name:s.name||'',grinder:s.grinder||'',brewer:s.brewer||'',basket:s.basket||'',papers:s.papers||'',water:s.water||'',
+      grindMin:s.grindMin,grindMax:s.grindMax,grindStep:s.grindStep,archived:!!s.archived};
+    newSetups.push(ns);setupIdMap[s.id]=ns.id;
+  });
+  (json.bags||[]).forEach(b=>{
+    const src='classic:bag:'+b.id;
+    const ex=existing.coffees.find(x=>x.sourceId===src)||newCoffees.find(x=>x.sourceId===src);
+    if(ex){bagCoffeeId[b.id]=ex.id;return}
+    const rr=joinRoaster(roasterName(b));
+    const nc={id:uid(),createdAt:b.createdAt||new Date().toISOString(),sourceId:src,
+      roaster:rr.name,roasterRef:rr.ref,name:b.name||'',origin:toFields(origin(b)),
+      roastDate:roastDateOf(b),notes:b.notes||'',home:true,archived:!!b.archived,
+      archivedAt:b.archived?(b.updatedAt||b.createdAt||new Date().toISOString()):null};
+    newCoffees.push(nc);bagCoffeeId[b.id]=nc.id;
+  });
+  (json.authored||[]).forEach(a=>{
+    const src='classic:authored:'+a.id;
+    if(already('coffees',src))return;
+    const rr=joinRoaster(roasterName(a));
+    const nc={id:uid(),createdAt:a.createdAt||new Date().toISOString(),sourceId:src,
+      roaster:rr.name,roasterRef:rr.ref,name:(a.roast&&a.roast.name)||a.name||'',origin:toFields(origin(a)),
+      roastDate:(a.roast&&a.roast.roastDate)||'',notes:a.notes||'',home:false};
+    newCoffees.push(nc);
+  });
+  (json.brews||[]).forEach(br=>{
+    const src='classic:brew:'+br.id;
+    const ex=existing.brews.find(x=>x.sourceId===src)||newBrews.find(x=>x.sourceId===src);
+    if(ex){brewIdMap[br.id]=ex.id;return}
+    const coffeeRef=bagCoffeeId[br.bagId];if(!coffeeRef)return;
+    const nb={id:uid(),createdAt:br.createdAt||new Date().toISOString(),sourceId:src,
+      coffeeRef,setupId:setupIdMap[br.setupId]||null,technique:br.technique||'',
+      grind:br.grind,doseG:br.doseG,waterG:br.waterG,tempC:br.tempC,timeSec:br.timeSec,instrumentation:br.instrumentation};
+    newBrews.push(nb);brewIdMap[br.id]=nb.id;
+  });
+  (json.cups||[]).forEach(c=>{
+    const src='classic:cup:'+c.id;
+    if(already('cups',src))return;
+    const score=c.hedonic==null?null:c.hedonic;
+    if(c.kind==='home'){
+      const coffeeRef=bagCoffeeId[c.bagId];if(!coffeeRef)return;
+      const brewRef=c.brewId?(brewIdMap[c.brewId]||null):null;
+      newCups.push({id:uid(),createdAt:c.createdAt||new Date().toISOString(),at:c.createdAt||new Date().toISOString(),
+        sourceId:src,kind:'home',coffeeRef,brewRef,score,line:c.notes||'',descriptors:c.descriptors||[]});
+    }else if(c.kind==='cafe'){
+      const rr=joinRoaster(roasterName(c)||c.roaster||'');
+      const nc={id:uid(),createdAt:c.createdAt||new Date().toISOString(),sourceId:src+':coffee',
+        roaster:rr.name,roasterRef:rr.ref,name:c.drink||'',origin:toFields(origin(c)),
+        roastDate:'',notes:'',home:false};
+      newCoffees.push(nc);
+      const placeRef=joinPlace(c.shop,c.city);
+      newCups.push({id:uid(),createdAt:c.createdAt||new Date().toISOString(),at:c.createdAt||new Date().toISOString(),
+        sourceId:src,kind:'bar',placeRef,coffeeRef:nc.id,score,line:c.notes||'',descriptors:c.descriptors||[]});
+    }
+  });
+  return {newRoasters,newPlaces,newCoffees,newCups,newSetups,newBrews};
 }
 /* ==== /pure ==== */
 
@@ -1488,7 +1597,13 @@ function vShelf(){
     <button class="btn btn-quiet" onclick="openImportCard()">Import a card</button>
   </div>
   ${items.length?items.map(coffeeRowHTML).join(''):'<div class="empty">Nothing on the shelf yet. A home brew lands here on its own — or take a café coffee home from its cup.</div>'}
-  ${archived.length?`<details class="more"><summary>Put away (${archived.length})</summary>${archived.map(coffeeRowHTML).join('')}</details>`:''}`;
+  ${archived.length?`<details class="more"><summary>Put away (${archived.length})</summary>${archived.map(coffeeRowHTML).join('')}</details>`:''}
+  <h2>Classic</h2>
+  <div class="lede">Carta 6.18.x, the previous app, kept whole and still working.</div>
+  <div class="btnrow" style="margin-bottom:16px">
+    <button class="btn btn-quiet" onclick="openClassicImport()">Import from classic</button>
+    <a class="btn btn-quiet" href="classic/index.html" style="text-decoration:none">Open classic</a>
+  </div>`;
 }
 /* ============ the hunt — the taste model, read; the brief, prepared ============ */
 function vScout(){
@@ -1716,6 +1831,50 @@ function confirmImportCard(){
   }
   importPending=null;save();closeSheet();render();
 }
+
+/* ---- the classic importer (ROADMAP.md Phase 6) — classic's JSON export,
+ * mapped through the pure importClassicMap (ARCHITECTURE.md §8), additive
+ * and re-runnable: import the same file twice and the second run adds
+ * nothing, because every minted record carries a sourceId back to classic's
+ * own id and the mapper checks for it first. ---- */
+let classicPending=null;
+function openClassicImport(){
+  classicPending=null;
+  openSheet(`<h3>Import from classic</h3>
+  <div class="sub">Classic's own export (Desk → Export → the working copy, a .json file) — read once, safe to read again.</div>
+  <label class="f"><span class="l">The file</span><input type="file" accept=".json,application/json" id="classic_file" onchange="classicFilePicked(event)"></label>
+  <div id="classic_preview"></div>`);
+}
+function classicFilePicked(e){
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    let json;try{json=JSON.parse(String(reader.result))}catch(err){toast('Could not read that file — is it classic\'s JSON export?');return}
+    let mapped;try{mapped=importClassicMap(json,D)}catch(err){toast('Could not map that export');return}
+    classicPending=mapped;
+    renderClassicPreview(mapped);
+  };
+  reader.onerror=()=>toast('Could not read that file');
+  reader.readAsText(f);
+}
+function renderClassicPreview(m){
+  const el=document.getElementById('classic_preview');if(!el)return;
+  const rows=[['Roasters',m.newRoasters.length],['Places',m.newPlaces.length],['Setups',m.newSetups.length],
+    ['Coffees',m.newCoffees.length],['Brews',m.newBrews.length],['Cups',m.newCups.length]];
+  const total=rows.reduce((s,r)=>s+r[1],0);
+  el.innerHTML=`<div class="card"><div class="kv"><span class="k">New records</span><span class="v num">${total}</span></div>
+    ${rows.filter(r=>r[1]).map(r=>`<div class="kv"><span class="k">${r[0]}</span><span class="v num">${r[1]}</span></div>`).join('')}</div>
+    ${total?`<button class="btn btn-primary" onclick="applyClassicImport()">Add ${total} record${total===1?'':'s'} to my Carta</button>`
+      :'<div class="empty">Nothing new — already imported, or the file is empty.</div>'}`;
+}
+function applyClassicImport(){
+  if(!classicPending)return;
+  const m=classicPending;
+  D.roasters.push(...m.newRoasters);D.places.push(...m.newPlaces);D.setups.push(...m.newSetups);
+  D.coffees.push(...m.newCoffees);D.brews.push(...m.newBrews);D.cups.push(...m.newCups);
+  classicPending=null;save();closeSheet();render();
+  toast('Imported from classic.');
+}
 function vAtlas(){
   const tasted=tastedCountryMap();
   const countries=Object.values(tasted).sort((a,b)=>a.label.localeCompare(b.label));
@@ -1787,8 +1946,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.4.0';
+const APP_VERSION='7.5.0';
 const CHANGELOG=[
+  {v:'7.5.0',d:"The migration. Bring your record across from classic — read its export straight in (roasters, cafés, coffees, brews, cups, mapped node-first so nothing's lost to a retired flat field), safe to run twice, nothing duplicated. Classic itself stays one tap away from the Shelf, lights on, for as long as you want it."},
   {v:'7.4.0',d:"The share. A coffee, a café, the passport, or the year — each a self-contained page on Carta paper, one tap to send (the OS share sheet where it's offered, a download everywhere else). A coffee or a café card carries itself back in: open one on another Carta and “add to my Carta” is one tap, no account, no server."},
   {v:'7.3.0',d:"The bridge. Take a café coffee home in one tap — the Shelf is now what you've actually got, not everything you've tasted. Photos on cups, one each, restrained. Capture a café's menu (paste, or a photo held up as a reference while you type — never saved) and walk a line straight into a logged cup or a link to what's already on your shelf."},
   {v:'7.2.0',d:"The passport. Every country your record can trace draws on the world frame — tasted ones washed and tappable into a chapter, untasted ones a hairline invitation. Tap a country or a city for its chapter — the coffees, the regions, the cafés — read straight from the record, no map tiles, no network."},

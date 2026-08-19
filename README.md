@@ -5,7 +5,7 @@ whether either was worth finding again.
 
 **Carta 7 is a fresh start** (`docs/PIVOT.md`), rebuilt smaller and simpler
 than the app that came before it. It ships in phases (`docs/ROADMAP.md`); this
-is **Phase 5 — the share**.
+is **Phase 6 — the migration, and the handover**.
 
 ## What's here right now
 
@@ -59,19 +59,30 @@ is **Phase 5 — the share**.
   (on the Shelf) is one tap to add it — no account, no server, no touching
   the sender's record.
 
-The classic importer is a later phase; see `docs/ROADMAP.md` for the order
-and why. The city frame's live street layer (from Phase 3, per
-`docs/ARCHITECTURE.md`) still waits on the device having somewhere to
-geocode a café to — a fast-follow, not dropped.
+- **The migration.** From the Shelf, **Import from classic** reads classic's
+  own JSON export (Desk → Export → the working copy) straight into Carta 7's
+  ledger — roasters, cafés, coffees, brews and cups, mapped node-first so a
+  bag or cup whose flat fields were long since retired in favor of a catalog
+  node still reads correctly, exactly as classic itself reads them. Roaster
+  and café names run through the same gentle join the door uses. Every
+  imported record is stamped with where it came from, so reading the same
+  export again — on this device or another — adds nothing a second time.
+  Nothing is deleted or altered on the classic side; it's a one-way read.
+
+The city frame's live street layer (from Phase 3, per `docs/ARCHITECTURE.md`)
+still waits on the device having somewhere to geocode a café to — a
+fast-follow, not dropped.
 
 ## Classic
 
 Carta 6.18.x — the previous, much larger app, with cafés, the resolver, the
 shared atlas, sync and everything else it grew over its run — is frozen
-whole at [`classic/index.html`](classic/index.html). It keeps working exactly
-as before; nothing there was touched by the rebuild. See
-[`classic/README.md`](classic/README.md) for its full documentation. A
-migration from classic's export into Carta 7's ledger is Phase 6.
+whole at [`classic/index.html`](classic/index.html), one tap away from the
+Shelf (**Open classic**). It keeps working exactly as before; nothing there
+was touched by the rebuild. See [`classic/README.md`](classic/README.md) for
+its full documentation. Bring a record across with **Import from classic**,
+above — classic itself stays on, a museum with the lights still on, for as
+long as you want it.
 
 ## The stack
 

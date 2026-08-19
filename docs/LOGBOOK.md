@@ -7,6 +7,41 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-19 — Phase 6 shipped: the migration, and the handover
+
+- **Shipped:** `importClassicMap(json, existing)` — classic's own JSON
+  export, mapped onto Carta 7's ledger (roasters, places, setups, coffees,
+  brews, cups), reading node-first with a flat-field fallback exactly as
+  classic's own `bagRoaster`/`lotRead`/`roastRead` do, so nothing goes blank
+  just because classic had already retired the flat text behind a catalog
+  node. Additive and re-runnable — every minted record carries a `sourceId`
+  back to its classic id, so reading the same export twice adds nothing the
+  second time. Roaster and café names join through the existing gentle join,
+  both against the standing record and within one import batch. The Shelf
+  gets a Classic section: **Import from classic** (pick the file, see the
+  new-record counts, add them) and **Open classic**, a plain link. `uid()`
+  moved into the pure block, since `importClassicMap` needed an id generator
+  and the block is evaluated standalone by the test harness. PR #80.
+- **The other half of the phase — GitHub Pages at the root — needed nothing
+  here:** Phase 1 already moved Carta 7's `index.html` to the repo root and
+  classic to `classic/`, and `CNAME` already sits at root. That's been true
+  since Phase 1 merged; this phase just confirmed it.
+- **Not touched, on purpose:** `manifest.json`'s `scope`/`start_url` of
+  `/carta/` — `ARCHITECTURE.md` names this a kept decision, not a leftover.
+  `ROADMAP.md` said the classic link belongs on "the Desk corner"; Carta 7
+  has no Desk room (four rooms only), so it landed on the Shelf instead, the
+  closest analog as the utility/list room — a deliberate substitution, not a
+  silent drop.
+- **Verified:** `node test/model.test.js` at 30/30 (8 new cases for the
+  importer); a full sweep for a stray `</script>` inside a comment (the
+  Phase 5 lesson); and a real-browser Playwright run against a synthetic
+  classic export — the preview's per-kind counts, the imported records
+  reading back correctly across the Shelf/Journal/Atlas, and a second import
+  of the same file landing on "Nothing new."
+- **Next:** either the rest of Phase 3 (geocoding + the live street layer)
+  or Phase 7, per `ROADMAP.md`.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-18 — Phase 5 shipped: the share
 
 - **Shipped:** all five named card kinds — Coffee, Place, the Passport, the
