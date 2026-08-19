@@ -787,7 +787,7 @@ let tab='journal';
 // a chapter (country/city) is a screen, not a sheet — reached from the Atlas, one level
 // deep, closed back to it. No stack: chapters don't nest into further chapters yet.
 let pageView=null;
-function go(t){tab=t;pageView=null;render()}
+function go(t){tab=t;pageView=null;render();maybeAutoExport()}
 function openCountryChapter(name){pageView={kind:'country',id:name};render();window.scrollTo(0,0)}
 function openCityChapter(city){pageView={kind:'city',id:city};render();window.scrollTo(0,0);geocodeCityPlaces(city)}
 function closePage(){pageView=null;render()}
@@ -978,7 +978,8 @@ function photoPicked(e){
   compressPhoto(f).then(dataUri=>{
     cupPhotoPending=dataUri;
     const el=document.getElementById('photopreview');
-    if(el)el.innerHTML=`<img class="thumb big" src="${dataUri}" alt="">`;
+    const tight=storageUsedBytes()+dataUri.length*2>STORAGE_SOFT_LIMIT;
+    if(el)el.innerHTML=`<img class="thumb big" src="${dataUri}" alt="">`+(tight?lowStorageNoteHTML():'');
   }).catch(()=>toast('Could not read that photo'));
 }
 
@@ -1754,6 +1755,15 @@ function vShelf(){
   </div>
   ${items.length?items.map(coffeeRowHTML).join(''):'<div class="empty">Nothing on the shelf yet. A home brew lands here on its own — or take a café coffee home from its cup.</div>'}
   ${archived.length?`<details class="more"><summary>Put away (${archived.length})</summary>${archived.map(coffeeRowHTML).join('')}</details>`:''}
+  <h2>Your record</h2>
+  <div class="lede">${esc(exportedLine())} One device, no account, no sync — nothing else has a copy of this.</div>
+  <div class="btnrow" style="margin-bottom:10px">
+    <button class="btn btn-quiet" onclick="exportLedgerJSON()">Back up my record</button>
+  </div>
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px">
+    <input type="checkbox" ${getPref('autoExport',false)?'checked':''} onchange="setPref('autoExport',this.checked)">
+    <span class="muted" style="margin:0">Quietly back up every two weeks</span>
+  </label>
   <h2>Classic</h2>
   <div class="lede">Carta 6.18.x, the previous app, kept whole and still working.</div>
   <div class="btnrow" style="margin-bottom:16px">
@@ -1872,6 +1882,48 @@ function copyPlainText(str,msg){
   document.body.appendChild(ta);ta.focus();ta.select();
   try{document.execCommand('copy')}catch(e){}
   ta.remove();toast(msg||'Copied.');
+}
+
+/* ============ durability (ROADMAP.md Phase 8) — the record's one safety net ============
+ * Carta is one device, one localStorage key, zero sync, by design
+ * (ARCHITECTURE.md §3) — right for a hobby, but it means the whole journal's
+ * durability has rested on a habit nobody was ever asked to form. Quiet and
+ * factual, never urgency theater: a stated fact on the Shelf, the same
+ * register as a coffee's own rest window. */
+function weeksSince(iso){return Math.floor(Math.floor((Date.now()-new Date(iso))/864e5)/7)}
+function exportedLine(){
+  const at=getPref('exportedAt',null);
+  if(!at)return 'Never backed up yet.';
+  const w=weeksSince(at);
+  if(w<1)return 'Backed up this week.';
+  return `Last backed up — ${w} week${w===1?'':'s'} ago.`;
+}
+function exportLedgerJSON(){
+  const stamp=new Date().toISOString().slice(0,10);
+  downloadBlob(new Blob([JSON.stringify(D,null,2)],{type:'application/json'}),`carta-${stamp}.json`);
+  setPref('exportedAt',new Date().toISOString());
+  render();
+  toast('Backed up — saved to your downloads.');
+}
+const AUTO_EXPORT_DAYS=14;   // a fortnight between quiet backups, opt-in only
+function maybeAutoExport(){
+  if(!getPref('autoExport',false))return;
+  const at=getPref('exportedAt',null);
+  const days=at?Math.floor((Date.now()-new Date(at))/864e5):Infinity;
+  if(days>=AUTO_EXPORT_DAYS)exportLedgerJSON();
+}
+// a rough, conservative measure of what this origin has already spent in
+// localStorage — most browsers cap it near 5MB; warn well before a write
+// actually fails, not only after (savePhotos()'s own catch stays the last
+// line of defense, not the first)
+const STORAGE_SOFT_LIMIT=4.5*1024*1024;
+function storageUsedBytes(){
+  let used=0;
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);used+=(k.length+(localStorage.getItem(k)||'').length)}}catch(e){}
+  return used*2;   // UTF-16 — the unit a browser's quota actually counts against
+}
+function lowStorageNoteHTML(){
+  return `<div class="note">Storage is getting full. <span class="text-action" onclick="exportLedgerJSON()">Back up now</span> to be safe.</div>`;
 }
 
 /* ============ the ask — scout, stage two (ROADMAP.md Phase 7) ============
@@ -2530,8 +2582,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.9.0';
+const APP_VERSION='7.10.0';
 const CHANGELOG=[
+  {v:'7.10.0',d:"Durability, without a server. The Shelf now states plainly how long it's been since your record was backed up — the same voice as a bag's own rest window, never a nag. One tap downloads the whole thing as a plain JSON file, or hand it a quiet fortnightly rhythm and it'll back itself up on its own, opt-in, off unless you turn it on. A photo you're about to add now says something first if storage is getting tight, instead of only failing silently once it's already too late."},
   {v:'7.9.0',d:"Two more places the streets can reach. A café's own sheet now draws its position, same live layer as its city — a settled view of the one place, not the whole neighborhood. And Scout's asks got the same treatment: a grounded café it names draws on real streets now, not just a plain dot. A sheet's own map dies when the sheet closes, and never disturbs a map still standing on the screen underneath it."},
   {v:'7.8.4',d:"The streets, actually there. A city's live map would open, show a pin or two, and collapse to a hairline right as the streets should have faded in — the map area had no height of its own once its stand-in dots stepped aside, and the layer meant to fill that space was quietly losing a styling tie to the map library's own stylesheet. Both fixed; the frame now holds its shape start to finish."},
   {v:'7.8.3',d:"Classic's cafés, carried whole. Importing from classic used to leave every café's position behind — even the ones classic had already confirmed on a map — so every city needed a fresh round of geocoding after crossing over, and a café's own city could come up blank if the cup that mentioned it hadn't carried one. The importer now reads classic's café register by name and carries its position, city, neighborhood and palette straight across, same as it always meant to."},
