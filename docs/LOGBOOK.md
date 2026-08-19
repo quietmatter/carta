@@ -7,6 +7,51 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-19 — Phase 3 finished: the city frame's street layer
+
+- **Shipped:** the one thing Phase 3 left for later. A city chapter now
+  draws its cafés on a real frame, not just a list: `cafePlotSVG` fits a box
+  to whatever café positions are on file and draws each as a plain dot,
+  tapping straight into the café's own sheet — the same "drawn plot" the
+  ask's results already used, factored apart from it (`plotBox`) so both
+  share one projection instead of two. Positions come from a new
+  `geocodeCityPlaces`, which quietly confirms each un-placed café the first
+  time its city chapter opens (reusing `geocodeCafe`, the exact keyless
+  Nominatim door Phase 7 built to ground the ask's own suggestions — one
+  door, two callers), fills blanks only, tries a café at most once ever, and
+  paces itself past Nominatim's own usage policy. Real streets — MapLibre GL
+  over OpenFreeMap's vector tiles, repainted in Carta's own tokens — fade in
+  under those same pins where the network reaches them and TAKE OVER as
+  live, pannable markers; where it can't, the drawn plot simply stands, says
+  so once in one quiet line ("Streets unavailable — showing saved
+  positions"), and offers Retry. No dialog, no dead end, no red — a network
+  hiccup is not treated as a failure the keeper needs to be told off about.
+  Ported craft from classic (the style, the loader, the mount/destroy
+  lifecycle, the camera-floor math) minus its ground mode, its atlas edges
+  layer and its lens — Carta 7 has one map surface, not classic's whole
+  unified system. `render()` now destroys and remounts whatever map surface
+  the current screen carries, the same lifecycle classic used; a theme
+  toggle repaints a live map in place rather than leaving it stale.
+- **Not touched, on purpose:** the passport (world frame) and its country
+  chapters stay exactly as they were — this was always the city frame's own
+  gap, not the passport's.
+- **Verified:** `node test/model.test.js` at 37/37 (no pure-block changes —
+  geocoding and the map are both network/DOM code and correctly live outside
+  the markers); a real-browser Playwright run with Nominatim mocked: a
+  logged café gets placed and drawn within the pacing window, the pin taps
+  into the café sheet, a second visit shows it instantly from storage with
+  no re-geocode. The live tile layer itself couldn't be exercised past its
+  loader in this sandbox (`unpkg.com`/`tiles.openfreemap.org` are proxy-
+  blocked here) — which turned out to be a faithful stand-in for "the CDN is
+  unreachable," and confirmed the exact thing that mattered: the failure is
+  silent and graceful, never a crash, never a dialog. Also re-ran the Phase
+  5, 6 and 7 smoke suites in full as a regression check, since this touched
+  shared machinery (`render()`, the ask's own pin plot) — all still green.
+- **Next:** the horizon list (`ROADMAP.md`): the Lotmark loop, sync-as-
+  backup, OCR for menus, community menus, the concierge tier — none earned
+  yet.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-19 — Phase 7 shipped: the scout, stage two
 
 - **Shipped:** the ask — Scout can now send the brief on the keeper's own

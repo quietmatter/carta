@@ -261,6 +261,25 @@ nav.tabs button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
 .plot-box .ask-pin.st-booked circle{stroke:var(--ink);stroke-width:2}
 .plot-box .ask-pin.st-been circle{fill:var(--ink);stroke:var(--ink)}
 .plot-box .ask-pin.st-skip circle{opacity:.35;stroke-dasharray:2 2}
+.plot-box .cafe-mark circle{fill:var(--ink);stroke:var(--paper);stroke-width:1.5;cursor:pointer}
+.plot-box .cafe-mark:active circle{fill:var(--ink-2)}
+
+/* ===== the city frame's street layer (ROADMAP.md Phase 3, finished) — real streets
+   under the drawn plot's pins, fading in only once tiles actually land; the drawing
+   always stands on its own first. Ported craft from classic, minus its ground mode,
+   atlas edges and lens — Carta 7 has one map surface, not classic's whole system. ===== */
+.smap-live{position:absolute;inset:0;opacity:0;transition:opacity .45s ease}
+.smap-live.in{opacity:1}
+.smap-live .maplibregl-map{width:100%;height:100%}
+.smap-live .maplibregl-ctrl-attrib{font-family:var(--sans)!important;font-size:9px!important;letter-spacing:.02em;background:color-mix(in srgb,var(--paper-card) 82%,transparent)!important;color:var(--ink-3)!important;padding:1px 6px}
+.smap-live .maplibregl-ctrl-attrib a{color:var(--ink-3)!important;text-decoration:none}
+.smap-live .maplibregl-ctrl-attrib-button{display:none!important}
+.smap-live .maplibregl-canvas{outline:none!important}
+.smap-live .maplibregl-cooperative-gesture-screen{font-family:var(--sans)!important;font-size:13px}
+.pin{width:11px;height:11px;border-radius:50%;background:var(--ink);border:1.5px solid var(--paper);cursor:pointer}
+.smap-note{position:absolute;left:8px;right:8px;bottom:8px;z-index:2;background:var(--paper-card);border:1px solid var(--line);
+  padding:6px 9px;font-family:var(--sans);font-size:11px;color:var(--ink-3);display:flex;gap:8px;align-items:center;justify-content:space-between}
+.text-action{text-decoration:underline;cursor:pointer;flex:none;color:var(--ink-3)}
 
 </style>
 </head>
@@ -720,10 +739,11 @@ let tab='journal';
 let pageView=null;
 function go(t){tab=t;pageView=null;render()}
 function openCountryChapter(name){pageView={kind:'country',id:name};render();window.scrollTo(0,0)}
-function openCityChapter(city){pageView={kind:'city',id:city};render();window.scrollTo(0,0)}
+function openCityChapter(city){pageView={kind:'city',id:city};render();window.scrollTo(0,0);geocodeCityPlaces(city)}
 function closePage(){pageView=null;render()}
 let _lastScreenKey=null;
 function render(){
+  smapDestroy();   // live maps die with the DOM they sit in — give the contexts back first
   const lit=pageView?'atlas':tab;
   document.getElementById('who').textContent=pageView?SUBS[pageView.kind]:(SUBS[tab]||'');
   document.getElementById('tabs').innerHTML=TABS.map(t=>
@@ -736,6 +756,7 @@ function render(){
   const m=document.getElementById('main');
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=0;
+  smapMount();
 }
 
 /* ============ sheet plumbing (ported wholesale) ============ */
@@ -1920,26 +1941,205 @@ function askResultHTML(id){
   <button class="btn btn-quiet" style="margin-top:14px" onclick="openAsk()">Ask again</button>`;
 }
 function openAskResult(id){openSheet(askResultHTML(id));}
-/* the drawn plot for a handful of pins — no lands, no topo, just a box fit to
- * hold them (§7's own fallback name for exactly this shape). A ring until a
- * status is set, filled once you've been, doubled once it's booked, faded
- * once skipped — never the ember, the passport's own law held here too. */
-function cityPinsSVG(points,askId){
-  const pts=(points||[]).filter(p=>p.lat!=null&&p.lon!=null&&isFinite(p.lat)&&isFinite(p.lon));
-  if(!pts.length)return '';
-  const la0=pts.reduce((a,p)=>a+p.lat,0)/pts.length;
+/* the drawn plot — a box fit to hold a handful of points and nothing else, no
+ * lands, no topo (§7's own name for this shape: "the drawn plot"). Shared by
+ * the ask's pins and the city frame below — both are "a few points, fit to a
+ * box," and the projection math is one thing, not two. */
+function plotBox(points){
+  const la0=points.reduce((a,p)=>a+p.lat,0)/points.length;
   const px=p=>KMX(p.lon,la0),py=p=>KMY(p.lat);
   let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
-  pts.forEach(p=>{const x=px(p),y=py(p);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)});
+  points.forEach(p=>{const x=px(p),y=py(p);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)});
   const pad=Math.max(0.6,(x1-x0)*0.18,(y1-y0)*0.18);
   x0-=pad;x1+=pad;y0-=pad;y1+=pad;
   const W=336,P=4;
   const H=Math.max(160,Math.round((W-2*P)*(y1-y0)/Math.max(0.001,(x1-x0)))+2*P);
   const s=Math.min((W-2*P)/Math.max(0.001,x1-x0),(H-2*P)/Math.max(0.001,y1-y0)),cx=(x0+x1)/2,cy=(y0+y1)/2;
-  const X=p=>W/2+(px(p)-cx)*s,Y=p=>H/2-(py(p)-cy)*s;
-  const n=v=>v.toFixed(1);
-  const marks=pts.map(p=>`<g class="ask-pin${p.status?' st-'+p.status:''}" onclick="openAskFinding('${p.id}')"><circle cx="${n(X(p))}" cy="${n(Y(p))}" r="6"></circle></g>`).join('');
-  return `<div class="plot-box"${askId?` id="ask_pins_${askId}"`:''}><svg viewBox="0 0 ${W} ${H}">${marks}</svg></div>`;
+  return {W,H,X:p=>W/2+(px(p)-cx)*s,Y:p=>H/2-(py(p)-cy)*s};
+}
+/* the ask's pins — a suggestion is a ring until it's lived. A ring until a
+ * status is set, filled once you've been, doubled once it's booked, faded
+ * once skipped — never the ember, the passport's own law held here too. */
+function cityPinsSVG(points,askId){
+  const pts=(points||[]).filter(p=>p.lat!=null&&p.lon!=null&&isFinite(p.lat)&&isFinite(p.lon));
+  if(!pts.length)return '';
+  const box=plotBox(pts),n=v=>v.toFixed(1);
+  const marks=pts.map(p=>`<g class="ask-pin${p.status?' st-'+p.status:''}" onclick="openAskFinding('${p.id}')"><circle cx="${n(box.X(p))}" cy="${n(box.Y(p))}" r="6"></circle></g>`).join('');
+  return `<div class="plot-box"${askId?` id="ask_pins_${askId}"`:''}><svg viewBox="0 0 ${box.W} ${box.H}">${marks}</svg></div>`;
+}
+
+/* ============ the city frame's street layer (ROADMAP.md Phase 3, finished) ============
+ * Real streets under a city chapter's café pins — an enhancement, never a
+ * dependency (ARCHITECTURE.md §7): MapLibre GL renders OpenFreeMap's vector
+ * tiles (OpenStreetMap data), repainted in Carta's own tokens, lazy-loaded
+ * only once a map surface is on screen and the network answers. The drawn
+ * plot always renders first from stored lat/lon and stands alone offline;
+ * tiles fade in and TAKE OVER — the drawn pins step aside for real, pannable
+ * markers, never the other way around. Ported craft from classic (the style,
+ * the loader, the mount/destroy lifecycle) minus its ground mode, its atlas
+ * edges layer and its lens — Carta 7 has one map surface, not classic's whole
+ * unified system. */
+const ML_JS='https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js';
+const ML_CSS='https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css';
+const ML_TILES='https://tiles.openfreemap.org/planet';
+const ML_GLYPHS='https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf';
+let _mlP=null,_mlDown=false,_smaps={},_smapCfg={},_smapCam={},_smapN=0,_smapMT=null;
+function mlLoad(){
+  if(window.maplibregl)return Promise.resolve();
+  if(_mlP)return _mlP;
+  return _mlP=new Promise((res,rej)=>{
+    const css=document.createElement('link');css.rel='stylesheet';css.href=ML_CSS;document.head.appendChild(css);
+    const s=document.createElement('script');s.src=ML_JS;
+    const to=setTimeout(()=>{_mlP=null;rej(new Error('slow'))},8000);
+    s.onload=()=>{clearTimeout(to);res()};
+    s.onerror=()=>{clearTimeout(to);_mlP=null;rej(new Error('unreachable'))};
+    document.head.appendChild(s);
+  });
+}
+// the exact token hexes, by theme — a MapLibre style can't read CSS variables
+function smapInk(){
+  return document.documentElement.getAttribute('data-theme')==='dusk'
+    ?{page:'#171310',sunk:'#2d241f',ink2:'#c8bcae',faint:'#5b574f',ember:'#e06b4f'}
+    :{page:'#f2eee6',sunk:'#e9e3d8',ink2:'#554a41',faint:'#b8b5b0',ember:'#a63f2b'};
+}
+function smapStyle(){
+  const c=smapInk();
+  const road=cls=>['match',['get','class'],cls,true,false];
+  return {version:8,glyphs:ML_GLYPHS,sources:{osm:{type:'vector',url:ML_TILES}},layers:[
+    {id:'bg',type:'background',paint:{'background-color':c.page}},
+    {id:'park',type:'fill',source:'osm','source-layer':'park',paint:{'fill-color':c.sunk,'fill-opacity':.5}},
+    {id:'water',type:'fill',source:'osm','source-layer':'water',paint:{'fill-color':c.sunk}},
+    {id:'road-minor',type:'line',source:'osm','source-layer':'transportation',filter:road(['minor','service','residential','living_street','unclassified']),layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':c.faint,'line-width':['interpolate',['linear'],['zoom'],11,.25,13,.5,15,.95,17,1.9],'line-opacity':.9}},
+    {id:'road-major',type:'line',source:'osm','source-layer':'transportation',filter:road(['motorway','trunk','primary','secondary','tertiary']),layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':c.ink2,'line-width':['interpolate',['linear'],['zoom'],9,.4,12,.85,14,1.5,16,2.8,18,4.8]}},
+    {id:'boundary',type:'line',source:'osm','source-layer':'boundary',filter:['all',['>=',['to-number',['get','admin_level']],4],['<=',['to-number',['get','admin_level']],10],['!=',['get','maritime'],1]],paint:{'line-color':c.ember,'line-opacity':.9,'line-dasharray':[3,2.2],'line-width':['interpolate',['linear'],['zoom'],8,.6,12,1.1,15,1.9]}},
+    {id:'lbl-neigh',type:'symbol',source:'osm','source-layer':'place',filter:['match',['get','class'],['neighbourhood','suburb','quarter'],true,false],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-transform':'uppercase','text-letter-spacing':.14,'text-size':['interpolate',['linear'],['zoom'],11,9.5,14,12.5],'text-max-width':7,'text-padding':6},paint:{'text-color':c.ink2,'text-halo-color':c.page,'text-halo-width':1.6,'text-halo-blur':.4}},
+    {id:'lbl-city',type:'symbol',source:'osm','source-layer':'place',filter:['match',['get','class'],['city','town'],true,false],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-letter-spacing':.04,'text-size':['interpolate',['linear'],['zoom'],9,12,13,17],'text-max-width':8},paint:{'text-color':c.ink2,'text-halo-color':c.page,'text-halo-width':1.4}},
+  ]};
+}
+function smapPinEl(o){
+  o=o||{};
+  const el=document.createElement('div');el.className='pin';
+  if(o.aria){el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label',o.aria);
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click()}})}
+  return el;
+}
+function smapView(cfg,pts){
+  if(pts.length===1){cfg.center=[pts[0].lon,pts[0].lat];cfg.zoom=13.2;if(cfg.minZoom==null)cfg.minZoom=9}
+  else{
+    const lats=pts.map(p=>p.lat),lons=pts.map(p=>p.lon);
+    cfg.bounds=[[Math.min(...lons),Math.min(...lats)],[Math.max(...lons),Math.max(...lats)]];
+    // the camera floor: the map never opens, or zooms out, to world scale — derived
+    // from the extent, roughly two stops above the fit (classic's own CHARTS.md rule)
+    if(cfg.minZoom==null){
+      const cos=Math.cos(((Math.min(...lats)+Math.max(...lats))/2)*Math.PI/180)||1;
+      const span=Math.max(Math.max(...lats)-Math.min(...lats),(Math.max(...lons)-Math.min(...lons))*cos,.002);
+      cfg.minZoom=Math.max(1,Math.min(11,Math.log2(360/span)-2.2));
+    }
+  }
+  return cfg;
+}
+function smapReg(cfg){const id='smap'+(++_smapN);_smapCfg[id]=cfg;return id}
+// mount whatever map surfaces the current paint carries; a surface inside a
+// closed fold has no width, and a camera fitted to nothing is a camera
+// pointed at the wrong ground — it boots once the card is actually open
+function smapMount(){
+  clearTimeout(_smapMT);
+  _smapMT=setTimeout(()=>{
+    Object.keys(_smaps).forEach(k=>{const s=_smaps[k];if(!s.el.isConnected){try{s.map.remove()}catch(e){}delete _smaps[k]}});
+    document.querySelectorAll('[data-smap]').forEach(el=>{
+      const cfg=_smapCfg[el.dataset.smap];
+      if(cfg&&!el._smap&&el.clientWidth>0)smapBoot(el,cfg);
+    });
+  },250);
+}
+function smapDestroy(){
+  Object.keys(_smaps).forEach(k=>{const s=_smaps[k];
+    if(s.camKey)try{_smapCam[s.camKey]={center:s.map.getCenter(),zoom:s.map.getZoom()}}catch(e){}
+    try{s.map.remove()}catch(e){}});
+  _smaps={};_smapCfg={};
+}
+function smapRestyle(){Object.keys(_smaps).forEach(k=>{try{_smaps[k].map.setStyle(smapStyle())}catch(e){}})}
+function smapBoot(el,cfg){
+  el._smap=true;
+  const id=el.dataset.smap;
+  if(!navigator.onLine||_mlDown){smapNote(el,true);return}   // the plot stands; quiet about it
+  mlLoad().then(()=>{
+    if(!el.isConnected)return;
+    const live=document.createElement('div');live.className='smap-live';
+    el.appendChild(live);
+    const camKey=cfg.camKey,cam=camKey?_smapCam[camKey]:null;
+    const opts={container:live,style:smapStyle(),interactive:true,dragRotate:false,pitchWithRotate:false,cooperativeGestures:true,
+      attributionControl:{compact:false,customAttribution:'© OpenMapTiles · © OpenStreetMap contributors'}};
+    if(cam){opts.center=cam.center;opts.zoom=cam.zoom}
+    else if(cfg.center){opts.center=cfg.center;opts.zoom=cfg.zoom}
+    else{opts.bounds=cfg.bounds;opts.fitBoundsOptions={padding:40,maxZoom:15}}
+    if(cfg.minZoom!=null)opts.minZoom=cfg.minZoom;
+    let map;
+    try{map=new maplibregl.Map(opts)}catch(e){smapFail(el);return}
+    if(map.touchZoomRotate)map.touchZoomRotate.disableRotation();
+    _smaps[id]={map,el,camKey};
+    const to=setTimeout(()=>smapNote(el,true),3000);   // ~2.5s and the plot takes over — it never left
+    map.on('load',()=>{
+      clearTimeout(to);_mlDown=false;smapNote(el,false);
+      try{map.getCanvas().setAttribute('tabindex','-1')}catch(e){}
+      el.querySelectorAll(':scope>svg').forEach(p=>p.remove());   // the drawn pins hand over to live markers
+      (cfg.marks?cfg.marks():[]).forEach(mk=>new maplibregl.Marker({element:mk.el,anchor:'center'}).setLngLat([mk.lon,mk.lat]).addTo(map));
+      live.classList.add('in');
+    });
+    if(camKey)map.on('moveend',()=>{try{_smapCam[camKey]={center:map.getCenter(),zoom:map.getZoom()}}catch(e){}});
+  }).catch(()=>{if(el.isConnected)smapFail(el)});
+}
+function smapFail(el){_mlDown=true;smapNote(el,true)}
+// one quiet line, no red, no dialog: offline is a considered mode, not an
+// error (VOICE.md). Retry re-attempts the tiles by hand.
+function smapNote(el,on){
+  let n=el.querySelector(':scope>.smap-note');
+  if(!on){if(n)n.remove();return}
+  if(n)return;
+  n=document.createElement('div');n.className='smap-note';
+  n.innerHTML=`<span>Streets unavailable — showing saved positions.</span><span class="text-action" onclick="smapRetry('${el.dataset.smap}')">Retry</span>`;
+  el.appendChild(n);
+}
+function smapRetry(id){
+  const el=document.querySelector(`[data-smap="${CSS.escape(id)}"]`);if(!el)return;
+  _mlDown=false;el._smap=false;
+  const s=_smaps[id];if(s){try{s.map.remove()}catch(e){}delete _smaps[id]}
+  el.querySelectorAll(':scope>.smap-live,:scope>.smap-note').forEach(n=>n.remove());
+  smapMount();
+}
+// the city chapter's own drawn plot — a café is a filled dot, tap opens its
+// sheet; the live layer (above) takes over once tiles land, same markers,
+// same tap. Places without a confirmed position yet just aren't drawn — see
+// geocodeCityPlaces, which fills them in and repaints as each one resolves.
+function cafePlotSVG(places,city){
+  const pts=(places||[]).filter(p=>p.lat!=null&&p.lon!=null&&isFinite(p.lat)&&isFinite(p.lon));
+  if(!pts.length)return '';
+  const box=plotBox(pts),n=v=>v.toFixed(1);
+  const marks=pts.map(p=>`<g class="cafe-mark" onclick="openPlaceSheet('${p.id}')"><circle cx="${n(box.X(p))}" cy="${n(box.Y(p))}" r="6"></circle></g>`).join('');
+  const smapId=smapReg(smapView({camKey:'city|'+fold(city),marks:()=>pts.map(p=>{
+    const el=smapPinEl({aria:p.name});el.onclick=()=>openPlaceSheet(p.id);
+    return {lat:p.lat,lon:p.lon,el};
+  })},pts));
+  return `<div class="plot-box" data-smap="${smapId}"><svg viewBox="0 0 ${box.W} ${box.H}">${marks}</svg></div>`;
+}
+// geocoding a café is the same lookup the ask already grounds its suggestions
+// with (geocodeCafe, Phase 7) — one keyless Nominatim door, two callers. Fills
+// blanks only, tries each place at most once ever (`geocoded`), and paces
+// itself a second apart per Nominatim's own usage policy — a city chapter
+// is a handful of cafés, never a bulk job.
+let _geocoding=new Set();
+async function geocodeCityPlaces(city){
+  const targets=live('places').filter(p=>p.city&&fold(p.city)===fold(city)&&p.lat==null&&!p.geocoded&&!_geocoding.has(p.id));
+  for(const p of targets){
+    _geocoding.add(p.id);
+    const geo=await geocodeCafe(p.name,'',p.city);
+    p.geocoded=true;
+    if(geo){p.lat=geo.lat;p.lon=geo.lon}
+    _geocoding.delete(p.id);
+    save();
+    if(pageView&&pageView.kind==='city'&&fold(pageView.id)===fold(city))render();
+    await new Promise(r=>setTimeout(r,1100));
+  }
 }
 
 /* ============ the cards — the share (ROADMAP.md Phase 5) ============
@@ -2168,6 +2368,7 @@ function vCityChapter(city){
   <div class="eyebrow">City</div>
   <div class="display">${esc(city)}</div>
   <div class="lede">${places.length} café${places.length===1?'':'s'} on the record.</div>
+  ${cafePlotSVG(places,city)}
   <h2>Your bars</h2>
   ${places.length?places.map(p=>{
     const pc=byPlace[p.id]||[];
@@ -2184,12 +2385,14 @@ function applyTheme(){
   document.documentElement.setAttribute('data-theme',duskMQ.matches?'dusk':'paper');
   const mc=document.querySelector('meta[name=theme-color]');
   if(mc)mc.setAttribute('content',duskMQ.matches?'#171310':'#f2eee6');
+  smapRestyle();   // a live street map repaints to the theme in place
 }
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.6.0';
+const APP_VERSION='7.7.0';
 const CHANGELOG=[
+  {v:'7.7.0',d:"Streets. A city's chapter draws your cafés now — a plain dot per café at first, its position confirmed quietly the first time you open the chapter, then real streets fading in underneath where the network reaches them. Offline, or where it can't, the drawn plot simply stands and says so once. Finishes what Phase 3 started."},
   {v:'7.6.0',d:"The ask. Scout can ask on your behalf now — a city, a neighborhood, a country, a route or a friend's taste, sent with your brief to a model you bring your own key for. Every café it names is checked against a real place before it's ever drawn as a pin; what can't be confirmed is listed, never guessed. No key, or the call fails, and it's the plain brief, copied, same as before. Been, Booked or Skip on a result feeds it back into your record."},
   {v:'7.5.0',d:"The migration. Bring your record across from classic — read its export straight in (roasters, cafés, coffees, brews, cups, mapped node-first so nothing's lost to a retired flat field), safe to run twice, nothing duplicated. Classic itself stays one tap away from the Shelf, lights on, for as long as you want it."},
   {v:'7.4.0',d:"The share. A coffee, a café, the passport, or the year — each a self-contained page on Carta paper, one tap to send (the OS share sheet where it's offered, a download everywhere else). A coffee or a café card carries itself back in: open one on another Carta and “add to my Carta” is one tap, no account, no server."},

@@ -4,8 +4,10 @@ A coffee brewing journal — the cup you made, the cup you were served, and
 whether either was worth finding again.
 
 **Carta 7 is a fresh start** (`docs/PIVOT.md`), rebuilt smaller and simpler
-than the app that came before it. It ships in phases (`docs/ROADMAP.md`); this
-is **Phase 7 — the scout, stage two**.
+than the app that came before it. It ships in phases (`docs/ROADMAP.md`); all
+seven are shipped, most recently **Phase 7 — the scout, stage two** — and
+Phase 3's live street layer, the one thing that phase left for later, is
+finished too.
 
 ## What's here right now
 
@@ -47,10 +49,17 @@ is **Phase 7 — the scout, stage two**.
 - **The passport.** The Atlas opens on a world frame — every country your
   record can trace, drawn from an offline outline file (no map tiles, no
   network): tasted countries washed and tappable, untasted ones a hairline
-  invitation. Tap a country, or a city from your own list, for its
-  **chapter** — the coffees you've had from there, grouped by region, or the
-  cafés you've been to and how they've scored — typography, not another map.
-  The footer says it plainly: the map remembers what the bags said.
+  invitation. Tap a country for its chapter — the coffees you've had from
+  there, grouped by region. The footer says it plainly: the map remembers
+  what the bags said.
+- **A city's own map.** Tap a city from your list for its chapter and your
+  cafés there draw as a plain, honest plot — a dot per café, fit to a box —
+  from positions Carta quietly confirms the first time you open the chapter
+  (a keyless place lookup, same door the ask grounds its own suggestions
+  through). Real streets fade in under those same pins where the network
+  reaches them, live and pannable; where it can't, the drawn plot simply
+  stands, says so once in one quiet line, and offers Retry — never a dialog,
+  never a dead end.
 - **A photo on a cup.** One, optional, forever — never a hero, a small
   square next to the cup in the Journal and a modest image on its own page.
   Compressed on the device to a reasonable size; nothing leaves it.
@@ -79,11 +88,6 @@ is **Phase 7 — the scout, stage two**.
   export again — on this device or another — adds nothing a second time.
   Nothing is deleted or altered on the classic side; it's a one-way read.
 
-The city chapter's own live street layer (from Phase 3, per
-`docs/ARCHITECTURE.md`) still waits — a fast-follow, not dropped. The ask's
-results draw on a much smaller frame of their own: a plain box fit to the
-handful of pins one ask returns, not the city itself.
-
 ## Classic
 
 Carta 6.18.x — the previous, much larger app, with cafés, the resolver, the
@@ -99,11 +103,13 @@ long as you want it.
 
 One file, `index.html` — all CSS and JS inline, self-contained, zero
 dependencies, zero build. Everything lives in this browser's `localStorage`
-(`carta7.v1`). No account, no server — the ask (above) is the one deliberate,
-keeper-initiated exception to offline, and it's opt-in: bring your own key or
-never touch it. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
-full technical spec and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the build
-order.
+(`carta7.v1`). No account, no server — the ask is the one deliberate,
+keeper-initiated exception to offline (bring your own key or never touch it);
+the café place lookup and the city map's street tiles are the other two
+network touches, both keyless, both progressive enhancement that quietly
+stands down to what's already stored the moment the network doesn't answer.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full technical
+spec and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the build order.
 
 ## Running it
 
