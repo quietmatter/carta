@@ -7,6 +7,52 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-19 — the city map, actually working (four PRs off a bug report)
+
+- **Why:** the founder reported the map "not working as intended," then —
+  after two rounds — "every city map crashes," attached their real classic
+  export, and finally described the exact symptom ("opens with a pin or
+  two, then collapses to a line"). Each report narrowed the diagnosis; none
+  of the four bugs found were guesses shipped on faith.
+- **Shipped, in the order found:**
+  1. **The render storm** (PR #86) — `geocodeCityPlaces` re-rendered once
+     per café as it resolved, and `render()` tears down and rebuilds every
+     live map on repaint. A city with several un-placed cafés got the
+     street layer rebuilt every ~1.1s instead of settling once. Debounced.
+  2. **The importer's data loss** (PR #87) — `importClassicMap`'s
+     `joinPlace()` never read classic's café Register at all, only a cup's
+     own (sometimes blank) city text. Every classic café needed a fresh
+     geocode after crossing over, even ones classic had already confirmed —
+     compounding bug #1 for anyone arriving via the importer, which is
+     everyone with a pre-Carta-7 record. Now carries position, city,
+     neighborhood and palette across, blanks-only.
+  3. **The actual crash** (PR #88) — not WebGL/GPU at all: `.plot-box` has
+     no height of its own (it's sized by a child `<svg>` that the live
+     layer deletes once it loads), and separately, MapLibre's own CSS wins
+     a same-specificity tie against ours for the container's positioning,
+     stripping it of the `position:absolute` it needs to fill anything.
+     Both fixed; verified with real before/after pixel measurements against
+     the exact pinned MapLibre build, not just "no thrown error."
+  4. **Two more integrations** (PR #89) — a café's own sheet now draws a
+     settled live pin of just that place; the ask's result pins get the
+     same live layer the city chapter has. Building the second surfaced
+     that sheets never had a map mount/teardown lifecycle at all
+     (`smapMount`/`smapDestroy` only ever ran from the tab-level `render()`)
+     — fixed with a scoped destroy so a sheet's map dies with the sheet
+     without ever touching a map still alive on the screen underneath it.
+- **Method worth keeping:** this sandbox's outbound network to unpkg/
+  OpenFreeMap is proxy-blocked, which made the early "does it even boot"
+  checks pass for the wrong reason (the degrade path is solid, but that's
+  not the same as the live path working). Installed the exact pinned
+  MapLibre GL version locally and routed the CDN URLs to it instead of
+  trusting a synthetic pass — that's what actually caught bug #3, and
+  caught a real regression (a string passed where bug #4's shared helper
+  expected a function) before it shipped, not after.
+- **Not touched, on purpose:** the country-chapter region-scale map named
+  as a third enrichment option — bigger lift (no region-level coordinates
+  captured anywhere yet), not asked for this round.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-19 — Act Two drafted: the roadmap, refined against a shipped app
 
 - **Why now:** with Phases 1–7 shipped plus OCR (v7.8.1, 43/43 pure tests),
