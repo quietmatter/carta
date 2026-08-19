@@ -698,15 +698,20 @@ function askPromptText(briefText,scopeKind,destination,question){
   const askLine=question?`\nSomething else worth knowing: ${question}`:'';
   return `${briefText}\n\n${kindLine}${askLine}\n\nRecommend specialty coffee cafés that match this taste. Reply with ONLY a JSON object, no other text, no markdown fences, in exactly this shape:\n{"cafes":[{"name":"...","neighborhood":"...","city":"...","why":"one sentence, tied to my taste above"}]}\nList at most 8. If you don't know real cafés here, return {"cafes":[]} rather than inventing one.`;
 }
-function parseAskJSON(text){
+// a model's answer, fenced or bare, prose around it or not — the one door
+// every "ask the model for JSON" caller reads its reply through
+function extractJSON(text){
   const raw=String(text||'');
   const fence=raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const body=fence?fence[1]:raw;
   const start=body.indexOf('{'),end=body.lastIndexOf('}');
-  if(start===-1||end===-1||end<start)return {ok:false,findings:[]};
-  let data;
-  try{data=JSON.parse(body.slice(start,end+1))}catch(e){return {ok:false,findings:[]}}
-  const list=Array.isArray(data&&data.cafes)?data.cafes:[];
+  if(start===-1||end===-1||end<start)return null;
+  try{return JSON.parse(body.slice(start,end+1))}catch(e){return null}
+}
+function parseAskJSON(text){
+  const data=extractJSON(text);
+  if(!data)return {ok:false,findings:[]};
+  const list=Array.isArray(data.cafes)?data.cafes:[];
   const findings=list.map(c=>({
     name:String((c&&c.name)||'').trim(),
     neighborhood:String((c&&c.neighborhood)||'').trim(),
@@ -714,6 +719,21 @@ function parseAskJSON(text){
     why:String((c&&c.why)||'').trim(),
   })).filter(f=>f.name);
   return {ok:true,findings};
+}
+/* ---- the menu's OCR (horizon list, ROADMAP.md — "a BYO-key vision call
+ * through the same sanctioned channel as the scout's ask; one posture, two
+ * uses"). The prompt and the parse are the two halves worth testing, same
+ * reasoning as the ask: a bad parse here just looks like Carta reading
+ * nothing off a perfectly legible photo. */
+function menuOCRPrompt(){
+  return `This is a photo of a café's coffee menu. List every coffee it's pouring, one per line, in the same shape a keeper would type by hand: "Roaster — Coffee name, process" (e.g. "Sey's — Ethiopia Gedeb, washed"). Skip anything that clearly isn't a single coffee — a latte, a description, prices, hours. Reply with ONLY a JSON object, no other text, no markdown fences, in exactly this shape:\n{"lines":["Roaster — Coffee, process", "..."]}\nIf you can't make out any coffees, return {"lines":[]} rather than guessing.`;
+}
+function parseMenuOCR(text){
+  const data=extractJSON(text);
+  if(!data)return {ok:false,lines:[]};
+  const list=Array.isArray(data.lines)?data.lines:[];
+  const lines=list.map(l=>String(l||'').trim()).filter(Boolean);
+  return {ok:true,lines};
 }
 /* ==== /pure ==== */
 
@@ -1264,13 +1284,19 @@ function saveCoffeeForm(id){
 }
 
 /* ============ the menu — capture, read, and the walk from a line to a cup ============
- * A café's menu, typed while you read it (ROADMAP.md Phase 4: "no OCR
- * dependency" — a photo is a reference to type against, never sent
- * anywhere and never stored; only the words you typed persist). Each line
- * becomes an item; tap one to log a cup on the spot (the coffee is minted
- * and the item points at it before the café-cup form even opens, so the
- * link survives whether or not the cup itself gets finished) or to point
- * at a coffee already on the shelf. */
+ * A café's menu, typed while you read it (ROADMAP.md Phase 4) — a photo is
+ * a reference to type against by default, never sent anywhere, never
+ * stored; only the words you type persist. "Read it for me" (the horizon
+ * list's OCR item) is the opt-in exception: the same BYO-key door the ask
+ * already calls through, one posture, two uses — the keeper's own key, the
+ * keeper's own tap, and the photo travels only that once, only to
+ * Anthropic, only when asked. Either way the photo itself is never kept:
+ * it lives in memory for this sheet's lifetime and is gone the moment the
+ * menu saves or the sheet closes. Each line becomes an item; tap one to
+ * log a cup on the spot (the coffee is minted and the item points at it
+ * before the café-cup form even opens, so the link survives whether or
+ * not the cup itself gets finished) or to point at a coffee already on
+ * the shelf. */
 const menuById=id=>D.menus.find(m=>m.id===id);
 function openPlaceSheet(placeId){
   const p=placeById(placeId);if(!p)return;
@@ -1283,15 +1309,15 @@ function openPlaceSheet(placeId){
     <span><span class="t">${esc(fmtWhen(m.createdAt))}</span><br><span class="m">${m.items.length} item${m.items.length===1?'':'s'}</span></span>
     <span class="go">→</span></button>`).join('')}`:'<div class="muted">No menus captured yet.</div>'}`);
 }
-let menuPhotoPreview=null;
-function openMenuCapture(placeId){menuPhotoPreview=null;paintMenuCapture(placeId);}
+let menuPhotoPreview=null,menuPhotoFile=null,_menuOCRBusy=false;
+function openMenuCapture(placeId){menuPhotoPreview=null;menuPhotoFile=null;paintMenuCapture(placeId);}
 function paintMenuCapture(placeId){
   const p=placeById(placeId);
   openSheet(`<h3>Capture the menu</h3>
   <div class="sub">${esc(p?p.name:'')}</div>
   <label class="f"><span class="l">Photo <span class="opt">optional — a reference while you type, never saved</span></span>
     <input type="file" accept="image/*" capture="environment" id="mc_photo" onchange="menuPhotoPicked(event)"></label>
-  <div id="mc_preview">${menuPhotoPreview?`<img class="thumb big" src="${menuPhotoPreview}" alt="">`:''}</div>
+  <div id="mc_preview"></div>
   <label class="f"><span class="l">The menu, one coffee per line</span>
     <textarea id="mc_text" style="min-height:140px" placeholder="Sey's — Ethiopia Gedeb, washed
 Onyx — Colombia Pink Bourbon"></textarea></label>
@@ -1300,9 +1326,38 @@ Onyx — Colombia Pink Bourbon"></textarea></label>
 function menuPhotoPicked(e){
   const f=e.target.files&&e.target.files[0];if(!f)return;
   if(menuPhotoPreview)URL.revokeObjectURL(menuPhotoPreview);
+  menuPhotoFile=f;
   menuPhotoPreview=URL.createObjectURL(f);
-  const el=document.getElementById('mc_preview');
-  if(el)el.innerHTML=`<img class="thumb big" src="${menuPhotoPreview}" alt="">`;
+  paintMenuPhoto();
+}
+function paintMenuPhoto(){
+  const el=document.getElementById('mc_preview');if(!el)return;
+  if(!menuPhotoPreview){el.innerHTML='';return}
+  el.innerHTML=`<img class="thumb big" src="${menuPhotoPreview}" alt="">
+    <button class="btn btn-quiet" style="margin-top:8px" onclick="readMenuPhoto()">${askKey()?'Read it for me':'Set a key to read it for me'}</button>
+    <div id="mc_ocr_status"></div>`;
+}
+async function readMenuPhoto(){
+  if(_menuOCRBusy||!menuPhotoFile)return;
+  if(!askKey()){openAskKey();return}
+  const status=document.getElementById('mc_ocr_status');
+  _menuOCRBusy=true;
+  if(status)status.innerHTML='<div class="muted small" style="margin-top:6px">Reading…</div>';
+  try{
+    const dataUri=await compressPhoto(menuPhotoFile,1400,1.5*1024*1024);
+    const raw=await callVisionModel(menuOCRPrompt(),dataUri);
+    const parsed=parseMenuOCR(raw);
+    if(!parsed.lines.length){
+      if(status)status.innerHTML=`<div class="muted small" style="margin-top:6px">Couldn't make out any coffees — type it in by hand.</div>`;
+    }else{
+      const ta=document.getElementById('mc_text');
+      if(ta)ta.value=(ta.value.trim()?ta.value.trim()+'\n':'')+parsed.lines.join('\n');
+      if(status)status.innerHTML=`<div class="muted small" style="margin-top:6px">${parsed.lines.length} line${parsed.lines.length===1?'':'s'} read — check it over before saving.</div>`;
+    }
+  }catch(e){
+    if(status)status.innerHTML=`<div class="muted small" style="margin-top:6px">${esc((e&&e.message)||'Could not read that photo.')}</div>`;
+  }
+  _menuOCRBusy=false;
 }
 function saveMenuCapture(placeId){
   const lines=val('mc_text').split('\n').map(s=>s.trim()).filter(Boolean);
@@ -1311,6 +1366,7 @@ function saveMenuCapture(placeId){
   const menu={id:uid(),createdAt:new Date().toISOString(),placeRef:placeId,at:new Date().toISOString(),items};
   D.menus.push(menu);
   if(menuPhotoPreview){URL.revokeObjectURL(menuPhotoPreview);menuPhotoPreview=null}
+  menuPhotoFile=null;
   save();closeSheet();toast('Menu captured.');
   openMenuPage(menu.id);
 }
@@ -1836,12 +1892,14 @@ function openAsk(){
   <div id="ask_result"></div>
   <div class="muted small" style="margin-top:10px"><span onclick="openAskKey()" style="text-decoration:underline;cursor:pointer">Change your key</span></div>`);
 }
-async function callAskModel(prompt){
+// the one door — content is either a plain prompt string (the ask) or a
+// content-block array carrying an image plus a prompt (the menu's OCR)
+async function callModel(content){
   const key=askKey();if(!key)throw new Error('Set your key first.');
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:askModel(),max_tokens:1024,messages:[{role:'user',content:prompt}]}),
+    body:JSON.stringify({model:askModel(),max_tokens:1024,messages:[{role:'user',content}]}),
   });
   if(!r.ok){
     let msg=`The model call failed (${r.status}).`;
@@ -1850,6 +1908,12 @@ async function callAskModel(prompt){
   }
   const j=await r.json();
   return (j.content||[]).map(b=>b.text||'').join('');
+}
+const callAskModel=prompt=>callModel(prompt);
+async function callVisionModel(prompt,imageDataUri){
+  const m=String(imageDataUri||'').match(/^data:([^;]+);base64,([\s\S]*)$/);
+  if(!m)throw new Error('Could not read that photo.');
+  return callModel([{type:'image',source:{type:'base64',media_type:m[1],data:m[2]}},{type:'text',text:prompt}]);
 }
 async function geocodeCafe(name,neighborhood,city){
   const q=[name,neighborhood,city].filter(Boolean).join(', ');
@@ -2390,8 +2454,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.7.0';
+const APP_VERSION='7.8.0';
 const CHANGELOG=[
+  {v:'7.8.0',d:"Read it for me. Hold a menu's photo up and Carta can read it now — the same key the ask uses, the same one tap, never required. Check the lines it found, edit anything, save same as always. The photo itself still never leaves this reading, and still never gets kept."},
   {v:'7.7.0',d:"Streets. A city's chapter draws your cafés now — a plain dot per café at first, its position confirmed quietly the first time you open the chapter, then real streets fading in underneath where the network reaches them. Offline, or where it can't, the drawn plot simply stands and says so once. Finishes what Phase 3 started."},
   {v:'7.6.0',d:"The ask. Scout can ask on your behalf now — a city, a neighborhood, a country, a route or a friend's taste, sent with your brief to a model you bring your own key for. Every café it names is checked against a real place before it's ever drawn as a pin; what can't be confirmed is listed, never guessed. No key, or the call fails, and it's the plain brief, copied, same as before. Been, Booked or Skip on a result feeds it back into your record."},
   {v:'7.5.0',d:"The migration. Bring your record across from classic — read its export straight in (roasters, cafés, coffees, brews, cups, mapped node-first so nothing's lost to a retired flat field), safe to run twice, nothing duplicated. Classic itself stays one tap away from the Shelf, lights on, for as long as you want it."},

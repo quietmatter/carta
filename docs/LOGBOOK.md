@@ -7,6 +7,55 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-19 — off the horizon list: OCR for menus
+
+- **Picked, and why:** with every scheduled phase shipped, the horizon
+  list (`ROADMAP.md`) was the only unopened door. Four of its five items
+  are gated on something Carta can't originate alone — the Lotmark loop and
+  community menus need Lotmark's published atlas, which doesn't exist yet;
+  the concierge tier needs outside demand and starts from revenue, which is
+  the "business creep" tripwire by definition; sync-as-backup is gated on
+  multi-device pain "felt in practice," not expressed. OCR for menus was
+  the one actually ripe: self-contained, and the list named its own shape
+  — "a BYO-key vision call through the same sanctioned channel as the
+  scout's ask; one posture, two uses." Phase 4 had explicitly parked OCR
+  rather than ruled it out ("no OCR dependency" was the v1 cut, not a law),
+  and Phase 7 had since built exactly the door this needed.
+- **Shipped:** **Read it for me** on the menu-capture sheet. A photo held
+  up while typing can now be read by a model instead — the same
+  BYO-key channel and the same key the ask already uses (`callModel`, now
+  shared by both: a plain prompt for the ask, an image content block plus
+  a prompt for this), one tap, never automatic, never required. The lines
+  it finds land in the same textarea the manual path already fills,
+  appended to anything already typed rather than overwriting it — checked
+  and editable before anything saves, same as always. The photo itself
+  still keeps the Phase 4 promise: it lives in memory for the sheet's
+  lifetime only, travels to Anthropic exactly once if the keeper asks it
+  to, and is never written to the ledger or `localStorage` either way.
+  `extractJSON` is a new shared door both `parseAskJSON` and the new
+  `parseMenuOCR` read a model's answer through — fenced or bare, prose
+  around it or not, degrading to nothing rather than guessing at a menu
+  line that was never there.
+- **Verified:** `node test/model.test.js` at 43/43 (6 new cases: the OCR
+  prompt asks for the same line shape the textarea already expects,
+  `parseMenuOCR` reads clean and fenced JSON, drops blank/null entries,
+  degrades to empty on a non-JSON answer, and `extractJSON` itself is
+  covered as the shared door). A full Playwright run with the vision call
+  mocked: no OCR button before a photo exists, the no-key state opens the
+  key sheet rather than calling out, a set key changes the button's label,
+  OCR appends to a manually-typed line rather than clobbering it, the
+  saved menu carries every line, the outbound request actually carried an
+  image block, and — checked directly against the ledger and
+  `localStorage` — the photo itself never landed in either. Re-ran the
+  Phase 7 ask suite and the street-layer suite as regression checks, since
+  this touched shared machinery (`callAskModel` → `callModel`); both still
+  green.
+- **Next:** the horizon list's other four items, none earned yet by their
+  own gates — nothing left to pick from without one of those gates opening
+  first. `ROADMAP.md`'s scheduled phases and every horizon item that could
+  ship alone are now both done.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-19 — Phase 3 finished: the city frame's street layer
 
 - **Shipped:** the one thing Phase 3 left for later. A city chapter now

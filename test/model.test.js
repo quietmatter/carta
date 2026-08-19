@@ -28,7 +28,7 @@ vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
-  askPromptText, parseAskJSON };
+  askPromptText, parseAskJSON, menuOCRPrompt, parseMenuOCR, extractJSON };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -332,5 +332,36 @@ parsed = M.parseAskJSON('{"cafes": [ this is not valid json');
 assert.equal(parsed.ok, false);
 assert.deepEqual(parsed.findings, []);
 ok('parseAskJSON degrades to empty, never throws, on truncated or malformed JSON');
+
+// ---- the menu's OCR (horizon list): the prompt, and the parse of what comes back ----
+const ocrPrompt = M.menuOCRPrompt();
+assert.ok(ocrPrompt.includes('ONLY a JSON object') && ocrPrompt.includes('"lines"'), 'the model is told exactly what shape to answer in');
+assert.ok(ocrPrompt.includes('Roaster') && ocrPrompt.includes('Coffee'), 'the prompt states the same line shape a keeper types by hand');
+ok('menuOCRPrompt asks for strict JSON in the shape the menu textarea already expects');
+
+let ocr = M.parseMenuOCR('{"lines":["Sey\'s — Ethiopia Gedeb, washed","Onyx — Colombia Pink Bourbon, washed"]}');
+assert.equal(ocr.ok, true);
+assert.equal(ocr.lines.length, 2);
+assert.equal(ocr.lines[0], "Sey's — Ethiopia Gedeb, washed");
+ok('parseMenuOCR reads a clean JSON answer straight');
+
+ocr = M.parseMenuOCR('Here\'s what I found:\n```json\n{"lines":["Fabrica — Kenya Kiamabara"]}\n```');
+assert.equal(ocr.lines.length, 1);
+assert.equal(ocr.lines[0], 'Fabrica — Kenya Kiamabara');
+ok('parseMenuOCR reads the JSON out of a markdown-fenced answer with prose around it');
+
+ocr = M.parseMenuOCR('{"lines":["Real Coffee","",null,"  ","Another Coffee  "]}');
+assert.deepEqual(ocr.lines, ['Real Coffee', 'Another Coffee'], 'blank/null entries never become blank menu lines');
+ok('parseMenuOCR drops blank or null entries and trims what survives');
+
+ocr = M.parseMenuOCR("Sorry, I can't quite make out this photo.");
+assert.equal(ocr.ok, false);
+assert.deepEqual(ocr.lines, []);
+ok('parseMenuOCR degrades to empty, never throws, on a non-JSON answer — never invents a line');
+
+// extractJSON is the shared door both parseAskJSON and parseMenuOCR read through
+assert.deepEqual(M.extractJSON('{"a":1}'), { a: 1 });
+assert.equal(M.extractJSON('not json at all'), null);
+ok('extractJSON is the one shape-reading door shared by every "ask the model for JSON" caller');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);
