@@ -20,5 +20,20 @@
       "type": "image/svg+xml",
       "purpose": "any"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "A cup",
+      "short_name": "A cup",
+      "description": "Straight to the door — paste or type a coffee, no detour through the journal.",
+      "url": "/carta/?open=door",
+      "icons": [
+        {
+          "src": "icon-192.svg",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
   ]
 }

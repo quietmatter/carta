@@ -2616,8 +2616,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.11.0';
+const APP_VERSION='7.11.1';
 const CHANGELOG=[
+  {v:'7.11.1',d:"A shortcut to the door. Long-press Carta's icon on a home screen that supports it (Android, ChromeOS, desktop) and \"A cup\" jumps straight past the journal — the paste-or-type door, one long-press away instead of an open-then-tap. Not on iOS, which has never offered a long-press menu for a home-screen web app; nothing in Carta changes that."},
   {v:'7.11.0',d:"Roast joins the vector. A coffee can carry its roast level now — light through dark, same optional field as everything else, never required. Scout reads it back the same way it already reads process and origin: Roast leads your vector now, with its own weight and n, and the brief — and anything Scout sends on your behalf — can finally say what roast character actually earns your 9s. Paste a bag or type a menu line that states it plainly and Carta picks it up on its own, still yours to correct."},
   {v:'7.10.0',d:"Durability, without a server. The Shelf now states plainly how long it's been since your record was backed up — the same voice as a bag's own rest window, never a nag. One tap downloads the whole thing as a plain JSON file, or hand it a quiet fortnightly rhythm and it'll back itself up on its own, opt-in, off unless you turn it on. A photo you're about to add now says something first if storage is getting tight, instead of only failing silently once it's already too late."},
   {v:'7.9.0',d:"Two more places the streets can reach. A café's own sheet now draws its position, same live layer as its city — a settled view of the one place, not the whole neighborhood. And Scout's asks got the same treatment: a grounded café it names draws on real streets now, not just a plain dot. A sheet's own map dies when the sheet closes, and never disturbs a map still standing on the screen underneath it."},
@@ -2639,6 +2640,14 @@ const CHANGELOG=[
 /* ============ boot ============ */
 applyTheme();
 render();
+// the app-shortcut's own door (ROADMAP.md Phase 10, manifest.json's
+// shortcuts array) — a long-press on the home screen straight to the
+// door, skipping the Journal. Cleared from the address bar once read, so
+// it never reopens on an ordinary reload of the same tab.
+if(new URLSearchParams(location.search).get('open')==='door'){
+  history.replaceState(null,'',location.pathname);
+  openDoor();
+}
 </script>
 </body>
 </html>
