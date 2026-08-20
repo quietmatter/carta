@@ -5,12 +5,16 @@ whether either was worth finding again.
 
 **Carta 7 is a fresh start** (`docs/PIVOT.md`), rebuilt smaller and simpler
 than the app that came before it. It ships in phases (`docs/ROADMAP.md`); all
-seven are shipped, most recently **Phase 7 — the scout, stage two** — and
-Phase 3's live street layer, the one thing that phase left for later, is
-finished too.
+seven are shipped, and Phase 3's live street layer, the one thing that phase
+left for later, is finished too. **Phase 12 put the map in front** — the
+commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
 
 ## What's here right now
 
+- **Three rooms, one door.** Atlas · Journal · Shelf on the bar, with
+  **＋ A cup** beside them — the door is reachable from every room, not just
+  the top of one. Everything a room opens — a country, a city, a café, a cup,
+  your taste, the dials — is a screen you close back to where you came from.
 - **The journal.** Every cup, newest first — a café cup or a home brew, its
   score, what you found.
 - **The shelf.** Every coffee you've actually got — a home brew lands here on
@@ -27,16 +31,17 @@ finished too.
   is scaled to) — the first one writes itself from two words.
 - **Put away, and undo.** Nothing is deleted outright. Put a cup or a coffee
   away and it leaves the working list but stays on file, one tap from back.
-- **Scout: your taste, argued.** A pure derivation over the record — the bar
+- **Your taste, argued** (from the Atlas, or the Journal's **Taste →**). A
+  pure derivation over the record — the bar
   (a floor for judging a café, the roasters you keep reaching for), the
   vector (the processes, origins and descriptors that earn your scores) —
   every figure carrying its own evidence, never a number without its reasons.
-- **The brief.** Scout prepares it: a plain-text cut sized for pasting into
+- **The brief.** Your taste prepares it: a plain-text cut sized for pasting into
   an AI chat, and a self-contained page to keep, both scoped to a city if
   you've logged one there — "already had" excludes what you've already
   found, so the answer isn't a rehash. Strictly offline; nothing here makes
   a network call.
-- **The ask.** Scout can send the brief on your own behalf — a city, a
+- **The ask.** Carta can send the brief on your own behalf — a city, a
   neighborhood, a country, a route, or a friend's taste, plus anything else
   worth knowing — to a model you bring your own key for. This is the door
   that calls out in Carta, and only when you tap **Ask Carta** (the menu's
@@ -47,23 +52,27 @@ finished too.
   fails, and Carta falls back to the same plain-text brief, copied. **Been
   · Booked · Skip** on each result feeds back into your record — a café you
   mark Been or Booked is on file the next time you type its name.
-- **The passport.** The Atlas opens on a world frame — every country your
-  record can trace, drawn from an offline outline file (no map tiles, no
-  network): tasted countries washed and tappable, untasted ones a hairline
-  invitation. Tap a country for its chapter — the coffees you've had from
-  there, grouped by region. The footer says it plainly: the map remembers
-  what the bags said.
-- **A city's own map.** Tap a city from your list for its chapter and your
-  cafés there draw as a plain, honest plot — a dot per café, fit to a box —
+- **The passport.** Carta opens on it: the world frame full-bleed, every
+  country your record can trace, drawn from outlines carried in the file
+  itself (no map tiles, no network, nothing to be offline from). Tasted
+  countries are inked and tappable with your own spelling written across
+  them; untasted ones are a hairline invitation. Tap one for its chapter —
+  the coffees you've had from there, grouped by region — under its own
+  shape. Your cities read underneath, each with its own drawn plot.
+- **A city's own map.** Tap a city and its streets fill the screen, your
+  cafés listed on a sheet you pull up over them — pull it up and the map
+  reframes rather than reloading, so the pins step clear of the paper. The
+  drawn plot is underneath the whole time: a dot per café, fit to the box,
   from positions Carta quietly confirms the first time you open the chapter
   (a keyless place lookup, same door the ask grounds its own suggestions
   through). Real streets fade in under those same pins where the network
   reaches them, live and pannable; where it can't, the drawn plot simply
   stands, says so once in one quiet line, and offers Retry — never a dialog,
   never a dead end.
-- **A photo on a cup.** One, optional, forever — never a hero, a small
-  square next to the cup in the Journal and a modest image on its own page.
-  Compressed on the device to a reasonable size; nothing leaves it.
+- **A photo on a cup.** One, optional, forever — a small square beside the
+  cup in the Journal, and on the cup's own page the size you took it for.
+  Add it when you log the cup or any time after. Compressed on the device to
+  a reasonable size; nothing leaves it.
 - **The menu.** From a café's page (tap it from a city chapter), capture what
   it's pouring — type each line, or hold a photo up as reference while you
   do. **Read it for me** can read that same photo for you, one tap, through
@@ -106,12 +115,17 @@ long as you want it.
 ## The stack
 
 One file, `index.html` — all CSS and JS inline, self-contained, zero
-dependencies, zero build. Everything lives in this browser's `localStorage`
+dependencies, zero build. That includes the map layer: the passport's
+projection (d3-array + d3-geo, the two modules it actually uses) is vendored
+into the file beside the outlines it draws, so the map works with the network
+switched off. Everything lives in this browser's `localStorage`
 (`carta7.v1`). No account, no server — the ask is the one deliberate,
 keeper-initiated exception to offline (bring your own key or never touch it);
 the café place lookup and the city map's street tiles are the other two
 network touches, both keyless, both progressive enhancement that quietly
-stands down to what's already stored the moment the network doesn't answer.
+stands down to what's already stored the moment the network doesn't answer —
+the street layer is fetched only when a map surface is actually on screen,
+and the drawn plot beneath it stands on its own when it can't be.
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full technical
 spec and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the build order.
 
