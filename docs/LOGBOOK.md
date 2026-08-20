@@ -7,6 +7,40 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-20 — Phase 11 shipped: the return loop, without gamification
+
+- **Shipped:** the roadmap's own fifth tripwire, tested against a real
+  feature for the first time — does a surface state a fact, or does it
+  score one? Two quiet surfaces. First, `newGroundToast()`: the moment a
+  country or city first lands on the passport, one dry sentence plus an
+  offer to share the passport card right then. Bootstraps silently
+  against whatever's already tasted — a pre-existing record, and a
+  brand-new keeper's own first flurry of cups, both stay quiet, since
+  either would read as the onboarding-reward pattern this phase exists
+  to refuse; a bulk classic import never calls it at all. `toast()` grew
+  an optional action-label param so this reuses the app's own existing
+  "fact + one action" shape (undo) rather than a second UI paradigm.
+  Second: a shelf coffee genuinely taken home (the café-to-shelf bridge,
+  never a coffee that started home) with no home brew a week on gets one
+  line — "taken home, not brewed yet." `takeItHome()` now stamps a
+  dedicated `homeAt`. PR #96.
+- **Explicitly not in it:** a streak, a badge, a push notification, a
+  percent-complete anything — checked against every string before it
+  shipped.
+- **Verified:** by hand in a real browser — first-ever saves bootstrap
+  silently, a repeat country/city stays silent, a genuinely new one
+  announces with a working Share action that opens the real passport
+  preview; the taken-home note fires at 10 days with no brew, stays
+  silent inside the 7-day grace period, silent for a coffee never
+  explicitly taken home, and silent once any brew exists. `node
+  test/model.test.js` 49/49, unaffected (DOM/localStorage-coupled code,
+  outside the pure block). A self-inflicted duplicate `function vShelf(){`
+  from a stray edit-tool overlap was caught by the syntax check before
+  any browser testing — worth naming since it's the same first-line
+  check that's caught something in nearly every phase this session.
+- **Next:** Phase 12 — the scout, tuned on real asks.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-20 — Phase 10 shipped: quick capture, a shortcut to the door
 
 - **Shipped:** the smallest possible cut at the biggest source of friction
