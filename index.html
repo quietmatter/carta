@@ -879,13 +879,13 @@ function closeSheet(){const s=document.getElementById('sheet');
 
 /* ============ toast (undo, when there's something to undo) ============ */
 let _toastUndo=null;
-function toast(m,undoFn){
+function toast(m,actionFn,actionLabel){
   const t=document.getElementById('toast');
-  _toastUndo=undoFn||null;
-  t.innerHTML=esc(m)+(undoFn?' <span class="undo" onclick="_toastUndo&&_toastUndo();_toastUndo=null;document.getElementById(\'toast\').classList.remove(\'show\')">Undo</span>':'');
-  t.classList.toggle('withundo',!!undoFn);
+  _toastUndo=actionFn||null;
+  t.innerHTML=esc(m)+(actionFn?` <span class="undo" onclick="_toastUndo&&_toastUndo();_toastUndo=null;document.getElementById('toast').classList.remove('show')">${esc(actionLabel||'Undo')}</span>`:'');
+  t.classList.toggle('withundo',!!actionFn);
   t.classList.add('show');
-  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),undoFn?4000:1800);
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),actionFn?4000:1800);
 }
 
 /* ============ dial component (ported wholesale) ============
@@ -1117,6 +1117,7 @@ function doorKind(kind){
     roaster:s.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:s.name,origin:s.o,roastLevel:s.roastLevel||'',home:kind==='home'};
   D.coffees.push(c);save();
   doorState=null;
+  newGroundToast('country',c.origin&&c.origin.country);
   if(kind==='bar')openCafeCup(c.id);else openBrewFlow(c.id);
 }
 
@@ -1185,7 +1186,9 @@ function saveCafeCup(){
   if(cupPhotoPending){cup.photo=true;setCupPhoto(cup.id,cupPhotoPending);cupPhotoPending=null}
   D.cups.push(cup);
   cafeCupState=null;hedState=null;descState=new Set();
-  save();closeSheet();go('journal');toast('Kept.');
+  const city=(placeById(placeRef)||{}).city;
+  save();closeSheet();go('journal');
+  newGroundToast('city',city,'Kept.');
 }
 function knownCities(){
   const seen={};
@@ -1348,7 +1351,8 @@ function saveCoffeeForm(id){
   const rr=resolveRoaster(fields.roaster);fields.roasterRef=rr.ref;if(rr.name)fields.roaster=rr.name;
   if(id){Object.assign(coffeeById(id),fields,{updatedAt:new Date().toISOString()})}
   else{D.coffees.push({id:uid(),createdAt:new Date().toISOString(),...fields,home:true})}
-  save();closeSheet();render();toast('Saved to the shelf');
+  save();closeSheet();render();
+  newGroundToast('country',fields.origin.country,'Saved to the shelf');
 }
 
 /* ============ the menu — capture, read, and the walk from a line to a cup ============
@@ -1743,9 +1747,9 @@ function vJournal(){
   ${cups.length?cups.map(cupRowHTML).join(''):'<div class="empty">Tap ＋ A cup to start the record.</div>'}
   ${archivedFold('cups',cupRowHTML,'Put away')}`;
 }
-function coffeeRowHTML(c){
+function coffeeRowHTML(c,noteHTML){
   return `<button class="rowlink" onclick="openCoffeeDetail('${c.id}')">
-    <span><span class="t">${esc(coffeeLabel(c))}</span><br><span class="m">${esc(originLine(c))}</span></span>
+    <span><span class="t">${esc(coffeeLabel(c))}</span><br><span class="m">${esc(originLine(c))}</span>${noteHTML||''}</span>
     <span class="go">→</span></button>`;
 }
 function openCoffeeDetail(id){
@@ -1773,8 +1777,21 @@ function openCoffeeDetail(id){
 // at a café isn't on the shelf until this says it is — a brew always is.
 function takeItHome(coffeeId){
   const c=coffeeById(coffeeId);if(!c||c.home)return;
-  c.home=true;c.updatedAt=new Date().toISOString();
+  c.home=true;c.homeAt=new Date().toISOString();c.updatedAt=c.homeAt;
   save();render();toast('Added to the shelf — brew it whenever.');
+}
+// a fact the shelf already knows and used to say nothing about (ROADMAP.md
+// Phase 11) — homeAt is stamped only by the café-to-shelf bridge above, so
+// this never fires for a coffee that started home (door/form): those were
+// never "taken home" from somewhere else, and a brew there is the ordinary
+// next step, not a stall worth a line about.
+const TAKEN_HOME_QUIET_DAYS=7;
+function takenHomeNoteHTML(c){
+  if(!c.home||!c.homeAt)return '';
+  if(D.brews.some(b=>b.coffeeRef===c.id))return '';
+  const days=Math.floor((Date.now()-new Date(c.homeAt))/864e5);
+  if(days<TAKEN_HOME_QUIET_DAYS)return '';
+  return '<br><span class="m">taken home, not brewed yet</span>';
 }
 function vShelf(){
   const items=live('coffees').filter(c=>c.home).sort(byNew);
@@ -1786,7 +1803,7 @@ function vShelf(){
     <button class="btn btn-quiet" onclick="openCoffeeForm()">＋ Add a coffee</button>
     <button class="btn btn-quiet" onclick="openImportCard()">Import a card</button>
   </div>
-  ${items.length?items.map(coffeeRowHTML).join(''):'<div class="empty">Nothing on the shelf yet. A home brew lands here on its own — or take a café coffee home from its cup.</div>'}
+  ${items.length?items.map(c=>coffeeRowHTML(c,takenHomeNoteHTML(c))).join(''):'<div class="empty">Nothing on the shelf yet. A home brew lands here on its own — or take a café coffee home from its cup.</div>'}
   ${archived.length?`<details class="more"><summary>Put away (${archived.length})</summary>${archived.map(coffeeRowHTML).join('')}</details>`:''}
   <h2>Your record</h2>
   <div class="lede">${esc(exportedLine())} One device, no account, no sync — nothing else has a copy of this.</div>
@@ -2452,6 +2469,30 @@ function sharePlaceCard(placeId){
 }
 function sharePassportCard(){openCardPreview(passportCardHTML(),'carta-passport.html','My passport')}
 function shareYearCard(year){openCardPreview(yearCardHTML(year),`carta-${year}.html`,`${year} in cups`)}
+/* ============ the return loop, without gamification (ROADMAP.md Phase 11) ============
+ * A fact stated once, not a badge: the exact moment a country or city
+ * first lands on the passport, one sentence plus the offer to share it
+ * while the win is fresh — never a streak, a badge, or a percent-complete
+ * (the fifth tripwire, ROADMAP.md §"the tripwires"). Bootstraps silently
+ * against whatever's already tasted the first time this ever runs, so an
+ * existing record — or a bulk classic import, which never calls this at
+ * all — doesn't flood with "new!" for ground that was never actually new.
+ * A brand-new keeper's very first country stays silent too: everything is
+ * "new" on day one, and announcing each one of a first sitting's cups
+ * reads exactly like the onboarding-reward pattern this phase refuses. */
+function newGroundToast(kind,rawValue,fallbackMsg){
+  const value=(rawValue||'').trim();
+  if(!value){if(fallbackMsg)toast(fallbackMsg);return}
+  const prefKey=kind==='country'?'seenCountries':'seenCities';
+  const key=kind==='country'?landKey(value):fold(value);
+  const currentKeys=kind==='country'?Object.keys(tastedCountryMap()):knownCities().map(fold);
+  let seen=getPref(prefKey,null);
+  if(!seen){setPref(prefKey,currentKeys);if(fallbackMsg)toast(fallbackMsg);return}
+  if(seen.includes(key)){if(fallbackMsg)toast(fallbackMsg);return}
+  setPref(prefKey,[...seen,key]);
+  const label=kind==='country'?((tastedCountryMap()[key]||{}).label||value):value;
+  toast(`New ground: ${label}.`,()=>sharePassportCard(),'Share the passport');
+}
 
 /* ---- the import door — a coffee or a café card, read back in ---- */
 let importPending=null;
@@ -2616,8 +2657,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.11.1';
+const APP_VERSION='7.12.0';
 const CHANGELOG=[
+  {v:'7.12.0',d:"A reason to come back, stated plainly. The first time a country or a city actually lands on your passport, Carta says so in one sentence — with a tap to share it while it's fresh — and then goes quiet about it forever after. Nothing already on your record gets announced retroactively. And a coffee you took home a while back with nothing brewed from it yet says so on the shelf, one line, no pressure. No streaks, no badges, no percent-complete — if it ever starts reading like a score, that's a bug, not a feature."},
   {v:'7.11.1',d:"A shortcut to the door. Long-press Carta's icon on a home screen that supports it (Android, ChromeOS, desktop) and \"A cup\" jumps straight past the journal — the paste-or-type door, one long-press away instead of an open-then-tap. Not on iOS, which has never offered a long-press menu for a home-screen web app; nothing in Carta changes that."},
   {v:'7.11.0',d:"Roast joins the vector. A coffee can carry its roast level now — light through dark, same optional field as everything else, never required. Scout reads it back the same way it already reads process and origin: Roast leads your vector now, with its own weight and n, and the brief — and anything Scout sends on your behalf — can finally say what roast character actually earns your 9s. Paste a bag or type a menu line that states it plainly and Carta picks it up on its own, still yours to correct."},
   {v:'7.10.0',d:"Durability, without a server. The Shelf now states plainly how long it's been since your record was backed up — the same voice as a bag's own rest window, never a nag. One tap downloads the whole thing as a plain JSON file, or hand it a quiet fortnightly rhythm and it'll back itself up on its own, opt-in, off unless you turn it on. A photo you're about to add now says something first if storage is getting tight, instead of only failing silently once it's already too late."},
