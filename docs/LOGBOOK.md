@@ -7,6 +7,61 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-20 — Phase 10 shipped: quick capture, a shortcut to the door
+
+- **Shipped:** the smallest possible cut at the biggest source of friction
+  in the most-used loop. `manifest.json` gains a standard `shortcuts`
+  entry ("A cup") — zero dependency, zero new surface — and the boot
+  sequence reads `?open=door` to open the door directly, cleaning the
+  query string from the address bar so an ordinary reload doesn't reopen
+  it. PR #94.
+- **A gap raised before building, not after:** `manifest.json`'s
+  `shortcuts` array has no iOS Safari implementation at all — home-screen
+  PWAs on iPhone/iPad get no long-press quick-action menu, full stop,
+  Android/ChromeOS/desktop Chrome only. The phase's own "Done when" bar
+  (a long-press on the home screen) can't be met on the founder's own
+  test device with this mechanism, and the phase explicitly rules out
+  anything needing a native shell — the only route to a real iOS
+  long-press action. Asked the founder before writing any code; the
+  answer was build it anyway (correct, genuinely useful for Android/
+  desktop users of the app) and name the gap honestly rather than let it
+  read as solved everywhere. Done, in the changelog and here.
+- **Verified:** by hand in a real browser — an ordinary load never
+  auto-opens the door, `?open=door` opens it and clears the query string,
+  a reload of the cleaned URL doesn't reopen it, and the door's own flow
+  works normally once opened this way. `node test/model.test.js` 49/49,
+  unaffected (boot/DOM-coupled code and static manifest JSON, no
+  pure-block change).
+- **Next:** Phase 11 — the return loop, without gamification.
+- **For Lotmark's desk:** nothing new this entry.
+
+## 2026-08-19 — Phase 9 shipped: roast joins the taste model
+
+- **Shipped:** §0's first finding, closed. `roastLevel` on Coffee — a
+  short fixed scale (Light / Medium-light / Medium / Medium-dark / Dark),
+  optional everywhere, never required, never a rung or a ladder (the
+  phase's own named tripwire). `parseRoastLevel` reads a level off a
+  pasted bag or a menu line the same light-touch way the door already
+  reads a roaster/name split, only firing adjacent to the word "roast"
+  itself so a tasting note ("light, floral") is never mistaken for a
+  roast level. `tasteModel()` grows a fourth vector bucket, `roast`,
+  built the same way processes/origins already are; Scout's vector leads
+  with it now. `briefPlainText()` gains one clause, ahead of Processes —
+  and since the ask's prompt embeds that same brief text verbatim, it
+  inherited the clause for free, no separate edit needed despite the
+  phase naming "one clause each." PR #93.
+- **Verified:** `node test/model.test.js` 49/49 (43 prior + 6 new — the
+  roast bucket and its ranking, the brief's clause and its position ahead
+  of Processes, parseRoastLevel's word-adjacency behavior including its
+  deliberate refusals on bare tasting-note words). By hand in a real
+  browser: the Coffee form's select saves and reopens pre-selected; a
+  door paste stating "light roast" parses, pre-fills the still-editable
+  select, and the minted coffee carries it; a menu line stating "Dark
+  Roast" carries through "Log a cup"; Scout's Roast row and the brief's
+  clause both render correctly.
+- **Next:** Phase 10 — quick capture, a PWA shortcut to the door.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-19 — Phase 8 shipped: durability, without a server
 
 - **Shipped:** the first phase of Act Two. `exportLedgerJSON()` — Carta 7's
