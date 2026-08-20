@@ -1,9 +1,11 @@
 # CARTA 7 — the technical architecture
 
 *The fourth turn's build, specified. `PIVOT.md` argued the what;
-`ROADMAP.md` orders the when; this is the how. It is written to be enough:
-a competent session should be able to start Phase 1 from this document and
-the classic file alone.*
+`ROADMAP.md` orders the when; this is the how. It was written to be enough
+to start Phase 1 from this document and the classic file alone, and it is
+kept current as the phases land — read through Phase 12. Where a section
+describes what was planned and what was built, it says both; the plan is
+part of the record.*
 
 ## 1. The stack laws (unchanged, and why)
 
@@ -12,11 +14,24 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–4,000 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.)
+  cost, not the stack's.) At Phase 12 it stands at **3,420 lines / 295 KB**.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
   droppable file is brand, not accident.
+- **Vendored, exactly twice** *(amended at Phase 12 — `ROADMAP.md` tripwire
+  2, moved in the open rather than slipped past)*. The passport's projection
+  needs real spherical geometry, and freehanding one is the kind of "small"
+  maths that is wrong in ways nobody sees. So `d3-array` 3.2.4 and `d3-geo`
+  3.1.1 (ISC, Mike Bostock) are **pasted into the file verbatim from their
+  dist builds** — 54 KB, the two modules `geoEquirectangular` / `geoPath`
+  and their fit/bounds/centroid actually need; full d3 is 280 KB for three
+  calls. This costs the law nothing it was protecting: no npm, no build, no
+  lockfile, no fetch, no version resolution, and the file is still one file
+  you can drop on a static host. Upgrading is re-pasting a dist file.
+  What it *does* cost is auditability-by-reading, which is why the number is
+  two and the bar for a third is a deliberate amendment here, not a
+  judgement call in a PR.
 - **Offline-first, localStorage.** The device is the source of truth. Every
   network touch is a progressive enhancement that degrades to nothing.
 - **The terse house style.** Single quotes, dense one-line helpers, section
@@ -29,19 +44,24 @@ Carta 7 is built exactly the way classic was, smaller:
 ## 2. Repository layout after the turn
 
 ```
-index.html            Carta 7 — the new app
+index.html            Carta 7 — the app
+CLAUDE.md             the working guide to this file (Carta 7)
+test/model.test.js    the pure-block harness (§9)
 classic/index.html    Carta 6.18.x, frozen whole (it is self-contained;
-                      freezing it is one `git mv`)
-fonts/  manifest.json  icon-*.svg  CNAME     as today
+                      freezing it was one `git mv`)
+classic/CLAUDE.md     the third turn's architecture map, kept for the record
+classic/README.md     classic's own user documentation, travelled with it
+fonts/  manifest.json  icon-*.svg  CNAME     as before
 docs/                 the design record, both eras
 server/               dormant — kept for the record and the horizon's
-                      backup option; not part of 7.0, not deleted
+                      backup option; not part of 7.x, not deleted
 ```
 
 PWA notes: `manifest.json` keeps scope `/carta/`; classic gets no manifest
-of its own (it's a page, not an install target). Version identity restarts
-at `APP_VERSION = '7.0.0'` with a fresh `CHANGELOG` whose first entry names
-the turn.
+of its own (it's a page, not an install target). It carries one `shortcuts`
+entry (Phase 10) pointing at `?open=door`. Version identity restarted at
+`APP_VERSION = '7.0.0'` with a fresh `CHANGELOG` whose first entry names the
+turn; Phase 12 is `7.13.0`.
 
 ## 3. Storage
 
@@ -63,7 +83,7 @@ the turn.
   fails instead of after, and a factual "last exported" read stated on the
   Shelf. Neither is a new key, and neither is sync.
 
-## 4. The data model (the six objects, specified)
+## 4. The data model (seven objects, as shipped)
 
 Every record: `id` (uid), `createdAt`; edits stamp `updatedAt`. Put-away is
 `archived: true` + `archivedAt` — one flag, one filter helper (`live(coll)`),
@@ -93,11 +113,25 @@ D = {
   brews:   [{ ...classic's shape minus roastRef/lotRef; keeps coffeeRef }],
   menus:   [{ id, createdAt, placeRef, at,
               items:[{ text,                           // the line as printed
-                       roaster?, name?, origin?,       // parsed, editable
+                       roaster?, name?, roastLevel?,   // parsed, editable
                        coffeeRef? }] }],               // set when tasted/taken home
-  prefs:   { tempUnit, ...; scout:{ skips, leans } }   // matchOf's surviving bookkeeping
+  asks:    [{ id, createdAt, kind, destination,        // Phase 7 — the ask's history
+              question, model,
+              findings:[{ id, name, neighborhood, city, why,
+                          lat, lon, grounded,          // grounded === a real place lookup confirmed it
+                          status, placeRef }] }],      // status: been | booked | skip
+  prefs:   { tempUnit, askKey, askModel,               // the key lives here and nowhere else
+             exportedAt, autoExport, ... }
 }
 ```
+
+Fields the phases added after this section was first written, all optional,
+none of them new objects: `coffees.roastLevel` (Phase 9), `coffees.home` +
+`coffees.homeAt` (Phase 11 — stamped only by the café-to-shelf bridge, so
+"taken home, not brewed yet" can never fire on a coffee that started at
+home), `prefs.exportedAt` / `prefs.autoExport` (Phase 8). `asks` is the one
+collection the original six missed; it is the record of what was asked and
+what came back, and Phase 13 is the phase that reads it.
 
 **The gentle join** (replaces the catalog, the resolver, and the fold):
 roasters and places are the graph's nodes, so each carries `aka[]` — other
@@ -127,9 +161,11 @@ cannot corrupt). Shape:
 ```
 
 Every figure carries its `n` and its evidence refs — the model is
-inspectable on a page of its own (the Scout room's "Your taste, as the
-record argues it"), because *a recommendation never travels without its
-reasons* starts with the model itself.
+inspectable on a page of its own, because *a recommendation never travels
+without its reasons* starts with the model itself. That page was the Scout
+room; since Phase 12 it is **Your taste**, a screen off the Atlas (Scout is
+not a room any more — what it argued is geography). `vector.roast` was an
+empty slot until Phase 9 gave it a field to read; it now leads the vector.
 
 **The brief** (`brief(scope)`) renders three forms from one derivation:
 
@@ -147,46 +183,77 @@ it; it changes by version, never silently.
 
 ## 6. The section map of the new file (in script order)
 
+As built, after Phase 12 re-cut the rooms. `CLAUDE.md` is the working map
+with the function names; this is the shape:
+
 ```
 tokens/style     the QM-inherited layer + Carta overrides (ported)
+                 + "the rooms" — the redesign's own furniture (.shdr,
+                   .shead, .lrow, the three-room bar and the door)
+map layer        <carta-belt> · <carta-plot> · <carta-streets>, three light-DOM
+                 custom elements above the app's own script, with d3-array +
+                 d3-geo vendored beside them (§1). Leaflet injected at runtime.
 store            load/save, carta7.v1, live(), put-away, photos key
-domain           uid, dates, °C, rest window, roast levels, fold, findNode
-taste            tasteModel(), brief() — pure, memoized, tested (§9)
-router           four rooms (journal|scout|atlas|shelf) + page overlays,
-                 go()/render(), pageStack, the door on every masthead
-maps             plotSVG (slimmed: no rungs, no held, no lens law),
-                 LANDS + landRings, LAND_TOPO + landTopo, passport frame,
-                 chapter frame, city frame (smap* street layer, café scope)
-views            vJournal, vScout, vAtlas, vShelf; node pages as story
-                 pages (country/region/roaster/place/coffee)
+domain           uid, dates, °C, rest window, ROAST_LEVELS, fold, matchNodes
+                 — inside the /* ==== pure ==== */ markers (§9)
+taste            tasteModel(), briefPlainText(), the pages — pure, then
+                 tasteModelMemo() outside the markers, dirtied by save()
+router           three rooms (atlas|journal|shelf) + one screen overlay:
+                 go()/openScreen()/closePage(), SCREENS, ROOM_OF, the door
+                 on the bar rather than a masthead
+views            vAtlas (home: the passport + your cities), vJournal, vShelf,
+                 vTaste, and the screens — vCountryChapter, vCityChapter,
+                 vCafe, vCup, vBrew
 door             paste-or-type → card; no adjudication, no propose
-menus            capture (paste → items; assisted transcription), menu page
-cards            card renderer + carta.card/v1 embed; the exports
+menus            capture (type → items; a photo held up as reference, or
+                 read through the ask's channel), menu page
+cards            card renderer + carta.card/v1 embed; the exports; import back
+ask              askPromptText/callModel/geocodeCafe grounding, the findings
 sheets/dials     ported plumbing
-boot             migrate-nothing boot; importer entry; welcome
+boot             migrate-nothing boot; ?open=door; importer entry; welcome
 ```
 
-Porting rule: **port craft, not law.** `plotSVG`, `LANDS`, `landTopo`, the
-street-layer theming, the palette engines, the dial, the tuck come over as
-code; the evidence gates, `RUNG`, holds, lens machinery, and every
-`penGuard`/`readOnly` path do not come with them.
+Porting rule: **port craft, not law.** `LANDS`, `landTopo`, the dial, the
+sheet plumbing, the token layer come over as code; the evidence gates,
+`RUNG`, holds, lens machinery, and every `penGuard`/`readOnly` path do not
+come with them. Classic's `plotSVG` was *not* ported in the end — it carried
+exactly the law this rule excludes (rung gating, lens, scene clustering), so
+Phase 3 wrote `passportSVG()` purpose-built instead. Phase 12 took the app's
+own passport off it and onto `<carta-belt>`; `passportSVG()` stays, because a
+**card** is a standalone page and cannot carry a custom element that needs
+the app's script. Two drawings of one frame is deliberate: the interactive
+one and the one that travels.
 
 ## 7. Network posture (the whole of it)
 
 | Touch | When | Degrades to |
 |---|---|---|
-| Brand read (Microlink) | saving a roaster/place with a site | no palette |
-| Geocode (Nominatim) | placing a café | typed city, drawn map |
-| Street tiles (OpenFreeMap) | city frame on screen | the drawn plot |
-| **The ask** (BYO-key, stage 2) | the keeper taps "Ask" | **the brief, copied** |
+| Geocode (Nominatim) | placing a café; grounding an ask's answer | typed city, drawn plot |
+| Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
+| **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 
-Everything else — the model, the brief, the atlas, the cards — is offline
-by construction. The ask is the **one sanctioned outbound question**, and
-later uses (menu-photo OCR on the horizon) go through the same channel,
-same posture: keeper-initiated, keyed by the keeper, degrading to a manual
-path, never required. Grounding rule for stage 2: a café named in an answer
-is drawn only after a real place lookup confirms it exists — Carta never
-pins a hallucination.
+That is the whole list. Two notes on what it no longer says:
+
+- **The brand read (Microlink) was never built.** Carta 7 makes no call on
+  saving a roaster or a place. Palettes exist on records only because the
+  classic importer carries the ones classic already read. Building it would
+  be a new row here, deliberately added.
+- **MapLibre + OpenFreeMap left at Phase 12**, replaced by Leaflet over
+  OpenStreetMap's own tiles. The posture is unchanged and is the point:
+  Leaflet is injected at runtime, never bundled, and a surface that cannot
+  reach it hides itself so the drawn plot underneath simply stands. The
+  passport asks for nothing at all — its outlines are in the file and its
+  projection is vendored (§1), so the app's *home screen* is now the one
+  map surface with no network story to tell.
+
+Everything else — the model, the brief, the passport, the cards — is offline
+by construction. The ask is the **one sanctioned outbound question**, and its
+second use (menu-photo OCR) goes through the same channel, same posture:
+keeper-initiated, keyed by the keeper, the key on the device and nowhere
+else, degrading to a manual path, never required. Grounding rule: a café
+named in an answer is drawn only after a real place lookup confirms it
+exists — Carta never pins a hallucination; what can't be confirmed is
+listed, not plotted.
 
 ## 8. Migration (classic → 7)
 
@@ -221,9 +288,18 @@ invisible (a bad brief just looks like a mediocre brief). So:
 ## 10. What is deliberately not built
 
 No framework, no bundler, no TypeScript, no service worker beyond the PWA
-basics classic has, no accounts, no server in 7.0 (the dormant one returns
+basics classic has, no accounts, no server in 7.x (the dormant one returns
 only as the horizon's dumb backup), no analytics of any kind, no OCR
-dependency, no embedding/vector machinery in the taste model (counts and
-means with evidence beat opaque similarity for a corpus of hundreds — and
-they can be *read*). Each of these is a door we know the address of; not
-opening them is the architecture.
+dependency (the ask's own channel does that job, or nothing does), no
+embedding/vector machinery in the taste model (counts and means with
+evidence beat opaque similarity for a corpus of hundreds — and they can be
+*read*). Each of these is a door we know the address of; not opening them is
+the architecture.
+
+**The one amendment so far**, recorded here because a list of refusals is
+worth nothing if it quietly stops being true: Phase 12 vendored `d3-array`
+and `d3-geo` inline (§1). That is not a bundler, a build step or an npm
+dependency — it is two dist files pasted into the page — but it *is* 54 KB
+of code nobody in this repo wrote, and pretending otherwise would be the
+first crack. The count is two. A third needs an argument made here, in
+writing, before it is made in a PR.

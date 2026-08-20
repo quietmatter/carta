@@ -11,13 +11,14 @@ the outfitter (`../.claude/skills/outfitter/`):
 
 - **PIVOT.md** — the thesis: record + hunt, the seven joys, the scout
 - **ROADMAP.md** — the phases, the adopted decisions, the tripwires
-- **ARCHITECTURE.md** — the Carta 7 build: one file, six objects, the brief
+- **ARCHITECTURE.md** — the Carta 7 build: one file, seven objects, the brief
 - **MARKET.md** — the landscape, framed as play (direction, never the driver)
 - **LOGBOOK.md** — the trail register: where the trip actually is
 
 Everything from here down is the earlier turns' record — still the design
-history of `../index.html` (classic) and the source of ported craft, no
-longer the steering.
+history of `../classic/index.html`, frozen (its own architecture map is
+`../classic/CLAUDE.md`), and the source of ported craft. No longer the
+steering.
 
 ## The through-line
 

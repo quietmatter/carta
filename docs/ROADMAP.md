@@ -29,7 +29,7 @@ the logbook (`LOGBOOK.md`) of where the trip actually is.*
 ## Act One — complete
 
 Phases 1–7 shipped as designed, plus one horizon item (OCR for menus) that
-turned out ripe early. Carta 7 stands at **v7.8.1, 2,477 lines, 43/43 pure
+turned out ripe early. Act One closed at **v7.8.1, 2,477 lines, 43/43 pure
 tests** — the journal, the shelf, the dial-in loop, the brief, the passport
 and its chapters, the city frame's street layer, take-it-home, photos, menu
 capture with OCR, the card renderer, the classic importer, and the ask
@@ -79,7 +79,13 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
+*Phases 8–12 are shipped; Phase 13 is the open one. Carta 7 stands at
+**v7.13.0, 3,420 lines, 49/49 pure tests**. Full prose for each is in
+`LOGBOOK.md`, cited here, not repeated.*
+
 ### Phase 8 — durability, without a server
+
+**Shipped — v7.10.0, PR #91.**
 
 **The risk it closes:** the one Act One left open by design and never
 named plainly — a full local ledger is one lost phone from zero, and
@@ -101,6 +107,8 @@ know, from the app alone, how stale the last safety copy is — without
 having to remember to check.
 
 ### Phase 9 — the vector completed: roast joins the model
+
+**Shipped — v7.11.0, PR #93.**
 
 **The joy it serves:** the hunt, sharpened at its foundation — §0's first
 finding, closed.
@@ -125,6 +133,10 @@ aspirational copy the model can't back up.
 
 ### Phase 10 — quick capture (a door with no detour)
 
+**Shipped — v7.11.1, PR #94.** With one gap named rather than papered over:
+`manifest.json`'s `shortcuts` array has no iOS implementation at all, so the
+phase's own long-press bar is met on Android, ChromeOS and desktop only.
+
 **The joy it serves:** the cup, caught — Phase 1's own bar, "under twenty
 seconds," tightened now that real use has shown where the seconds go.
 
@@ -139,6 +151,9 @@ screen surface, anything needing a native shell — Carta stays a web app.
 screen, not from opening the app and tapping into it.
 
 ### Phase 11 — the return loop, without gamification
+
+**Shipped — v7.12.0, PR #96.** The fifth tripwire's first real test, and it
+held: two surfaces, both facts, neither a score.
 
 **The joy it serves:** the map fills in, and take-it-home — both stated
 back to the keeper as facts, so the app itself becomes a small reason to
@@ -161,18 +176,59 @@ If a proposed surface reads as a score, cut it, don't soften it.
 this to someone," and a stale take-home actually gets brewed because the
 app said one plain sentence, not because it applied pressure.
 
-### Phase 12 — the scout, tuned on real asks
+### Phase 12 — the map in front (the redesign)
+
+**Shipped — v7.13.0, PR #98.** Not the phase this slot originally held: the
+founder commissioned a redesign (`DESIGN_BRIEF.md`, drawn in
+`docs/redesign-concept/`) and it landed here, so the scout-tuning phase this
+number used to name is **Phase 13** below. The route bent; nothing was
+dropped.
+
+**The joy it serves:** the map fills in — promoted from a room you visit to
+the thing the app *is* when you open it.
+
+**What shipped:** the Atlas is home, the passport full-bleed and sticky —
+tasted countries inked with the keeper's own spelling written across them,
+each tappable into its chapter, cities reading underneath with their own
+drawn plots. **Four rooms became three** — Atlas · Journal · Shelf — with
+**＋ A cup** beside them on the bar; the app header is gone and the door is
+reachable from every room rather than the top of one. **Scout dissolved into
+the Atlas** as *Your taste* — the bar, the vector, the brief, the ask and the
+year all still argue, still with their reasons. A country, a city, a café, a
+cup, your taste and the dials became **screens, not sheets**. The door asks
+one question fewer. The Journal opens with the last cup you brewed.
+
+**The map layer, re-cut:** MapLibre + OpenFreeMap are gone. Three inline
+custom elements replace them — `<carta-belt>` (the passport), `<carta-plot>`
+(the drawn plot) and `<carta-streets>` (Leaflet + OpenStreetMap, injected at
+runtime the way MapLibre always was, hiding itself when unreachable so the
+drawn plot underneath simply stands). The passport needs **no network at
+all**: its outlines are `LANDS`, already in the file, and its projection is
+`d3-array` + `d3-geo` **vendored inline verbatim** — the one deliberate
+amendment to the kit's dependency law, recorded in `ARCHITECTURE.md` §1 and
+§10, not slipped past it.
+
+**The ledger is untouched:** same store, same keys, no migration, no schema
+change. The file stands at 3,420 lines / 295 KB — inside §1's own band.
+
+**Done when — met:** the app opens on the map, the door is one tap from
+anywhere, and everything the four rooms argued still argues.
+
+### Phase 13 — the scout, tuned on real asks
 
 **The joy it serves:** the hunt, refined with the one input Act One
 couldn't have — actual asks, actually made, in actual cities.
 
 **What ships:** deliberately last, and deliberately unspecified beyond its
-inputs — this phase reads the asks Scout's history has accumulated since
-Phase 7 shipped (grounded/ungrounded ratio, how often Been/Booked/Skip gets
-used, how often a result's café was already known) and proposes its own
-scope from what that usage actually shows: more candidates per ask where
-the model offers them, sharper exclusions once Phase 9's roast axis is
-feeding the prompt, whatever the real pattern turns out to be. **Explicitly
+inputs — this phase reads the asks the record has actually accumulated
+since Phase 7 shipped (`D.asks`: grounded/ungrounded ratio, how often
+Been/Booked/Skip gets used, how often a result's café was already known)
+and proposes its own scope from what that usage shows: more candidates per
+ask where the model offers them, sharper exclusions now that Phase 9's
+roast axis is feeding the prompt, whatever the real pattern turns out to
+be. (Scout is a room no longer — Phase 12 folded it into the Atlas as
+*Your taste* — but the ask, its findings and their history are all still
+there, which is what this phase needs.) **Explicitly
 not in it:** building this from imagination the way Phase 7 had to — the
 whole point of ordering it last is that guessing here, before the data
 exists, is exactly the mistake §0 was written to stop making.
@@ -202,10 +258,14 @@ against a hypothetical.
 2. **Tooling creep.** A bundler, a framework, a dependency → re-read
    `ARCHITECTURE.md` §1. The kit stays light. (Phase 10's shortcut is a
    JSON array in a manifest that already exists — if it ever needs a
-   native wrapper, stop.)
+   native wrapper, stop. Phase 12's vendored `d3-array` + `d3-geo` are the
+   one time this line has moved: 54 KB pasted into the file, no npm, no
+   build, no fetch, and amended into `ARCHITECTURE.md` §1 and §10 in the
+   open. A *second* vendoring is this tripwire firing — the amendment
+   named two modules, not a habit.)
 3. **The scout before the journal.** If scout work is outpacing journal
    joy, stop — the corpus is the fuel, and an empty journal scouts
-   nothing. (This is why Phase 12 is ordered last and gated on real
+   nothing. (This is why Phase 13 is ordered last and gated on real
    history existing to tune against.)
 4. **Business creep.** `MARKET.md` is play. If a decision starts from
    revenue, re-rank it by joy and see if it survives.

@@ -7,6 +7,80 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-20 — the record caught up with the file
+
+- **Why:** PR #98's own two follow-ups. `CLAUDE.md` still described classic
+  — the Register, the catalog, the pen, the holds, the reader — as though it
+  were the app being worked on, which it hasn't been since Phase 1; and
+  `ROADMAP.md`/`ARCHITECTURE.md` had no Phase 12 in them at all. A design
+  record that drifts out of step with the file is worse than none, because
+  it is confidently wrong.
+- **Shipped:** `CLAUDE.md` rewritten for Carta 7 — 1,272 lines of third-turn
+  machinery down to 317 lines of the app that actually exists: three rooms
+  and one door, the map layer's three custom elements, the seven
+  collections, the invariants Carta 7 keeps (no proofs, no gamification, the
+  ask grounded, the street layer never required, vendoring amended not
+  assumed). The classic map wasn't deleted — it moved whole to
+  `classic/CLAUDE.md` with a frozen banner and a note on reading its paths,
+  which also means a session working in `classic/` still gets it and a
+  session working on Carta 7 no longer does. `ROADMAP.md` records **Phase
+  12 — the map in front** and stamps 8–11 shipped with their versions and
+  PRs. `ARCHITECTURE.md` updated in §1, §2, §4, §5, §6, §7 and §10.
+  `docs/README.md`'s two stale lines fixed in passing.
+- **Decision, made because what shipped already made it:** the roadmap's
+  Phase 12 was *the scout, tuned on real asks*; the redesign landed in that
+  slot instead, and the code, the changelog and the README all say Phase 12
+  means the redesign. So the scout-tuning phase is **Phase 13** and stays
+  the open one. The route bent; nothing was dropped.
+- **The one law that had quietly moved:** Phase 12 vendored `d3-array` +
+  `d3-geo` inline (54 KB) and swapped MapLibre + OpenFreeMap for Leaflet +
+  OpenStreetMap, and neither was written into `ARCHITECTURE.md`. Both are
+  now — §1 as a named amendment with the count fixed at **two**, §10 as the
+  first entry in a list of refusals that would otherwise have stopped being
+  true. §7's network table also claimed a Microlink brand read that Carta 7
+  has never made; it says so now. This is the tooling-creep tripwire's
+  intended behaviour, one PR late.
+- **Verified:** `node test/model.test.js` 49/49 (docs only, nothing in the
+  file touched). Every claim in the new map read back against `index.html`
+  rather than remembered — the router constants, the section order, the
+  `blank` shape, `passportSVG`'s surviving use in the cards, the absence of
+  a brand read.
+- **Next:** Phase 13 — the scout, tuned on real asks, whenever there's
+  enough ask history to tune against.
+- **For Lotmark's desk:** nothing new this entry.
+
+## 2026-08-20 — Phase 12 shipped: the map in front
+
+*(Recorded a beat late, with the doc pass above — the phase merged as PR #98
+without its entry.)*
+
+- **Shipped:** the redesign commission (`DESIGN_BRIEF.md`, drawn in
+  `docs/redesign-concept/`), and with it a phase the roadmap hadn't planned
+  for. The **Atlas is home** — the passport full-bleed and sticky, tasted
+  countries inked with the keeper's own spelling written across them, each
+  tappable, cities underneath with their own drawn plots. **Four rooms
+  became three** (Atlas · Journal · Shelf) with **＋ A cup** beside them:
+  the app header is gone and the door is reachable from everywhere rather
+  than the top of one screen. **Scout dissolved into the Atlas** as *Your
+  taste* — everything it argued still argues, still with its reasons. A
+  country, a city, a café, a cup, your taste and the dials became screens,
+  not sheets. The door asks one question fewer. The Journal opens with the
+  last cup you brewed. v7.13.0.
+- **The map layer, re-cut:** MapLibre + OpenFreeMap out; `<carta-belt>`,
+  `<carta-plot>` and `<carta-streets>` in, inline as light-DOM custom
+  elements. The passport now needs **no network at all** — `LANDS` was
+  already in the file and the projection came in with it.
+- **The kit law that moved:** the handoff prototype wanted d3, topojson,
+  Leaflet and a world atlas off CDNs, which would have ended the file's core
+  property. Instead `d3-array` + `d3-geo` were **vendored verbatim** (54 KB,
+  the two modules the projection actually uses) and Leaflet stayed a runtime
+  injection. Right call, wrong bookkeeping: it went in without amending
+  `ARCHITECTURE.md`. Fixed in the entry above, with the count held at two.
+- **The ledger is untouched:** same store, same keys, no migration, no
+  schema change. 3,420 lines / 295 KB — inside §1's own band.
+- **Next:** the doc pass above; then Phase 13.
+- **For Lotmark's desk:** nothing new this entry.
+
 ## 2026-08-20 — Phase 11 shipped: the return loop, without gamification
 
 - **Shipped:** the roadmap's own fifth tripwire, tested against a real
