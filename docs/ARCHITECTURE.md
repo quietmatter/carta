@@ -12,9 +12,22 @@ part of the record.*
 Carta 7 is built exactly the way classic was, smaller:
 
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
-  **3–4,000 lines / ≤ 500 KB** including map data — a file one person can
+  **3–4,500 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 12 it stands at **3,420 lines / 295 KB**.
+  cost, not the stack's.) At Phase 13 it stands at **4,287 lines / 355 KB**.
+
+  *The line band was 3–4,000 through Phase 12 and is amended here, at Phase
+  13, rather than quietly exceeded.* The argument: the band's stated purpose
+  is a file one person can read whole, and the ceiling that actually guards
+  the drop-it-on-a-static-host promise is the byte one — still 500 KB, still
+  untouched, and the file sits at 71% of it. Phase 13 added fourteen
+  surfaces to an app that had nine; 867 lines for that is roughly 60 lines a
+  screen in a house style whose views are multi-line template literals, and
+  compressing them to hold a number would satisfy the letter of "readable
+  whole" by working against its point. **4,500 is a ceiling, not an
+  allowance.** The next phase that wants past it does what this one did:
+  makes the argument here first. If a phase ever needs 5,000, the honest
+  reading is that the one-file law itself has come due, not the band.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -61,7 +74,7 @@ PWA notes: `manifest.json` keeps scope `/carta/`; classic gets no manifest
 of its own (it's a page, not an install target). It carries one `shortcuts`
 entry (Phase 10) pointing at `?open=door`. Version identity restarted at
 `APP_VERSION = '7.0.0'` with a fresh `CHANGELOG` whose first entry names the
-turn; Phase 12 is `7.13.0`.
+turn; Phase 12 is `7.13.0`, Phase 13 is `7.14.0`.
 
 ## 3. Storage
 
@@ -100,7 +113,11 @@ D = {
   coffees: [{ id, createdAt, roaster,                  // display string
               roasterRef?, name,
               origin:{ country?, region?, farm?, producer?, variety?,
-                       process?, altitude? },          // story fields, free text
+                       process?, altitude?, mill? },   // story fields, free text
+                                                        // altitude specified from the turn's
+                                                        // start, first offered a field at
+                                                        // Phase 13; mill added there, and the
+                                                        // road's Milled station reads it
               roastLevel?,                            // Act Two, Phase 9 — light..dark,
                                                         // optional, same law as process/origin:
                                                         // never a rung, never required (§4 below)
@@ -129,9 +146,10 @@ Fields the phases added after this section was first written, all optional,
 none of them new objects: `coffees.roastLevel` (Phase 9), `coffees.home` +
 `coffees.homeAt` (Phase 11 — stamped only by the café-to-shelf bridge, so
 "taken home, not brewed yet" can never fire on a coffee that started at
-home), `prefs.exportedAt` / `prefs.autoExport` (Phase 8). `asks` is the one
+home), `prefs.exportedAt` / `prefs.autoExport` (Phase 8), `origin.mill`
+(Phase 13, read by the country road's Milled station). `asks` is the one
 collection the original six missed; it is the record of what was asked and
-what came back, and Phase 13 is the phase that reads it.
+what came back, and Phase 14 is the phase that reads it.
 
 **The gentle join** (replaces the catalog, the resolver, and the fold):
 roasters and places are the graph's nodes, so each carries `aka[]` — other
@@ -202,11 +220,15 @@ router           three rooms (atlas|journal|shelf) + one screen overlay:
                  go()/openScreen()/closePage(), SCREENS, ROOM_OF, the door
                  on the bar rather than a masthead
 views            vAtlas (home: the passport + your cities), vJournal, vShelf,
-                 vTaste, and the screens — vCountryChapter, vCityChapter,
-                 vCafe, vCup, vBrew
+                 vTaste, and the screens — the walk down from a country
+                 (vCountryChapter → vRegionChapter → vProducerPage), the
+                 places (vCityChapter, vCafe, vCup, vMenu), the argument
+                 (vTaste → vBrief → vAsk → vAskResult), and what the keeper
+                 owns (vRecord → vSetups → vSetup), plus vBrew
 door             paste-or-type → card; no adjudication, no propose
-menus            capture (type → items; a photo held up as reference, or
-                 read through the ask's channel), menu page
+menus            one screen (vMenu): the lines as printed, and the box to add
+                 to them — a photo held up as reference, or read through the
+                 ask's channel
 cards            card renderer + carta.card/v1 embed; the exports; import back
 ask              askPromptText/callModel/geocodeCafe grounding, the findings
 sheets/dials     ported plumbing

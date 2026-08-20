@@ -116,7 +116,10 @@ h2:first-child{margin-top:2px}
   padding:12px 0;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline}
 .rowlink:active{background:var(--paper-2)}
 .rowlink .t{font-family:var(--serif);font-size:var(--s16);color:var(--ink)}
-.rowlink .m{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);letter-spacing:.02em;line-height:1.5}
+/* the meta line — the sans note that sits under a title anywhere, at the size
+   the row it belongs to reads at */
+.m{font-family:var(--sans);font-size:12.5px;color:var(--ink-3);letter-spacing:.01em;line-height:1.5}
+.rowlink .m{font-size:var(--s11);letter-spacing:.02em}
 .rowlink .go{flex:none;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11)}
 .rowlink .row-main{display:flex;align-items:center;gap:10px;min-width:0}
 /* one photo, optional forever, presentation governed by restraint (PIVOT.md
@@ -269,7 +272,9 @@ nav.tabs[hidden]{display:none}
 .omini{background:var(--surface-card);border:1px solid var(--line-strong);color:var(--ink);
   font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
   padding:9px 13px;min-height:38px;cursor:pointer;border-radius:var(--radius)}
-.omini.bare{background:none}
+/* the same control with nothing under it — a word standing on a screen, not a
+   box: used where the surface behind it is already the app's own paper */
+.omini.bare{background:none;border-color:transparent;padding-left:4px;padding-right:4px}
 .omini:active{background:var(--paper-2)}
 .leaflet-container{background:var(--surface-sunk)!important;font-family:var(--sans)!important}
 .leaflet-control-attribution{font-size:9px!important;letter-spacing:.02em;
@@ -334,9 +339,60 @@ nav.tabs[hidden]{display:none}
 .ofnine{font-family:var(--sans);font-size:var(--s11);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
 .dchip{font-family:var(--sans);font-size:12px;letter-spacing:.02em;padding:5px 10px;border:1px solid var(--line);
   color:var(--ink-2);background:var(--surface-page);border-radius:var(--chipr)}
-/* what the taste model reads back — a figure, and the reasons under it */
-.vbar{height:6px;background:var(--surface-sunk);position:relative;margin-top:2px}
-.vbar span{position:absolute;left:0;top:0;bottom:0;background:var(--ink)}
+
+/* ===== the rest of the rooms — the chapters, the brief, the ask, the record ===== */
+/* the road: how far the record follows one country, station by station. A
+   station stands filled where the record reaches it and hollow where it does
+   not; the rail runs dashed across a gap rather than pretending to cross it.
+   Coverage counts — it never grades, so nothing here is ever the ember. */
+.road{display:flex;align-items:flex-start;gap:0;margin-top:16px}
+.road .st{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0}
+.road .rail{display:flex;align-items:center;width:100%}
+.road .rail i{flex:1;height:1px;background:var(--ink)}
+.road .rail i.gap{background:none;border-top:1px dashed var(--ca-ink-300)}
+.road .rail i.end{background:none;border:0}
+.road .mk{flex:none;width:9px;height:9px;background:var(--ink);border:1px solid var(--ink)}
+.road .mk.off{background:none;border-color:var(--ca-ink-300)}
+.road .n{font-family:var(--sans);font-size:13px;font-variant-numeric:tabular-nums;margin-top:8px;color:var(--ink)}
+.road .l{font-family:var(--sans);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-top:3px;color:var(--ink-3);text-align:center}
+.road .st.off .n,.road .st.off .l{color:var(--text-disabled)}
+/* a figure that carries its reasons — tap it for the cups it was read from */
+.fig{background:none;border:0;padding:0;cursor:pointer;color:var(--ink);font-family:inherit;
+  font-size:inherit;font-style:inherit;line-height:inherit;border-bottom:1px dotted var(--ink-3)}
+.fig:active{border-bottom-color:var(--ink)}
+/* the altitude band — a stated range, drawn against the span the atlas allows.
+   Only ever drawn from heights the bags actually state (MODEL_QA: no invented
+   precision); where nothing is stated the band doesn't draw at all. */
+.band{position:relative;height:26px;margin-top:12px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.band::before{content:"";position:absolute;left:0;right:0;top:12px;height:1px;background:var(--line)}
+.band>span{position:absolute;top:9px;height:5px;background:var(--ink)}
+.band-ax{display:flex;justify-content:space-between;font-family:var(--sans);font-size:10px;letter-spacing:.08em;color:var(--ink-3);margin-top:5px}
+/* the ledger box — stated facts, and "unread" wherever the record is silent */
+.led{border:1px solid var(--line);background:var(--surface-page);padding:4px 16px}
+.led .r{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+.led .r:last-child{border-bottom:none}
+.led .k{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;color:var(--ink-3);flex:none}
+.led .v{text-align:right;font-family:var(--serif);font-size:15.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.led .v.unread{color:var(--text-disabled);font-style:italic}
+/* a chip that picks — a scope, a kind of ask, a mark on what Carta found */
+.picks{display:flex;flex-wrap:wrap;gap:7px}
+.pick{font-family:var(--sans);font-size:12.5px;letter-spacing:.02em;padding:9px 13px;min-height:40px;cursor:pointer;
+  border-radius:var(--chipr);background:none;color:var(--ink-2);border:1px solid var(--line-strong)}
+.pick.on{background:var(--ink);color:var(--text-on-fill);border-color:var(--ink)}
+.pick.mini{font-size:11.5px;padding:7px 12px;min-height:34px;color:var(--ink-3);border-color:var(--line)}
+.pick.mini.on{color:var(--text-on-fill);border-color:var(--ink)}
+/* the file a sheet is waiting for, and the box a photo is dropped into */
+.pickzone{display:block;border:1px dashed var(--border-control);padding:18px;text-align:center;cursor:pointer;
+  font-family:var(--serif);font-style:italic;font-size:var(--s15);color:var(--ink-3)}
+.pickzone input{display:none}
+.photoslot{flex:none;width:104px;height:104px;border:1px solid var(--line);background:var(--surface-page);position:relative;overflow:hidden;cursor:pointer;display:block}
+.photoslot img{width:100%;height:100%;object-fit:cover;display:block}
+.photoslot .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;
+  font-family:var(--serif);font-style:italic;font-size:var(--s13);color:var(--ink-3)}
+.photoslot input{display:none}
+/* the ground a finding stands on — placed, or listed and not drawn */
+.ground{flex:none;font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.ground.no{color:var(--text-disabled)}
 
 </style>
 </head>
@@ -731,6 +787,25 @@ function brewRecipe(b){return `${b.grind??'—'} grind · ${b.doseG??'—'}g →
 function fmtWhen(iso){if(!iso)return '';const d=new Date(iso);const days=Math.floor((Date.now()-d)/864e5);
   if(days<1)return 'today';if(days===1)return 'yesterday';if(days<7)return days+'d ago';
   return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+// a date at month precision — the grain a record actually knows a first
+// sighting to. A day would be precision the ledger never earned.
+function fmtMonth(iso){if(!iso)return '';
+  return new Date(iso).toLocaleDateString(undefined,{month:'long',year:'numeric'});}
+// the day a cup was drunk, written out — a cup's own page is the one place
+// worth spelling the date rather than counting back to it
+function fmtDateLong(iso){if(!iso)return '';
+  const d=new Date(iso),now=new Date();
+  return d.toLocaleDateString(undefined,Object.assign({weekday:'long',day:'numeric',month:'long'},
+    d.getFullYear()===now.getFullYear()?{}:{year:'numeric'}));}
+/* the ledger box — the shape every stated block in the app is set in: a key in
+ * the label face, its value in the reading face, and "unread" wherever the
+ * record is silent. Rows come in as [key, value]; an empty value is a state,
+ * never a blank line and never a zero. */
+function ledgerHTML(rows){
+  return `<div class="led">${rows.map(r=>`<div class="r">
+    <span class="k">${esc(r[0])}</span>
+    <span class="v${r[1]?'':' unread'}">${esc(r[1]||'unread')}</span></div>`).join('')}</div>`;
+}
 function restState(c){if(!c.roastDate)return '';
   const days=Math.floor((Date.now()-new Date(c.roastDate+'T00:00'))/864e5);
   if(days<5)return `resting — ${5-days}d to go`;
@@ -1171,18 +1246,47 @@ function tasteModelMemo(){if(_tasteDirty||!_tasteCache){_tasteCache=tasteModel(D
  */
 const TABS=[{id:'atlas',label:'Atlas'},{id:'journal',label:'Journal'},{id:'shelf',label:'Shelf'}];
 // which room a screen belongs to, so the bar keeps saying where you are
-const ROOM_OF={atlas:'atlas',country:'atlas',city:'atlas',cafe:'atlas',taste:'atlas',
-  journal:'journal',cup:'journal',shelf:'shelf',brew:'shelf'};
-// the screens that stand on their own — no bar under them, one way back
-const BARELESS=new Set(['cup','taste','brew']);
+const ROOM_OF={atlas:'atlas',country:'atlas',region:'atlas',producer:'atlas',city:'atlas',cafe:'atlas',
+  taste:'atlas',brief:'atlas',ask:'atlas',askresult:'atlas',menu:'atlas',
+  journal:'journal',cup:'journal',shelf:'shelf',record:'shelf',setups:'shelf',setup:'shelf',brew:'shelf'};
+// the screens that stand on their own — no bar under them, one way back. Taste,
+// the brief and the ask are one argument read in three sittings: you walk in at
+// the top and out at the bottom, so the bar would only offer a way to lose your
+// place. What Carta found is a destination, not a step, and keeps the bar.
+const BARELESS=new Set(['cup','taste','brief','ask','brew']);
 let tab='atlas';
 let pageView=null;
 function go(t){stopTimer(true);tab=t;pageView=null;render();maybeAutoExport()}
 function openScreen(kind,id,extra){stopTimer(true);pageView=Object.assign({kind,id:id||null},extra||{});render()}
 function openCountryChapter(name){openScreen('country',name)}
-function openCityChapter(city){_citySheetUp=false;openScreen('city',city);geocodeCityPlaces(city)}
+// the walk down from a country: a region is a scope on the same coffees, and a
+// grower is the last name the bag gave before the road runs out. Neither is a
+// record of its own — both are read off the greens, so both carry the country
+// they were read in and hand it back on the way out.
+function openRegionChapter(country,region){openScreen('region',country,{region:region||''})}
+function openProducerPage(country,name,region){openScreen('producer',name,{country,region:region||''})}
+function openCityChapter(city){_citySheetUp=CITY_DETENT_DEFAULT;openScreen('city',city);geocodeCityPlaces(city)}
 function openCafeScreen(placeId){const p=placeById(placeId);if(!p)return;openScreen('cafe',placeId);if(p.city)geocodeCityPlaces(p.city)}
 function openTaste(){openScreen('taste')}
+// the brief is a screen now, not a sheet (it was a wall of text in a drawer):
+// its scope rides on the screen itself, so picking one re-reads the record
+// instead of re-opening anything.
+function openBriefScreen(scopeId){openScreen('brief',null,{scopeId:scopeId||'',raw:false})}
+function openAskScreen(){openScreen('ask')}
+function openAskResultScreen(id){openScreen('askresult',id)}
+function openAskScreenFor(city){askDraft={kind:'city',dest:city||'',question:askDraft.question||''};openScreen('ask')}
+function openMenuScreen(menuId,placeId){openScreen('menu',menuId||null,{placeRef:placeId||(menuById(menuId)||{}).placeRef||null})}
+function openRecord(){openScreen('record')}
+function openSetupsScreen(){openScreen('setups')}
+function openSetupScreen(id){openScreen('setup',id)}
+// the record's own door to its Setups: one Setup opens straight, several list
+// first, none goes to the form — a list of one is a page that says nothing.
+function openSetupsDoor(){
+  const list=live('setups');
+  if(!list.length){openSetupForm();return}
+  if(list.length===1){openSetupScreen(list[0].id);return}
+  openSetupsScreen();
+}
 // a cup is a screen now, not a sheet — it carries a photo at the size a photo
 // deserves, and the café it was drunk in, on its own streets. It closes back to
 // wherever it was opened from: the journal, or the café's own list.
@@ -1190,7 +1294,9 @@ function openCupDetail(id){const c=cupById(id);if(!c)return;
   openScreen('cup',id,{back:(pageView&&pageView.kind==='cafe')?{kind:'cafe',id:pageView.id}:null})}
 function closePage(){pageView=null;render()}
 const SCREENS={atlas:vAtlas,journal:vJournal,shelf:vShelf,country:vCountryChapter,
-  city:vCityChapter,cafe:vCafe,cup:vCup,taste:vTaste,brew:vBrew};
+  region:vRegionChapter,producer:vProducerPage,city:vCityChapter,cafe:vCafe,cup:vCup,
+  taste:vTaste,brief:vBrief,ask:vAsk,askresult:vAskResult,menu:vMenu,
+  record:vRecord,setups:vSetups,setup:vSetup,brew:vBrew};
 let _lastScreenKey=null;
 function render(){
   const view=pageView||{kind:tab,id:null};
@@ -1432,7 +1538,8 @@ function paintDoor(){
     <div class="sub">Paste the bag, or just type it.</div>
     <label class="f"><textarea id="d_text" placeholder="Sey's — Ethiopia Gedeb, washed">${esc(s.text)}</textarea></label>
     <button class="btn btn-primary" onclick="doorNext1()">Continue</button>
-    <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
+    <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>
+    <div class="note">Carta reads a roaster and a coffee out of it. Nothing is guessed, and nothing is merged without asking.</div>`);
     return;
   }
   if(s.step==='confirm'){
@@ -1473,7 +1580,8 @@ function paintDoor(){
     <div class="btnrow">
       <button class="btn btn-quiet" onclick="doorJoin(false)">No, different</button>
       <button class="btn btn-primary" onclick="doorJoin(true)">Yes, same</button>
-    </div>`);
+    </div>
+    <div class="note">Carta asks once and never merges two names on its own. Say no and both stand, apart.</div>`);
   }
 }
 function doorNext1(){doorState.text=val('d_text');const p=doorParse(doorState.text);
@@ -1721,6 +1829,8 @@ function openCoffeeForm(id){
     <label class="f"><span class="l">Producer</span><input type="text" id="cf_producer" value="${esc(o.producer||'')}"></label>
     <label class="f"><span class="l">Variety</span><input type="text" id="cf_variety" value="${esc(o.variety||'')}"></label>
     <label class="f"><span class="l">Process</span><input type="text" id="cf_process" value="${esc(o.process||'')}"></label>
+    <label class="f"><span class="l">Altitude <span class="opt">as stated</span></span><input type="text" id="cf_altitude" value="${esc(o.altitude||'')}" placeholder="1,900 – 2,100 m"></label>
+    <label class="f"><span class="l">Mill <span class="opt">as stated</span></span><input type="text" id="cf_mill" value="${esc(o.mill||'')}"></label>
   </div>
   <div class="grid2">
     <label class="f"><span class="l">Roast level <span class="opt">optional</span></span><select id="cf_roastlevel">
@@ -1733,11 +1843,13 @@ function openCoffeeForm(id){
   <button class="btn btn-primary" onclick="saveCoffeeForm('${id||''}')">Save</button>
   ${id?(c.archived
     ?`<button class="btn btn-quiet" onclick="restore('coffees','${id}');closeSheet()">Restore</button>`
-    :`<button class="btn btn-quiet" onclick="putAway('coffees','${id}');closeSheet()">Put away</button>`):''}`);
+    :`<button class="btn btn-quiet" onclick="putAway('coffees','${id}');closeSheet()">Put away</button>`):''}
+  <div class="note">A field left blank is unread, not wrong. Two facts are enough for this green to meet another keeper’s record; one, and it stays a green only you can see.</div>`);
 }
 function saveCoffeeForm(id){
   const fields={roaster:val('cf_roaster'),name:val('cf_name'),
-    origin:{country:val('cf_country'),region:val('cf_region'),farm:val('cf_farm'),producer:val('cf_producer'),variety:val('cf_variety'),process:val('cf_process')},
+    origin:{country:val('cf_country'),region:val('cf_region'),farm:val('cf_farm'),producer:val('cf_producer'),
+      variety:val('cf_variety'),process:val('cf_process'),altitude:val('cf_altitude'),mill:val('cf_mill')},
     roastLevel:val('cf_roastlevel'),roastDate:val('cf_roastdate'),notes:val('cf_notes')};
   if(!fields.roaster&&!fields.name){toast('Name the roaster or the coffee');return}
   const rr=resolveRoaster(fields.roaster);fields.roasterRef=rr.ref;if(rr.name)fields.roaster=rr.name;
@@ -1766,19 +1878,67 @@ const menuById=id=>D.menus.find(m=>m.id===id);
 // (see vCafe) — this name survives as the one door every older caller already
 // knows, and simply opens the screen instead
 function openPlaceSheet(placeId){closeSheet();openCafeScreen(placeId)}
+/* ============ the menu — a screen at the counter ============
+ * Capturing a menu and reading one back were two sheets that never met: you
+ * typed the board into one, and the lines came back in the other. It is one
+ * screen now — what they're pouring, and the box to add to it — because at a
+ * counter those are the same moment.
+ */
 let menuPhotoPreview=null,menuPhotoFile=null,_menuOCRBusy=false;
-function openMenuCapture(placeId){menuPhotoPreview=null;menuPhotoFile=null;paintMenuCapture(placeId);}
-function paintMenuCapture(placeId){
+function openMenuCapture(placeId){menuPhotoPreview=null;menuPhotoFile=null;openMenuScreen(null,placeId);}
+function vMenu(menuId,view){
+  const m=menuId?menuById(menuId):null;
+  const placeId=(m&&m.placeRef)||(view&&view.placeRef)||null;
   const p=placeById(placeId);
-  openSheet(`<h3>Capture the menu</h3>
-  <div class="sub">${esc(p?p.name:'')}</div>
-  <label class="f"><span class="l">Photo <span class="opt">optional — a reference while you type, never saved</span></span>
-    <input type="file" accept="image/*" capture="environment" id="mc_photo" onchange="menuPhotoPicked(event)"></label>
-  <div id="mc_preview"></div>
-  <label class="f"><span class="l">The menu, one coffee per line</span>
-    <textarea id="mc_text" style="min-height:140px" placeholder="Sey's — Ethiopia Gedeb, washed
-Onyx — Colombia Pink Bourbon"></textarea></label>
-  <button class="btn btn-primary" onclick="saveMenuCapture('${placeId}')">Save the menu</button>`);
+  const items=m?m.items:[];
+  return `<div>
+    <header class="shdr" style="display:block">
+      <button class="back" onclick="${p?`openCafeScreen('${p.id}')`:"go('atlas')"}">← ${esc(p?p.name:'Atlas')}</button>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+        <div>
+          <div class="eyebrow" style="margin-bottom:4px">What they’re pouring</div>
+          <div class="display" style="font-size:1.5rem;margin:0">The menu</div>
+        </div>
+        <div class="m" style="padding-bottom:4px">${esc(m?fmtWhen(m.createdAt):'not captured yet')}</div>
+      </div>
+    </header>
+    <div class="pad" style="padding-top:18px">
+      ${items.length?items.map((it,i)=>{
+        const linked=it.coffeeRef?coffeeById(it.coffeeRef):null;
+        const read=linked
+          ?`${[linked.roaster,linked.home?'on your shelf':'already on the record'].filter(Boolean).join(' · ')}`
+          :(it.name?`${it.roaster||'no roaster named'} · read as a coffee`:'no coffee named — logged as it reads');
+        return `<div style="border-bottom:1px solid var(--line);padding:15px 0">
+          <div style="font-family:var(--serif);font-size:17.5px;line-height:1.35">${esc(it.text)}</div>
+          <div class="m" style="margin-top:4px">${esc(read)}</div>
+          ${linked?'':`<div class="btnrow" style="margin-top:11px">
+            <button class="btn btn-quiet mini" style="min-height:38px" onclick="menuItemLogCup('${m.id}',${i})">Log a cup</button>
+            <button class="btn mini" style="min-height:38px;border:1px solid var(--line);color:var(--ink-3);background:none" onclick="menuItemGotIt('${m.id}',${i})">Already got it</button>
+          </div>`}
+        </div>`;
+      }).join(''):'<div class="empty">Nothing on this menu yet — type the board in below.</div>'}
+
+      <div class="shead"><span class="l">${m?'Add to the menu':'The menu'}</span><span class="r">one coffee per line</span></div>
+      <div style="display:flex;gap:12px;align-items:stretch;margin-top:14px">
+        <label class="photoslot" id="mc_slot">${menuPhotoHTML()}
+          <input type="file" accept="image/*" capture="environment" id="mc_photo" onchange="menuPhotoPicked(event)"></label>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:8px">
+          <div class="note" style="border:0;padding:0;margin:0;line-height:1.45">A photo is a reference to type against. It is never saved, and it only travels if you ask it to.</div>
+          <button class="btn btn-quiet mini" style="min-height:38px" onclick="readMenuPhoto()">${askKey()?'Read it for me':'Set a key to read it'}</button>
+        </div>
+      </div>
+      <div id="mc_ocr_status"></div>
+      <textarea id="mc_text" style="min-height:96px;margin-top:14px" placeholder="Sey’s — Ethiopia Gedeb, washed
+Onyx — Colombia Pink Bourbon"></textarea>
+      <button class="btn" style="margin-top:12px;min-height:48px;background:var(--fill-strong);color:var(--text-on-fill);border:1px solid var(--fill-strong)"
+        onclick="saveMenuCapture('${placeId||''}','${m?m.id:''}')">Save the menu</button>
+      <div class="note" style="margin-top:20px">Read it for me sends the photo once, to the model you keep a key for, and keeps nothing. What it finds lands in the box for you to check.</div>
+    </div></div>`;
+}
+function menuPhotoHTML(){
+  return menuPhotoPreview
+    ?`<img src="${menuPhotoPreview}" alt="">`
+    :'<span class="ph">The board</span>';
 }
 function menuPhotoPicked(e){
   const f=e.target.files&&e.target.files[0];if(!f)return;
@@ -1787,12 +1947,13 @@ function menuPhotoPicked(e){
   menuPhotoPreview=URL.createObjectURL(f);
   paintMenuPhoto();
 }
+// the slot repaints itself rather than the screen: a re-render would throw
+// away whatever has already been typed into the box beside it
 function paintMenuPhoto(){
-  const el=document.getElementById('mc_preview');if(!el)return;
-  if(!menuPhotoPreview){el.innerHTML='';return}
-  el.innerHTML=`<img class="thumb big" src="${menuPhotoPreview}" alt="">
-    <button class="btn btn-quiet" style="margin-top:8px" onclick="readMenuPhoto()">${askKey()?'Read it for me':'Set a key to read it for me'}</button>
-    <div id="mc_ocr_status"></div>`;
+  const el=document.getElementById('mc_slot');if(!el)return;
+  const input=el.querySelector('input');
+  el.innerHTML=menuPhotoHTML();
+  if(input)el.appendChild(input);
 }
 async function readMenuPhoto(){
   if(_menuOCRBusy||!menuPhotoFile)return;
@@ -1816,34 +1977,21 @@ async function readMenuPhoto(){
   }
   _menuOCRBusy=false;
 }
-function saveMenuCapture(placeId){
+function saveMenuCapture(placeId,menuId){
   const lines=val('mc_text').split('\n').map(s=>s.trim()).filter(Boolean);
   if(!lines.length){toast('Type at least one line');return}
   const items=lines.map(line=>{const p=doorParse(line);return {text:line,roaster:p.roaster,name:p.name,roastLevel:parseRoastLevel(line)}});
-  const menu={id:uid(),createdAt:new Date().toISOString(),placeRef:placeId,at:new Date().toISOString(),items};
-  D.menus.push(menu);
+  const existing=menuId?menuById(menuId):null;
+  let menu;
+  if(existing){existing.items=existing.items.concat(items);menu=existing}
+  else{menu={id:uid(),createdAt:new Date().toISOString(),placeRef:placeId,at:new Date().toISOString(),items};D.menus.push(menu)}
   if(menuPhotoPreview){URL.revokeObjectURL(menuPhotoPreview);menuPhotoPreview=null}
   menuPhotoFile=null;
-  save();closeSheet();toast('Menu captured.');
-  openMenuPage(menu.id);
+  save();
+  toast(existing?'Added to the menu.':'Menu captured.');
+  openMenuScreen(menu.id,menu.placeRef);
 }
-function openMenuPage(menuId){
-  const m=menuById(menuId);if(!m)return;
-  const p=placeById(m.placeRef);
-  openSheet(`<h3>The menu</h3>
-  <div class="sub">${esc(p?p.name:'')} · ${esc(fmtWhen(m.createdAt))}</div>
-  ${m.items.map((it,i)=>{
-    const coffee=it.coffeeRef?coffeeById(it.coffeeRef):null;
-    return `<div class="card">
-      <div class="row"><span>${esc(it.text)}</span></div>
-      ${coffee?`<div class="muted small" style="margin-top:4px">On your shelf: ${esc(coffeeLabel(coffee))}</div>`
-        :`<div class="btnrow" style="margin-top:8px">
-          <button class="btn mini btn-quiet" onclick="menuItemLogCup('${m.id}',${i})">Log a cup</button>
-          <button class="btn mini btn-quiet" onclick="menuItemGotIt('${m.id}',${i})">Already got it</button>
-        </div>`}
-    </div>`;
-  }).join('')}`);
-}
+function openMenuPage(menuId){openMenuScreen(menuId)}
 function menuItemLogCup(menuId,i){
   const m=menuById(menuId);if(!m)return;
   const item=m.items[i];
@@ -2188,13 +2336,27 @@ function vCup(id,view){
   const setup=brew?setupById(brew.setupId):null;
   const photo=cup.photo?getCupPhoto(cup.id):null;
   const backLabel=view&&view.back?'← '+esc((placeById(view.back.id)||{name:'The café'}).name):'← Back';
+  // the provenance block, in the order a cup is actually read back: what it
+  // was, where it came from, how it was made, whose hands roasted it, and the
+  // room it was drunk in. A line the record is silent on says so.
+  // how long the coffee had rested when this cup was poured — the figure the
+  // cup itself can defend, not today's distance from a roast date
+  const roastedLine=(()=>{
+    if(!coffee||!coffee.roaster)return '';
+    if(!coffee.roastDate||!cup.at)return coffee.roaster;
+    const days=Math.round((new Date(cup.at)-new Date(coffee.roastDate+'T00:00'))/864e5);
+    if(!isFinite(days)||days<0)return coffee.roaster;
+    return `${coffee.roaster} · ${days===0?'the same day':`${days} day${days===1?'':'s'} before`}`;
+  })();
   const ledger=[
     ['Coffee',coffeeLabel(coffee)],
-    originLine(coffee)?['Origin',originLine(coffee)]:null,
-    brew?['Brew',brewLine(brew)]:null,
-    setup?['Setup',setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')]:null,
-    place?['Café',place.name]:null,
-  ].filter(Boolean);
+    ['Origin',originLine(coffee)],
+    cup.kind==='bar'?['Poured',place?'At the bar':'']:['Brew',brewLine(brew)],
+    cup.kind==='bar'
+      ?['Roasted',roastedLine]
+      :['Setup',setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):''],
+    ['Café',place?place.name:''],
+  ].filter(r=>!(r[0]==='Café'&&cup.kind!=='bar'));
   return `<div>
     <div class="hero">
       ${photo?`<img src="${photo}" alt="">`
@@ -2212,7 +2374,7 @@ function vCup(id,view){
         <div style="min-width:0">
           <div class="eyebrow" style="margin-bottom:6px">${cup.kind==='bar'?'A cup, out':'A cup, at home'}</div>
           <div class="display" style="margin:0">${esc(cup.kind==='bar'?(place?place.name:'A café'):coffeeLabel(coffee))}</div>
-          <div style="font-family:var(--sans);font-size:12.5px;color:var(--ink-3);margin-top:6px">${esc(fmtWhen(cup.at))}</div>
+          <div class="m" style="margin-top:6px">${esc([fmtDateLong(cup.at),place&&place.neighborhood?place.neighborhood:''].filter(Boolean).join(' · '))}</div>
         </div>
         <div style="flex:none;text-align:right">
           <div class="bigscore" style="font-size:44px">${cup.score==null?'—':cup.score}</div>
@@ -2221,11 +2383,7 @@ function vCup(id,view){
       </div>
       ${cup.line?`<div style="border-top:1px solid var(--line);margin-top:20px;padding-top:16px;font-family:var(--serif);font-style:italic;font-size:19px;line-height:1.5;color:var(--ink);max-width:34ch">${esc(cup.line)}</div>`:''}
       ${(cup.descriptors||[]).length?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:16px">${cup.descriptors.map(d=>`<span class="dchip">${esc(d)}</span>`).join('')}</div>`:''}
-      <div class="box" style="margin-top:26px;padding:4px 16px">
-        ${ledger.map((r,i)=>`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:11px 0;${i===ledger.length-1?'':'border-bottom:1px solid var(--line)'}">
-          <span class="eyebrow" style="margin:0;flex:none">${esc(r[0])}</span>
-          <span class="num" style="font-family:var(--serif);font-size:15.5px;text-align:right">${esc(r[1])}</span></div>`).join('')}
-      </div>
+      <div style="margin-top:26px">${ledgerHTML(ledger)}</div>
       ${place&&placed([place]).length?`<button style="width:100%;margin-top:18px;color:var(--ink);background:none;border:1px solid var(--line);padding:0;cursor:pointer;display:block" onclick="openCafeScreen('${place.id}')">
         ${streetsHTML([place],{boxStyle:'height:132px',zoom:15,still:true,attribLift:4,scoreOf:()=>1})}
         <span style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid var(--line)">
@@ -2237,6 +2395,7 @@ function vCup(id,view){
       ${cup.archived
         ?`<button class="btn btn-quiet" style="margin-top:8px;min-height:50px" onclick="restore('cups','${cup.id}')">Restore this cup</button>`
         :`<button class="btn btn-quiet" style="margin-top:8px;min-height:50px" onclick="putAwayCup('${cup.id}')">Put away this cup</button>`}
+      <div class="note" style="margin-top:22px">Nothing is deleted. Put a cup away and it leaves the list, not the record.</div>
     </div></div>`;
 }
 function cupBack(){
@@ -2288,6 +2447,9 @@ function vCafe(id){
       </div>
       <button class="btn" style="margin:22px 0 8px;min-height:50px;background:var(--fill-strong);color:var(--text-on-fill);border:1px solid var(--fill-strong)" onclick="openDoorAt('${p.id}')">＋ Log a cup here</button>
       ${menu?`<div class="shead"><span class="l">What they're pouring</span><span class="r">${esc(fmtWhen(menu.createdAt))}</span></div>
+        <button class="rowlink" style="padding:0 0 10px;border:0" onclick="openMenuScreen('${menu.id}')">
+          <span class="m">${menu.items.length} line${menu.items.length===1?'':'s'} on the board</span>
+          <span class="go">The menu →</span></button>
         ${menu.items.map((it,i)=>{
           const linked=it.coffeeRef?coffeeById(it.coffeeRef):null;
           return `<button class="lrow" style="min-height:52px" onclick="${linked?`openCoffeeDetail('${linked.id}')`:`menuItemLogCup('${menu.id}',${i})`}">
@@ -2353,6 +2515,8 @@ function openCoffeeDetail(id){
   ${c.home?'':'<div class="muted small" style="margin:-4px 2px 12px">Tasted, not yet on the shelf.</div>'}
   <button class="btn btn-primary" onclick="closeSheet();openBrewFlow('${id}')">Brew it</button>
   <button class="btn btn-quiet" onclick="closeSheet();openCafeCup('${id}')">Had it at a café</button>
+  ${growerOf(c)&&c.origin.country?`<button class="btn btn-quiet" onclick="closeSheet();openProducerPage(${jsq(c.origin.country)},${jsq(growerOf(c))},${jsq(regionOf(c))})">The farm →</button>`:''}
+  ${regionOf(c)&&c.origin.country?`<button class="btn btn-quiet" onclick="closeSheet();openRegionChapter(${jsq(c.origin.country)},${jsq(regionOf(c))})">The region →</button>`:''}
   ${c.origin&&c.origin.country?`<button class="btn btn-quiet" onclick="closeSheet();openCountryChapter(${jsq(c.origin.country)})">The country →</button>`:''}
   ${c.home?'':`<button class="btn btn-quiet" onclick="takeItHome('${id}');closeSheet()">Take it home</button>`}
   <button class="btn btn-quiet" onclick="closeSheet();openCoffeeForm('${id}')">Edit</button>
@@ -2396,25 +2560,203 @@ function vShelf(){
       <button class="btn btn-quiet" onclick="openCoffeeForm()">＋ Add a coffee</button>
       <button class="btn btn-quiet" onclick="openImportCard()">Import a card</button>
     </div>
-    <div style="margin-top:26px;border-top:1px solid var(--line);padding-top:16px">
-      <div class="eyebrow">Your record</div>
-      <div class="lede">${esc(exportedLine())} One device, no account, no sync — nothing else has a copy of this.</div>
-      <button class="btn btn-quiet" onclick="exportLedgerJSON()">Back up my record</button>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px">
+    <div class="shead"><span class="l">The record itself</span><span class="r">${esc(exportedLine().toLowerCase().replace(/\.$/,''))}</span></div>
+    <button class="lrow" style="min-height:58px" onclick="openRecord()">
+      <span class="mid"><span class="t" style="font-size:17px">Your record</span>
+      <span class="m">${esc(recordMetaLine())}</span></span>
+      <span class="go">→</span></button>
+  </div></div>`;
+}
+
+/* ============ your record — the whole of it, and every door out of it ============
+ * Everything the keeper owns and everything that carries it: what the record
+ * amounts to, the backup that is a file in their hand rather than a promise
+ * someone made them, what can be read in, what can be sent out, the instrument
+ * it was all written on, and classic with the lights still on.
+ */
+function recordMetaLine(){
+  const cups=live('cups').length,coffees=live('coffees').length;
+  return `${words(cups)} cup${cups===1?'':'s'} · ${words(coffees)} coffee${coffees===1?'':'s'} · on this device only`;
+}
+const setupBrews=id=>D.brews.filter(b=>b.setupId===id).sort(byNew);
+function setupAvg(id){
+  const ids=new Set(setupBrews(id).map(b=>b.id));
+  return avgOf(live('cups').filter(c=>c.brewRef&&ids.has(c.brewRef)));
+}
+function fmtBytes(n){
+  if(n<1024)return `${n} B`;
+  if(n<1024*1024)return `${Math.round(n/1024)} KB`;
+  return `${(n/1024/1024).toFixed(1)} MB`;
+}
+function vRecord(){
+  const cups=live('cups'),coffees=live('coffees'),places=live('places'),setups=live('setups');
+  const first=cups.slice().sort((a,b)=>String(a.at).localeCompare(String(b.at)))[0];
+  const shelf=coffees.filter(c=>c.home).length;
+  const cities=knownCities().length;
+  const photos=cups.filter(c=>c.photo).length;
+  const lead=setups.map(s=>({s,a:setupAvg(s.id)})).filter(x=>x.a!=null).sort((x,y)=>y.a-x.a)[0];
+  return `<div>
+    <header class="shdr" style="display:block">
+      <button class="back" onclick="go('shelf')">← The shelf</button>
+      <div class="eyebrow" style="margin-bottom:4px">Yours, on this device</div>
+      <div class="display" style="font-size:1.5rem;margin:0">Your record</div>
+    </header>
+    <div class="pad" style="padding-top:20px">
+      ${ledgerHTML([
+        ['Cups',cups.length?`${cups.length}${first&&first.at?` · since ${fmtMonth(first.at)}`:''}`:'none yet'],
+        ['Coffees',coffees.length?`${coffees.length}${shelf?` · ${shelf} on the shelf`:''}`:'none yet'],
+        ['Cafés',places.length?`${places.length}${cities?` · in ${words(cities)} cit${cities===1?'y':'ies'}`:''}`:'none yet'],
+        ['Setups',setups.length?String(setups.length):'none yet'],
+        ['On this device',`${fmtBytes(storageUsedBytes())}${photos?', photos included':''}`],
+      ])}
+
+      <div class="shead"><span class="l">Keeping it</span><span class="r">${esc(exportedLine().toLowerCase().replace(/\.$/,''))}</span></div>
+      <div class="lede" style="margin-top:12px">One device, no account, no sync. Nothing else has a copy of this — a backup is a file you hold, not a promise someone made you.</div>
+      <button class="btn" style="min-height:48px;background:var(--fill-strong);color:var(--text-on-fill);border:1px solid var(--fill-strong)" onclick="exportLedgerJSON()">Back up my record</button>
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;margin-top:14px">
         <input type="checkbox" ${getPref('autoExport',false)?'checked':''} onchange="setPref('autoExport',this.checked)">
         <span class="muted" style="margin:0">Quietly back up every two weeks</span>
       </label>
-    </div>
-    <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
-      <div class="eyebrow">Classic</div>
-      <div class="lede">Carta 6.18.x, the previous app, kept whole and still working.</div>
-      <div class="btnrow">
-        <button class="btn btn-quiet" onclick="openClassicImport()">Import from classic</button>
+      ${storageUsedBytes()>STORAGE_SOFT_LIMIT?lowStorageNoteHTML():''}
+
+      <div class="shead"><span class="l">Reading something in</span></div>
+      <button class="lrow" style="min-height:58px" onclick="openImportCard()">
+        <span class="mid"><span class="t" style="font-size:17px">Import a card</span>
+        <span class="m">a coffee or a café someone sent you</span></span><span class="go">→</span></button>
+      <button class="lrow" style="min-height:58px" onclick="openClassicImport()">
+        <span class="mid"><span class="t" style="font-size:17px">Import from classic</span>
+        <span class="m">classic’s own export — read once, safe to read again</span></span><span class="go">→</span></button>
+
+      <div class="shead"><span class="l">Sending something out</span><span class="r">a page, not a link</span></div>
+      <button class="lrow" style="min-height:58px" onclick="sharePassportCard()">
+        <span class="mid"><span class="t" style="font-size:17px">The passport</span>
+        <span class="m">${esc(`${words(Object.keys(tastedCountryMap()).length)} countr${Object.keys(tastedCountryMap()).length===1?'y':'ies'}, one page`)}</span></span><span class="go">→</span></button>
+      ${knownYears().length?`<button class="lrow" style="min-height:58px" onclick="shareYearPick()">
+        <span class="mid"><span class="t" style="font-size:17px">The year</span>
+        <span class="m">${esc(yearMetaLine())}</span></span><span class="go">→</span></button>`:''}
+      <button class="lrow" style="min-height:58px" onclick="pickCardSubject('coffee')">
+        <span class="mid"><span class="t" style="font-size:17px">A coffee</span>
+        <span class="m">carries its own data back in</span></span><span class="go">→</span></button>
+      <button class="lrow" style="min-height:58px" onclick="pickCardSubject('place')">
+        <span class="mid"><span class="t" style="font-size:17px">A café</span>
+        <span class="m">carries its own data back in</span></span><span class="go">→</span></button>
+
+      <div class="shead"><span class="l">The instrument</span></div>
+      <button class="lrow" style="min-height:58px" onclick="openSetupsDoor()">
+        <span class="mid"><span class="t" style="font-size:17px">Your Setups</span>
+        <span class="m">${esc(setups.length?`${words(setups.length)}${lead?` · ${lead.s.name||'one'} leads at ${trimNum(lead.a)}`:''}`:'none named yet')}</span></span>
+        <span class="go">→</span></button>
+
+      <div class="box" style="margin-top:28px">
+        <div class="eyebrow">Classic</div>
+        <div class="lede" style="max-width:34ch;margin-bottom:14px">Carta 6.18, the previous app, kept whole and still working. A museum with the lights still on.</div>
         <a class="btn btn-quiet" href="classic/index.html" style="text-decoration:none;line-height:22px">Open classic</a>
       </div>
-    </div>
-  </div></div>`;
+      <div class="note" style="margin-top:22px">Nothing is deleted outright. Put a cup or a coffee away and it leaves the working list, not the record.</div>
+    </div></div>`;
 }
+function yearMetaLine(){
+  const y=knownYears()[0];
+  const n=live('cups').filter(c=>c.at&&new Date(c.at).getFullYear()===y).length;
+  return `${y} — ${words(n)} cup${n===1?'':'s'} so far`;
+}
+function shareYearPick(){
+  const years=knownYears();
+  if(!years.length)return;
+  if(years.length===1){shareYearCard(years[0]);return}
+  openSheet(`<h3>Which year?</h3>
+  <div class="sub">A page for one year of the record.</div>
+  ${years.map(y=>{
+    const n=live('cups').filter(c=>c.at&&new Date(c.at).getFullYear()===y).length;
+    return `<button class="rowlink" onclick="closeSheet();shareYearCard(${y})">
+      <span><span class="t">${y}</span></span>
+      <span class="m">${n} cup${n===1?'':'s'}</span></button>`;
+  }).join('')}`);
+}
+// a card needs a subject, and the subject is picked from the record itself —
+// never from a list of everything, only from what is actually kept
+function pickCardSubject(kind){
+  const list=kind==='coffee'?live('coffees').slice().sort(byNew):live('places').slice().sort(byNew);
+  if(!list.length){toast(kind==='coffee'?'No coffees on the record yet.':'No cafés on the record yet.');return}
+  openSheet(`<h3>${kind==='coffee'?'Which coffee?':'Which café?'}</h3>
+  <div class="sub">A self-contained page, on Carta paper — the exact file that goes out.</div>
+  ${list.map(x=>`<button class="rowlink" onclick="closeSheet();${kind==='coffee'?`shareCoffeeCard('${x.id}')`:`sharePlaceCard('${x.id}')`}">
+    <span><span class="t">${esc(kind==='coffee'?coffeeLabel(x):x.name)}</span></span>
+    <span class="m">${esc(kind==='coffee'?originLine(x):(x.city||''))}</span></button>`).join('')}`);
+}
+
+/* ============ a Setup — where a grind number is true, and nowhere else ============ */
+function vSetups(){
+  const setups=live('setups');
+  return `<div>
+    <header class="shdr" style="display:block">
+      <button class="back" onclick="openRecord()">← Your record</button>
+      <div class="eyebrow" style="margin-bottom:4px">The instrument</div>
+      <div class="display" style="font-size:1.5rem;margin:0">Your Setups</div>
+    </header>
+    <div class="pad" style="padding-top:20px">
+      <div class="lede">The assembly, not the appliance. A grind number is true inside one Setup and nowhere else — change a burr, a basket, the water, and it is a new one.</div>
+      ${setups.map(s=>{
+        const n=setupBrews(s.id).length,a=setupAvg(s.id);
+        return `<button class="lrow" onclick="openSetupScreen('${s.id}')">
+          <span class="mid"><span class="t">${esc(s.name||'Unnamed Setup')}</span>
+          <span class="m">${esc([s.grinder,`${words(n)} brew${n===1?'':'s'}`].filter(Boolean).join(' · '))}</span></span>
+          <span class="sc${a==null?' none':''}">${a==null?'—':trimNum(a)}</span></button>`;
+      }).join('')}
+      <button class="btn btn-quiet" style="margin-top:18px" onclick="openSetupForm()">＋ A new Setup</button>
+      ${D.setups.filter(s=>s.archived).length?`<details class="more" style="margin-top:12px"><summary>Retired (${D.setups.filter(s=>s.archived).length})</summary>
+        ${D.setups.filter(s=>s.archived).map(s=>`<button class="rowlink" onclick="openSetupScreen('${s.id}')"><span><span class="t">${esc(s.name||'Unnamed Setup')}</span></span><span class="go">→</span></button>`).join('')}
+      </details>`:''}
+    </div></div>`;
+}
+function vSetup(id){
+  const s=setupById(id);
+  if(!s)return `<div class="pad" style="padding-top:26px"><div class="empty">That Setup isn’t on the record.</div>
+    <button class="btn btn-quiet" onclick="openRecord()">Back to your record</button></div>`;
+  const brews=setupBrews(s.id);
+  const scale=[s.grindMin,s.grindMax].filter(x=>x!=null).length===2
+    ?`${s.grindMin} – ${s.grindMax}${s.grindStep!=null?` · step ${s.grindStep}`:''}`:'';
+  const last=brews[0];
+  const back=live('setups').length>1?'openSetupsScreen()':'openRecord()';
+  return `<div>
+    <header class="shdr" style="display:block">
+      <button class="back" onclick="${back}">← ${live('setups').length>1?'Your Setups':'Your record'}</button>
+      <div class="eyebrow" style="margin-bottom:4px">A Setup · ${esc(`${words(brews.length)} brew${brews.length===1?'':'s'}`)}</div>
+      <div class="display" style="font-size:1.5rem;margin:0">${esc(s.name||'Unnamed Setup')}</div>
+    </header>
+    <div class="pad" style="padding-top:20px">
+      <div class="lede">The assembly, not the appliance. A grind number is true inside this Setup and nowhere else — change a burr, a basket, the water, and it is a new one.</div>
+      <div style="margin-top:18px">${ledgerHTML([
+        ['Grinder',s.grinder||''],['Brewer',s.brewer||''],['Basket',s.basket||''],
+        ['Papers',s.papers||''],['Water',s.water||''],['Grind scale',scale],
+      ])}</div>
+
+      <div class="shead" style="margin-bottom:0"><span class="l">The last brews on it</span>
+        <span class="r">grind · dose · water · temp · time</span></div>
+      ${brews.length?brews.slice(0,8).map(b=>{
+        const cup=live('cups').find(c=>c.brewRef===b.id);
+        const coffee=coffeeById(b.coffeeRef);
+        const sc=cup&&cup.score!=null?cup.score:null;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)">
+          <span style="min-width:0">
+            <span style="display:block;font-family:var(--serif);font-size:16px">${esc(coffeeLabel(coffee))}</span>
+            <span class="num" style="display:block;font-size:12.5px;color:var(--ink-3);margin-top:3px;letter-spacing:.02em">${esc(brewLine(b)||'no dials on that one')}</span>
+          </span>
+          <span class="sc${sc==null?' none':''}">${sc==null?'—':sc}</span>
+        </div>`;
+      }).join(''):'<div class="empty">Nothing brewed on it yet.</div>'}
+      <div class="note" style="max-width:36ch">Grind numbers never cross grinders, so this history never leaves this page. The next brew starts from the last one here.</div>
+
+      ${last&&coffeeById(last.coffeeRef)?`<button class="btn btn-primary" style="margin-top:22px;min-height:50px" onclick="openBrewFlow('${last.coffeeRef}')">Begin from the last brew</button>`:''}
+      <button class="btn btn-quiet" style="margin-top:8px;min-height:48px" onclick="openSetupForm('${s.id}')">Edit this Setup</button>
+      ${s.archived
+        ?`<button class="btn" style="margin-top:8px;min-height:48px;border:1px solid var(--line);color:var(--ink-3);background:none" onclick="restore('setups','${s.id}')">Restore this Setup</button>`
+        :`<button class="btn" style="margin-top:8px;min-height:48px;border:1px solid var(--line);color:var(--ink-3);background:none" onclick="retireSetup('${s.id}')">Retire this Setup</button>`}
+    </div></div>`;
+}
+// retiring the Setup you are standing on leaves nothing to stand on: the
+// record is where it lands, with the undo still one tap away in the toast
+function retireSetup(id){pageView=null;tab='shelf';putAway('setups',id);openRecord()}
 
 /* ============ the dials — a screen, because a brew is not an errand ============
  * The same dial-in loop, given the room it always needed: the Setup it reads
@@ -2502,49 +2844,111 @@ function vTaste(){
   const tm=tasteModelMemo();
   const anchor=tm.bar.anchors[0];
   const notice=tm.vector.descriptors[0];
+  const proc=tm.vector.processes;
+  // the argument, read as a sentence rather than shown as a dashboard: every
+  // figure in it is a door to the cups it was read from, and nothing is drawn
+  // as a meter — a bar chart of your own taste is a fitness app's idea of one.
+  const fig=(text,call)=>`<button class="fig" onclick="${call}">${esc(text)}</button>`;
+  // a stated value read back inside a sentence: a plain word joins the prose in
+  // lower case, anything carrying its own capitals is left exactly as written
+  const soft=s=>/[A-Z]/.test(String(s).slice(1))?String(s):String(s).charAt(0).toLowerCase()+String(s).slice(1);
   const claims=[
-    tm.bar.floor!=null?`A café earns the walk at <strong>${tm.bar.floor} or better</strong>.`:null,
-    anchor?`You keep going back to <strong>${esc(anchor.name)}</strong>.`:null,
-    notice?`What you notice, first and most, is <strong>${esc(notice.value)}</strong>.`:null,
+    tm.bar.floor!=null?`A café earns the walk at ${fig(`${tm.bar.floor} or better`,'openBarEvidence()')}.`:null,
+    anchor?`You keep going back to ${fig(anchor.name,`openAnchorEvidence(${jsq(anchor.name)})`)}.`:null,
+    notice?`What you notice first, and most, is ${fig(soft(notice.value),`openVectorEvidence('descriptors',${jsq(notice.value)})`)}${
+      proc.length>1?` — and it is ${fig(soft(proc[0].value),`openVectorEvidence('processes',${jsq(proc[0].value)})`)}, not ${esc(soft(proc[1].value))}, that keeps earning it`:''}.`:null,
   ].filter(Boolean).join(' ');
-  const cities=knownCities();
   return `<div>${head}
   <div class="pad" style="padding-top:20px">
-    <div style="font-family:var(--serif);font-size:21px;line-height:1.45;color:var(--ink);max-width:32ch">${claims||'Not enough yet to argue from.'}</div>
-    <div style="font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-3);margin-top:12px">Every figure below carries its own reasons — no number without them.</div>
+    <div style="font-family:var(--serif);font-size:21px;line-height:1.5;color:var(--ink);max-width:30ch">${claims||'Not enough yet to argue from.'}</div>
+    <div style="font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-3);margin-top:14px;max-width:34ch">Tap any figure for the cups it was read from. No number here travels without its reasons.</div>
 
-    <div class="shead" style="margin-top:28px"><span class="l">The bar</span><span class="r">${tm.bar.floor!=null?tm.bar.floor+'+ / 9 worth the walk':''}</span></div>
+    <div class="shead" style="margin-top:32px"><span class="l">The bar</span>
+      <span class="r">a roaster earns a line at 8+ over two cups</span></div>
     ${tm.bar.anchors.length?tm.bar.anchors.slice(0,5).map(a=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)">
+      <button class="rowlink" style="padding:14px 0;align-items:baseline" onclick="openAnchorEvidence(${jsq(a.name)})">
         <span style="min-width:0">
           <span style="display:block;font-family:var(--serif);font-size:17px">${esc(a.name)}</span>
-          <span style="display:block;font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-top:2px">${a.n} cup${a.n===1?'':'s'}, none under ${Math.min(...a.cupRefs.map(id=>{const c=cupById(id);return c&&c.score!=null?c.score:9}))}</span>
+          <span class="m" style="display:block;margin-top:2px">${a.n} cup${a.n===1?'':'s'}, none under ${Math.min(...a.cupRefs.map(id=>{const c=cupById(id);return c&&c.score!=null?c.score:9}))}</span>
         </span>
         <span class="num" style="flex:none;font-size:22px;font-weight:600">${a.avg.toFixed(1)}</span>
-      </div>`).join('')
+      </button>`).join('')
       :'<div class="muted" style="padding:12px 0">No anchors yet — a roaster earns one at 8+ over two cups.</div>'}
 
-    <div class="shead" style="margin-bottom:14px"><span class="l">What earns your scores</span></div>
-    ${vectorRowHTML('Roast',tm.vector.roast)}
-    ${vectorRowHTML('Process',tm.vector.processes)}
-    ${vectorRowHTML('Origin',tm.vector.origins)}
-    ${vectorRowHTML('Notice',tm.vector.descriptors)}
+    <div class="shead"><span class="l">What earns your scores</span><span class="r">weighted, out of nine</span></div>
+    ${vectorRowHTML('Notice','descriptors',tm.vector.descriptors)}
+    ${vectorRowHTML('Process','processes',tm.vector.processes)}
+    ${vectorRowHTML('Origin','origins',tm.vector.origins)}
+    ${vectorRowHTML('Roast','roast',tm.vector.roast)}
 
-    <div class="box firm" style="margin-top:26px">
+    <div class="box firm" style="margin-top:30px">
       <div class="eyebrow">The brief</div>
-      <div class="lede" style="margin-bottom:16px">Send this to a model with your own key, or copy it as plain text. Every café it names is checked against a real place before it lands on your map.</div>
-      ${cities.length?`<label class="f"><span class="l">Scope</span><select id="brief_scope">
-        <option value="">Everywhere</option>
-        ${cities.map(c=>`<option value="city:${esc(c)}">${esc(c)}</option>`).join('')}
-      </select></label>`:'<input type="hidden" id="brief_scope" value="">'}
-      <div class="btnrow">
-        <button class="btn btn-primary" style="min-height:48px" onclick="openAsk()">Ask Carta</button>
-        <button class="btn btn-quiet" style="flex:none;width:auto;padding:0 16px;min-height:48px" onclick="openBrief()">Copy</button>
-      </div>
+      <div class="lede" style="margin-bottom:16px;max-width:34ch">Everything above, cut down to what a stranger would need to find you a café. Read it before it goes anywhere.</div>
+      <button class="btn btn-quiet" style="min-height:48px" onclick="openBriefScreen()">Prepare the brief →</button>
     </div>
     ${askSectionHTML()}
     ${yearSectionHTML()}
+    <div class="note" style="margin-top:22px">Read from your cups alone. Nothing here is averaged with anyone else’s, and nothing leaves this device unless you send it.</div>
   </div></div>`;
+}
+/* ---- the reasons, one gesture away (the law: a score never travels without
+ * them). Each sheet names the rule it read, then lists the cups themselves —
+ * the evidence, not a restatement of the figure. ---- */
+function evidenceSheet(title,sub,rows,note){
+  openSheet(`<h3>${esc(title)}</h3>
+  <div class="sub">${esc(sub)}</div>
+  ${rows.length?rows.map(r=>`<div class="row" style="padding:12px 0;border-bottom:1px solid var(--line)">
+    <span style="min-width:0">
+      <span style="display:block;font-family:var(--serif);font-size:16.5px">${esc(r.t)}</span>
+      <span style="display:block;font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-top:2px">${esc(r.m)}</span>
+    </span>
+    <span class="num" style="flex:none;font-size:20px;font-weight:600">${esc(r.v)}</span>
+  </div>`).join(''):'<div class="empty">Nothing read yet.</div>'}
+  <div class="note">${esc(note)}</div>`);
+}
+// a cup, said the way the evidence needs it: what it was, where and when
+function cupEvidenceRow(c){
+  const place=c.kind==='bar'?placeById(c.placeRef):null;
+  return {t:coffeeLabel(coffeeById(c.coffeeRef)),
+    m:[place?place.name:'at home',fmtWhen(c.at)].filter(Boolean).join(' · '),
+    v:c.score==null?'—':String(c.score)};
+}
+function openBarEvidence(){
+  const tm=tasteModelMemo();
+  const rows=live('places').map(p=>{
+    const cups=placeCups(p.id);
+    return {p,cups,avg:placeAvg(p.id)};
+  }).filter(x=>x.cups.length).sort((a,b)=>b.avg-a.avg).map(x=>({
+    t:x.p.name,
+    m:`${x.cups.length} cup${x.cups.length===1?'':'s'} · ${x.cups.length>1?`returned ${words(x.cups.length-1)} time${x.cups.length===2?'':'s'}`:'not returned to'}`,
+    v:trimNum(x.avg),
+  }));
+  evidenceSheet(tm.bar.floor!=null?`Why ${words(tm.bar.floor)}`:'The bar',
+    'The floor is the middle of every café cup on your record — the score a café has to clear to be worth the walk.',
+    rows,'The floor moves when you do. It is not a target — it is what your own record already shows.');
+}
+function openAnchorEvidence(name){
+  const tm=tasteModelMemo();
+  const a=tm.bar.anchors.find(x=>fold(x.name)===fold(name));
+  const cups=(a?a.cupRefs:[]).map(cupById).filter(Boolean).sort(byNew);
+  evidenceSheet(a?`${a.name}, ${a.avg.toFixed(1)}`:name,
+    a?`${capFirst(words(a.n))} cup${a.n===1?'':'s'} on the record. None of them under ${Math.min(...cups.map(c=>c.score==null?9:c.score))}.`:'',
+    cups.map(cupEvidenceRow),
+    'A roaster earns a line at eight or better over two cups. Nothing here is averaged with anyone else’s cups.');
+}
+const VECTOR_RULES={
+  descriptors:'A descriptor earns its weight from the scores of the cups that carry it, never from how often you typed it.',
+  processes:'A process is weighed by the cups made from it — the record states what it read on the bag, and nothing more.',
+  origins:'An origin is weighed by its own cups. A country you have drunk twice is not ranked against one you have drunk twenty times.',
+  roast:'Roast is read only where a bag or a menu stated it plainly. Unread cups are left out, never counted as medium.',
+};
+function openVectorEvidence(kind,value){
+  const tm=tasteModelMemo();
+  const item=(tm.vector[kind]||[]).find(x=>fold(String(x.value))===fold(String(value)));
+  const cups=(item?item.cupRefs:[]).map(cupById).filter(Boolean).sort(byNew);
+  evidenceSheet(item?`${capFirst(String(item.value))}, ${item.weight.toFixed(1)}`:String(value),
+    item?`${capFirst(words(item.n))} cup${item.n===1?'':'s'} carry it. This is their weight, and the cups themselves.`:'',
+    cups.map(cupEvidenceRow),VECTOR_RULES[kind]||'');
 }
 function askSectionHTML(){
   const asks=D.asks.slice().sort(byNew);
@@ -2552,7 +2956,7 @@ function askSectionHTML(){
   return `<div class="shead"><span class="l">What Carta found</span><span class="r">${asks.length} ask${asks.length===1?'':'s'}</span></div>
   ${asks.map(a=>{
     const n=a.findings.filter(f=>f.grounded).length;
-    return `<button class="lrow" onclick="openAskResult('${a.id}')">
+    return `<button class="lrow" onclick="openAskResultScreen('${a.id}')">
       <span class="mid"><span class="t">${esc(a.destination)}</span>
       <span class="m">${askKindLabel(a.kind)} · ${n} café${n===1?'':'s'} placed · ${fmtWhen(a.createdAt)}</span></span>
       <span class="go">→</span></button>`;
@@ -2568,43 +2972,113 @@ function yearSectionHTML(){
   </select></label>
   <button class="btn btn-quiet" onclick="shareYearCard(Number(val('year_pick')))">Share this year</button>`;
 }
-/* a figure and the reasons under it: the lead value, its weight drawn as a bar
- * against the nine-point scale it was scored on, and what came next. */
-function vectorRowHTML(label,items){
+/* a figure and the reasons under it — a ledger row, not a meter. The lead
+ * value, its weight set in tabular figures against the nine-point scale it was
+ * scored on, and what came next in the same line. The bar this used to draw
+ * was a chart of one number: it said less than the number and read like a
+ * dashboard, which is the one register this record refuses. */
+function vectorRowHTML(label,kind,items){
   if(!items||!items.length)return '';
   const lead=items[0];
   const rest=items.slice(1,3).map(i=>`${esc(i.value)} ${i.weight.toFixed(1)}`).join(' · ');
-  const pct=Math.max(4,Math.min(100,Math.round(lead.weight/9*100)));
-  return `<div style="margin-bottom:16px">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px">
+  const unread=live('cups').filter(c=>c.score!=null).length-items.reduce((s,i)=>s+i.n,0);
+  return `<button class="rowlink" style="padding:15px 0;display:block" onclick="openVectorEvidence(${jsq(kind)},${jsq(String(lead.value))})">
+    <span style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
       <span class="eyebrow" style="margin:0">${esc(label)}</span>
-      <span style="font-family:var(--serif);font-size:16px">${esc(lead.value)}</span>
-    </div>
-    <div class="vbar"><span style="width:${pct}%"></span></div>
-    <div style="font-family:var(--sans);font-size:11.5px;color:var(--ink-3);margin-top:5px">${lead.weight.toFixed(1)} over ${lead.n} cup${lead.n===1?'':'s'}${rest?' · '+rest:''}</div>
-  </div>`;
+      <span style="display:flex;align-items:baseline;gap:12px">
+        <span style="font-family:var(--serif);font-size:18px">${esc(lead.value)}</span>
+        <span class="num" style="font-size:16px;min-width:34px;text-align:right">${lead.weight.toFixed(1)}</span>
+      </span>
+    </span>
+    <span class="m" style="display:block;margin-top:6px">over ${lead.n} cup${lead.n===1?'':'s'}${rest?' · '+rest:''}${
+      kind==='roast'&&unread>0?` · unread on ${unread}`:''}</span>
+  </button>`;
 }
-function openBrief(){
-  const sel=val('brief_scope');
-  let scopeKind=null,scopeId=null;
-  if(sel.startsWith('city:')){scopeKind='city';scopeId=sel.slice(5);}
+/* ============ the brief — a screen, and what actually goes out ============
+ * It was a sheet with a wall of text in it: the one thing in Carta that leaves
+ * the device, shown as an unread block of plain text with Copy under it. It is
+ * a screen now, and it states what goes out in four named parts before it ever
+ * shows the raw text — which is folded away, exact, and one tap open for
+ * anyone who wants to read every character of it.
+ */
+function briefScopeOf(view){
+  const id=(view&&view.scopeId)||'';
+  return id?{kind:'city',id}:{kind:null,id:null};
+}
+function vBrief(_id,view){
+  const scope=briefScopeOf(view);
   const tm=tasteModelMemo();
-  const text=briefPlainText(D,scopeKind,scopeId,tm);
-  openSheet(`<h3>The brief</h3>
-  <div class="sub">${scopeKind==='city'?esc(scopeId):'Everywhere'} — paste this into your AI chat.</div>
-  <label class="f"><textarea id="brief_text" readonly style="min-height:220px">${esc(text)}</textarea></label>
-  <div class="btnrow">
-    <button class="btn btn-quiet" onclick="downloadBriefPage('${scopeKind||''}','${esc(scopeId||'')}')">Share the page</button>
-    <button class="btn btn-primary" onclick="copyBrief()">Copy</button>
-  </div>
-  <div class="muted small" style="margin-top:10px">${text.length} characters. Strictly offline — nothing here calls out on its own.</div>`);
+  const text=briefPlainText(D,scope.kind,scope.id,tm);
+  const cities=knownCities();
+  const scoped=scope.kind?tm.scope(scope.kind,scope.id):null;
+  const v=tm.vector;
+  const families=[['Notice',v.descriptors],['Process',v.processes],['Origin',v.origins],['Roast',v.roast]].filter(f=>f[1].length);
+  const cafesInScope=scope.kind==='city'?cityPlaces(scope.id).length:live('places').length;
+  const soft=s=>/[A-Z]/.test(String(s).slice(1))?String(s):String(s).charAt(0).toLowerCase()+String(s).slice(1);
+  const barLines=(tm.bar.floor!=null?1:0)+(tm.bar.anchors.length?1:0);
+  const parts=[
+    {title:'The bar',count:`${barLines} line${barLines===1?'':'s'}`,
+     body:tm.bar.floor!=null
+       ?`A café earns the walk at ${tm.bar.floor} or better${tm.bar.anchors.length?` — and the ${words(Math.min(5,tm.bar.anchors.length))} roaster${tm.bar.anchors.length===1?'':'s'} you keep going back to`:''}.`
+       :'Nothing yet — a floor needs café cups to be read from.'},
+    {title:'What earns your scores',count:`${families.length} line${families.length===1?'':'s'}`,
+     body:families.length?`${families.map(f=>soft(f[1][0].value)).join(', ')} — each with the number of cups behind it.`:'Nothing scored yet.'},
+    {title:'Already had',count:scoped?`${scoped.had.length} coffee${scoped.had.length===1?'':'s'} · ${cafesInScope} café${cafesInScope===1?'':'s'}`:'not sent',
+     body:scoped
+       ?'Excluded by name, so the answer is not a rehash of your own record.'
+       :'Only a scoped brief lists what you have already had. Everywhere is too much to send, so nothing is excluded by name.'},
+    {title:'The scope',count:scope.id||'Everywhere',
+     body:scope.id?'Only the cups logged in scope inform the ask. Everything else stays home.':'Every cup on the record informs it.'},
+  ];
+  return `<div>
+    <header class="shdr" style="align-items:center;gap:14px">
+      <button class="omini bare" style="flex:none" onclick="openTaste()" aria-label="Back">←</button>
+      <div style="flex:1;min-width:0">
+        <div class="eyebrow" style="margin-bottom:4px">Prepared from your record</div>
+        <div class="display" style="font-size:1.5rem;margin:0">The brief</div>
+      </div>
+    </header>
+    <div class="pad" style="padding-top:20px">
+      <div class="eyebrow" style="margin-bottom:9px">Scoped to</div>
+      <div class="picks">
+        <button class="pick${scope.id?'':' on'}" onclick="openBriefScreen('')">Everywhere</button>
+        ${cities.map(c=>`<button class="pick${fold(c)===fold(scope.id||'')?' on':''}" onclick="openBriefScreen(${jsq(c)})">${esc(c)}</button>`).join('')}
+      </div>
+
+      <div class="shead"><span class="l">What goes out</span><span class="r">${words(parts.length)} parts</span></div>
+      ${parts.map(p=>`<div style="border-bottom:1px solid var(--line);padding:15px 0">
+        <div class="row"><span style="font-family:var(--serif);font-size:17px">${esc(p.title)}</span>
+          <span class="num" style="font-size:12px;color:var(--ink-3)">${esc(p.count)}</span></div>
+        <div style="font-family:var(--serif);font-size:15.5px;line-height:1.5;color:var(--ink-2);margin-top:5px;max-width:36ch">${esc(p.body)}</div>
+      </div>`).join('')}
+
+      <button class="rowlink" style="padding:15px 0" onclick="toggleBriefText()">
+        <span class="eyebrow" style="margin:0">The exact text</span>
+        <span class="m" id="brief_raw_toggle">show · ${text.length} characters</span>
+      </button>
+      <div id="brief_raw" hidden data-len="${text.length}" style="border:1px solid var(--line);background:var(--surface-page);padding:14px 16px;margin-top:12px;
+        font-family:var(--mono);font-size:12px;line-height:1.65;color:var(--ink-2);white-space:pre-wrap;max-height:260px;overflow-y:auto">${esc(text)}</div>
+
+      <div class="btnrow" style="margin-top:22px">
+        <button class="btn btn-primary" style="min-height:48px" onclick="openAskScreen()">Ask Carta</button>
+        <button class="btn btn-quiet" style="flex:none;width:auto;padding:0 16px;min-height:48px" onclick="copyBrief()">Copy</button>
+        <button class="btn btn-quiet" style="flex:none;width:auto;padding:0 16px;min-height:48px" onclick="downloadBriefPage('${scope.kind||''}','${esc(scope.id||'')}')">Keep</button>
+      </div>
+      <div class="note" style="margin-top:20px">Copy and Keep are strictly offline — nothing here calls out on its own. Ask Carta is the one door that does, with your own key, only when you tap it.</div>
+    </div></div>`;
+}
+// the raw text opens in place: a disclosure that re-rendered the screen would
+// send you back to the top of it, which is a strange way to be shown a detail
+function toggleBriefText(){
+  const box=document.getElementById('brief_raw'),lbl=document.getElementById('brief_raw_toggle');
+  if(!box||!lbl)return;
+  const opening=box.hasAttribute('hidden');
+  if(opening)box.removeAttribute('hidden');else box.setAttribute('hidden','');
+  lbl.textContent=`${opening?'hide':'show'} · ${box.dataset.len} characters`;
 }
 function copyBrief(){
-  const t=document.getElementById('brief_text');
-  t.focus();t.select();
-  const done=()=>toast('Copied — paste it into your chat.');
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value).then(done,()=>{document.execCommand('copy');done();});
-  else{document.execCommand('copy');done();}
+  const scope=briefScopeOf(pageView);
+  copyPlainText(briefPlainText(D,scope.kind,scope.id,tasteModelMemo()),'Copied — paste it into your chat.');
 }
 /* ============ sharing an exported page — a friend's phone, or a download ============
  * One door for every card and the brief alike. navigator.share with a real
@@ -2709,35 +3183,57 @@ function openAskKey(){
 function saveAskKey(){
   setPref('askKey',val('ask_key_input'));
   setPref('askModel',val('ask_model_input'));
+  closeSheet();
   toast('Saved — on this device only.');
-  openAsk();
+  if(pageView&&pageView.kind==='ask')render();else openAskScreen();
 }
 function clearAskKey(){setPref('askKey','');setPref('askModel','');openAskKey();}
-function openAsk(){
-  if(!askKey()){
-    openSheet(`<h3>Ask Carta</h3>
-    <div class="sub">Carta sends your brief and a question to a model, on your behalf — this is the one thing here that calls out, and it needs your own key first.</div>
-    <div class="empty">No key set yet.</div>
-    <div class="btnrow">
-      <button class="btn btn-quiet" onclick="copyPlainText(briefPlainText(D,null,null,tasteModelMemo()),'Copied — paste it into your chat.')">Copy the brief instead</button>
-      <button class="btn btn-primary" onclick="openAskKey()">Set your key</button>
-    </div>`);
-    return;
-  }
-  openSheet(`<h3>Ask Carta</h3>
-  <div class="sub">Sent with your taste, scoped the way you're actually asking.</div>
-  <label class="f"><span class="l">Kind</span><select id="ask_kind">
-    <option value="city">A city</option>
-    <option value="neighborhood">A neighborhood</option>
-    <option value="country">A country</option>
-    <option value="route">A route</option>
-    <option value="friend">A friend</option>
-  </select></label>
-  <label class="f"><span class="l">Where</span><input type="text" id="ask_dest" placeholder="Lisbon — or &quot;she likes what I like but darker&quot;"></label>
-  <label class="f"><span class="l">Anything else? <span class="opt">optional</span></span><textarea id="ask_question" placeholder="Three days, mostly on foot…"></textarea></label>
-  <button class="btn btn-primary" onclick="runAsk()">Ask Carta</button>
-  <div id="ask_result"></div>
-  <div class="muted small" style="margin-top:10px"><span onclick="openAskKey()" style="text-decoration:underline;cursor:pointer">Change your key</span></div>`);
+/* ============ the ask — a screen, with the door named on it ============
+ * The one thing in Carta that calls out, so the screen says so twice: the key
+ * it would use is stated as a fact on the page, and the degrade — no key, or
+ * a call that fails — is stated under the button before it is ever tapped.
+ */
+const ASK_KINDS=[['city','A city'],['neighborhood','A neighborhood'],['country','A country'],['route','A route'],['friend',"A friend's taste"]];
+let askDraft={kind:'city',dest:'',question:''};
+function openAsk(){openAskScreen()}
+// a chip that re-renders the screen must not drop what has already been typed
+function captureAskDraft(){
+  const d=document.getElementById('ask_dest'),q=document.getElementById('ask_question');
+  if(d)askDraft.dest=d.value;
+  if(q)askDraft.question=q.value;
+}
+function pickAskKind(k){captureAskDraft();askDraft.kind=k;render()}
+function vAsk(){
+  const key=askKey();
+  return `<div>
+    <header class="shdr" style="align-items:center;gap:14px">
+      <button class="omini bare" style="flex:none" onclick="openBriefScreen()" aria-label="Back">←</button>
+      <div style="flex:1;min-width:0">
+        <div class="eyebrow" style="margin-bottom:4px">Sent with your brief</div>
+        <div class="display" style="font-size:1.5rem;margin:0">Ask Carta</div>
+      </div>
+    </header>
+    <div class="pad" style="padding-top:20px">
+      <div class="lede" style="max-width:36ch">Carta asks on your behalf, with the key on this device. Every café it names is checked against a real place before it is ever drawn as a pin.</div>
+
+      <div class="eyebrow" style="margin:26px 0 9px">What kind of ask</div>
+      <div class="picks">
+        ${ASK_KINDS.map(k=>`<button class="pick${askDraft.kind===k[0]?' on':''}" onclick="pickAskKind('${k[0]}')">${esc(k[1])}</button>`).join('')}
+      </div>
+
+      <label class="f" style="margin-top:24px"><span class="l">Where</span>
+        <input type="text" id="ask_dest" value="${esc(askDraft.dest)}" placeholder="${askDraft.kind==='friend'?'She likes what I like, but darker':'Lisbon'}"></label>
+      <label class="f"><span class="l">Anything else <span class="opt">optional</span></span>
+        <textarea id="ask_question" style="min-height:70px" placeholder="Three days, mostly on foot…">${esc(askDraft.question)}</textarea></label>
+
+      <div class="box" style="margin-top:22px;padding:14px 16px;display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+        <span style="font-family:var(--serif);font-size:15.5px;color:var(--ink-2)">${key?'Your key is on this device':'No key on this device yet'}</span>
+        <button class="text-action" style="flex:none;background:none;border:0;font-family:var(--sans);font-size:12px;cursor:pointer" onclick="openAskKey()">${key?'Change it':'Set one'}</button>
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px;min-height:50px" onclick="runAsk()">Ask Carta</button>
+      <div id="ask_result"></div>
+      <div class="note" style="margin-top:20px">This is the only thing in Carta that calls out, and only when you tap it. No key, or the call fails, and you get the same brief to copy.</div>
+    </div></div>`;
 }
 // the one door — content is either a plain prompt string (the ask) or a
 // content-block array carrying an image plus a prompt (the menu's OCR)
@@ -2777,9 +3273,11 @@ async function geocodeCafe(name,neighborhood,city){
 let _askBusy=false;
 async function runAsk(){
   if(_askBusy)return;
-  const kind=val('ask_kind')||'city';
-  const destination=val('ask_dest');
-  const question=val('ask_question');
+  captureAskDraft();
+  if(!askKey()){openAskKey();return}
+  const kind=askDraft.kind||'city';
+  const destination=(askDraft.dest||'').trim();
+  const question=(askDraft.question||'').trim();
   if(!destination){toast('Where should Carta ask about?');return}
   const box=document.getElementById('ask_result');if(!box)return;
   _askBusy=true;
@@ -2803,7 +3301,7 @@ async function runAsk(){
     const ask={id:uid(),createdAt:new Date().toISOString(),kind,destination,question,model:askModel(),findings};
     D.asks.unshift(ask);save();
     _askBusy=false;
-    openAskResult(ask.id);
+    openAskResultScreen(ask.id);
   }catch(e){
     _askBusy=false;
     const msg=(e&&e.message)||'Could not reach the model.';
@@ -2811,15 +3309,21 @@ async function runAsk(){
     <button class="btn btn-quiet" onclick="copyPlainText(briefPlainText(D,null,null,tasteModelMemo()),'Copied — paste it into your chat.')">Copy the brief instead</button>`;
   }
 }
+/* a finding, set as an entry rather than a card: the name, whether it stands on
+ * real ground, where it is, why Carta named it, and the three marks that put it
+ * on your own record. What could not be confirmed says so plainly and is never
+ * drawn on the map (the grounding rule, non-negotiable). */
+const FIND_MARKS=[['been','Been'],['booked','Booked'],['skip','Skip']];
 function findingRowHTML(f){
-  return `<div class="card" id="find_${f.id}">
-    <div class="row"><span class="serif" style="font-size:16px">${esc(f.name)}</span>${f.grounded?'':'<span class="muted small">not confirmed</span>'}</div>
-    ${f.neighborhood||f.city?`<div class="muted small">${esc([f.neighborhood,f.city].filter(Boolean).join(', '))}</div>`:''}
-    ${f.why?`<div class="small" style="margin-top:6px">${esc(f.why)}</div>`:''}
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-      <button class="chip${f.status==='been'?' on':''}" onclick="setFindStatus('${f.id}','been')">Been</button>
-      <button class="chip${f.status==='booked'?' on':''}" onclick="setFindStatus('${f.id}','booked')">Booked</button>
-      <button class="chip${f.status==='skip'?' on':''}" onclick="setFindStatus('${f.id}','skip')">Skip</button>
+  return `<div style="border-bottom:1px solid var(--line);padding:16px 0" id="find_${f.id}">
+    <div class="row">
+      <span style="font-family:var(--serif);font-size:17.5px">${esc(f.name)}</span>
+      <span class="ground${f.grounded?'':' no'}">${f.grounded?'placed':'not confirmed'}</span>
+    </div>
+    <div class="m" style="margin-top:3px">${esc([f.neighborhood,f.city].filter(Boolean).join(', ')||'no address could be confirmed')}</div>
+    ${f.why?`<div style="font-family:var(--serif);font-size:15.5px;line-height:1.5;color:var(--ink-2);margin-top:8px;max-width:36ch">${esc(f.why)}</div>`:''}
+    <div class="picks" style="margin-top:12px">
+      ${FIND_MARKS.map(m=>`<button class="pick mini${f.status===m[0]?' on':''}" onclick="setFindStatus('${f.id}','${m[0]}')">${m[1]}</button>`).join('')}
     </div>
   </div>`;
 }
@@ -2834,23 +3338,46 @@ function setFindStatus(findId,status){
     else{const p={id:uid(),createdAt:new Date().toISOString(),name:f.name,city:f.city||'',lat:f.lat,lon:f.lon,aka:[]};D.places.push(p);f.placeRef=p.id;}
   }
   save();
-  const row=document.getElementById('find_'+findId);if(row)row.outerHTML=findingRowHTML(f);
-  const plot=document.getElementById('ask_pins_'+a.id);
-  if(plot)plot.outerHTML=askPinsHTML(a.id);
+  // the mark changes the map as well as the row — a ring becomes a filled pin —
+  // so the whole screen re-reads rather than the row swapping itself in place
+  if(pageView&&pageView.kind==='askresult'&&pageView.id===a.id)render();
 }
 function openAskFinding(findId){
   const row=document.getElementById('find_'+findId);
   if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
 }
-function askResultHTML(id){
-  const a=D.asks.find(x=>x.id===id);if(!a)return '<h3>Gone</h3>';
-  return `<h3>${esc(a.destination)}</h3>
-  <div class="sub">${askKindLabel(a.kind)} · ${a.findings.length} café${a.findings.length===1?'':'s'} named${a.question?' — '+esc(a.question):''}</div>
-  ${askPinsHTML(a.id)}
-  ${a.findings.length?a.findings.map(findingRowHTML).join(''):'<div class="empty">Carta didn\'t name anything it could stand behind here.</div>'}
-  <button class="btn btn-quiet" style="margin-top:14px" onclick="openAsk()">Ask again</button>`;
+/* ============ what Carta found — the answer, on its own ground ============ */
+function vAskResult(id){
+  const a=D.asks.find(x=>x.id===id);
+  if(!a)return `<div class="pad" style="padding-top:26px"><div class="empty">That ask isn’t on the record.</div>
+    <button class="btn btn-quiet" onclick="openTaste()">Back to your taste</button></div>`;
+  const grounded=a.findings.filter(f=>f.grounded);
+  const unplaced=a.findings.length-grounded.length;
+  const pts=placed(grounded).map(f=>({id:f.id,name:f.name,lat:f.lat,lon:f.lon,
+    score:(f.status==='been'||f.status==='booked')?1:null,dim:f.status==='skip'}));
+  const lede=[`${capFirst(words(a.findings.length))} named, ${words(grounded.length)} placed.`,
+    unplaced?`${unplaced===1?'The other':'The others'} could not be confirmed against a real address, so ${unplaced===1?'it is':'they are'} listed and not drawn.`:''
+  ].filter(Boolean).join(' ');
+  return `<div>
+    <div style="position:relative">
+      ${pts.length?streetsHTML(pts,{boxStyle:'height:270px',dot:11,plotWrap:'position:absolute;inset:0;padding:78px 60px 34px'})
+        :'<div class="mapbox" style="height:150px"></div>'}
+      <div class="fade top" style="height:110px;z-index:3"></div>
+      <button class="omini overlay" style="left:18px;top:18px" onclick="openAskScreen()">← Ask</button>
+    </div>
+    <div class="lift pad" style="padding-top:20px">
+      <div class="eyebrow" style="margin:0 0 6px">${esc(askKindLabel(a.kind))} · asked in ${esc(fmtMonth(a.createdAt))}</div>
+      <div class="display" style="margin:0">${esc(a.destination)}</div>
+      <div class="lede" style="margin-top:8px;max-width:36ch">${esc(lede)}</div>
+      ${a.question?`<div class="note" style="border:0;padding:0;margin:10px 0 0">You asked: ${esc(a.question)}</div>`:''}
+
+      <div class="shead"><span class="l">What Carta found</span><span class="r">been · booked · skip</span></div>
+      ${a.findings.length?a.findings.map(findingRowHTML).join('')
+        :'<div class="empty">Carta didn’t name anything it could stand behind here.</div>'}
+      <div class="note" style="margin-top:16px">Mark one Been or Booked and it is on file — the next time you type its name, Carta already knows it.</div>
+      <button class="btn btn-quiet" style="margin-top:14px" onclick="openAskScreen()">Ask again</button>
+    </div></div>`;
 }
-function openAskResult(id){openSheet(askResultHTML(id));}
 /* ============ the map surfaces — one vocabulary, three elements ============
  * carta-maps.js draws all three (loaded in the <head>): <carta-belt> for the
  * world frame, on Natural Earth's own outlines through d3 + topojson;
@@ -2908,12 +3435,16 @@ function plotThumbHTML(list){
  * is a sheet that covers its own pins. carta-streets re-fits in place through
  * its own marks(), so the tiles are never refetched — the pins simply move
  * clear of the paper coming up to meet them. */
-let _citySheetUp=false;
-function toggleCitySheet(){_citySheetUp=!_citySheetUp;mountCity()}
+// three detents, not two: the list settled over half the map is the working
+// height, but a city is a place before it is a list — the short detent hands
+// the streets back, and the tall one gives the list the room to be read.
+const CITY_DETENTS=[0.21,0.43,0.72],CITY_DETENT_DEFAULT=1;
+let _citySheetUp=CITY_DETENT_DEFAULT;
+function toggleCitySheet(){_citySheetUp=(_citySheetUp+1)%CITY_DETENTS.length;mountCity()}
 function mountCity(){
   const sheet=document.getElementById('citysheet');if(!sheet)return;
   const main=document.getElementById('main');
-  const h=Math.round((main.clientHeight||620)*(_citySheetUp?0.74:0.43));
+  const h=Math.round((main.clientHeight||620)*CITY_DETENTS[_citySheetUp]);
   sheet.style.height=h+'px';
   const list=sheet.querySelector('.list');
   if(list)list.style.height=Math.max(0,h-74)+'px';
@@ -2926,17 +3457,6 @@ function mountCity(){
   map.setAttribute('inset-bottom',String(h));
   map.setAttribute('attrib-lift',String(h+10));
   if(typeof map.marks==='function')map.marks();   // re-fit in place; no remount, no refetch
-}
-
-/* the ask's pins — a suggestion is a ring until it's lived. Filled once you've
- * been or booked, dimmed once skipped; what couldn't be confirmed against a
- * real place is never drawn here at all (the grounding rule, non-negotiable). */
-function askPinsHTML(askId){
-  const a=D.asks.find(x=>x.id===askId);if(!a)return `<div id="ask_pins_${askId}"></div>`;
-  const pts=placed(a.findings.filter(f=>f.grounded)).map(f=>({id:f.id,name:f.name,lat:f.lat,lon:f.lon,
-    score:(f.status==='been'||f.status==='booked')?1:null,dim:f.status==='skip'}));
-  return `<div id="ask_pins_${askId}">${pts.length?streetsHTML(pts,
-    {boxStyle:'height:200px;border:1px solid var(--line);margin:6px 0 14px',dot:6}):''}</div>`;
 }
 
 /* the taps a map sends back. Both events bubble out of carta-maps' elements as
@@ -3058,8 +3578,9 @@ function openCardPreview(html,filename,title){
   cardPending={html,filename,title};
   openSheet(`<h3>${esc(title)}</h3>
   <div class="sub">A self-contained page — the exact file that goes out.</div>
-  <iframe srcdoc="${esc(html)}" style="width:100%;height:360px;border:1px solid var(--line);margin-bottom:14px;background:var(--paper)"></iframe>
-  <button class="btn btn-primary" onclick="shareCardPending()">Share this card</button>`);
+  <iframe srcdoc="${esc(html)}" style="width:100%;height:360px;border:1px solid var(--line-strong);margin-bottom:14px;background:var(--paper)"></iframe>
+  <button class="btn btn-primary" onclick="shareCardPending()">Share this card</button>
+  <div class="note">One file, self-contained, on Carta paper. It goes to the share sheet where the browser offers one, and downloads where it doesn’t — the point is a friend on the other end.</div>`);
 }
 function shareCardPending(){if(cardPending)shareOrDownload(cardPending.html,cardPending.filename,cardPending.title)}
 function shareCoffeeCard(coffeeId){
@@ -3103,8 +3624,10 @@ function openImportCard(){
   importPending=null;
   openSheet(`<h3>Import a card</h3>
   <div class="sub">A coffee or a café someone sent you from their Carta.</div>
-  <label class="f"><span class="l">The file</span><input type="file" accept=".html,text/html" id="import_file" onchange="importCardPicked(event)"></label>
-  <div id="import_preview"></div>`);
+  <label class="pickzone">Choose the file someone sent you
+    <input type="file" accept=".html,text/html" id="import_file" onchange="importCardPicked(event)"></label>
+  <div id="import_preview"></div>
+  <div class="note">No account, no server, nothing touching the sender’s record — the card carries its own data, and you decide whether to keep it.</div>`);
 }
 function importCardPicked(e){
   const f=e.target.files&&e.target.files[0];if(!f)return;
@@ -3118,11 +3641,12 @@ function importCardPicked(e){
       toast('That card isn\'t a coffee or a café — nothing to add');return}
     importPending=data;
     const el=document.getElementById('import_preview');if(!el)return;
-    el.innerHTML=data.kind==='coffee'
-      ?`<div class="card"><div class="kv"><span class="k">Roaster</span><span class="v">${esc(data.data.roaster||'—')}</span></div><div class="kv"><span class="k">Name</span><span class="v">${esc(data.data.name||'—')}</span></div></div>
-        <button class="btn btn-primary" onclick="confirmImportCard()">Add to my Carta</button>`
-      :`<div class="card"><div class="kv"><span class="k">Café</span><span class="v">${esc(data.data.name||'—')}</span></div>${data.data.city?`<div class="kv"><span class="k">City</span><span class="v">${esc(data.data.city)}</span></div>`:''}</div>
-        <button class="btn btn-primary" onclick="confirmImportCard()">Add to my Carta</button>`;
+    const o=data.data.origin||{};
+    el.innerHTML=`<div style="margin-top:14px">${ledgerHTML(data.kind==='coffee'
+      ?[['Kind','A coffee'],['Roaster',data.data.roaster||''],['Coffee',data.data.name||''],
+        ['Origin',[o.region||o.country,o.process].filter(Boolean).join(' · ')]]
+      :[['Kind','A café'],['Café',data.data.name||''],['City',data.data.city||'']])}</div>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="confirmImportCard()">Add to my Carta</button>`;
   };
   reader.onerror=()=>toast('Could not read that file');
   reader.readAsText(f);
@@ -3153,9 +3677,11 @@ let classicPending=null;
 function openClassicImport(){
   classicPending=null;
   openSheet(`<h3>Import from classic</h3>
-  <div class="sub">Classic's own export (Desk → Export → the working copy, a .json file) — read once, safe to read again.</div>
-  <label class="f"><span class="l">The file</span><input type="file" accept=".json,application/json" id="classic_file" onchange="classicFilePicked(event)"></label>
-  <div id="classic_preview"></div>`);
+  <div class="sub">Classic's own export — read once, and safe to read again.</div>
+  <label class="pickzone">Choose classic's export — Desk → Export → the working copy, a .json file
+    <input type="file" accept=".json,application/json" id="classic_file" onchange="classicFilePicked(event)"></label>
+  <div id="classic_preview"></div>
+  <div class="note">Nothing is deleted or altered on the classic side; it is a one-way read. Read the same export twice and the second run adds nothing.</div>`);
 }
 function classicFilePicked(e){
   const f=e.target.files&&e.target.files[0];if(!f)return;
@@ -3174,9 +3700,9 @@ function renderClassicPreview(m){
   const rows=[['Roasters',m.newRoasters.length],['Places',m.newPlaces.length],['Setups',m.newSetups.length],
     ['Coffees',m.newCoffees.length],['Brews',m.newBrews.length],['Cups',m.newCups.length]];
   const total=rows.reduce((s,r)=>s+r[1],0);
-  el.innerHTML=`<div class="card"><div class="kv"><span class="k">New records</span><span class="v num">${total}</span></div>
-    ${rows.filter(r=>r[1]).map(r=>`<div class="kv"><span class="k">${r[0]}</span><span class="v num">${r[1]}</span></div>`).join('')}</div>
-    ${total?`<button class="btn btn-primary" onclick="applyClassicImport()">Add ${total} record${total===1?'':'s'} to my Carta</button>`
+  el.innerHTML=`<div style="margin-top:14px">${ledgerHTML([['New records',String(total)]].concat(
+      rows.filter(r=>r[1]).map(r=>[r[0],String(r[1])])))}</div>
+    ${total?`<button class="btn btn-primary" style="margin-top:14px" onclick="applyClassicImport()">Add ${total} record${total===1?'':'s'} to my Carta</button>`
       :'<div class="empty">Nothing new — already imported, or the file is empty.</div>'}`;
 }
 function applyClassicImport(){
@@ -3274,31 +3800,188 @@ function vAtlas(){
         <div class="box" style="margin-top:26px">
           <div class="eyebrow">Where next</div>
           <div class="lede" style="margin-bottom:14px">Carta sends what your record argues — the bar, the roasters, what you notice — and places every café it names on this map before drawing it.</div>
-          <button class="btn btn-quiet" style="min-height:46px" onclick="openTaste()">Ask Carta for a city</button>
+          <button class="btn btn-quiet" style="min-height:46px" onclick="openAskScreen()">Ask Carta for a city</button>
         </div>
       </div>
     </div>
   </div>`;
 }
 
+/* ============ the walk down from a country ============
+ * A country was a dead end: a shape, a count, a flat list of coffees. It is a
+ * chapter now, and the chapter opens downward — the road states how far the
+ * record actually follows this ground, then its regions, the hands that grew
+ * it, the hands that roast from it and the rooms it pours in each open one
+ * level further. Everything here is read off the greens the record already
+ * holds; nothing is fetched, nothing is inferred to fill a line.
+ */
+const originOf=c=>(c&&c.origin)||{};
+const growerOf=c=>String(originOf(c).farm||originOf(c).producer||'').trim();
+const regionOf=c=>String(originOf(c).region||'').trim();
+const countryCoffees=name=>live('coffees').filter(c=>landKey(originOf(c).country||'')===landKey(name));
+function cupsOfCoffees(list){const ids=new Set(list.map(c=>c.id));return live('cups').filter(c=>ids.has(c.coffeeRef))}
+function avgOf(cups){const s=cups.filter(c=>c.score!=null);return s.length?s.reduce((a,c)=>a+c.score,0)/s.length:null}
+// a stated value, grouped under the keeper's own commonest spelling of it —
+// never a resolver, never a lookup key printed back at them (VOICE.md)
+function groupStated(list,keyFn){
+  const m={};
+  list.forEach(x=>{
+    const raw=String(keyFn(x)||'').trim();if(!raw)return;
+    const k=fold(raw);
+    (m[k]=m[k]||{key:k,label:raw,items:[],spellings:{}});
+    m[k].items.push(x);m[k].spellings[raw]=(m[k].spellings[raw]||0)+1;
+  });
+  return Object.values(m).map(g=>{
+    g.label=Object.entries(g.spellings).sort((a,b)=>b[1]-a[1])[0][0];
+    g.cups=cupsOfCoffees(g.items);g.avg=avgOf(g.cups);
+    return g;
+  });
+}
+const byAvgDesc=(a,b)=>(b.avg==null?-1:b.avg)-(a.avg==null?-1:a.avg)||b.items.length-a.items.length;
+function andList(words){
+  if(words.length<2)return words[0]||'';
+  return words.slice(0,-1).join(', ')+' and '+words[words.length-1];
+}
+// what a green's own list amounts to, in the line a chapter row carries
+function greensMeta(g){
+  const n=g.items.length,cups=g.cups.length;
+  const lead=g.items.map(c=>({c,a:avgOf(cupsOfCoffees([c]))})).filter(x=>x.a!=null).sort((a,b)=>b.a-a.a)[0];
+  return [`${words(n)} coffee${n===1?'':'s'}`,cups?`${words(cups)} cup${cups===1?'':'s'}`:null,
+    lead?`${lead.c.name||coffeeLabel(lead.c)} leads`:null].filter(Boolean).join(' · ');
+}
+/* the road — six stations, and the plain fact of which ones this record
+ * reaches. A hollow station is not a failure and never reads as one: a bag
+ * that says nothing is a record that has been told less, not a lesser coffee. */
+const ROAD_STATIONS=[
+  {name:'Grown',has:c=>!!growerOf(c)},
+  {name:'Processed',has:c=>!!String(originOf(c).process||'').trim()},
+  {name:'Milled',has:c=>!!String(originOf(c).mill||'').trim()},
+  {name:'Roasted',has:c=>!!String(c.roaster||'').trim()},
+];
+function roadStations(coffees,cups){
+  const poured=new Set(cups.filter(c=>c.kind==='bar'&&c.placeRef).map(c=>c.placeRef));
+  return ROAD_STATIONS.map(s=>({name:s.name,n:coffees.filter(s.has).length}))
+    .concat([{name:'Poured',n:poured.size},{name:'Read',n:cups.length}]);
+}
+function roadHTML(st){
+  const rail=(edge,joined)=>edge?'<i class="end"></i>':`<i class="${joined?'':'gap'}"></i>`;
+  return `<div class="road">${st.map((s,i)=>{
+    const on=s.n>0,prev=i>0?st[i-1].n>0:true,next=i<st.length-1?st[i+1].n>0:true;
+    return `<div class="st${on?'':' off'}">
+      <div class="rail">${rail(i===0,on&&prev)}<span class="mk${on?'':' off'}"></span>${rail(i===st.length-1,on&&next)}</div>
+      <div class="n">${on?s.n:'—'}</div>
+      <div class="l">${s.name}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function roadNote(st,coffees){
+  const silent=st.filter(s=>!s.n).map(s=>s.name.toLowerCase());
+  const filled=st.length-silent.length;
+  const noFarm=coffees.filter(c=>!growerOf(c)).length;
+  const bits=[`${capFirst(words(filled))} station${filled===1?'':'s'} stand${filled===1?'s':''} out of ${words(st.length)}.`];
+  if(silent.length)bits.push(`${capFirst(andList(silent))} ${silent.length===1?'is':'are'} silent on every green here.`);
+  if(noFarm)bits.push(`${capFirst(words(noFarm))} of ${words(coffees.length)} name${noFarm===1?'s':''} no farm at all.`);
+  bits.push('Coverage counts — it never grades.');
+  return bits.join(' ');
+}
+// heights, read only where a bag actually states one: every figure a stated
+// altitude carries, so "1,900 – 2,100 m" reads as a span and "1900 masl" as a
+// point. Nothing is read across from a neighbouring lot.
+function altitudesOf(coffee){
+  const out=[];
+  (String(originOf(coffee).altitude||'').match(/\d[\d,.]*/g)||[]).forEach(t=>{
+    const n=Number(t.replace(/[,.]/g,''));
+    if(isFinite(n)&&n>=300&&n<=3000)out.push(n);
+  });
+  return out;
+}
+function altitudeBandHTML(coffees){
+  const stated=coffees.filter(c=>altitudesOf(c).length);
+  const all=stated.reduce((a,c)=>a.concat(altitudesOf(c)),[]);
+  const silent=coffees.length-stated.length;
+  const note=stated.length
+    ? `Stated by ${words(stated.length)} bag${stated.length===1?'':'s'}${silent?`. Unread on ${words(silent)}`:''} — height places a coffee, it never ranks it.`
+    : `No bag here states a height. Unread is a state, not a low one — height places a coffee, it never ranks it.`;
+  if(!all.length){
+    return `<div class="box" style="margin-top:22px">
+      <div class="row"><span class="eyebrow" style="margin:0">Grown between</span>
+        <span class="num" style="font-size:16px;color:var(--text-disabled);font-style:italic">unread</span></div>
+      <div class="note" style="border:0;padding:0;margin:12px 0 0">${esc(note)}</div></div>`;
+  }
+  const lo=Math.min(...all),hi=Math.max(...all);
+  // the drawn span holds the whole atlas the record could state, so a band is
+  // read against the same ground every time — never fitted to flatter itself
+  const axLo=Math.min(1200,Math.floor(lo/100)*100),axHi=Math.max(2400,Math.ceil(hi/100)*100);
+  const pct=v=>Math.max(0,Math.min(100,(v-axLo)/(axHi-axLo)*100));
+  const left=pct(lo),right=100-pct(hi);
+  return `<div class="box" style="margin-top:22px">
+    <div class="row"><span class="eyebrow" style="margin:0">Grown between</span>
+      <span class="num" style="font-size:16px">${lo===hi?`${lo.toLocaleString()} m`:`${lo.toLocaleString()} – ${hi.toLocaleString()} m`}</span></div>
+    <div class="band"><span style="left:${left.toFixed(1)}%;right:${right.toFixed(1)}%;${lo===hi?'width:5px;right:auto':''}"></span></div>
+    <div class="band-ax"><span>${axLo.toLocaleString()} m</span><span>the atlas</span><span>${axHi.toLocaleString()} m</span></div>
+    <div class="note" style="border:0;padding:0;margin:12px 0 0">${esc(note)}</div>
+  </div>`;
+}
+// the cups one scope was read from, listed where they were drunk — a country's
+// own reading, opened from the box that states it
+function cupsSheet(title,sub,cups){
+  openSheet(`<h3>${esc(title)}</h3>
+  <div class="sub">${esc(sub)}</div>
+  ${cups.length?cups.slice().sort(byNew).map(c=>{
+    const place=c.kind==='bar'?placeById(c.placeRef):null;
+    const coffee=coffeeById(c.coffeeRef);
+    return `<button class="lrow" style="min-height:56px" onclick="closeSheet();openCupDetail('${c.id}')">
+      <span class="mid"><span class="t" style="font-size:17px">${esc(coffeeLabel(coffee))}</span>
+      <span class="m">${esc([place?place.name:'At home',fmtWhen(c.at)].filter(Boolean).join(' · '))}</span></span>
+      <span class="sc${c.score==null?' none':''}" style="font-size:24px">${c.score==null?'—':c.score}</span></button>`;
+  }).join(''):'<div class="empty">Nothing read here yet.</div>'}`);
+}
+function openCountryCups(label){
+  const coffees=countryCoffees(label);
+  cupsSheet(`The cups from ${label}`,'Your own readings — never averaged into anyone else’s page.',cupsOfCoffees(coffees));
+}
+
 /* ============ a country — the chapter under its own shape ============ */
 function vCountryChapter(label){
-  const key=landKey(label);
-  const coffees=live('coffees').filter(c=>c.origin&&landKey(c.origin.country||'')===key);
-  const byRegion={};
-  coffees.forEach(c=>{
-    const raw=((c.origin&&c.origin.region)||'').trim();
-    const rk=raw?fold(raw):'';
-    (byRegion[rk]=byRegion[rk]||{label:raw||'Unspecified region',coffees:[],counts:{}});
-    byRegion[rk].coffees.push(c);
-    if(raw)byRegion[rk].counts[raw]=(byRegion[rk].counts[raw]||0)+1;
-  });
-  Object.values(byRegion).forEach(v=>{const es=Object.entries(v.counts);if(es.length)v.label=es.sort((a,b)=>b[1]-a[1])[0][0]});
-  const regions=Object.values(byRegion).sort((a,b)=>b.coffees.length-a.coffees.length);
-  const roasters=[...new Set(coffees.map(c=>c.roaster).filter(Boolean))];
+  const coffees=countryCoffees(label);
+  const cups=cupsOfCoffees(coffees);
+  const scored=cups.filter(c=>c.score!=null);
+  const a=avgOf(cups);
+  const roasters=groupStated(coffees,c=>c.roaster).sort(byAvgDesc);
+  const regions=groupStated(coffees,regionOf).sort(byAvgDesc);
+  const silentRegion=coffees.filter(c=>!regionOf(c));
+  const growers=groupStated(coffees,growerOf).sort((x,y)=>y.items.length-x.items.length);
+  const noGrower=coffees.length-growers.reduce((s,g)=>s+g.items.length,0);
+  const st=roadStations(coffees,cups);
+  const filled=st.filter(s=>s.n).length;
+  // where these greens have poured — a café you drank one in, by its own city
+  const pourIds=[...new Set(cups.filter(c=>c.kind==='bar'&&c.placeRef).map(c=>c.placeRef))];
+  const pours=pourIds.map(placeById).filter(Boolean);
+  const pourCities=[...new Set(pours.map(p=>p.city).filter(Boolean))];
+  const best=scored.slice().sort((x,y)=>y.score-x.score)[0];
+  const recordBest=live('cups').filter(c=>c.score!=null).reduce((m,c)=>Math.max(m,c.score),-1);
+  const lede=[
+    `${capFirst(words(coffees.length))} coffee${coffees.length===1?'':'s'} on the record${roasters.length?`, from ${words(roasters.length)} roaster${roasters.length===1?'':'s'}`:''}.`,
+    cups.length?`${capFirst(words(cups.length))} cup${cups.length===1?'':'s'}${best&&best.score===recordBest?', and the highest of them was drunk here':''}.`:null,
+  ].filter(Boolean).join(' ');
+  if(!coffees.length){
+    return `<div>
+      <div style="position:relative">
+        <div class="mapbox passport" style="height:300px">
+          <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" tasted="${esc(label)}" focus="${esc(label)}"></carta-belt>
+        </div>
+        <div class="fade top" style="height:88px;z-index:3"></div>
+        <button class="omini overlay" style="left:18px;top:18px" onclick="closePage()">← The passport</button>
+      </div>
+      <div class="lift pad" style="padding-top:22px">
+        <div class="eyebrow" style="margin:4px 0 6px">A country</div>
+        <div class="display big">${esc(label)}</div>
+        <div class="lede">Nothing from here on the record yet. Log a coffee that names it and this chapter opens on its own.</div>
+      </div></div>`;
+  }
   return `<div>
     <div style="position:relative">
-      <div class="mapbox passport" style="height:300px">
+      <div class="mapbox passport" style="height:296px">
         <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" tasted="${esc(label)}" focus="${esc(label)}"></carta-belt>
       </div>
       <div class="fade top" style="height:88px;z-index:3"></div>
@@ -3307,15 +3990,197 @@ function vCountryChapter(label){
     <div class="lift pad" style="padding-top:22px">
       <div class="eyebrow" style="margin:4px 0 6px">A country</div>
       <div class="display big">${esc(label)}</div>
-      <div class="lede">${coffees.length} coffee${coffees.length===1?'':'s'} on the record${roasters.length?', from '+roasters.length+' roaster'+(roasters.length===1?'':'s'):''}.</div>
-      ${regions.length?`<div class="shead"><span class="l">By region</span></div>
-        ${regions.map(r=>`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)">
-          <span style="font-family:var(--serif);font-size:17px">${esc(r.label)}</span>
-          <span class="num" style="font-size:13px;color:var(--ink-3)">${r.coffees.length}</span></div>`).join('')}`:''}
-      <div class="shead"><span class="l">The coffees</span></div>
-      ${coffees.length?coffees.slice().sort(byNew).map(c=>`<button class="lrow" style="min-height:56px" onclick="openCoffeeDetail('${c.id}')">
-        <span class="mid"><span class="t" style="font-size:18px">${esc(coffeeLabel(c))}</span><span class="m">${esc(originLine(c))}</span></span>
-        <span class="go">→</span></button>`).join(''):'<div class="empty">Nothing from here yet.</div>'}
+      <div class="lede">${esc(lede)}</div>
+
+      <div class="shead" style="margin-top:28px"><span class="l">How far the record follows it</span>
+        <span class="r">${words(filled)} of ${words(st.length)}</span></div>
+      ${roadHTML(st)}
+      <div class="note" style="border:0;padding:0;margin:14px 0 0">${esc(roadNote(st,coffees))}</div>
+
+      <div class="shead"><span class="l">Its regions</span>
+        <span class="r">${words(regions.length)} named${silentRegion.length?` · ${words(silentRegion.length)} silent`:''}</span></div>
+      ${regions.map(r=>`<button class="lrow" onclick="openRegionChapter(${jsq(label)},${jsq(r.label)})">
+        <span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc(greensMeta(r))}</span></span>
+        <span class="sc${r.avg==null?' none':''}">${r.avg==null?'—':trimNum(r.avg)}</span>
+        <span class="go">→</span></button>`).join('')}
+      ${silentRegion.length?`<button class="lrow" onclick="openRegionChapter(${jsq(label)},'')">
+        <span class="mid"><span class="t">No region named</span>
+        <span class="m">${esc(`${words(silentRegion.length)} coffee${silentRegion.length===1?'':'s'} · the bag stopped at the country`)}</span></span>
+        <span class="go">→</span></button>`:''}
+
+      <div class="shead"><span class="l">The hands that grew it</span>
+        <span class="r">${words(growers.length)} named${noGrower?` · ${words(noGrower)} unread`:''}</span></div>
+      ${growers.length?growers.map(g=>{
+        const producer=g.items.map(c=>String(originOf(c).producer||'').trim()).find(Boolean);
+        const meta=[producer&&fold(producer)!==fold(g.label)?producer:null,
+          `${words(g.items.length)} green${g.items.length===1?'':'s'}`].filter(Boolean).join(' · ');
+        return `<button class="rowlink" style="padding:13px 0" onclick="openProducerPage(${jsq(label)},${jsq(g.label)},${jsq(regionOf(g.items[0]))})">
+          <span style="min-width:0"><span class="t" style="display:block;font-size:17px">${esc(g.label)}</span>
+          <span class="m" style="display:block;margin-top:2px">${esc(meta)}</span></span>
+          <span class="go">→</span></button>`;
+      }).join(''):'<div class="muted" style="padding:12px 0">No bag here has named a hand yet.</div>'}
+      ${noGrower?`<div class="note">${esc(`${capFirst(words(noGrower))} of these coffees name${noGrower===1?'s':''} no hand at all.`)} A bag that says nothing is not a lesser coffee — it is a record that has been told less.</div>`:''}
+
+      <div class="shead"><span class="l">The hands that roast from here</span></div>
+      ${roasters.map(r=>`<div class="row" style="padding:12px 0;border-bottom:1px solid var(--line)">
+        <span style="font-family:var(--serif);font-size:17px">${esc(r.label)}</span>
+        <span class="num" style="font-size:12.5px;color:var(--ink-3)">${esc(`${words(r.items.length)} green${r.items.length===1?'':'s'}`)}${r.avg==null?'':' · '+trimNum(r.avg)}</span>
+      </div>`).join('')}
+
+      ${pours.length?`<div class="shead"><span class="l">Where it pours</span>
+        <span class="r">${words(pourCities.length)} cit${pourCities.length===1?'y':'ies'}</span></div>
+        ${pours.map(p=>{
+          const n=cups.filter(c=>c.placeRef===p.id).length;
+          return `<button class="rowlink" style="padding:13px 0" onclick="openCafeScreen('${p.id}')">
+            <span style="font-family:var(--serif);font-size:17px">${esc(p.name)}</span>
+            <span class="m">${esc([p.city,`${words(n)} cup${n===1?'':'s'}`].filter(Boolean).join(' · '))}</span></button>`;
+        }).join('')}`:''}
+
+      ${cups.length?`<div class="box" style="margin-top:30px">
+        <div class="eyebrow">What you found here</div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+          <div class="lede" style="margin:0;max-width:24ch">${esc(`${capFirst(words(cups.length))} cup${cups.length===1?'':'s'}.`)}${best?esc(` Your ${best.score} was ${coffeeLabel(coffeeById(best.coffeeRef))}, ${best.kind==='bar'?'drunk out':'drunk at home'}.`):''}</div>
+          ${a!=null?`<div style="flex:none;text-align:right">
+            <div class="bigscore" style="font-size:38px">${trimNum(a)}</div>
+            <div class="ofnine">your average</div></div>`:''}
+        </div>
+        <button class="btn btn-quiet" style="margin-top:16px" onclick="openCountryCups(${jsq(label)})">The cups from ${esc(label)} →</button>
+      </div>`:''}
+      <div class="note" style="margin-top:22px">Your scores stay yours. Nothing on this page is averaged into anyone else’s.</div>
+    </div>
+  </div>`;
+}
+
+/* ============ a region — the same question, at a finer grain ============ */
+function vRegionChapter(country,view){
+  const region=(view&&view.region)||'';
+  const all=countryCoffees(country);
+  const coffees=region?all.filter(c=>fold(regionOf(c))===fold(region)):all.filter(c=>!regionOf(c));
+  const label=region||'No region named';
+  const cups=cupsOfCoffees(coffees);
+  const growers=groupStated(coffees,growerOf).sort((x,y)=>y.items.length-x.items.length);
+  const noGrower=coffees.length-growers.reduce((s,g)=>s+g.items.length,0);
+  const processes=groupStated(coffees,c=>originOf(c).process).sort((x,y)=>y.items.length-x.items.length);
+  const noProcess=coffees.length-processes.reduce((s,g)=>s+g.items.length,0);
+  const repeats=growers.filter(g=>g.items.length>1)[0];
+  const lede=coffees.length?[
+    `${capFirst(words(coffees.length))} coffee${coffees.length===1?'':'s'}`,
+    repeats?`, ${words(repeats.items.length)} of them from the same hand`:'',
+    '.',
+    cups.length?` ${capFirst(words(cups.length))} cup${cups.length===1?'':'s'} read from ${coffees.length===1?'it':'them'}.`:'',
+  ].join('')
+    :(region?'Nothing from here on the record yet.':'Every coffee here named its region — nothing stopped at the country.');
+  return `<div>
+    <div style="position:relative">
+      <div class="mapbox passport" style="height:260px">
+        <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" tasted="${esc(country)}" focus="${esc(country)}"></carta-belt>
+      </div>
+      <div class="fade top" style="height:88px;z-index:3"></div>
+      <button class="omini overlay" style="left:18px;top:18px" onclick="openCountryChapter(${jsq(country)})">← ${esc(country)}</button>
+    </div>
+    <div class="lift pad" style="padding-top:22px">
+      <div class="eyebrow" style="margin:4px 0 6px">A region · ${esc(country)}</div>
+      <div class="display big">${esc(label)}</div>
+      <div class="lede">${esc(lede)}</div>
+      ${altitudeBandHTML(coffees)}
+
+      <div class="shead"><span class="l">The hands that grew it</span>
+        <span class="r">${words(growers.length)} named${noGrower?` · ${words(noGrower)} unread`:''}</span></div>
+      ${growers.map(g=>{
+        const producer=g.items.map(c=>String(originOf(c).producer||'').trim()).find(Boolean);
+        const meta=[producer&&fold(producer)!==fold(g.label)?producer:null,
+          `${words(g.items.length)} green${g.items.length===1?'':'s'}`].filter(Boolean).join(' · ');
+        return `<button class="rowlink" style="padding:14px 0;min-height:58px" onclick="openProducerPage(${jsq(country)},${jsq(g.label)},${jsq(region)})">
+          <span style="min-width:0"><span class="t" style="display:block;font-size:17px">${esc(g.label)}</span>
+          <span class="m" style="display:block;margin-top:2px">${esc(meta)}</span></span>
+          <span class="go">→</span></button>`;
+      }).join('')}
+      ${noGrower?`<div class="rowlink" style="padding:14px 0;cursor:default">
+        <span style="min-width:0"><span class="t" style="display:block;font-size:17px;color:var(--ink-3)">${esc(`${capFirst(words(noGrower))} green${noGrower===1?'':'s'} name${noGrower===1?'s':''} no hand`)}</span>
+        <span class="m" style="display:block;margin-top:2px">unread — the bag stopped at the region</span></span></div>`:''}
+
+      ${processes.length||noProcess?`<div class="shead" style="margin-bottom:14px"><span class="l">How it was made</span></div>
+      <div class="picks">
+        ${processes.map(p=>`<span class="dchip">${esc(p.label)} — ${words(p.items.length)}</span>`).join('')}
+        ${noProcess?`<span class="dchip" style="color:var(--text-disabled)">Unread — ${words(noProcess)}</span>`:''}
+      </div>`:''}
+
+      <div class="shead"><span class="l">The greens</span>
+        <span class="r">${words(coffees.length)} on the record</span></div>
+      ${coffees.slice().sort((x,y)=>(avgOf(cupsOfCoffees([y]))||-1)-(avgOf(cupsOfCoffees([x]))||-1)).map(c=>{
+        const ca=avgOf(cupsOfCoffees([c])),n=cupsOfCoffees([c]).length;
+        return `<button class="lrow" onclick="openCoffeeDetail('${c.id}')">
+          <span class="mid"><span class="t" style="font-size:17.5px">${esc(coffeeLabel(c))}</span>
+          <span class="m">${esc([originOf(c).process,n?`${words(n)} cup${n===1?'':'s'}`:'not scored'].filter(Boolean).join(' · '))}</span></span>
+          <span class="sc${ca==null?' none':''}">${ca==null?'—':trimNum(ca)}</span></button>`;
+      }).join('')}
+      <div class="note" style="margin-top:14px">A region is a scope, not a page of its own making: everything here is the same question the country asked, at a finer grain.</div>
+    </div>
+  </div>`;
+}
+
+/* ============ a producer — the last name the bag gave ============
+ * Where the farm went. The record holds four lines about a farm the trade
+ * knows a book about, and says so plainly: `unread` is designed here as a
+ * first-class state, never a blank and never a low default.
+ */
+function vProducerPage(name,view){
+  const country=(view&&view.country)||'';
+  const region=(view&&view.region)||'';
+  const coffees=countryCoffees(country).filter(c=>fold(growerOf(c))===fold(name));
+  const cups=cupsOfCoffees(coffees);
+  const roasters=groupStated(coffees,c=>c.roaster);
+  const producer=coffees.map(c=>String(originOf(c).producer||'').trim()).find(Boolean)||'';
+  const varieties=[...new Set(coffees.map(c=>String(originOf(c).variety||'').trim()).filter(Boolean))];
+  const processes=[...new Set(coffees.map(c=>String(originOf(c).process||'').trim()).filter(Boolean))];
+  const alts=coffees.reduce((a,c)=>a.concat(altitudesOf(c)),[]);
+  const first=coffees.slice().sort((a,b)=>a.createdAt.localeCompare(b.createdAt))[0];
+  const pours=[...new Set(cups.filter(c=>c.kind==='bar'&&c.placeRef).map(c=>c.placeRef))].map(placeById).filter(Boolean);
+  const ledger=[
+    ['Grower',producer&&fold(producer)!==fold(name)?producer:''],
+    ['Altitude',alts.length?(Math.min(...alts)===Math.max(...alts)?`${Math.min(...alts).toLocaleString()} m`:`${Math.min(...alts).toLocaleString()} – ${Math.max(...alts).toLocaleString()} m`):''],
+    ['Varieties',varieties.join(' · ')],
+    ['Processing',processes.join(' · ')],
+    ['First on record',first?fmtMonth(first.createdAt):''],
+  ];
+  const stated=ledger.filter(r=>r[1]).length;
+  const lede=coffees.length?[
+    `${capFirst(words(coffees.length))} green${coffees.length===1?'':'s'} on the record`,
+    cups.length?`, ${words(cups.length)} cup${cups.length===1?'':'s'}`:'',
+    roasters.length>1?`, from ${words(roasters.length)} roasters`:'',
+    '. What the trade knows about this hand, your record holds ',
+    stated?`${words(stated)} line${stated===1?'':'s'} of.`:'nothing of yet.',
+  ].join('')
+    :'Nothing from this hand on the record yet.';
+  return `<div>
+    <header class="shdr" style="display:block">
+      <button class="back" onclick="${region?`openRegionChapter(${jsq(country)},${jsq(region)})`:`openCountryChapter(${jsq(country)})`}">← ${esc(region||country)}</button>
+      <div class="eyebrow" style="margin-bottom:6px">A farm${region?` · ${esc(region)}, ${esc(country)}`:country?` · ${esc(country)}`:''}</div>
+      <div class="display" style="margin:0">${esc(name)}</div>
+    </header>
+    <div class="pad" style="padding-top:20px">
+      <div class="lede">${esc(lede)}</div>
+      ${ledgerHTML(ledger)}
+      <div class="note" style="border:0;padding:0;margin:12px 0 0">Unread is a state, not a low default. Nothing here is guessed to fill a line.</div>
+      <button class="btn btn-quiet" style="margin-top:14px" onclick="openCoffeeForm(${coffees[0]?`'${coffees[0].id}'`:''})">Add what the bag says</button>
+
+      <div class="shead"><span class="l">The greens</span></div>
+      ${coffees.map(c=>{
+        const ca=avgOf(cupsOfCoffees([c])),n=cupsOfCoffees([c]).length;
+        return `<button class="lrow" onclick="openCoffeeDetail('${c.id}')">
+          <span class="mid"><span class="t" style="font-size:17.5px">${esc(coffeeLabel(c))}</span>
+          <span class="m">${esc([originOf(c).process,n?`${words(n)} cup${n===1?'':'s'}`:'not scored'].filter(Boolean).join(' · '))}</span></span>
+          <span class="sc${ca==null?' none':''}">${ca==null?'—':trimNum(ca)}</span></button>`;
+      }).join('')}
+
+      ${pours.length?`<div class="shead"><span class="l">Where it pours</span></div>
+      ${pours.map(p=>{
+        const n=cups.filter(c=>c.placeRef===p.id).length;
+        return `<button class="rowlink" style="padding:13px 0" onclick="openCafeScreen('${p.id}')">
+          <span style="font-family:var(--serif);font-size:17px">${esc(p.name)}</span>
+          <span class="m">${esc([p.city,`${words(n)} cup${n===1?'':'s'}`].filter(Boolean).join(' · '))}</span></button>`;
+      }).join('')}`:''}
+      <div class="note" style="margin-top:22px">The roaster owns the roast, never the farm. This page is compiled from what the bags said, and it says who said it.</div>
     </div>
   </div>`;
 }
@@ -3364,6 +4229,7 @@ function vCityChapter(city){
             <span class="sc${a==null?' none':''}">${a==null?'—':a.toFixed(1)}</span></button>`;
         }).join(''):'<div class="empty">No cafés logged here yet.</div>'}
         <div class="note">Positions confirmed once, then kept. Offline, the drawn plot stands on its own.</div>
+        <button class="btn btn-quiet" style="margin-top:10px" onclick="openAskScreenFor(${jsq(city)})">Ask Carta about ${esc(city)}</button>
       </div>
     </div>
   </div>`;
@@ -3381,8 +4247,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.13.0';
+const APP_VERSION='7.14.0';
 const CHANGELOG=[
+  {v:'7.14.0',d:"The rest of the app. A country stopped being a dead end: it states how far the record actually follows that ground — grown, processed, milled, roasted, poured, read, dashed across whatever it can't reach — and then opens downward into its regions, the hands that grew it, the roasters working from it and the rooms it pours in. A region and a farm are pages now, walked down to from the country and back up from any coffee. Your taste dropped its meters and argues in a sentence instead, every figure in it tappable straight through to the cups it was read from. The brief left its drawer: it's a screen that says what goes out in four parts before it ever shows you the raw text, with the exact characters folded one tap away, and the ask that follows it names the key it would use and the degrade if you don't have one. What Carta found is its own page on its own streets. A café's menu is one screen at the counter rather than two sheets that never met. Your record — everything you own, the backup, what reads in, what sends out, your Setups, classic — has a page of its own, and a Setup finally keeps the grind history that is only ever true on it. Two new fields on a coffee, altitude and mill, both optional, both stated only where a bag states them. Nothing migrated; the ledger is the same file it was."},
   {v:'7.13.0',d:"The map, in front. Carta opens on the Atlas now — the passport full-bleed, every country you've tasted inked into it and tappable, your cities listed underneath with their own plots. Four rooms became three (Atlas · Journal · Shelf) with ＋ A cup standing beside them, reachable from anywhere instead of only from the top of one screen; Scout folded into the Atlas as \"Your taste\", because what it argues is geography. A city is streets edge to edge with your cafés on a sheet you pull up over them, a café has its own corner of the map, and a cup is finally a page — the photo at the size you took it for, the score set where you can read it. The record itself is untouched: same ledger, same file, nothing migrated. And the Journal opens with the last cup you brewed — its recipe, its finding, one tap to begin the next from it."},
   {v:'7.12.0',d:"A reason to come back, stated plainly. The first time a country or a city actually lands on your passport, Carta says so in one sentence — with a tap to share it while it's fresh — and then goes quiet about it forever after. Nothing already on your record gets announced retroactively. And a coffee you took home a while back with nothing brewed from it yet says so on the shelf, one line, no pressure. No streaks, no badges, no percent-complete — if it ever starts reading like a score, that's a bug, not a feature."},
   {v:'7.11.1',d:"A shortcut to the door. Long-press Carta's icon on a home screen that supports it (Android, ChromeOS, desktop) and \"A cup\" jumps straight past the journal — the paste-or-type door, one long-press away instead of an open-then-tap. Not on iOS, which has never offered a long-press menu for a home-screen web app; nothing in Carta changes that."},

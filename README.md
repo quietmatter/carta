@@ -13,13 +13,16 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
 
 - **Three rooms, one door.** Atlas · Journal · Shelf on the bar, with
   **＋ A cup** beside them — the door is reachable from every room, not just
-  the top of one. Everything a room opens — a country, a city, a café, a cup,
-  your taste, the dials — is a screen you close back to where you came from.
+  the top of one. Everything a room opens — a country, a region, a farm, a
+  city, a café, a menu, a cup, your taste, the brief, the ask, your record, a
+  Setup, the dials — is a screen you close back to where you came from.
 - **The journal.** Every cup, newest first — a café cup or a home brew, its
   score, what you found.
 - **The shelf.** Every coffee you've actually got — a home brew lands here on
   its own; a café coffee joins it only once you say **Take it home**, one tap
   from the cup. Tap a coffee to dial it in, or add what's not logged yet.
+  **Your record** — the whole of it, and every door out of it — opens from
+  the bottom of this room.
 - **The door** (＋ A cup, on every screen). Paste the bag or just type it —
   "Sey's — Ethiopia Gedeb" — and Carta reads a roaster and a coffee out of it.
   Type a roaster you've named before and it offers to join them rather than
@@ -32,15 +35,19 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
 - **Put away, and undo.** Nothing is deleted outright. Put a cup or a coffee
   away and it leaves the working list but stays on file, one tap from back.
 - **Your taste, argued** (from the Atlas, or the Journal's **Taste →**). A
-  pure derivation over the record — the bar
-  (a floor for judging a café, the roasters you keep reaching for), the
-  vector (the processes, origins and descriptors that earn your scores) —
-  every figure carrying its own evidence, never a number without its reasons.
-- **The brief.** Your taste prepares it: a plain-text cut sized for pasting into
-  an AI chat, and a self-contained page to keep, both scoped to a city if
-  you've logged one there — "already had" excludes what you've already
-  found, so the answer isn't a rehash. Strictly offline; nothing here makes
-  a network call.
+  pure derivation over the record, read as a sentence rather than shown as a
+  dashboard — the bar you hold a café to, the roaster you keep going back to,
+  what you notice first and what keeps earning it. Every figure in it is
+  dotted-underlined and tappable straight through to **the cups it was read
+  from**, and each of those sheets names the rule it read before it lists
+  them. No number without its reasons; no meters.
+- **The brief.** Your taste prepares it, on its own page. It states **what
+  goes out** in four named parts — the bar, what earns your scores, what
+  you've already had, and the scope — before it shows you a single character
+  of the raw text, which folds away behind **The exact text** for anyone who
+  wants to read all of it. Scope it to a city and "already had" excludes what
+  you've already found there, so the answer isn't a rehash. **Copy** and
+  **Keep** are strictly offline; nothing on this page makes a network call.
 - **The ask.** Carta can send the brief on your own behalf — a city, a
   neighborhood, a country, a route, or a friend's taste, plus anything else
   worth knowing — to a model you bring your own key for. This is the door
@@ -49,16 +56,31 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   key lives on this device and nowhere else. Every café it names is checked
   against a real place lookup before it's ever drawn as a pin — what can't
   be confirmed is listed, never guessed onto the map. No key, or the call
-  fails, and Carta falls back to the same plain-text brief, copied. **Been
-  · Booked · Skip** on each result feeds back into your record — a café you
+  fails, and Carta falls back to the same plain-text brief, copied. The ask's
+  own page states which key it would use, and what happens if there isn't
+  one, before you tap anything. What comes back is **its own page, on its own
+  streets** — what was named, what was placed, and why each one; **Been ·
+  Booked · Skip** on each result feeds back into your record, so a café you
   mark Been or Booked is on file the next time you type its name.
 - **The passport.** Carta opens on it: the world frame full-bleed, every
   country your record can trace, drawn from outlines carried in the file
   itself (no map tiles, no network, nothing to be offline from). Tasted
   countries are inked and tappable with your own spelling written across
-  them; untasted ones are a hairline invitation. Tap one for its chapter —
-  the coffees you've had from there, grouped by region — under its own
-  shape. Your cities read underneath, each with its own drawn plot.
+  them; untasted ones are a hairline invitation. Your cities read underneath,
+  each with its own drawn plot.
+- **A country, and the walk down from it.** Tap a country for its chapter,
+  under its own shape. It opens by stating **how far the record actually
+  follows that ground** — grown, processed, milled, roasted, poured, read, as
+  six stations: filled where your bags reached them, hollow where they didn't,
+  the line running dashed across the gap rather than pretending to cross it.
+  Coverage counts; it never grades, and a bag that said nothing is a record
+  that was told less, not a lesser coffee. Under the road: its regions, the
+  hands that grew it, the roasters working from it, the rooms it pours in,
+  and what you found there. **A region** opens from that list — the same
+  question at a finer grain, with the altitude band your bags actually stated
+  — and **a farm** from the region, where every line the record doesn't hold
+  says `unread` rather than sitting blank. You can also reach either from any
+  coffee.
 - **A city's own map.** Tap a city and its streets fill the screen, your
   cafés listed on a sheet you pull up over them — pull it up and the map
   reframes rather than reloading, so the pins step clear of the paper. The
@@ -73,9 +95,10 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   cup in the Journal, and on the cup's own page the size you took it for.
   Add it when you log the cup or any time after. Compressed on the device to
   a reasonable size; nothing leaves it.
-- **The menu.** From a café's page (tap it from a city chapter), capture what
-  it's pouring — type each line, or hold a photo up as reference while you
-  do. **Read it for me** can read that same photo for you, one tap, through
+- **The menu.** One screen at the counter, opened from a café's page: what
+  they're pouring, and the box to add to it. Type each line, or hold a photo
+  up as reference while you do. **Read it for me** can read that same photo
+  for you, one tap, through
   the ask's own BYO-key door — never required, never automatic, and the
   photo travels only that once and is never kept either way; the lines it
   finds land in the box for you to check and edit before anything saves.
@@ -88,10 +111,20 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   everywhere else — the actual point being a friend on the other end, not a
   file in your own Downloads. A coffee or a café card carries its own data
   back in (`carta.card/v1`): open one on another Carta and **Import a card**
-  (on the Shelf) is one tap to add it — no account, no server, no touching
+  (on your record) is one tap to add it — no account, no server, no touching
   the sender's record.
+- **Your record.** From the Shelf — everything you own on one page. What it
+  amounts to (cups, coffees, cafés, Setups, what it weighs on this device),
+  the backup and its "last copy" line, what can be read in, what can be sent
+  out, and classic's door. One device, no account, no sync: a backup is a
+  file you hold, not a promise someone made you.
+- **A Setup.** The assembly, not the appliance — the grinder, brewer, basket,
+  papers, water and grind scale, and **the last brews on it** with their
+  dials and what each one scored. A grind number is only true inside one
+  Setup, so that history never leaves its own page, and the next brew starts
+  from the last one there.
 
-- **The migration.** From the Shelf, **Import from classic** reads classic's
+- **The migration.** From your record, **Import from classic** reads classic's
   own JSON export (Desk → Export → the working copy) straight into Carta 7's
   ledger — roasters, cafés, coffees, brews and cups, mapped node-first so a
   bag or cup whose flat fields were long since retired in favor of a catalog
