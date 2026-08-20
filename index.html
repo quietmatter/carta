@@ -464,6 +464,26 @@ function bucketMulti(cups,keysFn){
   cups.forEach(c=>(keysFn(c)||[]).forEach(k=>{(m[k]=m[k]||{value:k,scores:[],cupRefs:[]});m[k].scores.push(c.score);m[k].cupRefs.push(c.id)}));
   return Object.values(m).map(x=>({value:x.value,weight:avg(x.scores),n:x.scores.length,cupRefs:x.cupRefs})).sort((a,b)=>b.weight-a.weight||b.n-a.n);
 }
+/* roastLevel on Coffee (ROADMAP.md Phase 9) — a short scale, optional
+ * everywhere, never required: exactly what a bag or a menu line actually
+ * states, not a rung and not a resolver (ARCHITECTURE.md §4's line: free
+ * text everywhere except the graph's nodes — this stays free text, just
+ * drawn from a small named set instead of the open field process/origin
+ * already are). parseRoastLevel reads a pasted bag or a menu line the same
+ * light-touch way the door already reads a roaster/name split — it only
+ * fires next to the word "roast" itself, so a tasting note ("light,
+ * floral") never gets mistaken for a roast level. */
+const ROAST_LEVELS=['Light','Medium-light','Medium','Medium-dark','Dark'];
+function parseRoastLevel(text){
+  const t=' '+fold(text||'')+' ';
+  const near=w=>t.includes(' '+w+' roast ')||t.includes(' roast '+w+' ');
+  if(near('medium light'))return 'Medium-light';
+  if(near('medium dark'))return 'Medium-dark';
+  if(near('light'))return 'Light';
+  if(near('dark'))return 'Dark';
+  if(near('medium'))return 'Medium';
+  return '';
+}
 function tasteModel(ledger){
   const coffeeOf=id=>(ledger.coffees||[]).find(c=>c.id===id);
   const placeOf=id=>(ledger.places||[]).find(p=>p.id===id);
@@ -486,6 +506,7 @@ function tasteModel(ledger){
   const nines=cups.filter(c=>c.score===9).map(c=>c.id);
 
   // the vector — what earns your taste, each value carrying its own weight and n
+  const roast=bucket(cups,c=>{const co=coffeeOf(c.coffeeRef);return co&&co.roastLevel});
   const processes=bucket(cups,c=>{const co=coffeeOf(c.coffeeRef);return co&&co.origin&&co.origin.process});
   const origins=bucket(cups,c=>{const co=coffeeOf(c.coffeeRef);return co&&co.origin&&(co.origin.country||co.origin.region)});
   const descriptors=bucketMulti(cups,c=>c.descriptors);
@@ -500,13 +521,14 @@ function tasteModel(ledger){
     const knownRoasters=[...new Set(scoped.map(c=>{const co=coffeeOf(c.coffeeRef);return co&&co.roaster}).filter(Boolean))];
     return {had,knownRoasters};
   }
-  return {bar:{floor,anchors,nines},vector:{processes,origins,descriptors},scope};
+  return {bar:{floor,anchors,nines},vector:{roast,processes,origins,descriptors},scope};
 }
 function briefPlainText(ledger,scopeKind,scopeId,tm){
   tm=tm||tasteModel(ledger);
   const lines=['MY COFFEE TASTE (from Carta)'];
   if(tm.bar.floor!=null)lines.push(`Baseline: I rate café coffee ${tm.bar.floor}+/9 as worth returning to.`);
   if(tm.bar.anchors.length)lines.push(`Roasters I keep reaching for: ${tm.bar.anchors.slice(0,5).map(a=>`${a.name} (avg ${a.avg.toFixed(1)}, ${a.n} cups)`).join('; ')}.`);
+  if(tm.vector.roast.length)lines.push(`Roast levels I rate highest: ${tm.vector.roast.slice(0,4).map(p=>`${p.value} (${p.weight.toFixed(1)}/9, n=${p.n})`).join(', ')}.`);
   if(tm.vector.processes.length)lines.push(`Processes I rate highest: ${tm.vector.processes.slice(0,4).map(p=>`${p.value} (${p.weight.toFixed(1)}/9, n=${p.n})`).join(', ')}.`);
   if(tm.vector.origins.length)lines.push(`Origins I rate highest: ${tm.vector.origins.slice(0,4).map(p=>`${p.value} (${p.weight.toFixed(1)}/9, n=${p.n})`).join(', ')}.`);
   if(tm.vector.descriptors.length)lines.push(`What I notice most in a 9: ${tm.vector.descriptors.slice(0,5).map(d=>d.value).join(', ')}.`);
@@ -1010,7 +1032,7 @@ function useTimer(){const s=tElapsed+(tStart?(Date.now()-tStart)/1000:0);
  * whichever quick form that is. No resolver, no propose sheet: an exact
  * spelling joins silently, a near one asks once, everything else is new. */
 let doorState=null;
-function openDoor(){doorState={step:'text',text:'',roaster:'',name:'',o:{}};paintDoor();}
+function openDoor(){doorState={step:'text',text:'',roaster:'',name:'',roastLevel:'',o:{}};paintDoor();}
 function doorParse(text){
   const parts=text.split(/\s+[—–-]\s+|,\s*/).map(s=>s.trim()).filter(Boolean);
   if(parts.length>=2)return {roaster:parts[0],name:parts.slice(1).join(', ')};
@@ -1031,7 +1053,11 @@ function paintDoor(){
     <div class="sub">Correct anything the paste read wrong.</div>
     <label class="f"><span class="l">Roaster <span class="opt">optional</span></span><input type="text" id="d_roaster" value="${esc(s.roaster)}"></label>
     <label class="f"><span class="l">Coffee</span><input type="text" id="d_name" value="${esc(s.name)}" placeholder="Ethiopia Gedeb"></label>
-    <details class="more"><summary>Origin — optional</summary>
+    <details class="more"><summary>Origin & roast — optional</summary>
+    <label class="f"><span class="l">Roast level</span><select id="d_roastlevel">
+      <option value="">—</option>
+      ${ROAST_LEVELS.map(r=>`<option value="${r}"${s.roastLevel===r?' selected':''}>${r}</option>`).join('')}
+    </select></label>
     <div class="grid2">
       <label class="f"><span class="l">Country</span><input type="text" id="d_country" value="${esc(s.o.country||'')}"></label>
       <label class="f"><span class="l">Region</span><input type="text" id="d_region" value="${esc(s.o.region||'')}"></label>
@@ -1064,10 +1090,10 @@ function paintDoor(){
 }
 function doorNext1(){doorState.text=val('d_text');const p=doorParse(doorState.text);
   if(!p.roaster&&!p.name){toast('Type or paste something first');return}
-  doorState.roaster=p.roaster;doorState.name=p.name;doorState.step='confirm';paintDoor();}
+  doorState.roaster=p.roaster;doorState.name=p.name;doorState.roastLevel=parseRoastLevel(doorState.text);doorState.step='confirm';paintDoor();}
 function doorNext2(){
   const s=doorState;
-  s.roaster=val('d_roaster');s.name=val('d_name');
+  s.roaster=val('d_roaster');s.name=val('d_name');s.roastLevel=val('d_roastlevel');
   s.o={country:val('d_country'),region:val('d_region'),farm:val('d_farm'),producer:val('d_producer'),variety:val('d_variety'),process:val('d_process')};
   if(!s.roaster&&!s.name){toast('Name the roaster or the coffee');return}
   if(s.roaster){
@@ -1088,7 +1114,7 @@ function doorKind(kind){
   // brewing it at home means beans in hand — the shelf; a café pour is only
   // tasted until "take it home" says otherwise (ROADMAP.md Phase 4)
   const c={id:uid(),createdAt:new Date().toISOString(),
-    roaster:s.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:s.name,origin:s.o,home:kind==='home'};
+    roaster:s.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:s.name,origin:s.o,roastLevel:s.roastLevel||'',home:kind==='home'};
   D.coffees.push(c);save();
   doorState=null;
   if(kind==='bar')openCafeCup(c.id);else openBrewFlow(c.id);
@@ -1301,7 +1327,13 @@ function openCoffeeForm(id){
     <label class="f"><span class="l">Variety</span><input type="text" id="cf_variety" value="${esc(o.variety||'')}"></label>
     <label class="f"><span class="l">Process</span><input type="text" id="cf_process" value="${esc(o.process||'')}"></label>
   </div>
-  <label class="f"><span class="l">Roast date <span class="opt">optional</span></span><input type="date" id="cf_roastdate" value="${esc(c.roastDate||'')}"></label>
+  <div class="grid2">
+    <label class="f"><span class="l">Roast level <span class="opt">optional</span></span><select id="cf_roastlevel">
+      <option value="">—</option>
+      ${ROAST_LEVELS.map(r=>`<option value="${r}"${c.roastLevel===r?' selected':''}>${r}</option>`).join('')}
+    </select></label>
+    <label class="f"><span class="l">Roast date <span class="opt">optional</span></span><input type="date" id="cf_roastdate" value="${esc(c.roastDate||'')}"></label>
+  </div>
   <label class="f"><span class="l">Notes <span class="opt">optional</span></span><textarea id="cf_notes">${esc(c.notes||'')}</textarea></label>
   <button class="btn btn-primary" onclick="saveCoffeeForm('${id||''}')">Save</button>
   ${id?(c.archived
@@ -1311,7 +1343,7 @@ function openCoffeeForm(id){
 function saveCoffeeForm(id){
   const fields={roaster:val('cf_roaster'),name:val('cf_name'),
     origin:{country:val('cf_country'),region:val('cf_region'),farm:val('cf_farm'),producer:val('cf_producer'),variety:val('cf_variety'),process:val('cf_process')},
-    roastDate:val('cf_roastdate'),notes:val('cf_notes')};
+    roastLevel:val('cf_roastlevel'),roastDate:val('cf_roastdate'),notes:val('cf_notes')};
   if(!fields.roaster&&!fields.name){toast('Name the roaster or the coffee');return}
   const rr=resolveRoaster(fields.roaster);fields.roasterRef=rr.ref;if(rr.name)fields.roaster=rr.name;
   if(id){Object.assign(coffeeById(id),fields,{updatedAt:new Date().toISOString()})}
@@ -1399,7 +1431,7 @@ async function readMenuPhoto(){
 function saveMenuCapture(placeId){
   const lines=val('mc_text').split('\n').map(s=>s.trim()).filter(Boolean);
   if(!lines.length){toast('Type at least one line');return}
-  const items=lines.map(line=>{const p=doorParse(line);return {text:line,roaster:p.roaster,name:p.name}});
+  const items=lines.map(line=>{const p=doorParse(line);return {text:line,roaster:p.roaster,name:p.name,roastLevel:parseRoastLevel(line)}});
   const menu={id:uid(),createdAt:new Date().toISOString(),placeRef:placeId,at:new Date().toISOString(),items};
   D.menus.push(menu);
   if(menuPhotoPreview){URL.revokeObjectURL(menuPhotoPreview);menuPhotoPreview=null}
@@ -1432,7 +1464,8 @@ function menuItemLogCup(menuId,i){
   const mt=matchNode('roasters',parsed.roaster);
   const roasterRef=mt.exact?mt.exact.id:mintRoasterIfNeeded(parsed.roaster,null);
   const coffee={id:uid(),createdAt:new Date().toISOString(),
-    roaster:parsed.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:parsed.name,origin:{},home:false};
+    roaster:parsed.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:parsed.name,origin:{},
+    roastLevel:item.roastLevel||parseRoastLevel(item.text),home:false};
   D.coffees.push(coffee);
   item.coffeeRef=coffee.id;
   save();closeSheet();
@@ -1788,6 +1821,7 @@ function vScout(){
   ${tm.bar.floor!=null?`<div class="kv"><span class="k">Worth the walk</span><span class="v num">${tm.bar.floor}+ / 9</span></div>`:'<div class="muted">Not enough café cups yet.</div>'}
   ${tm.bar.anchors.length?tm.bar.anchors.slice(0,5).map(a=>`<div class="kv"><span class="k">${esc(a.name)}</span><span class="v num">${a.avg.toFixed(1)} avg · ${a.n} cups</span></div>`).join(''):'<div class="muted">No anchors yet — a roaster earns one at 8+ over two cups.</div>'}
   <h2>Your vector</h2>
+  ${vectorRowHTML('Roast',tm.vector.roast)}
   ${vectorRowHTML('Process',tm.vector.processes)}
   ${vectorRowHTML('Origin',tm.vector.origins)}
   ${vectorRowHTML('Notice',tm.vector.descriptors)}
@@ -2582,8 +2616,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.10.0';
+const APP_VERSION='7.11.0';
 const CHANGELOG=[
+  {v:'7.11.0',d:"Roast joins the vector. A coffee can carry its roast level now — light through dark, same optional field as everything else, never required. Scout reads it back the same way it already reads process and origin: Roast leads your vector now, with its own weight and n, and the brief — and anything Scout sends on your behalf — can finally say what roast character actually earns your 9s. Paste a bag or type a menu line that states it plainly and Carta picks it up on its own, still yours to correct."},
   {v:'7.10.0',d:"Durability, without a server. The Shelf now states plainly how long it's been since your record was backed up — the same voice as a bag's own rest window, never a nag. One tap downloads the whole thing as a plain JSON file, or hand it a quiet fortnightly rhythm and it'll back itself up on its own, opt-in, off unless you turn it on. A photo you're about to add now says something first if storage is getting tight, instead of only failing silently once it's already too late."},
   {v:'7.9.0',d:"Two more places the streets can reach. A café's own sheet now draws its position, same live layer as its city — a settled view of the one place, not the whole neighborhood. And Scout's asks got the same treatment: a grounded café it names draws on real streets now, not just a plain dot. A sheet's own map dies when the sheet closes, and never disturbs a map still standing on the screen underneath it."},
   {v:'7.8.4',d:"The streets, actually there. A city's live map would open, show a pin or two, and collapse to a hairline right as the streets should have faded in — the map area had no height of its own once its stand-in dots stepped aside, and the layer meant to fill that space was quietly losing a styling tie to the map library's own stylesheet. Both fixed; the frame now holds its shape start to finish."},
