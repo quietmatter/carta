@@ -79,8 +79,8 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–12 are shipped; Phase 13 is the open one. Carta 7 stands at
-**v7.13.0, 3,420 lines, 49/49 pure tests**. Full prose for each is in
+*Phases 8–13 are shipped; Phase 14 is the open one. Carta 7 stands at
+**v7.14.0, 4,287 lines, 49/49 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -181,8 +181,9 @@ app said one plain sentence, not because it applied pressure.
 **Shipped — v7.13.0, PR #98.** Not the phase this slot originally held: the
 founder commissioned a redesign (`DESIGN_BRIEF.md`, drawn in
 `docs/redesign-concept/`) and it landed here, so the scout-tuning phase this
-number used to name is **Phase 13** below. The route bent; nothing was
-dropped.
+number used to name moved down — it is **Phase 14** below, having been Phase
+13 until this commission's own second half took that number too. The route
+bent; nothing was dropped.
 
 **The joy it serves:** the map fills in — promoted from a room you visit to
 the thing the app *is* when you open it.
@@ -214,7 +215,64 @@ change. The file stands at 3,420 lines / 295 KB — inside §1's own band.
 **Done when — met:** the app opens on the map, the door is one tap from
 anywhere, and everything the four rooms argued still argues.
 
-### Phase 13 — the scout, tuned on real asks
+### Phase 13 — the rest of the app (the redesign, completed)
+
+**Shipped — v7.14.0.** The same commission as Phase 12 (`DESIGN_BRIEF.md`,
+drawn in `docs/redesign-concept/`), finishing. Phase 12's prototype covered
+Today, the Atlas, a lot, a roaster, a café, the cup log, the brew, the shelf,
+the record and the welcome; the shipped app has a good deal more than that,
+and the surfaces it missed were still speaking the third turn's language. So
+this number was the scout's, again, and again the route bent — the
+scout-tuning phase is **Phase 14** below. Nothing was dropped.
+
+**The joy it serves:** the road is the thing worth reading. A country was a
+shape with a list under it; the atlas only actually opens if the ground under
+a cup does.
+
+**What shipped — fourteen surfaces.** The **country chapter** states how far
+the record follows that ground — grown, processed, milled, roasted, poured,
+read — as six stations, filled where the record reaches them and dashed
+across the gaps, then opens downward into its regions, the hands that grew
+it, the roasters working from it and the rooms it pours in. **A region** and
+**a producer** are pages now (both new), walked down to from the country and
+back up from any coffee; a farm's page designs `unread` as a first-class
+state rather than a blank. **Your taste** dropped its meters: the argument
+runs as prose, every figure in it dotted-underlined and tappable into the
+cups it was read from. **The brief** was promoted from a sheet with a wall of
+text in it to a screen that states what goes out in four named parts before
+it ever shows the raw characters, which fold away behind a disclosure. **The
+ask** names the key it would use as a fact on the page and states its degrade
+under the button; **what Carta found** is its own page on its own streets.
+**A café's menu** is one screen at the counter instead of two sheets that
+never met. **Your record** — the ledger, the backup, what reads in, what
+sends out, the instrument, classic — has a page of its own, and **a Setup**
+finally keeps the grind history that is only ever true on it. The city's
+sheet gained a third detent, because a city is a place before it is a list.
+
+**Two fields, both optional, both stated only where a bag states them:**
+`origin.altitude` — specified in `ARCHITECTURE.md` §4 since the turn began
+and never actually offered anywhere — now has a field and draws the region's
+altitude band. `origin.mill` is new, and is what the road's Milled station
+was always waiting on: hollow until a bag names one, which is the point that
+station makes.
+
+**The ledger is untouched:** same store, same keys, no migration, no schema
+change. Two optional fields on a shape that was always free text.
+
+**The band moved, in the open:** the file stands at **4,287 lines / 355 KB**
+against the 3–4,000 lines §1 stated through Phase 12, so §1 now reads
+**3–4,500**. The byte ceiling — the one that actually
+guards the drop-on-a-static-host promise — is untouched at 71% of 500 KB.
+`ARCHITECTURE.md` §1 carries the amendment and its argument; this is the
+tooling-creep tripwire's neighbour and it gets the same treatment: moved
+deliberately, written down, not slipped past.
+
+**Done when — met:** every surface the prototype named is built from the
+ledger rather than from fixtures, the empty state of each is designed
+alongside the full one, and no figure on any of them is printed without a way
+to reach its reasons.
+
+### Phase 14 — the scout, tuned on real asks
 
 **The joy it serves:** the hunt, refined with the one input Act One
 couldn't have — actual asks, actually made, in actual cities.
@@ -265,7 +323,7 @@ against a hypothetical.
    named two modules, not a habit.)
 3. **The scout before the journal.** If scout work is outpacing journal
    joy, stop — the corpus is the fuel, and an empty journal scouts
-   nothing. (This is why Phase 13 is ordered last and gated on real
+   nothing. (This is why Phase 14 is ordered last and gated on real
    history existing to tune against.)
 4. **Business creep.** `MARKET.md` is play. If a decision starts from
    revenue, re-rank it by joy and see if it survives.

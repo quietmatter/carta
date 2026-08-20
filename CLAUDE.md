@@ -51,7 +51,7 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. Phases 1–12 shipped; **Phase 13** is open.
+  read at every phase gate. Phases 1–13 shipped; **Phase 14** is open.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -118,6 +118,12 @@ server/               Classic's sync server — dormant
   `.shead` (a ruled section head: the label, and what the section amounts to),
   `.lrow` (the list row — title leads, meta off the faintest ink, the score set
   big enough to be the answer), the three-room bar and the door beside it.
+  Phase 13 added the furniture the chapters needed: `.road` (the six stations
+  and the rail that runs dashed across a gap), `.led` (the ledger box, where a
+  silent field reads `unread` rather than blank), `.fig` (a figure that carries
+  its reasons — dotted-underlined, tappable), `.band` (a stated altitude range
+  drawn against the atlas's own span), `.pick` (a chip that picks a scope, a
+  kind of ask, a mark) and `.pickzone` (the file a sheet is waiting for).
 - **the map layer** — three light-DOM custom elements defined above the app's
   own script, so page tokens (`var(--ink)`) resolve inside them. Taps leave as
   bubbling events (`carta:country-tap`, `carta:pin-tap`).
@@ -161,10 +167,29 @@ server/               Classic's sync server — dormant
   countries inked with the keeper's own spelling and tappable, cities
   underneath with their own plots), `vJournal` (every cup newest first, opening
   with the last brew and one tap to begin the next from it), `vShelf` (the
-  coffees you've got, the backup readout, the imports, classic's door),
-  `vTaste` (**Your taste** — what the Scout room used to argue, folded into the
-  Atlas), and the screens: `vCountryChapter`, `vCityChapter`, `vCafe`, `vCup`,
-  `vBrew`.
+  coffees you've got, and the door to the record), `vTaste` (**Your taste** —
+  what the Scout room used to argue, folded into the Atlas), and the screens.
+  Phase 13 grouped the screens into four walks:
+  - **down from a country** — `vCountryChapter` (the road: six stations,
+    filled where the record reaches them and dashed across the gaps; then
+    regions, growers, roasters, pours) → `vRegionChapter` (a scope on the
+    same greens, with the altitude band) → `vProducerPage` (the farm ledger,
+    where `unread` is designed rather than blank). All three read off
+    `origin`; none is a record of its own, so each carries the country it was
+    read in and hands it back on the way out.
+  - **the places** — `vCityChapter` (streets, with the list on a sheet at
+    three detents), `vCafe`, `vCup`, `vMenu`.
+  - **the argument** — `vTaste` → `vBrief` → `vAsk` → `vAskResult`. The first
+    three are `BARELESS`: one argument read in three sittings, so the bar
+    would only offer a way to lose your place. `vAskResult` is a destination
+    and keeps it.
+  - **what the keeper owns** — `vRecord` (the ledger, the backup, imports,
+    cards, the instrument, classic) → `vSetups` → `vSetup` (the grind history
+    that is only true on one Setup, which is why it never leaves that page).
+  Plus `vBrew`. **Every figure on all of them is derived from `D`** — the
+  counts, the road's stations, the altitude band, the taste argument, the
+  brief's four parts. A screen that needs a number the ledger cannot defend
+  states `unread` instead, and its empty state is designed with its full one.
 - **the door** (`openDoor`/`paintDoor`/`doorParse`) — paste the bag or type it;
   Carta reads a roaster and a coffee out of it, offers the gentle join, and
   asks where the cup was in the same step. Opening it from a café skips that
@@ -174,20 +199,26 @@ server/               Classic's sync server — dormant
   `openSetupForm`/`openBrewFlow`/`saveBrewFlow`/`openImpression`/`saveHomeCup`
   (the home path, through the dials and the timer). A brew always needs a
   Setup.
-- **menus** — `openMenuCapture` (type the lines, hold a photo up as reference)
-  → `saveMenuCapture` → `openMenuPage`; **Read it for me** sends that photo
-  once through the ask's own channel and keeps it nowhere.
-- **the ask** — `openAsk` → `askPromptText` (the brief, verbatim) →
-  `callModel` (BYO-key, `api.anthropic.com`) → `parseAskJSON` → `geocodeCafe`
-  **grounding every café before it is drawn** → findings with Been · Booked ·
-  Skip. `D.asks` is the history; Phase 13 is the phase that reads it.
+- **menus** — one screen, `vMenu`: what they're pouring, and the box to add to
+  it. `openMenuScreen(menuId, placeId)` opens either an existing menu or a
+  fresh capture; `saveMenuCapture` appends to the menu you are standing on
+  rather than minting a second one. **Read it for me** sends that photo once
+  through the ask's own channel and keeps it nowhere; the slot repaints itself
+  instead of re-rendering, so a repaint never eats what has been typed beside
+  it.
+- **the ask** — `vAsk` → `askPromptText` (the brief, verbatim) → `callModel`
+  (BYO-key, `api.anthropic.com`) → `parseAskJSON` → `geocodeCafe` **grounding
+  every café before it is drawn** → `vAskResult`, findings with Been · Booked
+  · Skip. The screen states the key it would use and its degrade before the
+  button is tapped; `askDraft` holds what has been typed across a chip tap.
+  `D.asks` is the history; Phase 14 is the phase that reads it.
 - **cards** — `coffeeCardHTML` / `placeCardHTML` / `passportCardHTML` /
   `yearCardHTML`, each a self-contained page on Carta paper with a live
   preview, shared through the OS share sheet or downloaded. A coffee or café
   card carries its data back in (`carta.card/v1`); `openImportCard` reads one.
   `passportSVG()` survives here because a card is a standalone page and cannot
   carry a custom element that needs the app's script.
-- **backup** — `exportLedgerJSON`, the Shelf's "last backed up" readout,
+- **backup** — `exportLedgerJSON`, the record page's "last backed up" readout,
   `maybeAutoExport` (opt-in, off by default, checked on a real tab switch so
   the download has a gesture behind it), `lowStorageNoteHTML`.
 - **the classic import** — `openClassicImport` → `importClassicMap` (pure,
@@ -221,7 +252,10 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 ### Invariants to preserve
 
 - **One file, no build.** Vanilla JS, inline everything, nothing fetched at
-  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–4,000 lines / ≤ 500 KB**.
+  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–4,500 lines / ≤ 500 KB**
+  (the line half was raised from 4,000 at Phase 13, with the argument written
+  into §1 — the byte ceiling has never moved and is the one that guards the
+  drop-it-on-a-static-host promise).
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written

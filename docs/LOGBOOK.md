@@ -7,6 +7,77 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-20 — Phase 13: the rest of the app
+
+- **Why:** Phase 12 shipped the redesign, but the prototype it was drawn
+  from only ever covered nine surfaces — Today, the Atlas, a lot, a roaster,
+  a café, the cup log, the brew, the shelf, the record, the welcome. The
+  shipped app has more than that, and everything the prototype missed was
+  still speaking in the register the redesign had just replaced: the country
+  chapter was a shape with a flat list under it, taste drew meters, and the
+  brief, the ask, the menu and the record were sheets. The founder took the
+  same commission back to Claude Design for the remainder; this is that
+  handoff, built.
+- **Shipped — v7.14.0, fourteen surfaces.** The **country** states how far
+  the record follows its ground as six stations, dashed across the gaps,
+  then opens downward into regions, growers, roasters and pours. **A region**
+  and **a producer** are new pages, walked down to from the country and up
+  from any coffee. **Taste** dropped its meters for prose whose every figure
+  opens the cups it was read from. **The brief** became a screen that names
+  its four parts before showing a character of raw text; **the ask** states
+  its key and its degrade before the button; **what Carta found** is its own
+  page on its own streets. **The menu** is one screen at the counter rather
+  than two sheets that never met. **Your record** got a page — the ledger,
+  the backup, what reads in, what sends out, the instrument, classic — and
+  **a Setup** keeps the grind history that is only true on it. The city's
+  sheet gained a third detent.
+- **Decision, made the same way it was made last time:** this took Phase 13,
+  and the scout-tuning phase moved to **Phase 14**. It is the second time
+  that phase has been displaced by this commission, which is worth saying
+  plainly rather than renumbering quietly: the route bends toward what is
+  actually ready, and scout was always gated on ask history existing, which
+  it still is. Nothing was dropped.
+- **The one law that moved, and this time in the same PR as the code:** §1's
+  line band, **3–4,000 → 3–4,500**. The file is 4,287 lines / 355 KB. The
+  argument is written into §1 rather than assumed: the byte ceiling is the
+  one that guards the drop-it-on-a-static-host promise, it has never moved,
+  and the file sits at 71% of it; fourteen surfaces at ~60 lines each is what
+  the house style costs, and compressing them to hold a round number would
+  serve the letter of "a file one person can read whole" against its point.
+  4,500 is a ceiling, not an allowance — and a phase that ever needs 5,000
+  should read that as the one-file law coming due, not the band.
+- **A field that was specified and never built:** `origin.altitude` has been
+  in `ARCHITECTURE.md` §4 since the turn began and appeared in exactly zero
+  places in `index.html`. It has a field now, and the region's altitude band
+  is drawn from it — only where a bag actually states a height, never read
+  across from a neighbouring lot. `origin.mill` is genuinely new, and is what
+  the road's Milled station reads: hollow until a bag names one, which is the
+  point that station makes.
+- **Verified:** `node test/model.test.js` 49/49 — the pure block was not
+  touched, but the brief's callers were, so it was run rather than assumed.
+  Beyond it, every screen and sheet loaded in Chromium in **both themes,
+  offline**, plus the same walk against an **empty ledger**, because a
+  chapter that reads its own counts is exactly the kind of surface that
+  divides by zero in an honest-looking way. Two things that pass fell out of
+  it: the record ledger was printing `unread` for counts that were simply
+  zero, and a café cup's Roasted line was stating the coffee's rest window
+  *today* rather than how long it had rested when that cup was poured — a
+  true number answering the wrong question.
+- **Next:** Phase 14 — the scout, tuned on real asks, whenever there is
+  enough ask history to tune against.
+- **Parked (compliments, not scope):** region and producer rows would carry
+  real map thumbnails if the record held coordinates for either; it holds
+  free text, so the rows carry names and figures instead and no mark is
+  invented. A brief scoped to *everywhere* still can't send an "already had"
+  list without blowing its own character budget — the page says so rather
+  than printing a count it wouldn't actually carry.
+- **For Lotmark's desk:** the producer page is the closest Carta 7 has come
+  to a constituent's own page, and it stays on the right side of the line
+  only because it is compiled from your own bags and says so. The moment it
+  wants to reconcile two keepers' facts about one farm — a merge law, a
+  precedence rule, an evidence gate — that is the third-turn relapse
+  tripwire, and it is Lotmark's.
+
 ## 2026-08-20 — the record caught up with the file
 
 - **Why:** PR #98's own two follow-ups. `CLAUDE.md` still described classic
