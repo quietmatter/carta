@@ -28,7 +28,7 @@ vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
-  askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, menuOCRPrompt, parseMenuOCR, extractJSON,
+  askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel };
 `, sandbox);
 const M = sandbox.__m;
@@ -501,6 +501,37 @@ const crossCity = [
 ];
 assert.equal(M.dedupeHits(crossCity).length, 2, 'the same hood name in two different real cities is two branches, not one');
 ok('dedupeHits keys on city as well as hood, so cross-city collisions never collapse into one');
+
+// ---- reading a pin off a link the keeper already has (Phase 16) ----
+// real shapes, not invented ones: a Google Maps place URL, an Apple Maps
+// share link (both forms), OSM's own permalink, and a bare typed pair
+const GMAPS='https://www.google.com/maps/place/Maru+Coffee/@34.1024,-118.2872,17z/data=!3m1!4b1!4m6!3m5!1s0x80c2c:0xabc!8m2!3d34.10245!4d-118.28715!16s%2Fg%2F11c';
+let r=M.parseMapLink(GMAPS);
+assert.ok(r&&Math.abs(r.lat-34.10245)<1e-9&&Math.abs(r.lon-(-118.28715))<1e-9,
+  'the !3d/!4d marker (the actual pin) wins over @lat,lon (only the last viewport center)');
+ok('parseMapLink prefers a Google Maps place URL\'s actual pin over its viewport center');
+
+r=M.parseMapLink('https://www.google.com/maps/@34.1024,-118.2872,17z');
+assert.ok(r&&r.lat===34.1024&&r.lon===-118.2872, 'falls back to @lat,lon when no !3d/!4d marker is present');
+r=M.parseMapLink('https://maps.apple.com/?ll=34.101,-118.287&q=Maru+Coffee');
+assert.deepEqual(r,{lat:34.101,lon:-118.287});
+r=M.parseMapLink('https://maps.apple.com/place?coordinate=34.101,-118.287&name=Maru');
+assert.deepEqual(r,{lat:34.101,lon:-118.287},'Apple\'s newer place-link shape uses coordinate=, not ll=');
+r=M.parseMapLink('https://www.openstreetmap.org/#map=17/34.10245/-118.28715');
+assert.ok(r&&r.lat===34.10245&&r.lon===-118.28715);
+r=M.parseMapLink('34.101, -118.287');
+assert.deepEqual(r,{lat:34.101,lon:-118.287},'a bare typed pair works with no link around it at all');
+r=M.parseMapLink('  -34.6,  -58.4  ');
+assert.deepEqual(r,{lat:-34.6,lon:-58.4},'negative latitude, negative longitude — both hemispheres');
+ok('parseMapLink reads Google, Apple (both share-link shapes), OSM\'s own permalink, and a bare pair');
+
+assert.equal(M.parseMapLink('https://maps.app.goo.gl/aBcD3fG'),null,
+  'a shortened share link carries no coordinates in the text at all — nothing to read without following a redirect Carta will not make');
+assert.equal(M.parseMapLink('Maru Coffee, 1936 Hillhurst Ave'),null,'a plain address is not a coordinate — this door reads pins, not names');
+assert.equal(M.parseMapLink('@200,-118.28'),null,'a latitude outside ±90 is not a real coordinate, whatever it looks like');
+assert.equal(M.parseMapLink(''),null);
+assert.equal(M.parseMapLink(null),null);
+ok('parseMapLink refuses what it cannot actually read as a coordinate, and never throws doing it');
 
 // ---- the menu's OCR (horizon list): the prompt, and the parse of what comes back ----
 const ocrPrompt = M.menuOCRPrompt();

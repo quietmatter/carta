@@ -79,8 +79,8 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–15 are shipped. Carta 7 stands at
-**v7.16.1, 4,643 lines, 63/63 pure tests**. Full prose for each is in
+*Phases 8–16 are shipped. Carta 7 stands at
+**v7.17.0, 4,716 lines, 66/66 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -406,6 +406,72 @@ chapter left open on the garbage name it was opened under would silently
 empty out from under the keeper as its one café corrected away underneath
 it — fixed by following the chapter to the real name rather than leaving a
 stale title over an empty list.
+
+### Phase 16 — the pin, in your own hand
+
+**Shipped — v7.17.0.**
+
+**The joy it serves:** the hunt, closed at the one point Phase 15 couldn't
+reach — a real café that Google or Apple Maps already has, that OSM's search
+index simply hasn't been told about yet.
+
+**Where this came from.** Scoping the gap between OpenStreetMap and the
+commercial map providers surfaced a hard finding before any code: Google's
+Places API lets a `place_id` be cached indefinitely but restricts coordinates
+to a 30-day cache and forbids storing an address at all without a live,
+attributed re-fetch; Foursquare's free tier carries the same shape and a
+2026 allowance of 500 calls a month. Neither is a fit for a ledger that keeps
+a confirmed position forever, offline, and neither is keyless. Bolting one on
+would have meant either quietly breaking its terms or re-fetching from a paid
+API every time a café screen renders — trading offline-first for freshness.
+**Declined**, on that finding alone.
+
+**What ships instead — the same keyless door, asked backwards.** OSM's
+*search* index can miss a café that opened last month; its map of streets and
+neighborhoods essentially never does, because those are mapped at a
+different, far more complete grain than individual small businesses. So
+where a name search has nothing to offer — unplaced, or none of the branches
+on the table is the real one — Carta now takes a link instead. Paste whatever
+Google or Apple Maps already handed the keeper's phone (the actual pin
+`!3d…!4d…`, not just the last viewport center; `ll=` or `coordinate=`; OSM's
+own permalink; or a bare typed pair) and `parseMapLink` reads the coordinate
+straight out of it, pure and tested against the real URL shapes each
+provider actually produces. `reverseGeocode` then asks the same Nominatim
+door the forward search already uses — not "where is this name" but "what's
+at this coordinate" — to fill in the real neighborhood and city exactly the
+way a search result already does. `settlePlace` needed no change at all: a
+reverse hit and a forward hit are the same shape.
+
+**Explicitly not in it:** no map-tap or drag-to-pin interaction — real added
+surface for a small phase, and the clipboard already holds the link on any
+phone that found the place on a map at all; no storage of the raw pasted
+text, only the parsed coordinate; a shortened share link (`maps.app.goo.gl/…`)
+carries no coordinate in its own text, and Carta says so rather than
+following the redirect, since that would be a network request this phase
+never asked for. And nothing here touches the ask's own grounding — a
+café the ask names is still confirmed only by the ask's own forward search;
+this door opens only from a keeper's own place record.
+
+**Tripwires, screened.** No new network row, no key, no server: the same
+Nominatim touch asked a different question, recorded as a refinement to
+§7's existing geocode row rather than a new one. No resolver — a pasted
+coordinate is the keeper vouching for a position, the same trust level as
+typing an address, if anything a stronger one since it is copied from a map
+that already confirmed the place exists. `ARCHITECTURE.md` §1 needed no
+amendment: budgeted at ~90 lines against ~157 free, landed inside 4,800.
+
+**Done when — met:** a café absent from OSM's own search can still be placed
+exactly, with a real neighborhood filled wherever Nominatim's reverse lookup
+can supply one, using nothing but a link already on the keeper's clipboard.
+
+**Parked for Lotmark's desk:** Overture Maps' Places theme (CDLA Permissive
+2.0, no caching restriction, sourced from Meta + Microsoft data, refreshed
+monthly) is the one place-data source actually license-compatible with
+"store it forever" — but it ships as a bulk dataset, not a live lookup API,
+so using it means standing up a query service, which is a server and not
+Carta's to build. It is a plausible source for the "published atlas, keyless,
+readBrand-posture" `ARCHITECTURE.md` §7 already names as Lotmark's future
+interchange with Carta. Logged for that desk, not built here.
 
 ## The horizon (unscheduled, revisited)
 

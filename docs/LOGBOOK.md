@@ -7,6 +7,51 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 16: the pin, in your own hand
+
+- **Why.** The founder asked how to bridge the gap between OSM and the
+  commercial map providers — Google/Apple have a café that OpenStreetMap's
+  search hasn't caught up to yet. Researched before writing a line: Google's
+  Places API allows a `place_id` cached forever but restricts coordinates to
+  a 30-day cache and forbids storing an address without a live re-fetch;
+  Foursquare's free tier carries the same shape (500 calls/month as of June
+  2026). Both are wrong for a ledger that keeps a confirmed position forever,
+  offline — adopting either would mean quietly breaking their terms or
+  trading offline-first for a paid re-fetch on every render. **Declined**,
+  before any code, on that finding.
+- **Shipped — v7.17.0.** The same keyless Nominatim door, asked the other
+  way: not "where is this name" (search, which can miss a new business) but
+  "what's at this coordinate" (reverse, which almost never does, since
+  streets are mapped far more completely than shops). Where a search has
+  nothing to offer — unplaced, or none of the offered branches is real —
+  Carta now reads a pasted map link. `parseMapLink` is pure and tested
+  against the actual URL shapes Google, Apple and OSM produce, including
+  preferring a Google Maps place URL's real `!3d…!4d…` marker over its
+  `@lat,lon` viewport center, which drifts once you've panned. `reverseGeocode`
+  fills the neighborhood and city the same way a forward search already does;
+  `settlePlace` needed no change, since a reverse hit is the same shape as a
+  forward one.
+- **Overture Maps, parked for Lotmark.** The one place-data source actually
+  license-compatible with "store it forever" (CDLA Permissive 2.0, no caching
+  restriction) — but it's a bulk dataset, not a live API, and standing up a
+  query service is a server, which isn't Carta's to build. It's a plausible
+  source for the "published atlas" `ARCHITECTURE.md` §7 already names as
+  Lotmark's future interchange. Logged for that desk.
+- **No tripwire, no amendment.** Same Nominatim touch asked differently — a
+  refinement to §7's existing row, not a new one. Not a resolver: a pasted
+  coordinate is the keeper vouching for a position, at least as trustworthy
+  as typing an address, since it's copied from a map that already confirmed
+  the place exists. Budgeted ~90 lines against ~157 free; landed inside
+  4,800 without touching the band.
+- **Explicitly not in it:** map-tap/drag-pin UI (real surface for a small
+  phase); storing the raw pasted text (only the parsed coordinate survives);
+  following a shortened share link's redirect (a network request this phase
+  never asked for — Carta says so instead of guessing). This door doesn't
+  touch the ask's own grounding, which still only confirms via its own
+  forward search.
+
+---
+
 ## 2026-08-21 — Phase 15 patch (v7.16.1): the city, one field over
 
 - **Why.** Phase 15 fixed a mis-pinned café; it left the same bug standing in

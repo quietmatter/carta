@@ -51,7 +51,7 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–15 shipped**; Phase 16 is unwritten.
+  read at every phase gate. **Phases 1–16 shipped**; Phase 17 is unwritten.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -321,14 +321,14 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 63 cases
+node test/model.test.js        # zero deps, plain Node, 66 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
 out of `index.html` and evaluates it against fixture ledgers — no DOM, no
 `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
-`parseRoastLevel` or
+`parseMapLink`, `parseRoastLevel` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**

@@ -1307,6 +1307,35 @@ function dedupeHits(hits){
   }
   return out;
 }
+/* ---- a pin, read straight off a link the keeper already has (Phase 16).
+ * OSM's search index can miss a café that opened last month; its map of
+ * streets and neighborhoods essentially never does. So the gap Nominatim's
+ * *search* leaves is closed by asking a different question of the same
+ * keyless door — not "where is this name" but "what's at this coordinate" —
+ * fed by the pin Google or Apple Maps already gave the keeper's phone.
+ *
+ * Precedence matters: a Google Maps place URL's `!3d…!4d…` is the actual
+ * pinned marker; its `@lat,lon,zoom` is only the last viewport center, which
+ * can drift once you've panned around. The specific one wins whenever both
+ * are present. A bare "lat, lon" typed by hand is the fallback all of them
+ * reduce to, so it is checked last and works alone. */
+function parseMapLink(text){
+  const s=String(text||'');
+  const inRange=(lat,lon)=>isFinite(lat)&&isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180;
+  const patterns=[
+    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,          // Google Maps — the actual pin
+    /[?&](?:ll|coordinate)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/, // Apple Maps, both link shapes
+    /#map=\d+\/(-?\d+\.\d+)\/(-?\d+\.\d+)/,    // OSM's own permalink — lat/lon in that order
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,              // Google Maps — viewport center, last resort
+    /[?&]q=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,
+    /^\s*(-?\d+\.\d+),\s*(-?\d+\.\d+)\s*$/,    // typed or pasted bare
+  ];
+  for(const re of patterns){
+    const m=s.match(re);
+    if(m){const lat=Number(m[1]),lon=Number(m[2]);if(inRange(lat,lon))return {lat,lon}}
+  }
+  return null;
+}
 /* ---- a figure the model wrote, read back against the record.
  * The brief is built from the taste model's own values, so when the model
  * answers "Alchemy fermentation 9.0/9, n=3" it is echoing one of them back.
@@ -3438,6 +3467,20 @@ async function geocodeCafe(name,neighborhood,city){
   const hits=await lookupPlace(name,neighborhood,city);
   return hits.length?hits[0]:null;
 }
+// the other direction through the same keyless door (Phase 16): not "where is
+// this name" but "what's at this coordinate" — the question OSM can answer
+// for a café its own search index has never heard of, because the streets
+// around it are mapped whether or not the shop itself is. A coordinate the
+// keeper is vouching for (copied from a map that already has the place) never
+// needs a name to confirm — it IS the confirmation.
+async function reverseGeocode(lat,lon){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lon}`,{headers:{'Accept':'application/json'}});
+    if(!r.ok)return {hood:'',city:''};
+    const x=await r.json();
+    return {hood:hoodOf(x&&x.address),city:cityOf(x&&x.address)};
+  }catch(e){return {hood:'',city:''}}
+}
 let _askBusy=false;
 // grounding is one keyless Nominatim lookup per name, and there are more names
 // to place now — the findings, the ones named only to be talked out of, and the
@@ -3829,17 +3872,46 @@ function pickBranch(placeId,i){
  * one is a question: several of it in this city and the keeper has to say
  * which; placed, stating where and offering the way back; or unplaced, which
  * is a fact rather than a failure and is written as one. */
+// the fallback OSM's own search can't reach: paste whatever the keeper's
+// phone already gave them from Google or Apple Maps, and Carta reads the pin
+// straight out of it (Phase 16). Offered wherever a name search has nothing
+// to show for itself — unplaced, or ambiguous with no branch that's the real
+// one — never as a replacement for the search that already works.
+const mapLinkHTML=p=>`<label class="f" style="margin-top:10px"><span class="l">Or paste a map link</span>
+  <input type="text" id="ml_${p.id}" placeholder="Copied from Google or Apple Maps…"></label>
+  <button class="btn btn-quiet" style="min-height:40px" onclick="pastePlaceLink('${p.id}')">Place it</button>`;
 function placeBranchHTML(p){
   if(p.branches&&p.branches.length)return `<div class="box" style="margin-top:20px">
     <div class="eyebrow" style="margin-bottom:4px">Which one</div>
     <div class="m">${esc(capFirst(words(p.branches.length)))} of these in ${esc(p.city||'this city')}. Only you know which you were in.</div>
     <div class="picks" style="margin-top:12px">
       ${p.branches.map((b,i)=>`<button class="pick" onclick="pickBranch('${p.id}',${i})">${esc(b.hood||'Unnamed area')}</button>`).join('')}
-    </div></div>`;
+    </div>
+    <div class="m" style="margin-top:12px">None of these? ${mapLinkHTML(p)}</div></div>`;
   // where it is, is already the eyebrow over its name — this line only has to
   // carry the way back, which is the thing that never existed before
   if(p.lat!=null)return `<div class="m" style="margin-top:16px">Placed · <span class="text-action" onclick="replaceCafe('${p.id}')">not right?</span></div>`;
-  return `<div class="m" style="margin-top:16px">Not placed yet · <span class="text-action" onclick="replaceCafe('${p.id}')">look it up</span></div>`;
+  return `<div class="m" style="margin-top:16px">Not placed yet · <span class="text-action" onclick="replaceCafe('${p.id}')">look it up</span></div>
+    ${mapLinkHTML(p)}`;
+}
+// paste, parse, confirm — the same settle as a branch pick, same undo. A link
+// Carta can't read gets a plain refusal, never a guess dressed up as a pin.
+async function pastePlaceLink(placeId){
+  const p=placeById(placeId);if(!p)return;
+  const input=document.getElementById('ml_'+placeId);
+  const coord=parseMapLink(input&&input.value);
+  if(!coord){toast('Couldn\'t read a position from that — paste the map\'s own link, not a shortened share link.');return}
+  const was={lat:p.lat,lon:p.lon,neighborhood:p.neighborhood,city:p.city,branches:p.branches};
+  const geo=await reverseGeocode(coord.lat,coord.lon);
+  const q=placeById(placeId);if(!q)return;
+  const cityChanged=geo.city&&fold(geo.city)!==fold(was.city||'');
+  settlePlace(q,{lat:coord.lat,lon:coord.lon,hood:geo.hood,city:geo.city});
+  save();render();
+  toast(`Placed in ${[geo.hood,cityChanged?geo.city:''].filter(Boolean).join(', ')||q.city||'the city'}.`,()=>{
+    const r=placeById(placeId);if(!r)return;
+    r.lat=was.lat;r.lon=was.lon;r.neighborhood=was.neighborhood;r.city=was.city;r.branches=was.branches;
+    save();render();
+  },'Undo');
 }
 // a pin can be wrong without being ambiguous — a café that moved, or a lookup
 // that matched the wrong thing outright. This is the way back: forget what was
@@ -4600,8 +4672,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.16.1';
+const APP_VERSION='7.17.0';
 const CHANGELOG=[
+  {v:'7.17.0',d:"A pin, from your own hand. OpenStreetMap's search can miss a café that hasn't been mapped as its own point yet, even on a street it knows perfectly well. So where a name search comes up empty — or none of the branches on offer is the real one — Carta now takes a link instead: paste whatever Google or Apple Maps already gave you, and it reads the actual pin straight out of it, then asks the same map for the real neighborhood the way it already does for a search result. No key, no new network touch, nothing kept but the coordinate — a link you copy and paste is not a link Carta remembers."},
   {v:'7.16.1',d:"The city, corrected along with the pin. Placing a café by its real address fixed the pin, but a café first added by pasting a street address into the City field stayed filed under that address forever — the Atlas groups by whatever was typed, and nothing had ever told it otherwise. The same confirmed lookup that places the pin now corrects the city too, exactly the way it already corrects the neighborhood: silently where there was nothing to say, and named in the toast where it actually changed something. A chapter open on a since-corrected name now follows you to the real one instead of quietly emptying out under you."},
   {v:'7.16.0',d:"The pin, corrected. A café you typed by hand used to be placed by a single best guess — so a café with more than one location in a city got whichever one came back first, and it stayed wrong, because Carta only ever looked once and gave you no way to say otherwise. It asks properly now. Where there is only one of something, it is placed quietly and keeps the neighborhood it was found in, which is the line that reads under its name. Where there are several, Carta doesn't choose: the café asks once, with the real neighborhoods to pick from, because only you know which one you were actually in. One tap places it, with an undo. And any café can be looked up again — a pin that was never right is no longer permanent."},
   {v:'7.15.0',d:"Ask Carta, arguing. It used to hand back a flat list of names with a sentence each; it ranks them now, and every one says what it is best FOR — the cleanest cup, the one worth the drive, the sleeper south of you — with the figures off your own brief it was read from sitting under it — underlined where Carta can open them, so one tap gets you the actual cups behind the claim, and left plain where your record can't back them — and what to ask for once you're at the counter. It names the places that are close but aren't the pick, and says why, instead of quietly dropping them. It closes with what it would actually do: the one strongest move, and the order to walk them in depending on what you're after. Two new things to ask: near a point rather than a city, and how far you'll actually go — which is what lets it say 'worth driving for' and mean it. Carta still makes no search, so it never claims what a café is pouring today; where a fit depends on a menu that turns over, the row says so. Every café it names is still checked against a real address before it is drawn, mentions included. And the model it asks by default is a much larger one, with the room to answer properly — your own key, your own choice, still on the device and nowhere else."},
