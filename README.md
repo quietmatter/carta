@@ -89,6 +89,11 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   OpenStreetMap hasn't caught up to — paste the map link your phone already
   gave you and Carta reads the pin straight out of it, then fills in the real
   neighborhood the same way a search result would.
+- **Your cities, drawn.** Each city on the Atlas carries a small thumbnail of
+  its own — the drawn plot always, and the real streets underneath once
+  that row is actually on your screen, the same shape the city's own page
+  shows full-size. Scroll past it and the live map steps aside again; it
+  never asks for more than what's actually being looked at.
 - **The passport.** Carta opens on it: the world frame full-bleed, every
   country your record can trace, drawn from outlines carried in the file
   itself (no map tiles, no network, nothing to be offline from). Tasted

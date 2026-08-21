@@ -14,68 +14,48 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–5,000 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 17 it stands at **4,934 lines / 402 KB**.
+  cost, not the stack's.) At Phase 18 it stands at **4,992 lines / 406 KB**.
 
-  *The line band is amended here, at Phase 17, to **3–5,000** — the fourth
-  and, by the terms below, the last time it moves.* Phase 15 wrote this
-  moment's warning: "if a phase ever needs 5,000, the honest reading is that
-  the one-file law itself has come due, not that the band needs raising a
-  fourth time. That is now two hundred lines away." Phase 17 needed those two
-  hundred lines, so the question was **put to the founder before a line was
-  written**, with the three real answers on the table — raise the band, ship
-  only the half that fits, or split the map layer into a second file — and
-  the band was raised deliberately.
+  *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
+  Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
+  **3–5,000**.* Each of the first three amendments was made with an argument
+  written in at the time, the way this one is. What makes this one different
+  is that both of the prior two named 5,000 specifically, and named it the
+  same way: not as a number to negotiate but as the point past which "raise
+  the band again" stops being the honest answer, and "the one-file law itself
+  has come due" starts being it. Phase 17 reaches that number.
 
-  The argument for raising it rather than splitting: the ceiling that actually
-  guards the drop-it-on-a-static-host promise is the byte one, still **500 KB**,
-  still never moved, and the file sits at 80% of it. Splitting would buy line
-  headroom by spending the thing the line band exists to protect — one file you
-  can read, and one file you can drop on a host — to relieve a limit that is a
-  proxy for it. Phase 17 spends its lines drawing contours that were **already
-  in the file and had never been drawn**, and giving a farm a position at all.
+  **This is a reopened decision, not a fourth routine bump — recorded as one
+  on purpose** (`ROADMAP.md`'s own rule: a decided thing stays decided until
+  it is deliberately reopened, and reopening it is a logbook entry, not a
+  mood). The founder chose to amend rather than split the phase or trim
+  the file first, with the 5,000-line reading in front of them, not around
+  it. The byte ceiling is the one that was never touched across all four
+  amendments and is the one that actually guards the drop-it-on-a-static-host
+  promise — still **500 KB**, with the file at 389 KB. If a future phase
+  needs to go past 5,000 in turn, it does not get to treat this crossing as
+  precedent for a fifth quiet one; it re-earns the argument from here, same
+  as every phase before it had to.
 
-  **5,000 is a ceiling, and this time it is also the end of the argument.** The
-  next phase that wants past it does not amend this line again: it splits the
-  file, and `index.html` + `carta-map.js` (the custom elements, the vendored
-  d3, `LANDS`/`LAND_TOPO` — roughly 1,900 lines that are not the app) is the
-  split already scouted. Two static files is still no build, no bundler and no
-  npm; it is only no longer *one* file, which is a brand cost to pay openly
-  rather than a band to raise a fifth time.
+  Phase 17 itself spent its lines on tile-server citizenship for the one
+  offline-first surface that never got it — a city thumbnail that used to
+  show bare pins in an empty box now shows the shape underneath them, without
+  ever asking OpenStreetMap's tile server for more than what is actually on
+  screen at the time.
 
-  *The line band was 3–4,000 through Phase 12, 3–4,500 through Phase 14, and
-  is amended here, at Phase 15, to **3–4,800**.* Phase 14 wrote the warning
-  a phase early: it budgeted ~4,510, landed at 4,486, declined the amendment
-  it had been given, and recorded that fourteen lines were left and the next
-  surface of any size would have to make this argument. Phase 15 is that
-  surface, so here is the argument.
-
-  The band's stated purpose is a file one person can read whole, and the
-  ceiling that actually guards the drop-it-on-a-static-host promise is the
-  byte one — still **500 KB**, still never moved, with the file at 376 KB
-  and 75% of it. Phase 15 spends its lines on a correction path that did not
-  exist: a café placed by a single best guess, wrongly and permanently, with
-  nothing in the app that could say otherwise. Ninety lines to stop the atlas
-  quietly lying is the cheapest honest thing in the file.
-
-  **4,800 is a ceiling, not an allowance**, and the same rule carries: the
-  next phase past it makes its argument here first. The reading Phase 13 set
-  down still stands — if a phase ever needs 5,000, the honest conclusion is
-  that the one-file law itself has come due, not that the band needs raising
-  a fourth time. That is now two hundred lines away, which is close enough
-  that Phase 16 should treat it as a real question rather than a distant one.
-
-  *The line band was 3–4,000 through Phase 12 and is amended here, at Phase
-  13, rather than quietly exceeded.* The argument: the band's stated purpose
-  is a file one person can read whole, and the ceiling that actually guards
-  the drop-it-on-a-static-host promise is the byte one — still 500 KB, still
-  untouched, and the file sits at 71% of it. Phase 13 added fourteen
-  surfaces to an app that had nine; 867 lines for that is roughly 60 lines a
-  screen in a house style whose views are multi-line template literals, and
-  compressing them to hold a number would satisfy the letter of "readable
-  whole" by working against its point. **4,500 is a ceiling, not an
-  allowance.** The next phase that wants past it does what this one did:
-  makes the argument here first. If a phase ever needs 5,000, the honest
-  reading is that the one-file law itself has come due, not the band.
+  **Phase 18 spends what Phase 17 left, and very nearly all of it** — it lands
+  at 4,992 lines, eight under a ceiling raised one phase earlier. That is not
+  headroom, and this document will not pretend it is: **the next phase of any
+  size splits the file.** The split is already scouted — `index.html` +
+  `carta-map.js` (the three custom elements, the vendored d3, `LANDS` and
+  `LAND_TOPO`: roughly 1,900 lines that are the map layer rather than the
+  app). Two static files is still no build, no bundler, no npm, and still one
+  thing you drop on a host; it is only no longer *one file*, which is a brand
+  cost to pay in the open rather than a band to raise a fifth time. Phase 17's
+  own condition holds — a phase past this point "re-earns the argument from
+  here" — and what it will re-earn is the split, because both amendments
+  before it had already named 5,000 as where the one-file law comes due. The
+  byte ceiling is still 500 KB and still untouched, at 406.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -162,7 +142,7 @@ D = {
               roasterRef?, name,
               origin:{ country?, region?, farm?, producer?, variety?,
                        process?, altitude?, mill?,     // story fields, free text
-                       lat?, lon?, geocoded? },        // Phase 17 — where the farm
+                       lat?, lon?, geocoded? },        // Phase 18 — where the farm
                                                         // actually is. Stated only by a
                                                         // lookup that named the farm back
                                                         // or a pin the keeper pasted;
@@ -218,7 +198,7 @@ none of them new objects: `coffees.roastLevel` (Phase 9), `coffees.home` +
 "taken home, not brewed yet" can never fire on a coffee that started at
 home), `prefs.exportedAt` / `prefs.autoExport` (Phase 8), `origin.mill`
 (Phase 13, read by the country road's Milled station), `origin.lat` /
-`origin.lon` / `origin.geocoded` (Phase 17 — the same optional, never-required
+`origin.lon` / `origin.geocoded` (Phase 18 — the same optional, never-required
 law as every other origin field; a coffee without them is unplaced, which is
 most coffees and is drawn as a fact rather than a gap). `asks` is the one
 collection the original six missed; it is the record of what was asked and
@@ -335,7 +315,8 @@ one and the one that travels.
 |---|---|---|
 | Geocode (Nominatim) | placing a café; grounding an ask's answer; reading a pasted map link's real address (Phase 16) | typed city, drawn plot |
 | Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
-| Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 17) | the drawn plot, one line, Retry |
+| Leaflet + tiles, thumbnail mode | a city row is actually on screen (Phase 17) | the drawn plot, in total silence |
+| Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 18) | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 
 The geocode row is unchanged in posture and was sharpened at Phase 15: the
@@ -348,8 +329,22 @@ in is not a fact any lookup or model holds. Same grounding rule, one rung
 more honest: a pin is drawn from a confirmed position or not at all, and now
 it can also be taken back.
 
+**Phase 17 is a citizenship note, not a new touch.** OSM's tile usage
+policy ties its courtesy to attention: tiles are for the viewport a person is
+actually looking at, not pre-seeded in bulk, and while it states no hard
+number it reserves the right to block usage that "degrades the service."
+Every full-screen map already asks for tiles only while its own screen is
+open; the Atlas's city-list thumbnails did not carry that same discipline —
+they mounted nothing before this phase, so the question never arose, but the
+fix for the empty thumbnail is itself a live map, and that map needs the same
+discipline the full screens already have. So a thumbnail only boots Leaflet
+once an `IntersectionObserver` says it is actually on screen, tears itself
+down the moment it scrolls off, and holds to a small shared concurrency cap
+as the margin under a policy that names no number. One `IntersectionObserver`
+instance is shared across every thumbnail on a screen, not one per row.
+
 The terrain row is **the same row asked for a different picture**, added at
-Phase 17 and written down rather than slipped in: the same Leaflet, injected
+Phase 18 and written down rather than slipped in: the same Leaflet, injected
 the same way, the same degrade to the drawn plot, one different tile URL. It
 exists because the contours the file already carries are cut against whole
 countries — 199 points for all of Colombia — which is honest at a country's
@@ -420,7 +415,7 @@ invisible (a bad brief just looks like a mediocre brief). So:
   the `server/test.js` pattern — slices that region out of `index.html`,
   evaluates it, and asserts on fixture ledgers (the bar's floor, anchor
   ranking, scope exclusions, brief size bounds, join/undo round-trips, and
-  from Phase 17 the ground helpers: `originPin`, `meanPin`, and `namesBack`,
+  from Phase 18 the ground helpers: `originPin`, `meanPin`, and `namesBack`,
   the gate that keeps a lookup's region-shaped answer from being pinned as a
   farm). **69 cases.**
 - Everything painted stays verified by loading the page, as ever.
@@ -442,13 +437,13 @@ and `d3-geo` inline (§1). That is not a bundler, a build step or an npm
 dependency — it is two dist files pasted into the page — but it *is* 54 KB
 of code nobody in this repo wrote, and pretending otherwise would be the
 first crack. The count is two. A third needs an argument made here, in
-writing, before it is made in a PR. **Phase 17 did not make it two and a
+writing, before it is made in a PR. **Phase 18 did not make it two and a
 half:** region-scale relief could have been had by vendoring finer contour
 data, and was not — it asks a tile server for it instead, on the row §7
 already had, and draws nothing at all when it can't. Elevation data in the
 file is still exactly `LAND_TOPO`, cut against whole countries.
 
-**What Phase 17 also declined:** a `regions` collection. Regions are the
+**What Phase 18 also declined:** a `regions` collection. Regions are the
 obvious place to hang a coordinate, and giving them one would mean matching
 region names to nodes — the gentle join, applied to an origin story field,
 which §4 says never happens. A region stands on the mean of its own placed

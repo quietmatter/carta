@@ -310,7 +310,7 @@ nav.tabs[hidden]{display:none}
 .lrow .sc.none{color:var(--text-disabled);font-size:22px}
 .lrow .kind{flex:none;width:40px;align-self:flex-start;padding-top:5px;font-family:var(--sans);
   font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-disabled)}
-.lrow .mapthumb{flex:none;width:60px;height:44px;border:1px solid var(--line);background:var(--surface-page);display:block;overflow:hidden}
+.lrow .mapthumb{flex:none;width:60px;height:44px;border:1px solid var(--line);background:var(--surface-page);display:block;overflow:hidden;position:relative}
 .lrow .ph{flex:none;width:44px;height:44px;object-fit:cover;border:1px solid var(--line)}
 /* a country the record has tasted — a name and its weight, tappable */
 .cchip{display:inline-flex;align-items:baseline;gap:7px;background:none;border:1px solid var(--line-strong);
@@ -684,22 +684,64 @@ nav.tabs[hidden]{display:none}
     }
   }
 
-  /* real streets — OpenStreetMap through Leaflet, filtered to Carta's ink */
+  /* real streets — OpenStreetMap through Leaflet, filtered to Carta's ink.
+   *
+   * thumb="on" (Phase 17) is the same element, mounted where a list row wants
+   * its shape rather than a screen wanting its map. OSM's own tile policy
+   * ties the courtesy to attention — tiles are for "the current viewport", not
+   * pre-seeded in bulk — so a thumbnail only boots Leaflet once it is actually
+   * on screen, and tears itself down again the moment it scrolls off, through
+   * one IntersectionObserver shared by every thumbnail on the page rather than
+   * one per row. A small concurrency cap is the margin under a policy that
+   * states no hard number, only that "capacity is limited". A thumbnail that
+   * fails degrades in total silence — the drawn plot underneath is already
+   * enough at 44×60px, and there is no room there for a "Retry" note sized
+   * for a screen. */
+  const THUMB_CAP = 6;
+  let _thumbLive = 0;
+  const _thumbIO = ('IntersectionObserver' in window) ? new IntersectionObserver(entries => {
+    entries.forEach(e => { const el = e.target; if (e.isIntersecting) el.thumbEnter(); else el.thumbLeave(); });
+  }, { rootMargin: '80px' }) : null;
   class Streets extends HTMLElement {
     static get observedAttributes() { return ['pins', 'pins-from', 'zoom', 'theme', 'still', 'terrain', 'names']; }
     connectedCallback() {
-      this.style.display = 'block'; keepPos(this); this.style.background = 'var(--surface-sunk)';
+      this.style.display = 'block'; keepPos(this);
+      // a thumbnail sits over the drawn plot until it actually has tiles to
+      // show — an opaque background here would black out the floor beneath
+      // it for however long it takes to scroll into view, or forever if it
+      // never does. boot() paints it once there is something to paint.
+      if (this.getAttribute('thumb') !== 'on') this.style.background = 'var(--surface-sunk)';
       if (!this.style.zIndex) this.style.zIndex = '0';   // contain Leaflet's own pane z-indexes
       this._mapHost = document.createElement('div');
       Object.assign(this._mapHost.style, { position: 'absolute', inset: '0' });
       this.appendChild(this._mapHost);
+      if (this.getAttribute('thumb') === 'on' && _thumbIO) { _thumbIO.observe(this); return; }
       if (!navigator.onLine || _lfDown) { this.fell(); return; }
       lfLoad().then(() => { if (this.isConnected) this.boot(); })
               .catch(() => { _lfDown = true; if (this.isConnected) this.fell(); });
     }
-    // the drawn plot is already underneath — step aside and say so once
+    // a thumbnail scrolled into view — booted only if under the shared cap, so
+    // a long list never holds more live maps at once than are actually looked at
+    thumbEnter() {
+      if (this._map || this._thumbPending || !navigator.onLine || _lfDown || _thumbLive >= THUMB_CAP) return;
+      this._thumbPending = true; _thumbLive++;
+      lfLoad().then(() => { this._thumbPending = false; if (this.isConnected && this.getBoundingClientRect().width) this.boot(); else _thumbLive--; })
+              .catch(() => { this._thumbPending = false; _thumbLive--; _lfDown = true; });
+    }
+    // scrolled back out — release the slot for whatever else is on screen now
+    thumbLeave() {
+      if (this._thumbPending) { this._thumbPending = false; _thumbLive--; return; }
+      if (!this._map) return;
+      // boot() painted an opaque floor for the tiles that were here — without
+      // clearing it, the drawn plot stays hidden behind a blank sunk panel
+      // forever once this scrolls off, long after the map itself is gone
+      this.teardown(); this.style.background = ''; _thumbLive--;
+    }
+    // the drawn plot is already underneath — step aside and say so once, unless
+    // this is a thumbnail too small to say anything in at all
     fell() {
       this.style.display = 'none';
+      if (this.getAttribute('thumb') === 'on') return;
       const box = this.parentElement;
       if (!box || box.querySelector(':scope>.smap-note')) return;
       const n = document.createElement('div');
@@ -709,7 +751,11 @@ nav.tabs[hidden]{display:none}
         + '<span class="text-action" onclick="render()">Retry</span>';
       box.appendChild(n);
     }
-    disconnectedCallback() { if (this._mo) { this._mo.disconnect(); this._mo = null; } if (this._ro) this._ro.disconnect(); if (this._map) { try { this._map.remove(); } catch (e) { } this._map = null; } }
+    teardown() { if (this._mo) { this._mo.disconnect(); this._mo = null; } if (this._ro) this._ro.disconnect(); if (this._map) { try { this._map.remove(); } catch (e) { } this._map = null; } }
+    disconnectedCallback() {
+      if (this.getAttribute('thumb') === 'on') { if (_thumbIO) _thumbIO.unobserve(this); if (this._map || this._thumbPending) _thumbLive--; }
+      this.teardown();
+    }
     attributeChangedCallback(n) { if (!this._map) return; if (n === 'theme') this.filter(); else this.marks(); }
     filter() {
       const dusk = (this.getAttribute('theme') || document.documentElement.getAttribute('data-theme')) === 'dusk';
@@ -725,9 +771,14 @@ nav.tabs[hidden]{display:none}
     }
     boot() {
       if (!window.L) { this.fell(); return; }
-      const still = this.getAttribute('still') === 'on';
+      this.style.background = 'var(--surface-sunk)';
+      const still = this.getAttribute('still') === 'on' || this.getAttribute('thumb') === 'on';
+      const thumb = this.getAttribute('thumb') === 'on';
+      // a 44×60px row has no legible room for attribution text, and cramming
+      // it in reads as broken, not compliant — the same city's own full map,
+      // reached by tapping this exact row, already carries it in full
       const map = this._map = window.L.map(this._mapHost, {
-        zoomControl: false, attributionControl: true, dragging: !still, scrollWheelZoom: false,
+        zoomControl: false, attributionControl: !thumb, dragging: !still, scrollWheelZoom: false,
         doubleClickZoom: !still, touchZoom: !still, keyboard: !still, tap: false, fadeAnimation: false,
         zoomSnap: 0, zoomDelta: .5, center: [55.6867, 12.5546], zoom: 12,
       });
@@ -3836,10 +3887,16 @@ function streetsHTML(list,o){
 }
 // the thumbnail a city or a café carries in a list — the drawn plot, always,
 // never a tile: a row is read at a glance and a glance can't wait on a network.
+// the drawn plot is the floor here too, the same law as every other map
+// surface — it renders first, instantly, offline; the streets only ever
+// layer on top of it, never replace it, and only once something is actually
+// looking at this row (thumb="on", Phase 17). A low zoom cap keeps a
+// thumbnail's own tile need to the few, wide tiles its 60×44px can even show.
 function plotThumbHTML(list){
   const pts=placed(list);
   if(!pts.length)return '<span class="mapthumb"></span>';
-  return `<span class="mapthumb"><carta-plot class="plot frame" pins="${pinsAttr(pts)}" dot="12" fit="frame"></carta-plot></span>`;
+  const pins=pinsAttr(pts);
+  return `<span class="mapthumb"><carta-plot class="plot frame" pins="${pins}" dot="12" fit="frame"></carta-plot><carta-streets style="position:absolute;inset:0" thumb="on" zoom="11" pins="${pins}"></carta-streets></span>`;
 }
 
 /* the city's sheet — pulled up over its own streets, and the map re-framing
@@ -4889,9 +4946,10 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.18.0';
+const APP_VERSION='7.19.0';
 const CHANGELOG=[
-  {v:'7.18.0',d:"The ground, at the size a phone reads it. The passport was drawing itself into a fixed frame two and a half times wider than any phone, so every country's name came out at about four pixels and the whole map read as a smudge — it is drawn at the size it is looked at now, and the tasted countries take the width they have instead of throwing away a third of it. A country you tap into is no longer a flat silhouette: it shows its own highlands, the thousand-, two-thousand- and three-thousand-metre contours that were already in the file and never drawn, because altitude is most of the reason a coffee from up there tastes the way it does. The regions you've actually found coffee from stand on that ground and open with a tap. A region opens onto real terrain — contour lines, relief, the valley the road runs down — with a pin on every farm the record can place, and a farm's own page carries the same. A farm is placed the two ways a café already is: one lookup, or a map link you paste. The lookup has to name the farm back, so an unknown farm is left unplaced rather than quietly pinned on the region around it — and every pin can be taken off again. Offline the terrain steps aside and your saved positions simply stand, as the streets already do."},
+  {v:'7.19.0',d:"The ground, at the size a phone reads it. The passport was drawing itself into a fixed frame two and a half times wider than any phone, so every country's name came out at about four pixels and the whole map read as a smudge — it is drawn at the size it is looked at now, and the tasted countries take the width they have instead of throwing away a third of it. A country you tap into is no longer a flat silhouette: it shows its own highlands, the thousand-, two-thousand- and three-thousand-metre contours that were already in the file and never drawn, because altitude is most of the reason a coffee from up there tastes the way it does. The regions you've actually found coffee from stand on that ground and open with a tap. A region opens onto real terrain — contour lines, relief, the valley the road runs down — with a pin on every farm the record can place, and a farm's own page carries the same. A farm is placed the two ways a café already is: one lookup, or a map link you paste. The lookup has to name the farm back, so an unknown farm is left unplaced rather than quietly pinned on the region around it — and every pin can be taken off again. Offline the terrain steps aside and your saved positions simply stand, as the streets already do."},
+  {v:'7.18.0',d:"Your cities, drawn. The little map beside each city on the Atlas used to show nothing but bare pins in an empty box — a shape was never asked for. It draws the real streets now, the same way the city's own page already does, but only once that row is actually on your screen; scroll past it and the live map steps aside again rather than sitting there spending a request for nothing. If the streets can't be reached, the row falls back to what it always showed, without a word about it — a thumbnail has no room to say so, and the drawn pins underneath are enough."},
   {v:'7.17.0',d:"A pin, from your own hand. OpenStreetMap's search can miss a café that hasn't been mapped as its own point yet, even on a street it knows perfectly well. So where a name search comes up empty — or none of the branches on offer is the real one — Carta now takes a link instead: paste whatever Google or Apple Maps already gave you, and it reads the actual pin straight out of it, then asks the same map for the real neighborhood the way it already does for a search result. No key, no new network touch, nothing kept but the coordinate — a link you copy and paste is not a link Carta remembers."},
   {v:'7.16.1',d:"The city, corrected along with the pin. Placing a café by its real address fixed the pin, but a café first added by pasting a street address into the City field stayed filed under that address forever — the Atlas groups by whatever was typed, and nothing had ever told it otherwise. The same confirmed lookup that places the pin now corrects the city too, exactly the way it already corrects the neighborhood: silently where there was nothing to say, and named in the toast where it actually changed something. A chapter open on a since-corrected name now follows you to the real one instead of quietly emptying out under you."},
   {v:'7.16.0',d:"The pin, corrected. A café you typed by hand used to be placed by a single best guess — so a café with more than one location in a city got whichever one came back first, and it stayed wrong, because Carta only ever looked once and gave you no way to say otherwise. It asks properly now. Where there is only one of something, it is placed quietly and keeps the neighborhood it was found in, which is the line that reads under its name. Where there are several, Carta doesn't choose: the café asks once, with the real neighborhoods to pick from, because only you know which one you were actually in. One tap places it, with an undo. And any café can be looked up again — a pin that was never right is no longer permanent."},

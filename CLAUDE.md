@@ -51,7 +51,7 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–17 shipped**; Phase 18 is unwritten.
+  read at every phase gate. **Phases 1–18 shipped**; Phase 19 is unwritten (and splits the file — §1).
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -130,19 +130,24 @@ server/               Classic's sync server — dormant
   - `<carta-belt>` — **the passport**, the app's home surface. Draws the
     `LANDS` outlines already in this file, fitted to the box. **No fetch, no
     tile, nothing to be offline from.** One SVG unit is one CSS pixel, so its
-    type is drawn at the size it is read at (Phase 17 — the fixed 1,000-unit
+    type is drawn at the size it is read at (Phase 18 — the fixed 1,000-unit
     box was what made it illegible on a phone). `topo="on"` inks `LAND_TOPO`'s
     1,000/2,000/3,000 m contours over a country's own fill; `marks="[…]"`
     stands its regions on the ground their farms were placed on.
   - `<carta-plot>` — the drawn plot: a handful of points fit to a box, offline.
   - `<carta-streets>` — a city or a single café: **Leaflet + OpenStreetMap
     tiles, injected at runtime** from unpkg. Unreachable, it hides itself and
-    the drawn plot underneath simply stands. `terrain="on"` swaps in
-    OpenTopoMap for a region or a farm (same row in `ARCHITECTURE.md` §7, one
-    different URL — never inverted for dusk, since an inverted hillshade reads
-    as valleys where the mountains are); `names="on"` labels a pin where the
-    name is the point. **`labels` is not that option** — the city already
-    passes it for the drawn plot and its street pins stay unlabelled.
+    the drawn plot underneath simply stands. `thumb="on"` (Phase 17) is the
+    same element for a list row: one shared `IntersectionObserver` boots it
+    only while actually on screen and tears it down the moment it scrolls
+    off, under a small shared concurrency cap — the tile-server citizenship
+    every full map already had, extended to the surface that never got it.
+    `terrain="on"` (Phase 18) swaps in OpenTopoMap for a region or a farm
+    (same §7 row, one different URL — never inverted for dusk, since an
+    inverted hillshade reads as valleys where the mountains are); `names="on"`
+    labels a pin where the name is the point. **`labels` is not that option**
+    — the city already passes it for the drawn plot, and its street pins stay
+    unlabelled.
   - Beside them, `d3-array` + `d3-geo` **vendored verbatim** — the projection
     the passport needs. See the invariants; this is an amendment, not a habit.
 - **store** — `localStorage` under one key, `carta7.v1`. `D` is the ledger,
@@ -278,14 +283,18 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 - **One file, no build.** Vanilla JS, inline everything, nothing fetched at
   load. `docs/ARCHITECTURE.md` §1 sets the band: **3–5,000 lines / ≤ 500 KB**
-  (the line half was raised from 4,000 at Phase 13, from 4,500 at Phase 15 and
-  from 4,800 at Phase 17, each with the argument written into §1 — the byte
-  ceiling has never moved and is the one that guards the
-  drop-it-on-a-static-host promise. **Phase 17's amendment is the last one:**
-  §1 now says the next phase that wants past 5,000 splits the file — the
-  scouted split is `index.html` + `carta-map.js` (the custom elements, the
-  vendored d3, `LANDS`/`LAND_TOPO`) — rather than raising the band a fifth
-  time. Two static files is still no build; it is only no longer one file.)
+  (raised from 4,000 at Phase 13, 4,500 at Phase 15, 4,800 at Phase 16, each
+  with the argument written into §1 — the byte ceiling has never moved and is
+  the one that guards the drop-it-on-a-static-host promise. Phase 17's
+  amendment to 5,000 is recorded as a **reopened decision**, not a routine
+  fourth bump: both of the prior two amendments had named 5,000 by name as
+  the point past which the one-file law itself, not the band, is what's come
+  due — see §1's own account of it).
+  **There is no room left:** Phase 18 landed at **4,992 of 5,000**, so §1 now
+  says the next phase of any size **splits the file** — `index.html` +
+  `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
+  ~1,900 lines that are not the app) — rather than a fifth amendment. Two
+  static files is still no build; it is only no longer one file.
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written
