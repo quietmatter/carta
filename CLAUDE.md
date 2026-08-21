@@ -31,7 +31,7 @@ JS inline, no build step, no accounts, no server.
 came before it, Carta 6.18.x, is frozen whole at `classic/index.html`. They
 are two different apps in one repo, and the distinction matters constantly:
 
-1. **Carta 7** (`index.html`, ~3,400 lines) — the product. Every phase of
+1. **Carta 7** (`index.html`, ~4,900 lines) — the product. Every phase of
    `docs/ROADMAP.md` ships here.
 2. **Classic** (`classic/index.html`, ~12,500 lines) — **frozen. No fixes, no
    features, lights on.** Its own architecture map is `classic/CLAUDE.md`;
@@ -51,7 +51,12 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–18 shipped**; Phase 19 is unwritten.
+  read at every phase gate. **Phases 1–18 and 20 shipped**; **Phase 19 is
+  written and scheduled but not yet built: it splits the file**
+  (`index.html` + `carta-map.js`) to pay the band debt Phase 18 landed with.
+  Phase 20 landed ahead of it — a founder-level call, made knowing it deepens
+  rather than pays down that debt — so read Phase 19 before adding anything
+  further to `index.html`.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -124,7 +129,7 @@ server/               Classic's sync server — dormant
   its reasons — dotted-underlined, tappable), `.band` (a stated altitude range
   drawn against the atlas's own span), `.pick` (a chip that picks a scope, a
   kind of ask, a mark) and `.pickzone` (the file a sheet is waiting for). Phase
-  18 moved the ask to the Atlas's own hero and gave its wait a screen of its
+  20 moved the ask to the Atlas's own hero and gave its wait a screen of its
   own: `.askfield` (the field standing on the passport's fade, handing its own
   taps back through a `pointer-events:none` parent), `.asktrust` (the one line
   under it, said before anything leaves), `button.led` (the same ledger box,
@@ -138,7 +143,11 @@ server/               Classic's sync server — dormant
   bubbling events (`carta:country-tap`, `carta:pin-tap`).
   - `<carta-belt>` — **the passport**, the app's home surface. Draws the
     `LANDS` outlines already in this file, fitted to the box. **No fetch, no
-    tile, nothing to be offline from.**
+    tile, nothing to be offline from.** One SVG unit is one CSS pixel, so its
+    type is drawn at the size it is read at (Phase 18 — the fixed 1,000-unit
+    box was what made it illegible on a phone). `topo="on"` inks `LAND_TOPO`'s
+    1,000/2,000/3,000 m contours over a country's own fill; `marks="[…]"`
+    stands its regions on the ground their farms were placed on.
   - `<carta-plot>` — the drawn plot: a handful of points fit to a box, offline.
   - `<carta-streets>` — a city or a single café: **Leaflet + OpenStreetMap
     tiles, injected at runtime** from unpkg. Unreachable, it hides itself and
@@ -146,6 +155,12 @@ server/               Classic's sync server — dormant
     mode here — a gated, cap'd live mount for list rows — and took it back
     out the same day: too much map for a 44×60px row, however carefully
     fetched. This element is unchanged from before that phase.)
+    `terrain="on"` (Phase 18) swaps in OpenTopoMap for a region or a farm
+    (same §7 row, one different URL — never inverted for dusk, since an
+    inverted hillshade reads as valleys where the mountains are); `names="on"`
+    labels a pin where the name is the point. **`labels` is not that option**
+    — the city already passes it for the drawn plot, and its street pins stay
+    unlabelled.
   - Beside them, `d3-array` + `d3-geo` **vendored verbatim** — the projection
     the passport needs. See the invariants; this is an amendment, not a habit.
 - **store** — `localStorage` under one key, `carta7.v1`. `D` is the ledger,
@@ -176,7 +191,7 @@ server/               Classic's sync server — dormant
   screens that hide the bar. The settle animation plays on a screen change,
   never on a repaint. `render()` is the single paint.
 - **views** — `vAtlas` (home: the passport full-bleed and sticky, the ask's
-  own field standing on its fade since Phase 18, tasted countries inked with
+  own field standing on its fade since Phase 20, tasted countries inked with
   the keeper's own spelling and tappable, cities underneath with their own
   plots), `vJournal` (every cup newest first, opening
   with the last brew and one tap to begin the next from it), `vShelf` (the
@@ -242,7 +257,7 @@ server/               Classic's sync server — dormant
   text; that is the honesty gate on the answer's return leg. The screen states
   the key it would use and its degrade before the button is tapped;
   `askDraft` holds what has been typed across a chip tap. **The rank is the
-  model's own order, in plain ink — never the ember.** Phase 18 moved the
+  model's own order, in plain ink — never the ember.** Phase 20 moved the
   question itself onto the Atlas's hero (`askFromHome` hands off to the same
   composer rather than firing the call directly) and gave the composer a
   ledger of its own before anything leaves (`askLedgerRowsHTML`, live off
@@ -297,18 +312,29 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 ### Invariants to preserve
 
 - **One file, no build.** Vanilla JS, inline everything, nothing fetched at
-  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–5,300 lines / ≤ 500 KB**
-  (raised from 4,000 at Phase 13, 4,500 at Phase 15, 4,800 at Phase 16, 5,000
-  at Phase 17, each with the argument written into §1 — the byte ceiling has
-  never moved and is the one that guards the drop-it-on-a-static-host
-  promise. Phase 17's amendment to 5,000 is recorded as a **reopened
-  decision**, not a routine fourth bump: both of the prior two amendments had
-  named 5,000 by name as the point past which the one-file law itself, not
-  the band, is what's come due — see §1's own account of it. The decision
-  stood even after Phase 17's own first draft was replaced same-day by a
-  smaller, simpler one — it was never contingent on that draft specifically.
-  Phase 18's amendment to 5,300 re-earned that same argument rather than
-  treating Phase 17's crossing as precedent, per Phase 17's own rule).
+  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–5,000 lines / ≤ 500 KB**
+  (raised from 4,000 at Phase 13, 4,500 at Phase 15, 4,800 at Phase 16, each
+  with the argument written into §1 — the byte ceiling has never moved and is
+  the one that guards the drop-it-on-a-static-host promise. Phase 17's
+  amendment to 5,000 is recorded as a **reopened decision**, not a routine
+  fourth bump: both of the prior two amendments had named 5,000 by name as
+  the point past which the one-file law itself, not the band, is what's come
+  due — see §1's own account of it. The decision stood even after Phase 17's
+  own first draft was replaced same-day by a smaller, simpler one — it was
+  never contingent on that draft specifically).
+  **The band is overdrawn, not amended:** Phase 18 landed at 5,043 of 5,000
+  (bytes fine, 407 of 500 KB), recorded as an open debt rather than a fifth
+  amendment, by the founder's own call — land over, and give the split its
+  own phase. That is **Phase 19**, written up in `ROADMAP.md`: `index.html` +
+  `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
+  ~1,900 lines that are not the app). Two static files is still no build; it
+  is only no longer one file. **Phase 20 landed before Phase 19 did, knowingly
+  deepening the debt further** — put to the founder directly rather than
+  assumed, the same way every prior line-band call was — to **5,374 of
+  5,000** (bytes still fine, 428.7 of 500 KB). §1 records this explicitly:
+  the debt is Phase 19's to pay, still, and it is larger now than when it was
+  scheduled. **Until Phase 19 lands, nothing further goes into `index.html`**
+  without the same explicit call.
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written
@@ -356,14 +382,15 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 71 cases
+node test/model.test.js        # zero deps, plain Node, 74 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
 out of `index.html` and evaluates it against fixture ledgers — no DOM, no
 `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
-`parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel` or
+`parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel`,
+`originPin`, `meanPin`, `namesBack` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**
