@@ -51,10 +51,12 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–18 shipped**; **Phase 19 is written and
-  scheduled: it splits the file** (`index.html` + `carta-map.js`) to pay the
-  band debt Phase 18 landed with — read it before adding anything to
-  `index.html`.
+  read at every phase gate. **Phases 1–18 and 20 shipped**; **Phase 19 is
+  written and scheduled but not yet built: it splits the file**
+  (`index.html` + `carta-map.js`) to pay the band debt Phase 18 landed with.
+  Phase 20 landed ahead of it — a founder-level call, made knowing it deepens
+  rather than pays down that debt — so read Phase 19 before adding anything
+  further to `index.html`.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -126,7 +128,16 @@ server/               Classic's sync server — dormant
   silent field reads `unread` rather than blank), `.fig` (a figure that carries
   its reasons — dotted-underlined, tappable), `.band` (a stated altitude range
   drawn against the atlas's own span), `.pick` (a chip that picks a scope, a
-  kind of ask, a mark) and `.pickzone` (the file a sheet is waiting for).
+  kind of ask, a mark) and `.pickzone` (the file a sheet is waiting for). Phase
+  20 moved the ask to the Atlas's own hero and gave its wait a screen of its
+  own: `.askfield` (the field standing on the passport's fade, handing its own
+  taps back through a `pointer-events:none` parent), `.asktrust` (the one line
+  under it, said before anything leaves), `button.led` (the same ledger box,
+  now also a door onto the brief it was read from), and `.think` (the wait's
+  narrated hairline — a `.rule` that fills as the call actually progresses, a
+  breathing ember tip, and `.settle` for an answer that writes itself in
+  rather than arriving flat). All still, correctly, under
+  `prefers-reduced-motion`.
 - **the map layer** — three light-DOM custom elements defined above the app's
   own script, so page tokens (`var(--ink)`) resolve inside them. Taps leave as
   bubbling events (`carta:country-tap`, `carta:pin-tap`).
@@ -179,9 +190,10 @@ server/               Classic's sync server — dormant
   view, `ROOM_OF` says which room a screen belongs to, `BARELESS` names the
   screens that hide the bar. The settle animation plays on a screen change,
   never on a repaint. `render()` is the single paint.
-- **views** — `vAtlas` (home: the passport full-bleed and sticky, tasted
-  countries inked with the keeper's own spelling and tappable, cities
-  underneath with their own plots), `vJournal` (every cup newest first, opening
+- **views** — `vAtlas` (home: the passport full-bleed and sticky, the ask's
+  own field standing on its fade since Phase 20, tasted countries inked with
+  the keeper's own spelling and tappable, cities underneath with their own
+  plots), `vJournal` (every cup newest first, opening
   with the last brew and one tap to begin the next from it), `vShelf` (the
   coffees you've got, and the door to the record), `vTaste` (**Your taste** —
   what the Scout room used to argue, folded into the Atlas), and the screens.
@@ -195,10 +207,12 @@ server/               Classic's sync server — dormant
     read in and hands it back on the way out.
   - **the places** — `vCityChapter` (streets, with the list on a sheet at
     three detents), `vCafe`, `vCup`, `vMenu`.
-  - **the argument** — `vTaste` → `vBrief` → `vAsk` → `vAskResult`. The first
-    three are `BARELESS`: one argument read in three sittings, so the bar
-    would only offer a way to lose your place. `vAskResult` is a destination
-    and keeps it.
+  - **the argument** — `vTaste` → `vBrief` → `vAsk` → `vAsking` → `vAskResult`.
+    The first four are `BARELESS`: one argument read in a sitting apiece, so
+    the bar would only offer a way to lose your place — `vAsking` most of
+    all, since while the ask is out there is exactly one thing to do with the
+    screen, and it's on it (Cancel). `vAskResult` is a destination and keeps
+    the bar.
   - **what the keeper owns** — `vRecord` (the ledger, the backup, imports,
     cards, the instrument, classic) → `vSetups` → `vSetup` (the grind history
     that is only true on one Setup, which is why it never leaves that page).
@@ -243,7 +257,21 @@ server/               Classic's sync server — dormant
   text; that is the honesty gate on the answer's return leg. The screen states
   the key it would use and its degrade before the button is tapped;
   `askDraft` holds what has been typed across a chip tap. **The rank is the
-  model's own order, in plain ink — never the ember.**
+  model's own order, in plain ink — never the ember.** Phase 20 moved the
+  question itself onto the Atlas's hero (`askFromHome` hands off to the same
+  composer rather than firing the call directly) and gave the composer a
+  ledger of its own before anything leaves (`askLedgerRowsHTML`, live off
+  `tasteModelMemo()`, a door onto the brief via `openAskBrief`). The wait is a
+  screen of its own now (`vAsking`, `askBegin`/`askSay`/`askPlace`, painted in
+  place by `paintAsking` rather than re-rendered, so a repaint never remounts
+  the plot or replays a line already read) — narrating the record's own
+  figures, the call, then each name as `groundNamed`'s new `onPlaced` callback
+  lands it on the wait's plot. **Cancel is a real cancel**: `cancelAsk` aborts
+  the in-flight fetch via `AbortController` and the grounding loop checks
+  `_askCancel` every iteration, and `runAsk` holds the record write itself
+  until after its own final cancel check, so nothing lands in `D.asks` on any
+  cancelled path. The answer settles in on arrival (`_askSettle`, `.settle`),
+  never on a re-render from marking a finding.
 - **cards** — `coffeeCardHTML` / `placeCardHTML` / `passportCardHTML` /
   `yearCardHTML`, each a self-contained page on Carta paper with a live
   preview, shared through the OS share sheet or downloaded. A coffee or café
@@ -294,18 +322,24 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
   due — see §1's own account of it. The decision stood even after Phase 17's
   own first draft was replaced same-day by a smaller, simpler one — it was
   never contingent on that draft specifically).
-  **The band is now overdrawn:** Phase 18 landed at **5,043 of 5,000** (bytes
-  are fine, 407 of 500 KB). §1 records it as an open debt rather than a fifth
-  amendment, by the founder's own call — land over, and give the split its own
-  phase. That is **Phase 19**, written up in `ROADMAP.md`: `index.html` +
+  **The band is overdrawn, not amended:** Phase 18 landed at 5,043 of 5,000
+  (bytes fine, 407 of 500 KB), recorded as an open debt rather than a fifth
+  amendment, by the founder's own call — land over, and give the split its
+  own phase. That is **Phase 19**, written up in `ROADMAP.md`: `index.html` +
   `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
   ~1,900 lines that are not the app). Two static files is still no build; it
   is only no longer one file. **Until it lands, 5,000 is still the number and
   nothing new goes into `index.html`** — there is no headroom to spend, only a
   debt to deepen. One small bugfix (a Phase 16 patch, six lines) was let
   through anyway before Phase 19 shipped, as the one named exception rather
-  than a quiet second overage — see §1's own account. The file now stands at
-  **5,049 / 5,000, 409 KB**.
+  than a quiet second overage — see §1's own account, at 5,049/409 KB. **Phase
+  20 then landed before Phase 19 did too, knowingly deepening the debt
+  further** — put to the founder directly rather than assumed, the same way
+  every prior line-band call was — to **5,380 of 5,000** (bytes still fine,
+  429.5 of 500 KB). §1 records this explicitly: the debt is Phase 19's to
+  pay, still, and it is larger now than when it was scheduled. **Until Phase
+  19 lands, nothing further goes into `index.html`** without the same
+  explicit call.
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written

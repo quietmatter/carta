@@ -79,9 +79,11 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–17 are shipped. Carta 7 stands at
-**v7.19.1, 4,830 lines, 71/71 pure tests**. Full prose for each is in
-`LOGBOOK.md`, cited here, not repeated.*
+*Phases 8–18 and 20 are shipped; Phase 19 (the split) is written and
+scheduled but not yet built. Carta 7 stands at
+**v7.21.0, 5,380 lines, 74/74 pure tests** — 380 lines over the 5,000-line
+band, an acknowledged debt Phase 19 exists to pay down (`ARCHITECTURE.md`
+§1). Full prose for each is in `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
 
@@ -678,6 +680,76 @@ untouched afterward. If it starts wanting a module system, that is tripwire 2
 stands beside it, the pure harness still slices its region out of `index.html`
 and passes, and the passport, the country contours, the city shape, the street
 and terrain surfaces all render in paper and dusk exactly as they do now.
+
+### Phase 20 — Ask Carta, at the front door
+
+**Shipped — v7.21.0. Landed ahead of Phase 19, deliberately — see below.**
+
+**The joy it serves:** the hunt — specifically, the distance between wanting
+to ask and actually asking. The ask was a button at the bottom of the Atlas,
+under everything the record had already done; reaching it meant scrolling
+past the passport, the cities and the tasted countries first. It is the
+first thing the Atlas says now.
+
+**What ships:** the passport stays the ground — it is the argument every ask
+is made from — and the question sits directly on it: one field in the hero,
+one word to send it (`.askfield`). What Carta has already found moves from
+a scroll away to directly under the fold, one tap from being reopened,
+because an answer you can't get back to is a receipt, not a record. The
+composer states what goes out with the ask as a ledger before anything
+leaves — the bar, the scores, what's excluded by name, the scope — each row
+read live off the record as it stands, `unread` wherever the record is
+silent, and the whole block is a door onto the brief itself if you want
+every character of it (`askLedgerRowsHTML`, `openAskBrief`). The wait — the
+one call Carta makes, which used to run silently under the button that
+started it — is a screen of its own now (`vAsking`), narrating the work
+rather than performing patience: the record read back in its own counted
+figures, the bar you hold, the call itself, then each name placed one at a
+time as its address confirms, landing on the wait's own plot as it lands.
+One hairline carries the progress, allotted in advance so it never runs
+backwards when the answer turns out to name eight places instead of five.
+Cancel is a real cancel — the fetch aborts via `AbortController`, the
+grounding loop stops at the name it's on, and nothing is written to the
+ledger. A failed call states the model's own reason where the wait was,
+with both doors on it: back to the ask, or copy the brief. The answer
+settles in on arrival, one row at a time in the order it was argued, rather
+than landing as a wall — marking a finding afterward re-reads the same
+screen and does not replay the settle. Reduced motion stills all of it.
+
+**The tripwires, screened.** No new network row: the wait narrates the same
+three touches the ask already made (the model call, the geocode pass) —
+nothing here calls out that didn't before. No gamification — the settle is
+a writing-in animation, not a score, and it plays once, never as a return
+nudge. No resolver, no proof: the ledger states what the record already
+holds: the same figures `briefPlainText` was already sending, just read
+aloud before the key is spent. **Cancel's honesty caught a real bug on the
+way in.** The draft this phase started from wrote the ask to `D.asks` and
+saved it *before* its last pacing beat, so a cancel landing in that final
+~900ms window would abort nothing — the answer was already fully grounded
+and already on the record, contradicting "nothing is written down" stated
+as this phase's own invariant. Fixed by moving the write after that beat's
+own cancel check, so every `_askCancel` branch in `runAsk`, including the
+last one, returns before `D.asks.unshift` runs.
+
+**Landed into a debt already owed, and made it larger — on purpose.** This
+phase was built against the file before Phase 18 and Phase 19 existed on
+`main`; both merged first, and with them the rule Phase 18 wrote directly
+into `ARCHITECTURE.md` §1: *nothing new goes into `index.html` before the
+split does.* This phase's own furniture (the front-door composer, the
+narrated wait screen, the settle-in animation) doesn't fit that rule — it
+adds to the very file the rule says not to touch. Put to the founder
+directly rather than assumed: hold this work until Phase 19 ships, or land
+it now and knowingly deepen the debt Phase 19 exists to pay down. The call
+was to land it. `index.html` stands at **5,374 lines against the still-
+unamended 5,000** (up from Phase 18's 5,043), bytes comfortable at
+428.7/500 KB. Recorded in `ARCHITECTURE.md` §1 as a second, larger debt
+against the same ceiling — not a fresh amendment, and not a precedent for
+the next phase to add more without asking the same question again.
+
+**Done when — met:** the ask is reachable from the Atlas in one tap and one
+field, states what it's about to send before the key is spent, narrates its
+one network call rather than hiding it, and a cancelled ask leaves nothing
+behind.
 
 ## The horizon (unscheduled, revisited)
 

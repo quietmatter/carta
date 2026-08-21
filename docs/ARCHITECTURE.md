@@ -14,7 +14,8 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–5,000 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 18 it stands at **5,049 lines / 409 KB — 49 over the ceiling, see below**.
+  cost, not the stack's.) At Phase 20 it stands at **5,380 lines / 429.5 KB —
+  380 over the ceiling, see below**.
 
   *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
   Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
@@ -89,6 +90,20 @@ Carta 7 is built exactly the way classic was, smaller:
   like a second precedent. That is what moved the count from 5,043 to
   **5,049 / 409 KB**. The rule stands for everything else — this is the one
   named exception, not a reopening of it.
+
+  **Phase 20 landed anyway, before Phase 19 did — the debt deepened again, by
+  an explicit call, not an accident.** It merged into this same rule,
+  mid-flight: the ask redesign (a new front-door composer, a narrated wait
+  screen, a settle-in animation) was already built against the pre-Phase-18
+  file when Phase 18, this rule, and the patch above all landed on `main`
+  first. Put to the founder directly rather than assumed — land the feature
+  anyway, deepening the debt Phase 19 exists to pay, or hold it until the
+  split ships — the call was to land it. `index.html` is now **5,380 lines
+  against the still-unmoved 5,000**, up from 5,049; bytes remain comfortable
+  at 429.5 of 500 KB. This is not a precedent for a phase after it to add
+  more on the same reasoning — the rule stands exactly as Phase 18 wrote it,
+  and Phase 19 is still the fix. What changed, twice now, is only that the
+  debt it will pay is larger than when it was scheduled.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single

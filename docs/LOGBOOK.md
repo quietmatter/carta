@@ -7,6 +7,61 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 20: Ask Carta, at the front door
+
+- **Shipped — v7.21.0.** The ask moved off a button at the bottom of the
+  Atlas — reachable only after scrolling past the passport, the cities and
+  the tasted countries — onto the Atlas's own hero: one field standing on
+  the passport's fade, one word to send it. What Carta has already found
+  moved with it, from a scroll away to directly under the fold.
+- **The composer states its own ledger before the key is spent** — the bar,
+  the scores, what's excluded by name, the scope, each read live off the
+  record, `unread` wherever it's silent — and the block is a door onto the
+  brief itself for anyone who wants every character of it.
+- **The wait is a screen of its own.** The one network call Carta makes used
+  to run silently under the button that started it; it now narrates the
+  record's own counted figures, the call, then each name landing on a plot
+  as its address confirms, on one hairline allotted in advance so it never
+  runs backwards. Cancel aborts the fetch and the grounding loop for real.
+- **A real bug, caught by taking the invariant literally.** The draft this
+  phase started from wrote the ask to the ledger *before* its last pacing
+  beat, so a cancel in that final ~900ms window didn't actually prevent
+  anything — the record was already written by the time cancel could stop
+  it, quietly breaking "nothing is written down." Fixed by moving the write
+  after that beat's own cancel check. Worth keeping in the record: a stated
+  invariant is worth re-deriving against the actual code path, not just
+  reading as prose.
+- **Landed into a `main` that had moved twice.** This phase was built against
+  the file before Phase 18 (the ground), Phase 19 (the split, scheduled), and
+  a small v7.20.1 patch all existed — all three merged to `main` first,
+  taking the version number (`7.20.0`), the phase number (18), and the
+  line-band decision this phase had independently reached for itself (an
+  amendment to 5,300). Collided on merge: renumbered to **Phase 20 /
+  v7.21.0**, and the band question was reopened rather than assumed, because
+  the answer on `main` had changed underneath it — see below.
+- **The debt, deepened rather than paid — an explicit call, not a silent
+  one.** Phase 18 had already landed `index.html` over the 5,000-line
+  ceiling (5,043), the founder had explicitly scheduled Phase 19 to pay it
+  down by splitting the map layer out (writing directly into
+  `ARCHITECTURE.md` §1: "nothing new goes into `index.html` before the split
+  does"), and one small v7.20.1 patch had already been let through as a
+  named exception, landing at 5,049. This phase adds to `index.html` anyway,
+  ahead of the split, landing it at **5,380 / 5,000** (bytes fine, 429.5/500
+  KB). Put to the founder directly rather than decided alone — hold the
+  branch until Phase 19 ships, or land now and deepen the debt further — the
+  call was to land. Recorded here and in `ARCHITECTURE.md` §1 as what it is:
+  a third, larger debt against the same still-unpaid ceiling, not a fresh
+  amendment and not a precedent for a phase after this one to do the same
+  without asking.
+- Two stray in-code comments from Phase 17's same-day correction had called
+  that work "Phase 18," written before either this phase or the real Phase
+  18 existed — a different session fixed them independently on `main`
+  (`Phase 17, corrected` / `its same-day correction is this`); this phase's
+  own attempt at the same fix was dropped in favor of `main`'s wording so
+  the file doesn't carry two different corrections of the same comment.
+
+---
+
 ## 2026-08-21 — Phase 16 patch (v7.20.1): the box that vanished on success
 
 - **Why.** Reported directly: place a café by pasting a Google or Apple Maps
