@@ -12,9 +12,35 @@ part of the record.*
 Carta 7 is built exactly the way classic was, smaller:
 
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
-  **3–4,800 lines / ≤ 500 KB** including map data — a file one person can
+  **3–5,000 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 15 it stands at **4,716 lines / 384 KB**.
+  cost, not the stack's.) At Phase 17 it stands at **4,934 lines / 402 KB**.
+
+  *The line band is amended here, at Phase 17, to **3–5,000** — the fourth
+  and, by the terms below, the last time it moves.* Phase 15 wrote this
+  moment's warning: "if a phase ever needs 5,000, the honest reading is that
+  the one-file law itself has come due, not that the band needs raising a
+  fourth time. That is now two hundred lines away." Phase 17 needed those two
+  hundred lines, so the question was **put to the founder before a line was
+  written**, with the three real answers on the table — raise the band, ship
+  only the half that fits, or split the map layer into a second file — and
+  the band was raised deliberately.
+
+  The argument for raising it rather than splitting: the ceiling that actually
+  guards the drop-it-on-a-static-host promise is the byte one, still **500 KB**,
+  still never moved, and the file sits at 80% of it. Splitting would buy line
+  headroom by spending the thing the line band exists to protect — one file you
+  can read, and one file you can drop on a host — to relieve a limit that is a
+  proxy for it. Phase 17 spends its lines drawing contours that were **already
+  in the file and had never been drawn**, and giving a farm a position at all.
+
+  **5,000 is a ceiling, and this time it is also the end of the argument.** The
+  next phase that wants past it does not amend this line again: it splits the
+  file, and `index.html` + `carta-map.js` (the custom elements, the vendored
+  d3, `LANDS`/`LAND_TOPO` — roughly 1,900 lines that are not the app) is the
+  split already scouted. Two static files is still no build, no bundler and no
+  npm; it is only no longer *one* file, which is a brand cost to pay openly
+  rather than a band to raise a fifth time.
 
   *The line band was 3–4,000 through Phase 12, 3–4,500 through Phase 14, and
   is amended here, at Phase 15, to **3–4,800**.* Phase 14 wrote the warning
@@ -135,7 +161,15 @@ D = {
   coffees: [{ id, createdAt, roaster,                  // display string
               roasterRef?, name,
               origin:{ country?, region?, farm?, producer?, variety?,
-                       process?, altitude?, mill? },   // story fields, free text
+                       process?, altitude?, mill?,     // story fields, free text
+                       lat?, lon?, geocoded? },        // Phase 17 — where the farm
+                                                        // actually is. Stated only by a
+                                                        // lookup that named the farm back
+                                                        // or a pin the keeper pasted;
+                                                        // `geocoded` means asked-once, not
+                                                        // found. A REGION never gets one:
+                                                        // it is the mean of its placed
+                                                        // farms, recomputed on read
                                                         // altitude specified from the turn's
                                                         // start, first offered a field at
                                                         // Phase 13; mill added there, and the
@@ -183,7 +217,10 @@ none of them new objects: `coffees.roastLevel` (Phase 9), `coffees.home` +
 `coffees.homeAt` (Phase 11 — stamped only by the café-to-shelf bridge, so
 "taken home, not brewed yet" can never fire on a coffee that started at
 home), `prefs.exportedAt` / `prefs.autoExport` (Phase 8), `origin.mill`
-(Phase 13, read by the country road's Milled station). `asks` is the one
+(Phase 13, read by the country road's Milled station), `origin.lat` /
+`origin.lon` / `origin.geocoded` (Phase 17 — the same optional, never-required
+law as every other origin field; a coffee without them is unplaced, which is
+most coffees and is drawn as a fact rather than a gap). `asks` is the one
 collection the original six missed; it is the record of what was asked and
 what came back. **Phase 14 widened it and broke nothing:** every field it
 added is optional, so an ask stored under the Phase 7 shape still opens and
@@ -252,6 +289,11 @@ tokens/style     the QM-inherited layer + Carta overrides (ported)
 map layer        <carta-belt> · <carta-plot> · <carta-streets>, three light-DOM
                  custom elements above the app's own script, with d3-array +
                  d3-geo vendored beside them (§1). Leaflet injected at runtime.
+                 belt: topo="on" (LAND_TOPO's contours) + marks="[…]" (the
+                 regions, on their farms' ground); streets: terrain="on"
+                 (the §7 tile row) + names="on" (a pin whose name is the point).
+                 One SVG unit is one CSS pixel — the belt is drawn at the size
+                 it is read at, which is what makes it legible on a phone.
 store            load/save, carta7.v1, live(), put-away, photos key
 domain           uid, dates, °C, rest window, ROAST_LEVELS, fold, matchNodes
                  — inside the /* ==== pure ==== */ markers (§9)
@@ -293,6 +335,7 @@ one and the one that travels.
 |---|---|---|
 | Geocode (Nominatim) | placing a café; grounding an ask's answer; reading a pasted map link's real address (Phase 16) | typed city, drawn plot |
 | Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
+| Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 17) | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 
 The geocode row is unchanged in posture and was sharpened at Phase 15: the
@@ -304,6 +347,17 @@ with the real neighborhoods to pick from, because which branch the keeper sat
 in is not a fact any lookup or model holds. Same grounding rule, one rung
 more honest: a pin is drawn from a confirmed position or not at all, and now
 it can also be taken back.
+
+The terrain row is **the same row asked for a different picture**, added at
+Phase 17 and written down rather than slipped in: the same Leaflet, injected
+the same way, the same degrade to the drawn plot, one different tile URL. It
+exists because the contours the file already carries are cut against whole
+countries — 199 points for all of Colombia — which is honest at a country's
+own frame and a lie at a region's. Where the file cannot draw real ground, it
+asks for it or shows none; it does not draw a coarse thing and call it
+terrain. The tiles are never inverted for dusk (an inverted hillshade reads as
+valleys where the mountains are) and Leaflet's own emoji attribution prefix is
+cleared, but OpenTopoMap's CC-BY-SA credit is not.
 
 That is the whole list, and **Phase 14 deliberately kept it that way.** The
 obvious way to make the ask's answers sharper is to let the model search —
@@ -365,7 +419,10 @@ invisible (a bad brief just looks like a mediocre brief). So:
   markers in the file. **`test/model.test.js`** — zero-dep, plain Node,
   the `server/test.js` pattern — slices that region out of `index.html`,
   evaluates it, and asserts on fixture ledgers (the bar's floor, anchor
-  ranking, scope exclusions, brief size bounds, join/undo round-trips).
+  ranking, scope exclusions, brief size bounds, join/undo round-trips, and
+  from Phase 17 the ground helpers: `originPin`, `meanPin`, and `namesBack`,
+  the gate that keeps a lookup's region-shaped answer from being pinned as a
+  farm). **69 cases.**
 - Everything painted stays verified by loading the page, as ever.
 
 ## 10. What is deliberately not built
@@ -385,4 +442,14 @@ and `d3-geo` inline (§1). That is not a bundler, a build step or an npm
 dependency — it is two dist files pasted into the page — but it *is* 54 KB
 of code nobody in this repo wrote, and pretending otherwise would be the
 first crack. The count is two. A third needs an argument made here, in
-writing, before it is made in a PR.
+writing, before it is made in a PR. **Phase 17 did not make it two and a
+half:** region-scale relief could have been had by vendoring finer contour
+data, and was not — it asks a tile server for it instead, on the row §7
+already had, and draws nothing at all when it can't. Elevation data in the
+file is still exactly `LAND_TOPO`, cut against whole countries.
+
+**What Phase 17 also declined:** a `regions` collection. Regions are the
+obvious place to hang a coordinate, and giving them one would mean matching
+region names to nodes — the gentle join, applied to an origin story field,
+which §4 says never happens. A region stands on the mean of its own placed
+farms and stands nowhere when it has none.

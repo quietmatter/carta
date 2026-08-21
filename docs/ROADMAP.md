@@ -473,6 +473,65 @@ Carta's to build. It is a plausible source for the "published atlas, keyless,
 readBrand-posture" `ARCHITECTURE.md` §7 already names as Lotmark's future
 interchange with Carta. Logged for that desk, not built here.
 
+### Phase 17 — the ground, and what grew on it
+
+**Shipped — v7.18.0.**
+
+**The joy it serves:** the record and the hunt at once — *where a coffee came
+from*, drawn as ground rather than as a name. Altitude is most of the reason a
+green from up there tastes the way it does, and until this phase the app held
+altitudes as text and drew countries as flat silhouettes.
+
+**Where this came from.** The founder, reading the Atlas on a phone: the map
+is unreadable at that size, a country you tap into has no definition, and a
+region is a list rather than a place. Four asks, in one sentence.
+
+**What shipped.**
+
+- **The passport at phone scale.** `carta-belt` drew into a fixed 1,000-unit
+  viewBox whatever the box actually was, so on a 390 px phone an 11 px country
+  name rendered at ~4 px and every hairline vanished. One SVG unit is one CSS
+  pixel now. The tasted frame also inset itself to 20–80% of the box, throwing
+  away 40% of a width a phone has none to spare of; it takes the width it has.
+  Labels gained the halo in their width estimate and a real edge margin — a
+  name that would run off the frame is **dropped, never clipped**, and the
+  chips underneath still name every country.
+- **A country shows its highlands.** `LAND_TOPO` — contours at 1,000 / 2,000 /
+  3,000 m for 48 countries — has been in the file since Phase 3 and only the
+  printed card ever drew it. `topo="on"` inks it back over a country's own
+  fill. Nothing was added to the file to do this.
+- **Its regions stand on it.** A region is marked where the record can place
+  it, tappable into its chapter. A region with nothing placed is listed and
+  never plotted — the ask's own rule, one scale down.
+- **A region opens onto real terrain.** OpenTopoMap over the Leaflet layer
+  that already ships (`ARCHITECTURE.md` §7 — a second tile URL on an existing
+  row, put to the founder before it was written), with a pin on every farm the
+  record can place, and the same on a farm's own page. Offline, it steps aside
+  and the drawn plot stands.
+- **A farm has a position.** `origin.lat`/`lon`/`geocoded` — two more optional
+  story fields, stated by a lookup that names the farm back or a pin the keeper
+  pastes, and takeable back with undo.
+
+**What it declined.** A `regions` collection (a coordinate on a region means
+matching region names to nodes — the gentle join applied to an origin story
+field, which §4 rules out; a region is the mean of its placed farms instead).
+Vendoring finer contour data for region-scale relief (**tripwire 2** — the
+count stays two; where the file can't draw real ground it asks for it, and
+draws nothing when it can't). Trusting a farm lookup: Nominatim answers
+*something* for almost any query, and for an unknown farm that something is
+the region around it — `namesBack` refuses it, so most smallholder farms stay
+honestly unplaced rather than quietly pinned in the same wrong spot.
+
+**The band.** This is the phase `ARCHITECTURE.md` §1 was waiting for. Phase 15
+wrote that 5,000 lines would mean the one-file law had come due, "two hundred
+lines away." Phase 17 needed those two hundred, so the question went to the
+founder **before a line was written**, with three real answers — raise the
+band, ship only the country half, or split the map layer into a second file.
+The band was raised to **3–5,000** deliberately, and §1 now names the split
+(`index.html` + `carta-map.js`) as what happens instead of a fifth amendment.
+Landed at 4,934 lines / 402 KB — 80% of the byte ceiling, which has still
+never moved.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner
@@ -493,7 +552,10 @@ interchange with Carta. Logged for that desk, not built here.
    `roastLevel` is a plain optional field, same as `process` — if it ever
    grows a scale, a rung, or a required tier, that's this tripwire firing.)
 2. **Tooling creep.** A bundler, a framework, a dependency → re-read
-   `ARCHITECTURE.md` §1. The kit stays light. (Phase 10's shortcut is a
+   `ARCHITECTURE.md` §1. The kit stays light. (Phase 17 is the worked
+   example of this firing and being obeyed: region relief wanted finer
+   contour data vendored into the file, and got a tile URL on an existing
+   network row instead — the count is still two.) (Phase 10's shortcut is a
    JSON array in a manifest that already exists — if it ever needs a
    native wrapper, stop. Phase 12's vendored `d3-array` + `d3-geo` are the
    one time this line has moved: 54 KB pasted into the file, no npm, no

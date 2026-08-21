@@ -7,6 +7,62 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 17: the ground, and what grew on it
+
+- **Why.** The founder, reading the Atlas on a phone: the map is unreadable at
+  that size, a country you tap into has no definition, a region is a list
+  rather than a place, and a farm is a name with nowhere to stand. Four asks in
+  one sentence, and the second one — *topography, because elevation is key to
+  coffee quality* — turned out to be half-built already.
+- **The find that shaped the phase.** `LAND_TOPO` has been in the file since
+  Phase 3: contours at 1,000 / 2,000 / 3,000 m for 48 countries, cut from the
+  public-domain Terrarium model, and drawn by **nothing but the printed
+  passport card**. The country half of this phase needed no new data at all,
+  only a `topo="on"` on `carta-belt`. Decoded and measured before designing
+  anything: 199 points for the whole of Colombia — honest at a country's own
+  frame, a lie at a region's. That number is what sent region relief to tiles
+  instead of to a second vendoring.
+- **Shipped — v7.18.0.** The passport drawn at the size it is read at (one SVG
+  unit = one CSS pixel; the old fixed 1,000-unit box rendered an 11 px country
+  name at ~4 px on a phone, which was the whole "unreadable"). A country inked
+  with its own highlands, its regions standing on the ground their farms were
+  placed on, tappable. A region on real terrain — OpenTopoMap over the Leaflet
+  layer that already ships — with a pin per placed farm, and the same on a
+  farm's page. `origin.lat`/`lon`/`geocoded`: two more optional story fields,
+  placed by a lookup or a pasted pin, taken back with undo. 4,934 lines /
+  402 KB, 69 pure tests.
+- **Two founder calls, both put before any code.** The line band (§1's
+  pre-committed "5,000 means the one-file law has come due") and the terrain
+  tile row (§7). Three real options were offered on the band — raise, cut to
+  the country half, or split the map layer — and it was raised to **3–5,000**.
+  §1 now names the split (`index.html` + `carta-map.js`, ~1,900 lines that are
+  not the app) as what happens *instead of* a fifth amendment. That is the
+  next phase's inheritance, written down while it is cheap to say.
+- **Tripwire 2 fired and was obeyed.** Region-scale relief could have been had
+  by vendoring finer contour data. It wasn't: the count is still two, and where
+  the file can't draw real ground it asks for it and draws nothing when it
+  can't. Also declined: a `regions` collection — a coordinate on a region means
+  matching region names to nodes, which is the gentle join applied to an origin
+  story field, and origin fields never join. A region is the mean of its placed
+  farms, recomputed on read, stored nowhere.
+- **The honesty gate.** Nominatim answers *something* for nearly any query, and
+  for a farm it has never heard of that something is the region around it —
+  which would have pinned every unknown farm on the same spot and called it
+  confirmed, Phase 15's bug reborn one level down. `namesBack` requires the
+  lookup to name the farm back; everything else stays listed and unplaced,
+  which is most smallholder farms and is written as a fact about the map rather
+  than a gap in the record. Pure, and tested.
+- **Parked.** Tapping the terrain to drop a farm pin by hand (Phase 16 parked
+  the same thing for cafés; it is one surface, and it should be one phase for
+  both). A region's own altitude band read off the terrain rather than off what
+  the bags stated.
+- **For Lotmark's desk.** Farm-level geography is the clearest case yet for the
+  published atlas §7 already names: OSM knows washing stations and cooperatives
+  far better than it knows farms, and the gap is exactly the trade-side record
+  Lotmark would hold. Carta will keep asking the keeper instead.
+
+---
+
 ## 2026-08-21 — Phase 16: the pin, in your own hand
 
 - **Why.** The founder asked how to bridge the gap between OSM and the
