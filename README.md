@@ -82,7 +82,9 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   neighborhood it was found in. Where there are several — two Marus in Los
   Angeles — Carta doesn't pick one for you: the café asks once, with the real
   neighborhoods to choose from, and one tap places it. Any café can be looked
-  up again, so a pin that was never right isn't stuck that way.
+  up again, so a pin that was never right isn't stuck that way — and if a
+  café was first typed with a street address in the City field rather than a
+  real one, the same confirmed lookup corrects that too.
 - **The passport.** Carta opens on it: the world frame full-bleed, every
   country your record can trace, drawn from outlines carried in the file
   itself (no map tiles, no network, nothing to be offline from). Tasted

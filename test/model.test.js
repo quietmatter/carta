@@ -28,7 +28,7 @@ vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
-  askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, dedupeHits, menuOCRPrompt, parseMenuOCR, extractJSON,
+  askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel };
 `, sandbox);
 const M = sandbox.__m;
@@ -481,6 +481,26 @@ assert.equal(M.dedupeHits([{ lat: 1.00001, lon: 2.00001, hood: '' }, { lat: 1.00
 assert.deepEqual(M.dedupeHits([]), []);
 assert.deepEqual(M.dedupeHits(null), []);
 ok('dedupeHits collapses one café returned twice, so only a real branch ever becomes a question');
+
+// ---- reading the real city off a place lookup — the city-field bug ----
+// a café pasted into the door with a street address in the City field ends up
+// with p.city holding that address forever unless the confirmed lookup can
+// correct it — the same treatment Phase 15 already gave the neighborhood.
+assert.equal(M.cityOf({ road: 'Mateo Street', quarter: 'Arts District', suburb: 'Downtown', city: 'Los Angeles' }), 'Los Angeles');
+assert.equal(M.cityOf({ town: 'Ojai', county: 'Ventura County' }), 'Ojai', 'a town is a city here — Nominatim only states one of the two');
+assert.equal(M.cityOf({ village: 'Little Compton' }), 'Little Compton');
+assert.equal(M.cityOf({ county: 'Ventura County' }), '', 'a county alone is not a city — leave it blank rather than guess one level too coarse');
+assert.equal(M.cityOf(null), '');
+ok('cityOf reads the real city off a confirmed address, the same way hoodOf reads the neighborhood');
+
+// dedupeHits must key on city too — a garbage city query can genuinely pull
+// candidates from different real cities that happen to share a hood name
+const crossCity = [
+  { lat: 34.10, lon: -118.28, hood: 'Downtown', city: 'Los Angeles' },
+  { lat: 37.77, lon: -122.42, hood: 'Downtown', city: 'San Francisco' },
+];
+assert.equal(M.dedupeHits(crossCity).length, 2, 'the same hood name in two different real cities is two branches, not one');
+ok('dedupeHits keys on city as well as hood, so cross-city collisions never collapse into one');
 
 // ---- the menu's OCR (horizon list): the prompt, and the parse of what comes back ----
 const ocrPrompt = M.menuOCRPrompt();
