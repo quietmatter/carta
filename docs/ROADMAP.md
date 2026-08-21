@@ -80,7 +80,7 @@ Neither finding changes a joy or a law. Both change what ships next.
 ## The phases (Act Two)
 
 *Phases 8–15 are shipped. Carta 7 stands at
-**v7.16.0, 4,601 lines, 61/61 pure tests**. Full prose for each is in
+**v7.16.1, 4,643 lines, 63/63 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -390,6 +390,22 @@ that argument, making it.
 **Done when — met:** a café with two branches in one city asks instead of
 guessing, a café with one is placed without a word and knows its
 neighborhood, and no pin in the app is permanent any more.
+
+**Patch, v7.16.1 — the city was the same bug one field over.** A café first
+added by pasting a street address into the City field (rather than a real
+city) stayed filed under that address permanently: `knownCities()` and the
+Atlas group by whatever was typed, and placing the pin correctly did nothing
+to it, because `settlePlace` only ever touched `lat`/`lon`/`neighborhood`.
+Confirmed lookups state the real city too and Carta was throwing that away
+exactly the way it threw away the neighborhood before this phase. `cityOf`
+(pure, tested, same shape as `hoodOf`) reads it off `city`/`town`/`village`;
+`settlePlace` now corrects `city` from a confirmed hit the same way it
+corrects `neighborhood` — silent where nothing changed, named in the toast
+where it did. One more thing this needed and almost didn't get: a city
+chapter left open on the garbage name it was opened under would silently
+empty out from under the keeper as its one café corrected away underneath
+it — fixed by following the chapter to the real name rather than leaving a
+stale title over an empty list.
 
 ## The horizon (unscheduled, revisited)
 

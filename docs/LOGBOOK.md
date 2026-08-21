@@ -7,6 +7,34 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 15 patch (v7.16.1): the city, one field over
+
+- **Why.** Phase 15 fixed a mis-pinned café; it left the same bug standing in
+  the field next to it. A café first added by pasting a street address into
+  the City field (rather than a real city) stayed filed under that address
+  forever, because `settlePlace` only ever corrected `lat`/`lon`/
+  `neighborhood` — never `city` — and the Atlas groups everything by
+  whatever `p.city` literally holds.
+- **Shipped — v7.16.1.** The confirmed lookup that places the pin now
+  corrects `city` too, the same way it already corrects `neighborhood`:
+  silent where a single match settles quietly, named in the toast only where
+  it actually changed something (so the common case — the city was already
+  right — stays quiet). `cityOf` is `hoodOf`'s twin, reading `city`/`town`/
+  `village`; a rural hit with only a county leaves the field alone rather
+  than guessing one level too coarse. `dedupeHits` now keys on city as well
+  as neighborhood, since a garbage-city query can genuinely pull candidates
+  from more than one real city.
+- **One regression caught before shipping, not after.** Correcting `city`
+  live means a keeper standing on the very chapter they opened — still
+  titled the garbage address — would watch its one café quietly vanish from
+  the list as it renamed itself away underneath them. Testing the fix
+  end-to-end (not just the pure functions) is what surfaced this; the
+  chapter now follows the correction to the real city instead of leaving a
+  stale title over an empty list.
+- **No new tripwire.** Same posture as Phase 15 proper: a confirmed fact
+  correcting one field on one record, not a merge between two.
+
+---
 ## 2026-08-21 — Phase 15: the pin, corrected
 
 - **Why.** The founder noticed hand-typed cafés were mis-pinned and proposed

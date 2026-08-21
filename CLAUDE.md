@@ -321,13 +321,13 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 61 cases
+node test/model.test.js        # zero deps, plain Node, 63 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
 out of `index.html` and evaluates it against fixture ledgers — no DOM, no
 `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
-`joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `dedupeHits`,
+`joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
 `parseRoastLevel` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 

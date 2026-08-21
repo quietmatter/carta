@@ -1278,14 +1278,30 @@ function hoodOf(address){
   for(const k of HOOD_KEYS){const v=cleanHood(address[k]);if(v)return v}
   return '';
 }
+/* A café pasted in wrong doesn't only mis-hit the pin — the same lookup that
+ * confirms the address also states the real city, and until now Carta threw
+ * that away exactly the way it threw away the neighborhood. A café added by
+ * pasting a street address into the City field stays filed under that address
+ * forever otherwise: the Atlas groups by the field as typed, so the garbage
+ * string becomes its own permanent "city" no correction to the pin ever
+ * touches. `city`/`town`/`village` cover everywhere OSM states one; a rural
+ * address with only a county is left blank rather than guessed. */
+const CITY_KEYS=['city','town','village'];
+function cityOf(address){
+  if(!address||typeof address!=='object')return '';
+  for(const k of CITY_KEYS){const v=String(address[k]||'').trim();if(v)return v}
+  return '';
+}
 // two hits are the same café when they land on the same area, or — where
 // neither states one — on the same corner. Rounded to about a city block, so a
 // lookup that returns one café twice never reads as a choice to be made.
+// The city rides along in the key too: a hood name is only unique within one
+// city, and a garbage-city query can genuinely return candidates from several.
 function dedupeHits(hits){
   const seen={},out=[];
   for(const h of (hits||[])){
     if(!h||h.lat==null||h.lon==null)return out.length?out:[];
-    const key=h.hood?'h:'+fold(h.hood):'p:'+h.lat.toFixed(3)+','+h.lon.toFixed(3);
+    const key=h.hood?'h:'+fold(h.city||'')+'|'+fold(h.hood):'p:'+h.lat.toFixed(3)+','+h.lon.toFixed(3);
     if(seen[key])continue;
     seen[key]=true;out.push(h);
   }
@@ -3411,7 +3427,7 @@ async function lookupPlace(name,neighborhood,city){
     return dedupeHits(list.map(x=>{
       const lat=Number(x.lat),lon=Number(x.lon);
       if(!isFinite(lat)||!isFinite(lon))return null;
-      return {lat,lon,hood:hoodOf(x.address)};
+      return {lat,lon,hood:hoodOf(x.address),city:cityOf(x.address)};
     }).filter(Boolean));
   }catch(e){return []}
 }
@@ -3761,11 +3777,22 @@ async function geocodeCityPlaces(city){
     // un-placed café. The debounce outlives the loop's own pacing, so a steady
     // drip of resolutions keeps pushing it out and it only fires once, after
     // the last one.
+    // a correction can rename the very chapter the keeper is standing on out
+    // from under them — the garbage city they opened settles to a real one and
+    // the list below the title quietly empties. Follow them there rather than
+    // leaving the stale name on screen over a chapter with nothing left in it.
     const on=pageView&&((pageView.kind==='city'&&fold(pageView.id)===fold(city))
       ||(pageView.kind==='cafe'&&targets.some(t=>t.id===pageView.id)));
     if(on){
       clearTimeout(_geoRenderT);
-      _geoRenderT=setTimeout(render,1400);
+      _geoRenderT=setTimeout(()=>{
+        if(pageView&&pageView.kind==='city'&&fold(pageView.id)===fold(city)&&!cityPlaces(city).length){
+          const moved=[...new Set(targets.map(t=>t.city).filter(c=>c&&fold(c)!==fold(city)))];
+          if(moved.length===1){pageView=Object.assign({},pageView,{id:moved[0]});_citySheetUp=CITY_DETENT_DEFAULT}
+          else{closePage();go('atlas');return}
+        }
+        render();
+      },1400);
     }
     await new Promise(r=>setTimeout(r,1100));
   }
@@ -3773,20 +3800,28 @@ async function geocodeCityPlaces(city){
 // one branch, settled: the position and the area the lookup actually stated.
 // The area only ever comes from a confirmed position — an unplaced café is
 // never given a neighborhood, because there would be nothing behind it.
+// where it actually is, confirmed. A café's own name and city are what the
+// keeper typed and can be anything — the neighborhood was always blank until
+// a lookup filled it, and the city gets the same treatment now: a confirmed
+// address outranks free text, the same way Phase 15 already trusted it for
+// the neighborhood. A rural hit with no city-level component in its address
+// leaves the field exactly as it was rather than blanking it.
 function settlePlace(p,hit){
   p.lat=hit.lat;p.lon=hit.lon;
   if(hit.hood)p.neighborhood=hit.hood;
+  if(hit.city)p.city=hit.city;
   delete p.branches;
 }
 // the keeper answering the only question they can answer
 function pickBranch(placeId,i){
   const p=placeById(placeId);if(!p||!p.branches)return;
   const hit=p.branches[i];if(!hit)return;
-  const was={lat:p.lat,lon:p.lon,neighborhood:p.neighborhood,branches:p.branches};
+  const was={lat:p.lat,lon:p.lon,neighborhood:p.neighborhood,city:p.city,branches:p.branches};
+  const cityChanged=hit.city&&fold(hit.city)!==fold(was.city||'');
   settlePlace(p,hit);save();render();
-  toast(`Placed in ${hit.hood||p.city||'the city'}.`,()=>{
+  toast(`Placed in ${[hit.hood,cityChanged?hit.city:''].filter(Boolean).join(', ')||p.city||'the city'}.`,()=>{
     const q=placeById(placeId);if(!q)return;
-    q.lat=was.lat;q.lon=was.lon;q.neighborhood=was.neighborhood;q.branches=was.branches;
+    q.lat=was.lat;q.lon=was.lon;q.neighborhood=was.neighborhood;q.city=was.city;q.branches=was.branches;
     save();render();
   },'Undo');
 }
@@ -3816,7 +3851,13 @@ async function replaceCafe(placeId){
   const q=placeById(placeId);if(!q)return;
   if(!hits.length){toast('No address could be confirmed for that name.');return}
   q.lat=null;q.lon=null;q.geocoded=true;
-  if(hits.length===1){settlePlace(q,hits[0]);save();render();toast(`Placed in ${hits[0].hood||q.city||'the city'}.`);return}
+  if(hits.length===1){
+    const was=q.city,hit=hits[0];
+    const cityChanged=hit.city&&fold(hit.city)!==fold(was||'');
+    settlePlace(q,hit);save();render();
+    toast(`Placed in ${[hit.hood,cityChanged?hit.city:''].filter(Boolean).join(', ')||q.city||'the city'}.`);
+    return;
+  }
   q.branches=hits;save();render();
 }
 
@@ -4559,8 +4600,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.16.0';
+const APP_VERSION='7.16.1';
 const CHANGELOG=[
+  {v:'7.16.1',d:"The city, corrected along with the pin. Placing a café by its real address fixed the pin, but a café first added by pasting a street address into the City field stayed filed under that address forever — the Atlas groups by whatever was typed, and nothing had ever told it otherwise. The same confirmed lookup that places the pin now corrects the city too, exactly the way it already corrects the neighborhood: silently where there was nothing to say, and named in the toast where it actually changed something. A chapter open on a since-corrected name now follows you to the real one instead of quietly emptying out under you."},
   {v:'7.16.0',d:"The pin, corrected. A café you typed by hand used to be placed by a single best guess — so a café with more than one location in a city got whichever one came back first, and it stayed wrong, because Carta only ever looked once and gave you no way to say otherwise. It asks properly now. Where there is only one of something, it is placed quietly and keeps the neighborhood it was found in, which is the line that reads under its name. Where there are several, Carta doesn't choose: the café asks once, with the real neighborhoods to pick from, because only you know which one you were actually in. One tap places it, with an undo. And any café can be looked up again — a pin that was never right is no longer permanent."},
   {v:'7.15.0',d:"Ask Carta, arguing. It used to hand back a flat list of names with a sentence each; it ranks them now, and every one says what it is best FOR — the cleanest cup, the one worth the drive, the sleeper south of you — with the figures off your own brief it was read from sitting under it — underlined where Carta can open them, so one tap gets you the actual cups behind the claim, and left plain where your record can't back them — and what to ask for once you're at the counter. It names the places that are close but aren't the pick, and says why, instead of quietly dropping them. It closes with what it would actually do: the one strongest move, and the order to walk them in depending on what you're after. Two new things to ask: near a point rather than a city, and how far you'll actually go — which is what lets it say 'worth driving for' and mean it. Carta still makes no search, so it never claims what a café is pouring today; where a fit depends on a menu that turns over, the row says so. Every café it names is still checked against a real address before it is drawn, mentions included. And the model it asks by default is a much larger one, with the room to answer properly — your own key, your own choice, still on the device and nowhere else."},
   {v:'7.14.0',d:"The rest of the app. A country stopped being a dead end: it states how far the record actually follows that ground — grown, processed, milled, roasted, poured, read, dashed across whatever it can't reach — and then opens downward into its regions, the hands that grew it, the roasters working from it and the rooms it pours in. A region and a farm are pages now, walked down to from the country and back up from any coffee. Your taste dropped its meters and argues in a sentence instead, every figure in it tappable straight through to the cups it was read from. The brief left its drawer: it's a screen that says what goes out in four parts before it ever shows you the raw text, with the exact characters folded one tap away, and the ask that follows it names the key it would use and the degrade if you don't have one. What Carta found is its own page on its own streets. A café's menu is one screen at the counter rather than two sheets that never met. Your record — everything you own, the backup, what reads in, what sends out, your Setups, classic — has a page of its own, and a Setup finally keeps the grind history that is only ever true on it. Two new fields on a coffee, altitude and mill, both optional, both stated only where a bag states them. Nothing migrated; the ledger is the same file it was."},

@@ -14,7 +14,7 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–4,800 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 15 it stands at **4,601 lines / 376 KB**.
+  cost, not the stack's.) At Phase 15 it stands at **4,643 lines / 379 KB**.
 
   *The line band was 3–4,000 through Phase 12, 3–4,500 through Phase 14, and
   is amended here, at Phase 15, to **3–4,800**.* Phase 14 wrote the warning
@@ -145,9 +145,13 @@ D = {
                                                         // never a rung, never required (§4 below)
               roastDate?, notes?, site?, palette?, archived? }],
   places:  [{ id, createdAt, name, aka?[], city?, lat?, lon?,
-              neighborhood?, geocoded?,           // both stated only by a real lookup
-              branches?:[{ lat, lon, hood }],     // Phase 15 — several of it in one city,
-              roasterRefs?, notes?, site?,        //   unanswered until the keeper says which
+              neighborhood?, geocoded?,           // both stated only by a real lookup;
+                                                   //   Phase 15's patch also lets `city` itself
+                                                   //   be corrected the same way — a café pasted
+                                                   //   in with a street address in the City field
+                                                   //   is not stuck under it forever
+              branches?:[{ lat, lon, hood, city }],// Phase 15 — several of it in one city,
+              roasterRefs?, notes?, site?,         //   unanswered until the keeper says which
               palette?, archived? }],
   roasters:[{ id, createdAt, name, aka?[], city?, story?, site?,
               palette?, archived? }],
