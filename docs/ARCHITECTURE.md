@@ -14,7 +14,7 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–4,800 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 15 it stands at **4,643 lines / 379 KB**.
+  cost, not the stack's.) At Phase 15 it stands at **4,716 lines / 384 KB**.
 
   *The line band was 3–4,000 through Phase 12, 3–4,500 through Phase 14, and
   is amended here, at Phase 15, to **3–4,800**.* Phase 14 wrote the warning
@@ -152,7 +152,9 @@ D = {
                                                    //   is not stuck under it forever
               branches?:[{ lat, lon, hood, city }],// Phase 15 — several of it in one city,
               roasterRefs?, notes?, site?,         //   unanswered until the keeper says which
-              palette?, archived? }],
+              palette?, archived? }],              // Phase 16 settles the same way from a
+                                                    //   pasted map link when search finds nothing
+                                                    //   — no new field, same lat/lon/neighborhood
   roasters:[{ id, createdAt, name, aka?[], city?, story?, site?,
               palette?, archived? }],
   setups:  [{ ...classic's shape, unchanged }],
@@ -289,7 +291,7 @@ one and the one that travels.
 
 | Touch | When | Degrades to |
 |---|---|---|
-| Geocode (Nominatim) | placing a café; grounding an ask's answer | typed city, drawn plot |
+| Geocode (Nominatim) | placing a café; grounding an ask's answer; reading a pasted map link's real address (Phase 16) | typed city, drawn plot |
 | Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 

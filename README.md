@@ -84,7 +84,11 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   neighborhoods to choose from, and one tap places it. Any café can be looked
   up again, so a pin that was never right isn't stuck that way — and if a
   café was first typed with a street address in the City field rather than a
-  real one, the same confirmed lookup corrects that too.
+  real one, the same confirmed lookup corrects that too. And where a search
+  turns up nothing at all — a café Google or Apple Maps already have that
+  OpenStreetMap hasn't caught up to — paste the map link your phone already
+  gave you and Carta reads the pin straight out of it, then fills in the real
+  neighborhood the same way a search result would.
 - **The passport.** Carta opens on it: the world frame full-bleed, every
   country your record can trace, drawn from outlines carried in the file
   itself (no map tiles, no network, nothing to be offline from). Tasted
