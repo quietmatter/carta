@@ -412,6 +412,65 @@ nav.tabs[hidden]{display:none}
 .ground{flex:none;font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
 .ground.no{color:var(--text-disabled)}
 
+/* ===== the ask, moved to the front door (the Ask Carta redesign) =====
+   The ask stopped being a page you go and find and became the first thing the
+   Atlas says: the passport stays the ground, and the question sits on it. Three
+   pieces of furniture carry it — the field on the map, the hairline the wait is
+   drawn along, and the settle that writes an answer in rather than pasting it. */
+/* the hero's fade runs deeper than a caption's: the belt frames itself to
+   whatever has been tasted, so one country can fill the whole plate — a field
+   and a line of type have to stand on paper whatever is drawn behind them */
+.fade.bottom.deep{background:linear-gradient(to top,var(--surface-card) 0%,
+  color-mix(in srgb,var(--surface-card) 96%,transparent) 44%,
+  color-mix(in srgb,var(--surface-card) 0%,transparent) 100%)}
+/* the field standing on the passport. It sits inside that fade, which is
+   pointer-events:none by design — a fade is read through, never tapped — so the
+   field hands its own taps back. */
+.askfield{display:flex;align-items:stretch;border:1px solid var(--line-strong);background:var(--surface-card);pointer-events:auto}
+.askfield input{flex:1;min-width:0;border:0;padding:13px 14px;font-size:16px;background:transparent}
+.askfield input:focus{outline:none}
+.askfield button{flex:none;background:var(--accent);color:var(--accent-ink);border:0;padding:0 18px;cursor:pointer;
+  font-family:var(--sans);font-size:var(--s13);letter-spacing:.02em;min-height:var(--touch-min)}
+.askfield button:active{filter:brightness(.88)}
+/* the one line under it: what leaves the device, said before anything does */
+.asktrust{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3);margin-top:9px;pointer-events:auto}
+/* the ledger, when it is also a door to the brief it was read from */
+button.led{display:block;width:100%;text-align:left;cursor:pointer;color:inherit;font:inherit}
+button.led:active{background:var(--paper-2)}
+/* ===== the wait — narrated, on one hairline =====
+   A spinner says only that something is happening. This says what: each stage
+   is a fact the ask actually reached, the rule fills to how far along it is,
+   and the ember tip breathes so a long call still reads as alive. */
+@keyframes ca-breathe{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes ca-written{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+/* a screen that runs to the bottom of the room it is in, so what it ends with
+   sits on the fold rather than wherever the text happens to stop */
+main.tall{display:flex;flex-direction:column}
+main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.think{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.think>.pad{flex:1 1 auto;display:flex;flex-direction:column}
+.think .rule{position:relative;height:1px;background:var(--line)}
+.think .rule .fill{position:absolute;left:0;top:0;height:1px;background:var(--accent);transition:width var(--mo-considered) var(--mo-ease)}
+.think .rule .tip{position:absolute;top:-2px;width:5px;height:5px;margin-left:-3px;background:var(--accent);
+  animation:ca-breathe 1.6s ease-in-out infinite;transition:left var(--mo-considered) var(--mo-ease)}
+/* nothing is happening any more — the tip stops breathing and stands where the
+   work stopped, rather than pulsing over a refusal */
+.think .rule .tip.stalled{animation:none;background:var(--ink-3)}
+/* what is already done drops to the size of a footnote — read if you want it */
+.think .done div{font-family:var(--sans);font-size:12.5px;color:var(--ink-3);line-height:1.5;padding:3px 0;letter-spacing:.01em}
+.think .now{display:flex;align-items:baseline;gap:10px;margin-top:14px}
+.think .now .mk{flex:none;width:7px;height:7px;background:var(--accent);animation:ca-breathe 1.6s ease-in-out infinite}
+.think .now .ln{font-family:var(--serif);font-size:18.5px;line-height:1.45;color:var(--ink);max-width:var(--measure);
+  animation:ca-written .5s var(--mo-ease) both}
+/* the answer settles in rather than arriving flat — one line at a time, in the
+   order it was argued. Played on arrival only; a mark never replays it. */
+.settle{animation:ca-written .62s var(--mo-ease) both}
+@media (prefers-reduced-motion:reduce){
+  .settle,.think .now .ln{animation:none!important;opacity:1!important;transform:none!important}
+  .think .rule .tip,.think .now .mk{animation:none!important}
+  .think .rule .fill,.think .rule .tip{transition:none!important}
+}
+
 </style>
 </head>
 <body>
@@ -1382,7 +1441,7 @@ function parseMenuOCR(text){
   const lines=list.map(l=>String(l||'').trim()).filter(Boolean);
   return {ok:true,lines};
 }
-/* ---- the city's own shape (Phase 18) — not streets, not pins, not a live
+/* ---- the city's own shape (Phase 17, corrected same day) — not streets, not pins, not a live
  * map: a soft silhouette of where the record actually reaches in this city,
  * drawn purely from the same lat/lon already on the ledger. No tile, no key,
  * nothing to be offline from — the drawn plot's own promise, carried one
@@ -1511,13 +1570,15 @@ function tasteModelMemo(){if(_tasteDirty||!_tasteCache){_tasteCache=tasteModel(D
 const TABS=[{id:'atlas',label:'Atlas'},{id:'journal',label:'Journal'},{id:'shelf',label:'Shelf'}];
 // which room a screen belongs to, so the bar keeps saying where you are
 const ROOM_OF={atlas:'atlas',country:'atlas',region:'atlas',producer:'atlas',city:'atlas',cafe:'atlas',
-  taste:'atlas',brief:'atlas',ask:'atlas',askresult:'atlas',menu:'atlas',
+  taste:'atlas',brief:'atlas',ask:'atlas',asking:'atlas',askresult:'atlas',menu:'atlas',
   journal:'journal',cup:'journal',shelf:'shelf',record:'shelf',setups:'shelf',setup:'shelf',brew:'shelf'};
 // the screens that stand on their own — no bar under them, one way back. Taste,
 // the brief and the ask are one argument read in three sittings: you walk in at
 // the top and out at the bottom, so the bar would only offer a way to lose your
 // place. What Carta found is a destination, not a step, and keeps the bar.
-const BARELESS=new Set(['cup','taste','brief','ask','brew']);
+// The wait is barer still: while the ask is out there is exactly one thing to
+// do with the screen, and it is on it — cancel.
+const BARELESS=new Set(['cup','taste','brief','ask','asking','brew']);
 let tab='atlas';
 let pageView=null;
 function go(t){stopTimer(true);tab=t;pageView=null;render();maybeAutoExport()}
@@ -1537,7 +1598,14 @@ function openTaste(){openScreen('taste')}
 // instead of re-opening anything.
 function openBriefScreen(scopeId){openScreen('brief',null,{scopeId:scopeId||'',raw:false})}
 function openAskScreen(){openScreen('ask')}
-function openAskResultScreen(id){openScreen('askresult',id)}
+// the wait is a screen of its own now: the ask used to run under the button
+// that started it, which made the one call Carta makes read like a form
+// submitting. It is the only thing happening, so it gets the whole page.
+function openAskingScreen(){openScreen('asking')}
+// arriving at an answer plays the settle once; marking one of its findings
+// re-reads the same screen and must not write it in all over again
+let _askSettle=false;
+function openAskResultScreen(id){_askSettle=!reducedMotion();openScreen('askresult',id)}
 function openAskScreenFor(city){askDraft=Object.assign({},askDraft,{kind:'city',dest:city||''});openScreen('ask')}
 function openMenuScreen(menuId,placeId){openScreen('menu',menuId||null,{placeRef:placeId||(menuById(menuId)||{}).placeRef||null})}
 function openRecord(){openScreen('record')}
@@ -1559,7 +1627,7 @@ function openCupDetail(id){const c=cupById(id);if(!c)return;
 function closePage(){pageView=null;render()}
 const SCREENS={atlas:vAtlas,journal:vJournal,shelf:vShelf,country:vCountryChapter,
   region:vRegionChapter,producer:vProducerPage,city:vCityChapter,cafe:vCafe,cup:vCup,
-  taste:vTaste,brief:vBrief,ask:vAsk,askresult:vAskResult,menu:vMenu,
+  taste:vTaste,brief:vBrief,ask:vAsk,asking:vAsking,askresult:vAskResult,menu:vMenu,
   record:vRecord,setups:vSetups,setup:vSetup,brew:vBrew};
 let _lastScreenKey=null;
 function render(){
@@ -1576,8 +1644,10 @@ function render(){
   const settle=screenKey!==_lastScreenKey&&!reducedMotion();_lastScreenKey=screenKey;
   const m=document.getElementById('main');
   m.classList.toggle('fixed',view.kind==='city');
+  m.classList.toggle('tall',view.kind==='asking');
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=0;
+  _askSettle=false;
   if(view.kind==='city')mountCity();
 }
 
@@ -3215,17 +3285,29 @@ function openVectorEvidence(kind,value){
     item?`${capFirst(words(item.n))} cup${item.n===1?'':'s'} carry it. This is their weight, and the cups themselves.`:'',
     cups.map(cupEvidenceRow),VECTOR_RULES[kind]||'');
 }
+/* an ask, in the row it is read back through — on the Atlas, where it is now
+ * the first thing under the fold, and here in Your taste, where the argument it
+ * was made from lives. One row, so both say the same thing: what kind of ask it
+ * was, how many of its names stood on real ground, when, and how much of it you
+ * have actually walked since. The thumbnail is the ask's own plot. */
+function askMetaLine(a){
+  const named=askNamed(a);
+  const n=named.filter(f=>f.grounded).length;
+  const been=named.filter(f=>f.status==='been').length;
+  return [askKindLabel(a.kind),`${words(n)} placed`,fmtWhen(a.createdAt),
+    been?`${words(been)} marked Been`:null].filter(Boolean).join(' · ');
+}
+function askRowHTML(a){
+  return `<button class="lrow" onclick="openAskResultScreen('${a.id}')">
+    ${plotThumbHTML(askNamed(a))}
+    <span class="mid"><span class="t">${esc(a.destination)}</span><span class="m">${esc(askMetaLine(a))}</span></span>
+    <span class="go">→</span></button>`;
+}
 function askSectionHTML(){
   const asks=D.asks.slice().sort(byNew);
   if(!asks.length)return '';
   return `<div class="shead"><span class="l">What Carta found</span><span class="r">${asks.length} ask${asks.length===1?'':'s'}</span></div>
-  ${asks.map(a=>{
-    const n=askNamed(a).filter(f=>f.grounded).length;
-    return `<button class="lrow" onclick="openAskResultScreen('${a.id}')">
-      <span class="mid"><span class="t">${esc(a.destination)}</span>
-      <span class="m">${askKindLabel(a.kind)} · ${n} café${n===1?'':'s'} placed · ${fmtWhen(a.createdAt)}</span></span>
-      <span class="go">→</span></button>`;
-  }).join('')}`;
+  ${asks.map(askRowHTML).join('')}`;
 }
 function yearSectionHTML(){
   const years=knownYears();
@@ -3477,20 +3559,68 @@ function captureAskDraft(){
 function pickAskKind(k){captureAskDraft();askDraft.kind=k;render()}
 function pickAskReach(r){captureAskDraft();askDraft.reach=r;render()}
 const askReach=()=>REACH_KINDS.has(askDraft.kind)?askDraft.reach:'';
+/* the scope an ask resolves to — a city the record already knows by name, or a
+ * country named outright. Read here so the composer can state what will be
+ * excluded before the key is spent, and read again by runAsk, so the ledger on
+ * the screen and the brief that actually leaves are the same document. */
+function askScopeOf(kind,destination){
+  const dest=(destination||'').trim();
+  if(!dest)return {kind:null,id:null};
+  const knownCity=knownCities().find(c=>fold(c)===fold(dest));
+  if((kind==='city'||kind==='near')&&knownCity)return {kind:'city',id:knownCity};
+  if(kind==='country')return {kind:'country',id:dest};
+  return {kind:null,id:null};
+}
+/* what goes out with this ask, stated as a ledger before it leaves — the four
+ * parts of the brief, each read from the record as it stands right now. Where
+ * the record is silent the row says unread rather than guessing a value into
+ * it, and the whole block opens the brief itself, exact text and all. */
+function askLedgerRowsHTML(){
+  const tm=tasteModelMemo();
+  const scope=askScopeOf(askDraft.kind,askDraft.dest);
+  const scoped=scope.kind?tm.scope(scope.kind,scope.id):null;
+  // a list, not a sentence: every value stands as the record spells it, so a
+  // country keeps its capital and a descriptor keeps its lower case
+  const v=tm.vector;
+  const values=[v.descriptors[0],v.processes[0],v.origins[0],v.roast[0]].filter(Boolean).map(x=>String(x.value));
+  const anchors=Math.min(5,tm.bar.anchors.length);
+  const had=scoped?scoped.had.length:0;
+  const rows=[
+    ['The bar',tm.bar.floor!=null
+      ?`${tm.bar.floor} or better${anchors?`, ${words(anchors)} anchor${anchors===1?'':'s'}`:''}`
+      :'unread — no café cup has set a floor',tm.bar.floor==null],
+    ['Your scores',values.length?values.join(' · '):'unread — nothing scored yet',!values.length],
+    ['Already had',had?`${words(had)} coffee${had===1?'':'s'} excluded by name`:'not sent — nothing excluded by name',!had],
+    ['The scope',scope.id?`${scope.id}, read from every cup`:'every cup on the record',false],
+  ];
+  return rows.map(r=>`<div class="r"><span class="k">${esc(r[0])}</span><span class="v${r[2]?' unread':''}">${esc(r[1])}</span></div>`).join('');
+}
+// the ledger follows the destination as it is typed, without re-reading the
+// whole screen — a chip that re-renders under a thumb mid-tap loses the tap
+function paintAskLedger(){
+  const box=document.getElementById('ask_led');
+  if(box)box.innerHTML=askLedgerRowsHTML();
+}
+function openAskBrief(){
+  captureAskDraft();
+  const scope=askScopeOf(askDraft.kind,askDraft.dest);
+  openBriefScreen(scope.kind==='city'?scope.id:'');
+}
 function vAsk(){
   const key=askKey();
   return `<div>
-    <header class="shdr" style="align-items:center;gap:14px">
-      <button class="omini bare" style="flex:none" onclick="openBriefScreen()" aria-label="Back">←</button>
-      <div style="flex:1;min-width:0">
-        <div class="eyebrow" style="margin-bottom:4px">Sent with your brief</div>
-        <div class="display" style="font-size:1.5rem;margin:0">Ask Carta</div>
+    <div class="pad" style="padding-top:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:26px">
+        <button class="omini bare" style="flex:none;margin-left:-4px" onclick="go('atlas')" aria-label="Back">←</button>
+        <span class="eyebrow" style="margin:0">Sent with your brief</span>
       </div>
-    </header>
-    <div class="pad" style="padding-top:20px">
-      <div class="lede" style="max-width:36ch">Carta asks on your behalf, with the key on this device. Every café it names is checked against a real place before it is ever drawn as a pin.</div>
+      <div class="eyebrow" style="color:var(--accent);margin-bottom:10px">Ask Carta</div>
+      <input type="text" id="ask_dest" value="${esc(askDraft.dest)}" aria-label="Where"
+        oninput="askDraft.dest=this.value;paintAskLedger()"
+        placeholder="${askDraft.kind==='friend'?'She likes what I like, but darker':askDraft.kind==='near'?'Huntington Park':'Lisbon'}"
+        style="width:100%;font-family:var(--serif);font-weight:600;font-size:1.875rem;letter-spacing:-.02em;line-height:1.12;padding:2px 0 12px;border:0;border-bottom:1px solid var(--ink-3)">
 
-      <div class="eyebrow" style="margin:26px 0 9px">What kind of ask</div>
+      <div class="eyebrow" style="margin:24px 0 9px">What kind of ask</div>
       <div class="picks">
         ${ASK_KINDS.map(k=>`<button class="pick${askDraft.kind===k[0]?' on':''}" onclick="pickAskKind('${k[0]}')">${esc(k[1])}</button>`).join('')}
       </div>
@@ -3500,18 +3630,18 @@ function vAsk(){
         ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach('${jsq(r)}')">${esc(r)}</button>`).join('')}
       </div>`:''}
 
-      <label class="f" style="margin-top:24px"><span class="l">Where</span>
-        <input type="text" id="ask_dest" value="${esc(askDraft.dest)}" placeholder="${askDraft.kind==='friend'?'She likes what I like, but darker':askDraft.kind==='near'?'Huntington Park':'Lisbon'}"></label>
-      <label class="f"><span class="l">Anything else <span class="opt">optional</span></span>
-        <textarea id="ask_question" style="min-height:70px" placeholder="Three days, mostly on foot…">${esc(askDraft.question)}</textarea></label>
+      <label class="f" style="margin-top:24px"><span class="l">Anything else <span class="opt">optional</span></span>
+        <textarea id="ask_question" style="min-height:64px" placeholder="Three days in Baixa and Alfama, mostly on foot…">${esc(askDraft.question)}</textarea></label>
 
-      <div class="box" style="margin-top:22px;padding:14px 16px;display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+      <div class="shead" style="margin-top:8px"><span class="l">What goes out with this</span><span class="r">tap to read it in full</span></div>
+      <button class="led" id="ask_led" style="margin-top:14px" onclick="openAskBrief()">${askLedgerRowsHTML()}</button>
+
+      <div class="box" style="margin-top:14px;padding:14px 16px;display:flex;align-items:baseline;justify-content:space-between;gap:12px">
         <span style="font-family:var(--serif);font-size:15.5px;color:var(--ink-2)">${key?'Your key is on this device':'No key on this device yet'}</span>
         <button class="text-action" style="flex:none;background:none;border:0;font-family:var(--sans);font-size:12px;cursor:pointer" onclick="openAskKey()">${key?'Change it':'Set one'}</button>
       </div>
-      <button class="btn btn-primary" style="margin-top:16px;min-height:50px" onclick="runAsk()">Ask Carta</button>
-      <div id="ask_result"></div>
-      <div class="note" style="margin-top:20px">This is the only thing in Carta that calls out, and only when you tap it. No key, or the call fails, and you get the same brief to copy.</div>
+      <button class="btn btn-primary" style="margin-top:16px;min-height:54px" onclick="runAsk()">Ask Carta</button>
+      <div class="note" style="margin-top:18px">The only thing in Carta that calls out, and only when you tap it. No key, or the call fails, and you get the same brief to copy.</div>
     </div></div>`;
 }
 // the one door — content is either a plain prompt string (the ask) or a
@@ -3520,12 +3650,13 @@ function vAsk(){
 // and 1024 tokens is what made the ask's answers read like a stub. A thinking
 // block, on a model that reasons by default, has no .text — so the join below
 // silently drops it and the parse only ever sees what was actually said.
-async function callModel(content,maxTokens){
+async function callModel(content,maxTokens,signal){
   const key=askKey();if(!key)throw new Error('Set your key first.');
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
     body:JSON.stringify({model:askModel(),max_tokens:maxTokens||1024,messages:[{role:'user',content}]}),
+    signal:signal||undefined,
   });
   if(!r.ok){
     let msg=`The model call failed (${r.status}).`;
@@ -3535,7 +3666,9 @@ async function callModel(content,maxTokens){
   const j=await r.json();
   return (j.content||[]).map(b=>b.text||'').join('');
 }
-const callAskModel=prompt=>callModel(prompt,ASK_MAX_TOKENS);
+// the ask's own call is the one the keeper can walk away from — Cancel on the
+// wait aborts it where the browser allows, rather than letting it land unseen
+const callAskModel=prompt=>callModel(prompt,ASK_MAX_TOKENS,_askAbort&&_askAbort.signal);
 async function callVisionModel(prompt,imageDataUri){
   const m=String(imageDataUri||'').match(/^data:([^;]+);base64,([\s\S]*)$/);
   if(!m)throw new Error('Could not read that photo.');
@@ -3589,9 +3722,10 @@ let _askBusy=false;
 // wildcard. So it paces itself a second apart, the way geocodeCityPlaces does,
 // and the progress line says which name it's on rather than sitting on "Asking…"
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function groundNamed(list,fallbackCity,say){
+async function groundNamed(list,fallbackCity,say,onPlaced){
   const out=[];
   for(let i=0;i<list.length;i++){
+    if(_askCancel)break;
     const f=list[i];
     const city=f.city||fallbackCity||'';
     if(i)await sleep(1000);
@@ -3599,11 +3733,142 @@ async function groundNamed(list,fallbackCity,say){
     const geo=await geocodeCafe(f.name,f.neighborhood||'',city);
     // the confirmed area outranks the model's own — one was looked up, the
     // other was written from memory, and only one of them placed the pin
-    out.push(Object.assign({},f,{id:uid(),city,lat:geo?geo.lat:null,lon:geo?geo.lon:null,
+    const rec=Object.assign({},f,{id:uid(),city,lat:geo?geo.lat:null,lon:geo?geo.lon:null,
       neighborhood:(geo&&geo.hood)||f.neighborhood||'',
-      grounded:!!geo,status:null,placeRef:null}));
+      grounded:!!geo,status:null,placeRef:null});
+    out.push(rec);
+    // the pin lands on the wait's own plot as the address confirms it, so the
+    // answer is already half-drawn by the time it is read
+    if(onPlaced)onPlaced(rec);
   }
   return out;
+}
+/* ============ the wait — narrated, on one hairline ============
+ * The ask ran under the button that started it, saying "Asking…" into a grey
+ * line: the one call Carta makes read like a form submitting. It is a screen of
+ * its own now, and it narrates the work rather than performing patience — every
+ * line is a stage the ask actually reached, read off the record it is reading
+ * (VOICE.md: never fabricate precision — the counts here are counted, the floor
+ * is the floor, and no line is written until the thing it says is true).
+ *
+ * The rule is the progress bar, and it is a hairline on purpose. The three
+ * quick reads are the first fifth of it; the model's own thinking is the long
+ * middle, where only the ember tip moves, breathing; the placings fill the rest
+ * one name at a time, and each confirmed name lands on the plot as it does. So
+ * the bar never runs backwards when the answer turns out to name eight places
+ * instead of five — the ground it covers was allotted before the names arrived.
+ */
+let askRun=null;          // {dest,kind,done[],now,pct,pins[],error}
+let _askCancel=false,_askAbort=null;
+const ASK_PCT_ASKING=22,ASK_PCT_READBACK=48,ASK_PCT_PLACED=96;
+function askBegin(destination,kind){
+  askRun={dest:destination,kind,done:[],now:'',pct:0,pins:[],error:null};
+  _askCancel=false;
+  _askAbort=(typeof AbortController==='function')?new AbortController():null;
+  openAskingScreen();
+}
+// a stage reached: what was current drops to a footnote, the new line is
+// written in, and the rule fills to where the work has actually got to
+function askSay(line,pct){
+  if(!askRun||_askCancel)return;
+  if(askRun.now)askRun.done.push(askRun.now);
+  askRun.now=line;
+  if(pct!=null)askRun.pct=Math.max(askRun.pct,Math.round(pct));
+  paintAsking();
+}
+// a name that came back with real ground under it — drawn the moment it does
+function askPlace(f){
+  if(!askRun||_askCancel||!f||f.lat==null||f.lon==null)return;
+  askRun.pins.push({id:f.id||'',name:f.name||'',lat:f.lat,lon:f.lon,score:null,dim:false});
+  paintAsking();
+}
+const askNowHTML=()=>`<span class="mk"></span><span class="ln">${esc(askRun?askRun.now:'')}</span>`;
+const askPinsJSON=()=>JSON.stringify((askRun?askRun.pins:[]));
+function paintAskMap(el){
+  if(!askRun||!askRun.pins.length){el.hidden=true;return}
+  const first=el.hidden;
+  el.hidden=false;
+  if(first)el.classList.add('settle');   // the plot writes itself in as it appears
+  const plot=el.querySelector('carta-plot');
+  if(plot&&!first)plot.setAttribute('pins',askPinsJSON());   // raw JSON — setAttribute does no unescaping
+  else el.innerHTML=`<div class="plotwrap" style="position:absolute;inset:0;padding:26px 30px">
+      <carta-plot class="plot frame" fit="frame" pins="${esc(askPinsJSON())}" dot="10" labels="off"></carta-plot></div>`;
+}
+// the screen is repainted in place rather than re-rendered: a re-render would
+// remount the plot on every stage and re-run the settle on lines already read
+function paintAsking(){
+  if(!askRun||!pageView||pageView.kind!=='asking')return;
+  const fill=document.getElementById('think_fill');
+  if(!fill)return;
+  const pct=askRun.pct+'%';
+  fill.style.width=pct;
+  const tip=document.getElementById('think_tip');if(tip)tip.style.left=pct;
+  const done=document.getElementById('think_done');
+  if(done)for(let i=done.children.length;i<askRun.done.length;i++){
+    const d=document.createElement('div');d.textContent=askRun.done[i];done.appendChild(d);
+  }
+  const now=document.getElementById('think_now');if(now)now.innerHTML=askNowHTML();
+  const map=document.getElementById('think_map');if(map)paintAskMap(map);
+}
+// cancelling is a real cancel: the call is aborted where the browser allows it,
+// the grounding loop stops at the name it is on, and nothing is written down
+function cancelAsk(){
+  _askCancel=true;_askBusy=false;
+  if(_askAbort)try{_askAbort.abort()}catch(e){}
+  askRun=null;
+  openAskScreen();
+}
+function vAsking(){
+  const r=askRun||{dest:'',done:[],now:'',pct:0,pins:[],error:null};
+  const pct=r.pct+'%';
+  return `<div class="think">
+    <div class="pad" style="padding-top:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <button class="omini bare" style="flex:none;margin-left:-4px" onclick="cancelAsk()" aria-label="Cancel">← Cancel</button>
+        <span class="eyebrow" style="margin:0">${r.dest?`Asking about ${esc(r.dest)}`:'Asking'}</span>
+      </div>
+      <div style="margin-top:34px">
+        <div class="rule">
+          <span class="fill" id="think_fill" style="width:${pct}"></span>
+          <span class="tip${r.error?' stalled':''}" id="think_tip" style="left:${pct}"></span>
+        </div>
+        <div style="margin-top:30px">
+          <div class="done" id="think_done">${r.done.map(l=>`<div>${esc(l)}</div>`).join('')}</div>
+          ${r.error?`<div class="empty" style="text-align:left;padding:18px 0 0">${esc(r.error)}</div>
+            <button class="btn btn-quiet" onclick="openAskScreen()">Back to the ask</button>
+            <button class="btn btn-quiet" onclick="copyPlainText(briefPlainText(D,null,null,tasteModelMemo()),'Copied — paste it into your chat.')">Copy the brief instead</button>`
+          :`<div class="now" id="think_now">${askNowHTML()}</div>`}
+        </div>
+      </div>
+      <div style="margin-top:auto">
+        <div class="mapbox${r.pins.length?' settle':''}" id="think_map" style="height:200px"${r.pins.length?'':' hidden'}>${
+          r.pins.length?`<div class="plotwrap" style="position:absolute;inset:0;padding:26px 30px">
+            <carta-plot class="plot frame" fit="frame" pins="${esc(askPinsJSON())}" dot="10" labels="off"></carta-plot></div>`:''}</div>
+        <div class="note" style="margin-top:18px;border-top-color:transparent">Each name is checked against a real address before it is drawn. What can’t be confirmed is listed, never guessed onto the map.</div>
+      </div>
+    </div></div>`;
+}
+// what the ask is about to read, said in the record's own figures — three
+// counted facts, not three reassurances
+function askOpeningLines(tm,scope){
+  const cups=live('cups').filter(c=>c.score!=null).length;
+  const cafes=live('places').length;
+  const countries=Object.keys(tastedCountryMap()).length;
+  const parts=[`${words(cups)} cup${cups===1?'':'s'}`,
+    cafes?`${words(cafes)} café${cafes===1?'':'s'}`:null,
+    countries?`${words(countries)} countr${countries===1?'y':'ies'}`:null].filter(Boolean);
+  const anchors=tm.bar.anchors.length;
+  const scoped=scope.kind?tm.scope(scope.kind,scope.id):null;
+  const had=scoped?scoped.had.length:0;
+  return [
+    [cups?`Reading your record — ${parts.join(', ')}.`:'Reading your record — nothing scored on it yet.',6],
+    [tm.bar.floor!=null
+      ?`Weighing the bar you hold: ${tm.bar.floor} or better earns the walk${anchors?`, and ${words(Math.min(5,anchors))} roaster${anchors===1?' earns':'s earn'} a return`:''}.`
+      :'No floor on the record yet — the ask goes out on what you notice alone.',12],
+    [had
+      ?`Excluding the ${words(had)} coffee${had===1?'':'s'} you have already had in ${scope.id} — no rehash.`
+      :'Nothing excluded by name — everywhere goes out.',18],
+  ];
 }
 async function runAsk(){
   if(_askBusy)return;
@@ -3614,36 +3879,68 @@ async function runAsk(){
   const question=(askDraft.question||'').trim();
   const reach=askReach();
   if(!destination){toast('Where should Carta ask about?');return}
-  const box=document.getElementById('ask_result');if(!box)return;
   _askBusy=true;
-  const say=m=>{const b=document.getElementById('ask_result');if(b)b.innerHTML=`<div class="muted" style="margin-top:12px">${esc(m)}</div>`};
-  say('Asking…');
+  askBegin(destination,kind);
+  const beat=ms=>sleep(_askCancel?0:ms);
   try{
     const tm=tasteModelMemo();
-    let scopeKind=null,scopeId=null;
-    const knownCity=knownCities().find(c=>fold(c)===fold(destination));
-    if((kind==='city'||kind==='near')&&knownCity){scopeKind='city';scopeId=knownCity}
-    else if(kind==='country'){scopeKind='country';scopeId=destination}
-    const briefText=briefPlainText(D,scopeKind,scopeId,tm);
+    const scope=askScopeOf(kind,destination);
+    for(const [line,pct] of askOpeningLines(tm,scope)){
+      askSay(line,pct);
+      await beat(reducedMotion()?200:620);
+      if(_askCancel)return;
+    }
+    const briefText=briefPlainText(D,scope.kind,scope.id,tm);
     const prompt=askPromptText(briefText,kind,destination,question,reach);
+    askSay('Asking, with your key, this once.',ASK_PCT_ASKING);
     const raw=await callAskModel(prompt);
+    if(_askCancel)return;
     const parsed=parseAskJSON(raw);
+    const named=(parsed.findings||[]).length+(parsed.mentions||[]).length
+      +((parsed.plan&&parsed.plan.wildcard)?1:0);
+    askSay(`Reading the answer back — ${words(named)} name${named===1?'':'s'}, ranked and argued.`,ASK_PCT_READBACK);
+    await beat(reducedMotion()?200:700);
+    if(_askCancel)return;
+    // one line per name, and the pin the moment the address confirms it: the
+    // grounding pass was always the slow half, and now it is the readable half
+    let placed_=0;
+    const say=m=>askSay(m,ASK_PCT_READBACK+(ASK_PCT_PLACED-ASK_PCT_READBACK)*(placed_/Math.max(1,named)));
+    const step=f=>{placed_++;askPlace(f)};
     const near=(kind==='city'||kind==='near')?destination:'';
-    const findings=await groundNamed(parsed.findings,near,say);
-    const mentions=await groundNamed(parsed.mentions,near,say);
+    const findings=await groundNamed(parsed.findings,near,say,step);
+    if(_askCancel)return;
+    const mentions=await groundNamed(parsed.mentions,near,say,step);
+    if(_askCancel)return;
     const plan=parsed.plan?Object.assign({},parsed.plan,
-      {wildcard:parsed.plan.wildcard?(await groundNamed([parsed.plan.wildcard],near,say))[0]:null}):null;
+      {wildcard:parsed.plan.wildcard?(await groundNamed([parsed.plan.wildcard],near,say,step))[0]:null}):null;
+    if(_askCancel)return;
+    const all=findings.concat(mentions,(plan&&plan.wildcard)?[plan.wildcard]:[]);
+    const lost=all.filter(f=>!f.grounded);
+    askSay(lost.length
+      ?(lost.length===1?`${lost[0].name} could not be confirmed — listed, never drawn.`
+        :`${capFirst(words(lost.length))} names could not be confirmed — listed, never drawn.`)
+      :`Every name confirmed against a real address.`,100);
     const ask={id:uid(),createdAt:new Date().toISOString(),kind,destination,question,reach,
       model:askModel(),read:parsed.read,findings,mentions,plan};
-    D.asks.unshift(ask);save();
+    await beat(reducedMotion()?200:900);
     _askBusy=false;
+    if(_askCancel)return;
+    // the write waits for the last beat's own cancel check — a cancel this
+    // late still meets a fully-grounded answer, but it must still meet nothing
+    // written, the same promise every earlier stage of this call already kept
+    D.asks.unshift(ask);save();
+    askDraft.dest='';   // the ask is on the record now; the field starts clean
+    askRun=null;
     openAskResultScreen(ask.id);
   }catch(e){
     _askBusy=false;
+    if(_askCancel||(e&&e.name==='AbortError'))return;
+    // the degrade is stated where the wait was, with both doors on it
     const msg=(e&&e.message)||'Could not reach the model.';
-    const b=document.getElementById('ask_result');if(!b)return;
-    b.innerHTML=`<div class="empty">${esc(msg)}</div>
-    <button class="btn btn-quiet" onclick="copyPlainText(briefPlainText(D,null,null,tasteModelMemo()),'Copied — paste it into your chat.')">Copy the brief instead</button>`;
+    // the stage it failed on stays on the page: what was being attempted is
+    // half the answer to why it didn't work
+    if(askRun){if(askRun.now)askRun.done.push(askRun.now);askRun.error=msg;askRun.now='';}
+    if(pageView&&pageView.kind==='asking')render();else toast(msg);
   }
 }
 /* a finding, set as an entry rather than a card: where it sits in the model's
@@ -3677,9 +3974,20 @@ function fitFigureHTML(s){
 // the city are the same place. Saying it twice is Carta's bug, not the model's.
 const whereHTML=f=>esc([f.neighborhood,f.city].filter(Boolean)
   .filter((v,i,a)=>a.findIndex(x=>fold(x)===fold(v))===i).join(', ')||'no address could be confirmed');
-function findingRowHTML(f,i){
+/* the settle — an answer arrives written, not pasted. Each row is held back a
+ * beat longer than the one above it, so the list reads in the order it was
+ * argued instead of landing as a wall. Played once, on arrival: marking a
+ * finding re-reads this screen and must not write the whole page in again.
+ * Under reduced motion nothing is delayed and nothing moves. */
+const settleCls=()=>_askSettle?' settle':'';
+const settleAt=i=>_askSettle?` style="animation-delay:${(0.12*i).toFixed(2)}s"`:'';
+// the same delay, for an element that already carries a style attribute
+const settleDelay=i=>_askSettle?`;animation-delay:${(0.12*i).toFixed(2)}s`:'';
+// i is the rank the model argued; `order` is only where the row falls in the
+// settle, so a mention can go on counting after the last finding
+function findingRowHTML(f,i,order){
   const chips=[f.verdict?tag(f.verdict,true):'',f.travel?tag(f.travel):'',f.stale?tag('program rotates'):''].filter(Boolean).join('');
-  return `<div class="find" id="find_${f.id}">
+  return `<div class="find${settleCls()}" id="find_${f.id}"${settleAt(order==null?i:order)}>
     <div class="row">
       <span style="font-family:var(--serif);font-size:17.5px"><span class="rk">${i+1}</span>${esc(f.name)}</span>
       ${groundHTML(f)}
@@ -3694,8 +4002,8 @@ function findingRowHTML(f,i){
 }
 // a place named only so you know it isn't the pick — the same row, one rung
 // quieter, and markable all the same: talked out of is not the same as unwanted
-function mentionRowHTML(f){
-  return `<div class="find" id="find_${f.id}">
+function mentionRowHTML(f,i){
+  return `<div class="find${settleCls()}" id="find_${f.id}"${settleAt(i)}>
     <div class="row">
       <span style="font-family:var(--serif);font-size:16px;color:var(--ink-2)">${esc(f.name)}</span>
       ${groundHTML(f)}
@@ -3751,28 +4059,30 @@ function vAskResult(id){
     unplaced?`${unplaced===1?'The other':'The others'} could not be confirmed against a real address, so ${unplaced===1?'it is':'they are'} listed and not drawn.`:''
   ].filter(Boolean).join(' ');
   const routeHTML=r=>`<div class="route"><span class="if">${esc(r.if)}</span><span class="ord">${esc((r.order||[]).join(' · '))}</span></div>`;
+  const n=a.findings.length;
   return `<div>
     <div style="position:relative">
-      ${pts.length?streetsHTML(pts,{boxStyle:'height:270px',dot:11,plotWrap:'position:absolute;inset:0;padding:78px 60px 34px'})
+      ${pts.length?streetsHTML(pts,{boxStyle:'height:280px',dot:11,plotWrap:'position:absolute;inset:0;padding:78px 60px 34px'})
         :'<div class="mapbox" style="height:150px"></div>'}
       <div class="fade top" style="height:110px;z-index:3"></div>
-      <button class="omini overlay" style="left:18px;top:18px" onclick="openAskScreen()">← Ask</button>
+      <button class="omini overlay" style="left:18px;top:18px" onclick="go('atlas')">← Atlas</button>
+      <button class="omini overlay bare" style="right:12px;top:18px" onclick="openAskScreen()">Ask again</button>
     </div>
     <div class="lift pad" style="padding-top:20px">
-      <div class="eyebrow" style="margin:0 0 6px">${esc(askKindLabel(a.kind))} · asked in ${esc(fmtMonth(a.createdAt))}${a.reach?' · '+esc(a.reach):''}</div>
-      <div class="display" style="margin:0">${esc(a.destination)}</div>
-      ${a.read?`<div class="lede" style="margin-top:8px">${esc(a.read)}</div>`:''}
-      <div class="m" style="margin-top:${a.read?'8px':'10px'}">${esc(lede)}</div>
-      ${a.question?`<div class="note" style="border:0;padding:0;margin:10px 0 0">You asked: ${esc(a.question)}</div>`:''}
+      <div class="eyebrow${settleCls()}" style="margin:0 0 6px">${esc(askKindLabel(a.kind))} · asked ${esc(fmtWhen(a.createdAt))}${a.reach?' · '+esc(a.reach):''}</div>
+      <div class="display${settleCls()}" style="margin:0">${esc(a.destination)}</div>
+      ${a.read?`<div class="lede${settleCls()}" style="margin-top:8px${settleDelay(1)}">${esc(a.read)}</div>`:''}
+      <div class="m${settleCls()}" style="margin-top:${a.read?'8px':'10px'}${settleDelay(1.6)}">${esc(lede)}</div>
+      ${a.question?`<div class="note${settleCls()}" style="border:0;padding:0;margin:10px 0 0${settleDelay(2)}">You asked: ${esc(a.question)}</div>`:''}
 
-      <div class="shead"><span class="l">What Carta found</span><span class="r">been · booked · skip</span></div>
-      ${a.findings.length?a.findings.map(findingRowHTML).join('')
+      <div class="shead${settleCls()}"${settleAt(2.3)}><span class="l">What Carta found</span><span class="r">been · booked · skip</span></div>
+      ${n?a.findings.map((f,i)=>findingRowHTML(f,i,i+3)).join('')
         :'<div class="empty">Carta didn’t name anything it could stand behind here.</div>'}
       ${a.findings.some(f=>(f.fit||[]).some(figBacked))?`<div class="note" style="border:0;padding:0;margin:12px 0 0">Tap an underlined figure for the cups it was read from. What isn’t underlined, the record can’t open.</div>`:''}
       ${a.findings.some(f=>f.fit&&f.fit.length)?`<button class="btn btn-quiet" style="margin-top:12px" onclick="openBriefScreen()">The brief these were read from</button>`:''}
 
       ${mentions.length?`<div class="shead"><span class="l">Close, but not the pick</span></div>
-      ${mentions.map(mentionRowHTML).join('')}`:''}
+      ${mentions.map((f,i)=>mentionRowHTML(f,i+n+3)).join('')}`:''}
 
       ${plan?`<div class="shead"><span class="l">What Carta would do</span></div>
       <div class="box">
@@ -3790,7 +4100,7 @@ function vAskResult(id){
         ${marksHTML(wild)}
       </div>`:''}`:''}
 
-      <div class="note" style="margin-top:16px">Mark one Been or Booked and it is on file — the next time you type its name, Carta already knows it.</div>
+      <div class="note" style="margin-top:16px">Mark one Been or Booked and it is on file — the next time you type its name, Carta already knows it. The pin fills the moment you do.</div>
       <button class="btn btn-quiet" style="margin-top:14px" onclick="openAskScreen()">Ask again</button>
     </div></div>`;
 }
@@ -3840,7 +4150,7 @@ function streetsHTML(list,o){
 // the thumbnail a city or a café carries in a list — the drawn plot, always,
 // never a tile: a row is read at a glance and a glance can't wait on a network.
 // Phase 17 tried a live map here and it was too much for what a glance needs;
-// Phase 18 is the correction — not a map at all, just the shape (below).
+// the same-day correction (still called Phase 17) took it back out — not a map at all, just the shape (below).
 function plotThumbHTML(list){
   const pts=placed(list);
   if(!pts.length)return '<span class="mapthumb"></span>';
@@ -4295,47 +4605,67 @@ function cityRowHTML(city){
     <span class="mid"><span class="t">${esc(city)}</span><span class="m">${esc(cityMetaLine(city))}</span></span>
     <span class="go">→</span></button>`;
 }
+/* ============ the Atlas — the passport, and the question on it ============
+ * The ask was a button at the bottom of this screen, under everything the
+ * record had already done. It is the first thing the screen says now (the Ask
+ * Carta redesign): the passport is still the ground — it is the argument
+ * every ask is made from — and the question stands on it, one field and one
+ * word. What it has already found sits directly under the fold, one tap from
+ * being reopened, because an answer you can't get back to is a receipt.
+ *
+ * The headline the passport used to carry (three countries, forty-seven cups)
+ * is not repeated here: the belt draws it, and the chips below count it.
+ */
 function vAtlas(){
   const tasted=tastedCountryMap();
   const countries=Object.values(tasted).sort((a,b)=>a.label.localeCompare(b.label));
   const cities=knownCities();
-  const cups=live('cups').length;
   const counts=countryCupCounts();
-  const headline=countries.length
-    ?`${capFirst(words(countries.length))} countr${countries.length===1?'y':'ies'}, <em>${words(cups)} cup${cups===1?'':'s'}</em>`
-    :'The map <em>fills in</em>';
+  const asks=D.asks.slice().sort(byNew);
   return `<div>
-    <div class="mapbox passport" style="position:sticky;top:0;height:min(432px,46vh);z-index:1">
+    <div class="mapbox passport" style="position:sticky;top:0;height:min(452px,50vh);z-index:1">
       <carta-belt style="position:absolute;inset:0" fit="cover" frame="tasted" lift="on" tasted="${esc(countries.map(c=>c.label).join(','))}"></carta-belt>
       <div class="fade top" style="height:104px"></div>
       <div class="overlay" style="left:20px;right:20px;top:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
         <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
         <button class="omini bare" onclick="openTaste()">Your taste →</button>
       </div>
-      <div class="fade bottom" style="height:150px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 34px">
-        <div class="eyebrow" style="margin-bottom:7px">The passport</div>
-        <div class="display big" style="margin:0">${headline}</div>
+      <div class="fade bottom deep" style="height:210px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 22px">
+        <div class="eyebrow" style="margin-bottom:7px;color:var(--accent)">Ask Carta</div>
+        <div class="display big" style="margin:0 0 14px">Where to <em>next?</em></div>
+        <div class="askfield">
+          <input type="text" id="home_ask" value="${esc(askDraft.dest)}" placeholder="A city, a route, a friend's taste…"
+            aria-label="Where to next" oninput="askDraft.dest=this.value" onkeydown="if(event.key==='Enter')askFromHome()">
+          <button onclick="askFromHome()">Ask →</button>
+        </div>
+        <div class="asktrust">Sent with your brief, on your own key — every café checked against a real address before it is drawn.</div>
       </div>
     </div>
-    <div class="lift" style="z-index:2;margin-top:-24px;padding-bottom:26px">
+    <div class="lift" style="z-index:2;margin-top:-18px;padding-bottom:26px">
       <div style="display:flex;justify-content:center;padding:9px 0 3px"><span style="width:38px;height:3px;background:var(--paper-3);display:block"></span></div>
       <div class="pad" style="padding-bottom:0">
         ${countries.length||cities.length?'':`<div class="lede" style="margin-top:14px">Log a coffee with its country, or a café cup with its city, and the passport starts filling in.</div>`}
-        ${cities.length?`<div class="shead" style="margin-top:8px"><span class="l">Your cities</span><span class="r">${cities.length} on the record</span></div>
+        ${asks.length?`<div class="shead" style="margin-top:8px"><span class="l">What Carta found</span>
+          <span class="r">${words(asks.length)} ask${asks.length===1?'':'s'} · tap to reopen</span></div>
+          ${asks.map(askRowHTML).join('')}`:''}
+        ${cities.length?`<div class="shead"${asks.length?'':' style="margin-top:8px"'}><span class="l">Your cities</span><span class="r">${cities.length} on the record</span></div>
           ${cities.map(cityRowHTML).join('')}`:''}
         ${countries.length?`<div class="shead"><span class="l">Tasted so far</span><span class="r">tap the map, or a name</span></div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
             ${countries.map(c=>`<button class="cchip" onclick="openCountryChapter(${jsq(c.label)})">${esc(c.label)}<span class="n">${counts[landKey(c.label)]||0}</span></button>`).join('')}
           </div>
-          <button class="btn btn-quiet" style="margin-top:16px" onclick="sharePassportCard()">Share the passport</button>`:''}
-        <div class="box" style="margin-top:26px">
-          <div class="eyebrow">Where next</div>
-          <div class="lede" style="margin-bottom:14px">Carta sends what your record argues — the bar, the roasters, what you notice — and places every café it names on this map before drawing it.</div>
-          <button class="btn btn-quiet" style="min-height:46px" onclick="openAskScreen()">Ask Carta for a city</button>
-        </div>
+          <button class="btn btn-quiet" style="margin-top:16px;margin-bottom:4px" onclick="sharePassportCard()">Share the passport</button>`:''}
       </div>
     </div>
   </div>`;
+}
+// the field on the passport hands off to the composer rather than firing the
+// call: what kind of ask it is, and how far you'd go, are the difference
+// between an answer and a list — so they are asked before the key is spent.
+function askFromHome(){
+  const el=document.getElementById('home_ask');
+  if(el)askDraft.dest=el.value;
+  openAskScreen();
 }
 
 /* ============ the walk down from a country ============
@@ -4778,8 +5108,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.19.0';
+const APP_VERSION='7.20.0';
 const CHANGELOG=[
+  {v:'7.20.0',d:"Ask Carta, at the front door. The ask was a button at the bottom of the Atlas, under everything the record had already done. It is the first thing the Atlas says now — one field standing on the passport itself, and what Carta has already found sits directly under the fold, one tap from being reopened. The composer states what goes out with the ask as a ledger before anything leaves — the bar, the scores, what's excluded by name, the scope — and opens the brief itself if you want every character of it. The wait is a screen of its own and narrates the work rather than spinning: your record read back in its own counted figures, the bar you hold, the call itself, then each name placed one at a time, landing on the plot as its address confirms. Cancel is a real cancel — the call aborts and nothing is written down. The answer settles in the order it was argued instead of arriving flat."},
   {v:'7.19.0',d:"Your cities, drawn differently. The live street map dropped into each city's thumbnail last version turned out to be exactly what a thumbnail shouldn't be — a moving map crammed into a space too small to read one in. It's a shape now instead: one soft outline of where your own cafés actually sit in that city, drawn straight from your own record, nothing fetched, nothing loading. One café reads as a small round place; a whole spread city reads as the true, particular outline of your own reach in it — never the same two cities twice, and never a street or a pin standing in for either."},
   {v:'7.18.0',d:"Your cities, drawn. The little map beside each city on the Atlas used to show nothing but bare pins in an empty box — a shape was never asked for. It draws the real streets now, the same way the city's own page already does, but only once that row is actually on your screen; scroll past it and the live map steps aside again rather than sitting there spending a request for nothing. If the streets can't be reached, the row falls back to what it always showed, without a word about it — a thumbnail has no room to say so, and the drawn pins underneath are enough."},
   {v:'7.17.0',d:"A pin, from your own hand. OpenStreetMap's search can miss a café that hasn't been mapped as its own point yet, even on a street it knows perfectly well. So where a name search comes up empty — or none of the branches on offer is the real one — Carta now takes a link instead: paste whatever Google or Apple Maps already gave you, and it reads the actual pin straight out of it, then asks the same map for the real neighborhood the way it already does for a search result. No key, no new network touch, nothing kept but the coordinate — a link you copy and paste is not a link Carta remembers."},

@@ -7,6 +7,42 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 18: Ask Carta, at the front door
+
+- **Shipped — v7.20.0.** The ask moved off a button at the bottom of the
+  Atlas — reachable only after scrolling past the passport, the cities and
+  the tasted countries — onto the Atlas's own hero: one field standing on
+  the passport's fade, one word to send it. What Carta has already found
+  moved with it, from a scroll away to directly under the fold.
+- **The composer states its own ledger before the key is spent** — the bar,
+  the scores, what's excluded by name, the scope, each read live off the
+  record, `unread` wherever it's silent — and the block is a door onto the
+  brief itself for anyone who wants every character of it.
+- **The wait is a screen of its own.** The one network call Carta makes used
+  to run silently under the button that started it; it now narrates the
+  record's own counted figures, the call, then each name landing on a plot
+  as its address confirms, on one hairline allotted in advance so it never
+  runs backwards. Cancel aborts the fetch and the grounding loop for real.
+- **A real bug, caught by taking the invariant literally.** The draft this
+  phase started from wrote the ask to the ledger *before* its last pacing
+  beat, so a cancel in that final ~900ms window didn't actually prevent
+  anything — the record was already written by the time cancel could stop
+  it, quietly breaking "nothing is written down." Fixed by moving the write
+  after that beat's own cancel check. Worth keeping in the record: a stated
+  invariant is worth re-deriving against the actual code path, not just
+  reading as prose.
+- **The line band, reopened again — to 3–5,300, `ARCHITECTURE.md` §1.**
+  Landed at 5,155/5,300, byte ceiling untouched (411.7/500 KB). Phase 17's
+  own rule was explicit that its crossing isn't precedent for a further one;
+  this amendment re-earned the argument rather than assuming it, the same
+  way each of the four before it did.
+- Two stray in-code comments from Phase 17's same-day correction had called
+  that work "Phase 18" (written before this phase had a name) — corrected to
+  "Phase 17, corrected same day" now that a real Phase 18 exists, so the two
+  don't collide.
+
+---
+
 ## 2026-08-21 — Phase 17, corrected same day: the shape, not the map
 
 - **The founder's verdict on v7.18.0, read within the hour:** *"I don't love

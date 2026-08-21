@@ -12,18 +12,28 @@ part of the record.*
 Carta 7 is built exactly the way classic was, smaller:
 
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
-  **3–5,000 lines / ≤ 500 KB** including map data — a file one person can
+  **3–5,300 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 17 it stands at **4,824 lines / 391 KB**.
+  cost, not the stack's.) At Phase 18 it stands at **5,155 lines / 411.7 KB**.
 
   *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
-  Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
-  **3–5,000**.* Each of the first three amendments was made with an argument
-  written in at the time, the way this one is. What makes this one different
-  is that both of the prior two named 5,000 specifically, and named it the
-  same way: not as a number to negotiate but as the point past which "raise
-  the band again" stops being the honest answer, and "the one-file law itself
-  has come due" starts being it. Phase 17 reaches that number.
+  Phase 14, 3–4,800 through Phase 16, 3–5,000 through Phase 17, and amended
+  again here, at Phase 18, to **3–5,300**.* Phase 17's own amendment named
+  5,000 as the point past which "raise the band again" stops being the honest
+  answer, and said plainly that a future crossing does not get to treat that
+  one as precedent for a fifth quiet bump — it re-earns the argument from
+  scratch. This is that argument, not a reflex: the ask redesign moved the
+  ask's whole composer, a new narrated wait screen, and the answer's settle-in
+  animation into the file, landing it at 5,152 — 152 lines past the line just
+  drawn. The byte ceiling, the one that has never moved across five
+  amendments and the one that actually guards the drop-it-on-a-static-host
+  promise, is untouched at **500 KB**, with the file at 411.7 KB — comfortably
+  inside it. Put to the founder directly, the same way Phase 17's crossing
+  was: the choice is to amend to 5,300, giving the phase after this one real
+  room rather than reopening the band again over a rounding error. If a
+  future phase needs to go past 5,300 in turn, it inherits Phase 17's rule
+  unchanged: this crossing is not its precedent either, and it re-earns the
+  argument the same way every one of these five did.
 
   **This is a reopened decision, not a fourth routine bump — recorded as one
   on purpose** (`ROADMAP.md`'s own rule: a decided thing stays decided until

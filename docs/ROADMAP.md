@@ -552,6 +552,70 @@ never a rank, never a score dressed as geography.
 where the record actually reaches in it — instantly, offline, from the
 ledger alone — and never asks a map server, a pin, or a tile for any of it.
 
+### Phase 18 — Ask Carta, at the front door
+
+**Shipped — v7.20.0.**
+
+**The joy it serves:** the hunt — specifically, the distance between wanting
+to ask and actually asking. The ask was a button at the bottom of the Atlas,
+under everything the record had already done; reaching it meant scrolling
+past the passport, the cities and the tasted countries first. It is the
+first thing the Atlas says now.
+
+**What ships:** the passport stays the ground — it is the argument every ask
+is made from — and the question sits directly on it: one field in the hero,
+one word to send it (`.askfield`). What Carta has already found moves from
+a scroll away to directly under the fold, one tap from being reopened,
+because an answer you can't get back to is a receipt, not a record. The
+composer states what goes out with the ask as a ledger before anything
+leaves — the bar, the scores, what's excluded by name, the scope — each row
+read live off the record as it stands, `unread` wherever the record is
+silent, and the whole block is a door onto the brief itself if you want
+every character of it (`askLedgerRowsHTML`, `openAskBrief`). The wait — the
+one call Carta makes, which used to run silently under the button that
+started it — is a screen of its own now (`vAsking`), narrating the work
+rather than performing patience: the record read back in its own counted
+figures, the bar you hold, the call itself, then each name placed one at a
+time as its address confirms, landing on the wait's own plot as it lands.
+One hairline carries the progress, allotted in advance so it never runs
+backwards when the answer turns out to name eight places instead of five.
+Cancel is a real cancel — the fetch aborts via `AbortController`, the
+grounding loop stops at the name it's on, and nothing is written to the
+ledger. A failed call states the model's own reason where the wait was,
+with both doors on it: back to the ask, or copy the brief. The answer
+settles in on arrival, one row at a time in the order it was argued, rather
+than landing as a wall — marking a finding afterward re-reads the same
+screen and does not replay the settle. Reduced motion stills all of it.
+
+**The tripwires, screened.** No new network row: the wait narrates the same
+three touches the ask already made (the model call, the geocode pass) —
+nothing here calls out that didn't before. No gamification — the settle is
+a writing-in animation, not a score, and it plays once, never as a return
+nudge. No resolver, no proof: the ledger states what the record already
+holds: the same figures `briefPlainText` was already sending, just read
+aloud before the key is spent. **Cancel's honesty caught a real bug on the
+way in.** The draft this phase started from wrote the ask to `D.asks` and
+saved it *before* its last pacing beat, so a cancel landing in that final
+~900ms window would abort nothing — the answer was already fully grounded
+and already on the record, contradicting "nothing is written down" stated
+as this phase's own invariant. Fixed by moving the write after that beat's
+own cancel check, so every `_askCancel` branch in `runAsk`, including the
+last one, returns before `D.asks.unshift` runs.
+
+**The line band, reopened.** `main` stood at 4,824/5,000 when this phase
+landed — 176 free — and the wait screen's own furniture (the hairline, the
+narrated stages, the settle stagger, the front-door composer) needed more
+than that. Phase 17's amendment had said explicitly that a further crossing
+does not get to treat that one as precedent; put to the founder directly,
+the answer was to amend again, to **3–5,300**, recorded in
+`ARCHITECTURE.md` §1 as its own reopened decision. Final tally:
+**5,155/5,300**, byte ceiling untouched at 411.7/500 KB.
+
+**Done when — met:** the ask is reachable from the Atlas in one tap and one
+field, states what it's about to send before the key is spent, narrates its
+one network call rather than hiding it, and a cancelled ask leaves nothing
+behind.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner

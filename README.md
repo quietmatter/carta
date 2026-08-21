@@ -52,19 +52,25 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   neighborhood, **a point to start from**, a country, a route, or a friend's
   taste, plus **how far you'll actually go** and anything else worth
   knowing — to a model you bring your own key for. This is the door
-  that calls out in Carta, and only when you tap **Ask Carta** (the menu's
-  **Read it for me**, below, is the same door, opened a second way); the
-  key lives on this device and nowhere else. Every café it names is checked
-  against a real place lookup before it's ever drawn as a pin — what can't
-  be confirmed is listed, never guessed onto the map. No key, or the call
-  fails, and Carta falls back to the same plain-text brief, copied. The ask's
-  own page states which key it would use, and what happens if there isn't
-  one, before you tap anything. What comes back is **its own page, on its own
-  streets**, and it argues rather than lists: the cafés **ranked, each saying
-  what it is best for** — the cleanest cup, the one worth the drive, the
-  sleeper — with the figures off your own brief it was read from underneath,
-  and what to ask for once you're at the counter. It names the places that
-  are close but **aren't** the pick, and says why, instead of dropping them.
+  that calls out in Carta, and only when you tap **Ask →** on the passport
+  itself (the menu's **Read it for me**, below, is the same door, opened a
+  second way); the key lives on this device and nowhere else. Before it
+  sends, the composer states what's actually going out as a ledger — the
+  bar, your scores, what's excluded by name, the scope — with a door onto
+  the brief's exact text for anyone who wants to read all of it. The wait
+  is a screen of its own, narrating your own record's figures, then the
+  call, then each name landing on a map the moment its address is
+  confirmed; **Cancel** is a real cancel and leaves nothing on the record.
+  Every café it names is checked against a real place lookup before it's
+  ever drawn as a pin — what can't be confirmed is listed, never guessed
+  onto the map. No key, or the call fails, and Carta falls back to the same
+  plain-text brief, copied, with a way back to the ask. What comes back
+  settles in as **its own page, on its own streets**, and it argues rather
+  than lists: the cafés **ranked, each saying what it is best for** — the
+  cleanest cup, the one worth the drive, the sleeper — with the figures off
+  your own brief it was read from underneath, and what to ask for once
+  you're at the counter. It names the places that are close but **aren't**
+  the pick, and says why, instead of dropping them.
   Those figures are checked back against your own record as they're drawn:
   one Carta can open is underlined and taps through to the cups it was read
   from, and one it can't produce is left as plain text rather than dressed up
@@ -98,8 +104,10 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   country your record can trace, drawn from outlines carried in the file
   itself (no map tiles, no network, nothing to be offline from). Tasted
   countries are inked and tappable with your own spelling written across
-  them; untasted ones are a hairline invitation. Your cities read underneath,
-  each carrying its own shape.
+  them; untasted ones are a hairline invitation. The ask stands right on it —
+  one field, one word — and what it's already found sits directly under the
+  fold, one tap from being reopened. Your cities read underneath, each
+  carrying its own shape.
 - **A country, and the walk down from it.** Tap a country for its chapter,
   under its own shape. It opens by stating **how far the record actually
   follows that ground** — grown, processed, milled, roasted, poured, read, as
