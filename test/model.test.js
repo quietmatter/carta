@@ -372,6 +372,61 @@ assert.equal(parsed.ok, false);
 assert.deepEqual(parsed.findings, []);
 ok('parseAskJSON degrades to empty, never throws, on truncated or malformed JSON');
 
+// ---- Phase 14: the ask asks for an argument, and holds its own caps ----
+const promptNear = M.askPromptText('brief', 'near', 'Huntington Park', '', 'a short drive');
+assert.ok(promptNear.includes("within reach of it: Huntington Park"), 'a centroid ask reads as a starting point, not as a city');
+assert.ok(promptNear.includes("How far I'll actually go: a short drive"), 'the reach rides in the prompt — it is what makes an honest distance answerable');
+ok('askPromptText carries a centroid and the reach the keeper stated');
+
+const promptRich = M.askPromptText('brief', 'city', 'Lisbon', '', '');
+assert.ok(!promptRich.includes("How far I'll actually go"), 'no reach stated, no reach clause invented');
+['"read"', '"verdict"', '"fit"', '"order"', '"travel"', '"stale"', '"mentions"', '"plan"', '"routes"', '"wildcard"']
+  .forEach(k => assert.ok(promptRich.includes(k), `the prompt names ${k} — a field the model is never asked for is a field it never fills`));
+assert.ok(promptRich.includes('ONE sentence'), 'the one-sentence discipline is stated, not hoped for — this is read as chips, not prose');
+assert.ok(/no live access to any menu/.test(promptRich), 'Carta makes no search, so the prompt forbids stating a menu as fact');
+assert.ok(promptRich.includes('At most 8 cafés, 4 mentions, 3 fit strings each, 4 routes'), 'the caps are stated in the same numbers the parse enforces');
+ok('askPromptText asks for the four parts, one sentence each, and rules out what Carta cannot know');
+
+const full = JSON.stringify({
+  read: 'The shops that fit you sit north, not next door.',
+  cafes: [{ name: 'Mad Lab', neighborhood: 'DTLA', city: 'Los Angeles', verdict: 'Best match overall',
+    why: 'Their co-ferment program is your 9s.', fit: ['Alchemy fermentation 9.0/9, n=3', 'tropical', 'stone fruit', 'dropped'],
+    order: 'Whatever rare coffee is on pour-over', travel: '15 min north', stale: true }],
+  mentions: [{ name: "Cruzita's", city: 'Huntington Park', instead: 'Café de olla, not a filter bar.' }],
+  plan: { move: 'Go to Mad Lab and ask what is on pour-over.',
+    routes: [{ if: 'you want the best cup', order: ['Cognoscenti', 'Maru', 'Mad Lab'] }],
+    wildcard: { name: 'Endorffeine', city: 'Los Angeles', why: 'Precision rather than fermentation.' } },
+});
+parsed = M.parseAskJSON(full);
+assert.equal(parsed.read, 'The shops that fit you sit north, not next door.');
+assert.equal(parsed.findings[0].verdict, 'Best match overall');
+assert.equal(parsed.findings[0].stale, true);
+assert.deepEqual(parsed.findings[0].fit, ['Alchemy fermentation 9.0/9, n=3', 'tropical', 'stone fruit'], 'three figures is the cap, and the parse holds it whatever the prompt asked');
+assert.equal(parsed.mentions[0].instead, 'Café de olla, not a filter bar.');
+assert.deepEqual(parsed.plan.routes[0].order, ['Cognoscenti', 'Maru', 'Mad Lab']);
+assert.equal(parsed.plan.wildcard.name, 'Endorffeine');
+ok('parseAskJSON reads all four parts of a full answer, and caps the evidence list itself');
+
+parsed = M.parseAskJSON('{"cafes":[{"name":"Copper Bean","why":"washed process, like your anchors"}]}');
+assert.equal(parsed.ok, true);
+assert.equal(parsed.findings[0].name, 'Copper Bean');
+assert.equal(parsed.findings[0].why, 'washed process, like your anchors');
+assert.deepEqual([parsed.findings[0].verdict, parsed.findings[0].order, parsed.findings[0].travel], ['', '', '']);
+assert.deepEqual(parsed.findings[0].fit, []);
+assert.deepEqual([parsed.read, parsed.mentions, parsed.plan], ['', [], null]);
+ok('parseAskJSON still reads the old four-field shape — every ask already on the record must open');
+
+parsed = M.parseAskJSON(JSON.stringify({ cafes: [], mentions: [{ city: 'nowhere' }], plan: { routes: [{ if: 'no order given' }], wildcard: { why: 'no name' } } }));
+assert.deepEqual(parsed.mentions, [], 'a mention with no name is a place Carta cannot ground or draw');
+assert.equal(parsed.plan, null, 'a plan that said nothing usable is no plan, not an empty box on the screen');
+ok('parseAskJSON drops the unusable rather than drawing an empty one');
+
+parsed = M.parseAskJSON(JSON.stringify({ cafes: Array.from({ length: 12 }, (_, i) => ({ name: 'Café ' + i })) }));
+assert.equal(parsed.findings.length, 8, 'the cap is enforced here, not trusted to the prompt');
+parsed = M.parseAskJSON(JSON.stringify({ cafes: [{ name: 'X', verdict: 'a verdict far longer than any chip could ever hold on a phone screen' }] }));
+assert.ok(parsed.findings[0].verdict.length <= 40 && parsed.findings[0].verdict.endsWith('…'), 'an over-long verdict is trimmed to chip length, never passed through to overflow the row');
+ok('parseAskJSON holds every cap the prompt states, and trims rather than overflows');
+
 // ---- the menu's OCR (horizon list): the prompt, and the parse of what comes back ----
 const ocrPrompt = M.menuOCRPrompt();
 assert.ok(ocrPrompt.includes('ONLY a JSON object') && ocrPrompt.includes('"lines"'), 'the model is told exactly what shape to answer in');
