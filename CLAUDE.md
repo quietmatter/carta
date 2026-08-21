@@ -51,7 +51,7 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–16 shipped**; Phase 17 is unwritten.
+  read at every phase gate. **Phases 1–17 shipped**; Phase 18 is unwritten.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -133,7 +133,11 @@ server/               Classic's sync server — dormant
   - `<carta-plot>` — the drawn plot: a handful of points fit to a box, offline.
   - `<carta-streets>` — a city or a single café: **Leaflet + OpenStreetMap
     tiles, injected at runtime** from unpkg. Unreachable, it hides itself and
-    the drawn plot underneath simply stands.
+    the drawn plot underneath simply stands. `thumb="on"` (Phase 17) is the
+    same element for a list row: one shared `IntersectionObserver` boots it
+    only while actually on screen and tears it down the moment it scrolls
+    off, under a small shared concurrency cap — the tile-server citizenship
+    every full map already had, extended to the surface that never got it.
   - Beside them, `d3-array` + `d3-geo` **vendored verbatim** — the projection
     the passport needs. See the invariants; this is an amendment, not a habit.
 - **store** — `localStorage` under one key, `carta7.v1`. `D` is the ledger,
@@ -268,12 +272,14 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 ### Invariants to preserve
 
 - **One file, no build.** Vanilla JS, inline everything, nothing fetched at
-  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–4,800 lines / ≤ 500 KB**
-  (the line half was raised from 4,000 at Phase 13 and from 4,500 at Phase 15,
-  each with the argument written into §1 — the byte ceiling has never moved
-  and is the one that guards the drop-it-on-a-static-host promise. §1 says
-  4,800 is a ceiling, not an allowance, and that a phase needing 5,000 means
-  the one-file law has come due rather than the band).
+  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–5,000 lines / ≤ 500 KB**
+  (raised from 4,000 at Phase 13, 4,500 at Phase 15, 4,800 at Phase 16, each
+  with the argument written into §1 — the byte ceiling has never moved and is
+  the one that guards the drop-it-on-a-static-host promise. Phase 17's
+  amendment to 5,000 is recorded as a **reopened decision**, not a routine
+  fourth bump: both of the prior two amendments had named 5,000 by name as
+  the point past which the one-file law itself, not the band, is what's come
+  due — see §1's own account of it).
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written
@@ -321,7 +327,7 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 66 cases
+node test/model.test.js        # zero deps, plain Node, 66 cases (unchanged — Phase 17 has no pure code; verify by loading the page)
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight

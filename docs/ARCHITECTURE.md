@@ -12,44 +12,36 @@ part of the record.*
 Carta 7 is built exactly the way classic was, smaller:
 
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
-  **3–4,800 lines / ≤ 500 KB** including map data — a file one person can
+  **3–5,000 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 15 it stands at **4,716 lines / 384 KB**.
+  cost, not the stack's.) At Phase 17 it stands at **4,774 lines / 389 KB**.
 
-  *The line band was 3–4,000 through Phase 12, 3–4,500 through Phase 14, and
-  is amended here, at Phase 15, to **3–4,800**.* Phase 14 wrote the warning
-  a phase early: it budgeted ~4,510, landed at 4,486, declined the amendment
-  it had been given, and recorded that fourteen lines were left and the next
-  surface of any size would have to make this argument. Phase 15 is that
-  surface, so here is the argument.
+  *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
+  Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
+  **3–5,000**.* Each of the first three amendments was made with an argument
+  written in at the time, the way this one is. What makes this one different
+  is that both of the prior two named 5,000 specifically, and named it the
+  same way: not as a number to negotiate but as the point past which "raise
+  the band again" stops being the honest answer, and "the one-file law itself
+  has come due" starts being it. Phase 17 reaches that number.
 
-  The band's stated purpose is a file one person can read whole, and the
-  ceiling that actually guards the drop-it-on-a-static-host promise is the
-  byte one — still **500 KB**, still never moved, with the file at 376 KB
-  and 75% of it. Phase 15 spends its lines on a correction path that did not
-  exist: a café placed by a single best guess, wrongly and permanently, with
-  nothing in the app that could say otherwise. Ninety lines to stop the atlas
-  quietly lying is the cheapest honest thing in the file.
+  **This is a reopened decision, not a fourth routine bump — recorded as one
+  on purpose** (`ROADMAP.md`'s own rule: a decided thing stays decided until
+  it is deliberately reopened, and reopening it is a logbook entry, not a
+  mood). The founder chose to amend rather than split the phase or trim
+  the file first, with the 5,000-line reading in front of them, not around
+  it. The byte ceiling is the one that was never touched across all four
+  amendments and is the one that actually guards the drop-it-on-a-static-host
+  promise — still **500 KB**, with the file at 389 KB. If a future phase
+  needs to go past 5,000 in turn, it does not get to treat this crossing as
+  precedent for a fifth quiet one; it re-earns the argument from here, same
+  as every phase before it had to.
 
-  **4,800 is a ceiling, not an allowance**, and the same rule carries: the
-  next phase past it makes its argument here first. The reading Phase 13 set
-  down still stands — if a phase ever needs 5,000, the honest conclusion is
-  that the one-file law itself has come due, not that the band needs raising
-  a fourth time. That is now two hundred lines away, which is close enough
-  that Phase 16 should treat it as a real question rather than a distant one.
-
-  *The line band was 3–4,000 through Phase 12 and is amended here, at Phase
-  13, rather than quietly exceeded.* The argument: the band's stated purpose
-  is a file one person can read whole, and the ceiling that actually guards
-  the drop-it-on-a-static-host promise is the byte one — still 500 KB, still
-  untouched, and the file sits at 71% of it. Phase 13 added fourteen
-  surfaces to an app that had nine; 867 lines for that is roughly 60 lines a
-  screen in a house style whose views are multi-line template literals, and
-  compressing them to hold a number would satisfy the letter of "readable
-  whole" by working against its point. **4,500 is a ceiling, not an
-  allowance.** The next phase that wants past it does what this one did:
-  makes the argument here first. If a phase ever needs 5,000, the honest
-  reading is that the one-file law itself has come due, not the band.
+  Phase 17 itself spent its lines on tile-server citizenship for the one
+  offline-first surface that never got it — a city thumbnail that used to
+  show bare pins in an empty box now shows the shape underneath them, without
+  ever asking OpenStreetMap's tile server for more than what is actually on
+  screen at the time.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -293,6 +285,7 @@ one and the one that travels.
 |---|---|---|
 | Geocode (Nominatim) | placing a café; grounding an ask's answer; reading a pasted map link's real address (Phase 16) | typed city, drawn plot |
 | Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
+| Leaflet + tiles, thumbnail mode | a city row is actually on screen (Phase 17) | the drawn plot, in total silence |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 
 The geocode row is unchanged in posture and was sharpened at Phase 15: the
@@ -304,6 +297,20 @@ with the real neighborhoods to pick from, because which branch the keeper sat
 in is not a fact any lookup or model holds. Same grounding rule, one rung
 more honest: a pin is drawn from a confirmed position or not at all, and now
 it can also be taken back.
+
+**Phase 17 is a citizenship note, not a new touch.** OSM's tile usage
+policy ties its courtesy to attention: tiles are for the viewport a person is
+actually looking at, not pre-seeded in bulk, and while it states no hard
+number it reserves the right to block usage that "degrades the service."
+Every full-screen map already asks for tiles only while its own screen is
+open; the Atlas's city-list thumbnails did not carry that same discipline —
+they mounted nothing before this phase, so the question never arose, but the
+fix for the empty thumbnail is itself a live map, and that map needs the same
+discipline the full screens already have. So a thumbnail only boots Leaflet
+once an `IntersectionObserver` says it is actually on screen, tears itself
+down the moment it scrolls off, and holds to a small shared concurrency cap
+as the margin under a policy that names no number. One `IntersectionObserver`
+instance is shared across every thumbnail on a screen, not one per row.
 
 That is the whole list, and **Phase 14 deliberately kept it that way.** The
 obvious way to make the ask's answers sharper is to let the model search —

@@ -79,8 +79,8 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–16 are shipped. Carta 7 stands at
-**v7.17.0, 4,716 lines, 66/66 pure tests**. Full prose for each is in
+*Phases 8–17 are shipped. Carta 7 stands at
+**v7.18.0, 4,774 lines, 66/66 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -472,6 +472,66 @@ so using it means standing up a query service, which is a server and not
 Carta's to build. It is a plausible source for the "published atlas, keyless,
 readBrand-posture" `ARCHITECTURE.md` §7 already names as Lotmark's future
 interchange with Carta. Logged for that desk, not built here.
+
+### Phase 17 — the thumbnail, alive when it's actually looked at
+
+**Shipped — v7.18.0.**
+
+**The joy it serves:** the map fills in, at a surface Phase 12 built and
+never finished — the Atlas's city thumbnails have shown bare pins in an
+empty box since the day they shipped, the one place in the app that draws a
+map and never asked for its shape.
+
+**Checked before writing code, the way Phase 16 was.** OpenStreetMap's tile
+usage policy states no hard rate number, but is explicit that "capacity is
+limited," usage that "degrades the service" can be blocked without notice,
+and that tiles are for "the current viewport" — bulk or pre-seeded fetching
+is barred outright. That reframes the fix: not "add tiles to the thumbnail,"
+but "add tiles the way the policy actually asks for them" — tied to what a
+person is looking at, not to what merely exists in the DOM.
+
+**What ships.** `<carta-streets>` gains a `thumb="on"` mode: one shared
+`IntersectionObserver` — a single instance for every thumbnail on a screen,
+not one per row — boots Leaflet only once a row is actually visible, and
+tears the map down the instant it scrolls off. A small concurrency cap (6)
+is the margin under a policy that names no number of its own. A thumbnail
+that can't reach the streets degrades in total silence: the "Streets
+unavailable · Retry" note is sized for a screen, and a 44×60px row has no
+home for it — the drawn plot underneath already reads fine alone.
+
+**Three things the browser test caught that the design alone would have
+missed.** An opaque background painted on mount, hiding the plot underneath
+until (or unless) the thumbnail ever scrolled into view. The same
+background staying opaque forever after a booted thumbnail scrolled away
+and tore its map down — the plot stayed hidden behind a blank panel long
+after the reason for it was gone. And Leaflet's attribution control,
+rendered at thumbnail scale, coming out as illegible clipped text — removed
+for thumbnails, since the same city's full map is one tap from the same row
+and already carries it properly. All three needed the actual DOM lifecycle
+exercised in a real browser to surface; none would show up in a design
+review or a pure-function test.
+
+**The line band, reopened rather than bumped a fourth time.** `main` stood
+at 4,716/4,800 lines when this phase was scoped — 84 free. Both of the
+prior two amendments (Phase 14 and Phase 15) had explicitly named **5,000**
+as the number past which raising the band again stops being the honest
+answer and "the one-file law itself has come due" starts being it. Put to
+the founder directly rather than decided in the phase's own PR — the
+answer was to amend to 5,000 now, with the 5,000-line reading in view, not
+worked around. `ARCHITECTURE.md` §1 records this as a **reopened decision**,
+per this document's own rule that a decided thing stays decided until it is
+deliberately reopened. Landed at 4,774/5,000; the byte ceiling, untouched
+across all four amendments, sits at 388/500 KB.
+
+**Tripwires.** A genuinely new class of touch — a live map inside a
+scrolling list, not a single open screen — so it's recorded as its own row
+in `ARCHITECTURE.md` §7 rather than folded silently into the existing
+Nominatim/Leaflet rows. No resolver, no gamification, no new dependency.
+
+**Done when — met:** a city's thumbnail shows the real shape of the ground
+underneath its pins whenever it's actually on screen, asks OpenStreetMap's
+tile server for no more than that, and falls back to exactly what it always
+showed when it can't.
 
 ## The horizon (unscheduled, revisited)
 
