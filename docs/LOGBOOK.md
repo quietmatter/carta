@@ -51,14 +51,26 @@ Lotmark's desk. Old entries are never rewritten.*
   ever wanted it is a row in that table first, not a flag in the request.
 - **The band held, which is worth recording.** Budgeted at ~4,510 lines
   against §1's 4,500, and an amendment to 4,800 was approved in advance.
-  It landed at **4,446** and the amendment was not taken. §1 says a ceiling
+  It landed at **4,486** and the amendment was not taken. §1 says a ceiling
   is not an allowance; this is the first phase to approach one and stop.
-- **One design call worth naming.** The plan had each finding's evidence
+- **One design call, made twice.** The plan had each finding's evidence
   rendered as `.fig` — the dotted-underlined figure that taps through to the
-  cups it was read from. It isn't: a `fit` string is written by the model, so
-  there are no cups to open, and a tap that goes nowhere is a fabricated
-  affordance. The evidence reads as quiet meta instead, with one honest
-  tap-through under the section to the brief it was all read from.
+  cups it was read from. First pass said no: a `fit` string is written by the
+  model, so there are no cups behind it, and a tap that goes nowhere is a
+  fabricated affordance. That was right about the affordance and wrong about
+  the string. **The brief is built from the taste model's own values**, so a
+  `fit` string is an *echo* of one — `matchFigure(text, tm)` resolves it back
+  to the item it came from, and only a figure that resolves becomes a door.
+  It lands on the same `evidenceSheet` *Your taste* opens, with the same real
+  cups. What doesn't resolve stays flat grey, and the difference is legible
+  without being explained: a door is inked.
+- **And the resolver turned out to be the honesty gate on the return leg.** A
+  figure the record cannot produce — the model writing "your love of
+  Guatemalan naturals" over a record with no Guatemala in it — simply never
+  becomes a door, whatever was claimed. Carta doesn't argue with the model or
+  flag it in red; it just doesn't open. `matchFigure` is pure and tested,
+  matched on whole folded words, longest match winning, so "Anaerobic washed"
+  is never flattened to "Washed" and "tea" is never found inside "cleaner".
 - **Tripwires screened.** The rank is the model's own order, plain ink, never
   the ember — the ember is a score *you* gave a cup and nothing here has been
   drunk. No resolver, no rung, no gate, no streak. Every ask already on the

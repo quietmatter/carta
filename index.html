@@ -1254,6 +1254,34 @@ function parseAskJSON(text){
   const said=plan&&(plan.move||plan.routes.length||plan.wildcard);
   return {ok:true,read:askStr(data.read,240),findings,mentions,plan:said?plan:null};
 }
+/* ---- a figure the model wrote, read back against the record.
+ * The brief is built from the taste model's own values, so when the model
+ * answers "Alchemy fermentation 9.0/9, n=3" it is echoing one of them back.
+ * That means the string can be resolved to the item it came from — and only
+ * a figure that resolves earns the tap that opens the cups underneath it.
+ * One that doesn't stays plain text, because there is nothing behind it to
+ * open, and a door onto nothing is worse than no door.
+ *
+ * It doubles as the honesty gate on the way back: a figure the record cannot
+ * produce simply never becomes a door, whatever the model claimed.
+ *
+ * Longest match wins, so "Anaerobic washed" is never read as "Washed", and
+ * both sides are matched on whole folded words, so "tea" is not found inside
+ * "cleaner". */
+function matchFigure(text,tm){
+  const t=' '+fold(text)+' ';
+  if(!tm||t==='  ')return null;
+  let best=null;
+  const consider=(kind,value)=>{
+    const v=fold(value);
+    if(!v||t.indexOf(' '+v+' ')===-1)return;
+    if(!best||v.length>best.v.length)best={kind,value:String(value),v};
+  };
+  (tm.bar&&tm.bar.anchors||[]).forEach(a=>consider('anchor',a.name));
+  ['descriptors','processes','origins','roast'].forEach(k=>
+    ((tm.vector&&tm.vector[k])||[]).forEach(x=>consider(k,x.value)));
+  return best?{kind:best.kind,value:best.value}:null;
+}
 /* ---- the menu's OCR (horizon list, ROADMAP.md — "a BYO-key vision call
  * through the same sanctioned channel as the scout's ask; one posture, two
  * uses"). The prompt and the parse are the two halves worth testing, same
@@ -3416,6 +3444,17 @@ const marksHTML=f=>`<div class="picks" style="margin-top:12px">
   ${FIND_MARKS.map(m=>`<button class="pick mini${f.status===m[0]?' on':''}" onclick="setFindStatus('${f.id}','${m[0]}')">${m[1]}</button>`).join('')}
 </div>`;
 const groundHTML=f=>`<span class="ground${f.grounded?'':' no'}">${f.grounded?'placed':'not confirmed'}</span>`;
+// the thin ledger-coupled wrapper over the pure matchFigure, the same way
+// matchNode wraps matchNodes: a figure the record can open becomes the app's
+// own .fig and lands on the very sheet Your taste opens; one it can't stays
+// flat. The reader can tell them apart without being told — a door is inked.
+const figBacked=s=>matchFigure(s,tasteModelMemo());
+function fitFigureHTML(s){
+  const m=figBacked(s);
+  if(!m)return esc(s);
+  const call=m.kind==='anchor'?`openAnchorEvidence(${jsq(m.value)})`:`openVectorEvidence('${m.kind}',${jsq(m.value)})`;
+  return `<button class="fig" onclick="${call}">${esc(s)}</button>`;
+}
 // a model that answers "Compton, Compton" is answering honestly — the area and
 // the city are the same place. Saying it twice is Carta's bug, not the model's.
 const whereHTML=f=>esc([f.neighborhood,f.city].filter(Boolean)
@@ -3430,7 +3469,7 @@ function findingRowHTML(f,i){
     <div class="m" style="margin-top:3px">${whereHTML(f)}</div>
     ${chips?`<div class="picks" style="margin-top:9px">${chips}</div>`:''}
     ${f.why?`<div class="say">${esc(f.why)}</div>`:''}
-    ${(f.fit&&f.fit.length)?`<div class="m" style="margin-top:6px">${esc(f.fit.join(' · '))}</div>`:''}
+    ${(f.fit&&f.fit.length)?`<div class="m" style="margin-top:6px">${f.fit.map(fitFigureHTML).join(' · ')}</div>`:''}
     ${f.order?`<div class="m" style="margin-top:6px"><span class="k">Ask for</span> ${esc(f.order)}</div>`:''}
     ${marksHTML(f)}
   </div>`;
@@ -3511,6 +3550,7 @@ function vAskResult(id){
       <div class="shead"><span class="l">What Carta found</span><span class="r">been · booked · skip</span></div>
       ${a.findings.length?a.findings.map(findingRowHTML).join('')
         :'<div class="empty">Carta didn’t name anything it could stand behind here.</div>'}
+      ${a.findings.some(f=>(f.fit||[]).some(figBacked))?`<div class="note" style="border:0;padding:0;margin:12px 0 0">Tap an underlined figure for the cups it was read from. What isn’t underlined, the record can’t open.</div>`:''}
       ${a.findings.some(f=>f.fit&&f.fit.length)?`<button class="btn btn-quiet" style="margin-top:12px" onclick="openBriefScreen()">The brief these were read from</button>`:''}
 
       ${mentions.length?`<div class="shead"><span class="l">Close, but not the pick</span></div>
@@ -4407,7 +4447,7 @@ duskMQ.addEventListener('change',applyTheme);
 /* ============ version ============ */
 const APP_VERSION='7.15.0';
 const CHANGELOG=[
-  {v:'7.15.0',d:"Ask Carta, arguing. It used to hand back a flat list of names with a sentence each; it ranks them now, and every one says what it is best FOR — the cleanest cup, the one worth the drive, the sleeper south of you — with the figures off your own brief it was read from sitting under it, and what to ask for once you're at the counter. It names the places that are close but aren't the pick, and says why, instead of quietly dropping them. It closes with what it would actually do: the one strongest move, and the order to walk them in depending on what you're after. Two new things to ask: near a point rather than a city, and how far you'll actually go — which is what lets it say 'worth driving for' and mean it. Carta still makes no search, so it never claims what a café is pouring today; where a fit depends on a menu that turns over, the row says so. Every café it names is still checked against a real address before it is drawn, mentions included. And the model it asks by default is a much larger one, with the room to answer properly — your own key, your own choice, still on the device and nowhere else."},
+  {v:'7.15.0',d:"Ask Carta, arguing. It used to hand back a flat list of names with a sentence each; it ranks them now, and every one says what it is best FOR — the cleanest cup, the one worth the drive, the sleeper south of you — with the figures off your own brief it was read from sitting under it — underlined where Carta can open them, so one tap gets you the actual cups behind the claim, and left plain where your record can't back them — and what to ask for once you're at the counter. It names the places that are close but aren't the pick, and says why, instead of quietly dropping them. It closes with what it would actually do: the one strongest move, and the order to walk them in depending on what you're after. Two new things to ask: near a point rather than a city, and how far you'll actually go — which is what lets it say 'worth driving for' and mean it. Carta still makes no search, so it never claims what a café is pouring today; where a fit depends on a menu that turns over, the row says so. Every café it names is still checked against a real address before it is drawn, mentions included. And the model it asks by default is a much larger one, with the room to answer properly — your own key, your own choice, still on the device and nowhere else."},
   {v:'7.14.0',d:"The rest of the app. A country stopped being a dead end: it states how far the record actually follows that ground — grown, processed, milled, roasted, poured, read, dashed across whatever it can't reach — and then opens downward into its regions, the hands that grew it, the roasters working from it and the rooms it pours in. A region and a farm are pages now, walked down to from the country and back up from any coffee. Your taste dropped its meters and argues in a sentence instead, every figure in it tappable straight through to the cups it was read from. The brief left its drawer: it's a screen that says what goes out in four parts before it ever shows you the raw text, with the exact characters folded one tap away, and the ask that follows it names the key it would use and the degrade if you don't have one. What Carta found is its own page on its own streets. A café's menu is one screen at the counter rather than two sheets that never met. Your record — everything you own, the backup, what reads in, what sends out, your Setups, classic — has a page of its own, and a Setup finally keeps the grind history that is only ever true on it. Two new fields on a coffee, altitude and mill, both optional, both stated only where a bag states them. Nothing migrated; the ledger is the same file it was."},
   {v:'7.13.0',d:"The map, in front. Carta opens on the Atlas now — the passport full-bleed, every country you've tasted inked into it and tappable, your cities listed underneath with their own plots. Four rooms became three (Atlas · Journal · Shelf) with ＋ A cup standing beside them, reachable from anywhere instead of only from the top of one screen; Scout folded into the Atlas as \"Your taste\", because what it argues is geography. A city is streets edge to edge with your cafés on a sheet you pull up over them, a café has its own corner of the map, and a cup is finally a page — the photo at the size you took it for, the score set where you can read it. The record itself is untouched: same ledger, same file, nothing migrated. And the Journal opens with the last cup you brewed — its recipe, its finding, one tap to begin the next from it."},
   {v:'7.12.0',d:"A reason to come back, stated plainly. The first time a country or a city actually lands on your passport, Carta says so in one sentence — with a tap to share it while it's fresh — and then goes quiet about it forever after. Nothing already on your record gets announced retroactively. And a coffee you took home a while back with nothing brewed from it yet says so on the shelf, one line, no pressure. No streaks, no badges, no percent-complete — if it ever starts reading like a score, that's a bug, not a feature."},

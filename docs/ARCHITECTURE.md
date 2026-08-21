@@ -14,13 +14,16 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–4,500 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 14 it stands at **4,446 lines / 367 KB**.
+  cost, not the stack's.) At Phase 14 it stands at **4,486 lines / 369 KB**.
 
   *Phase 14 planned an amendment to 4,800 and did not need one.* The ask's
-  rebuild was budgeted at ~4,510 lines and landed at 4,446, inside the band
+  rebuild was budgeted at ~4,510 lines and landed at 4,486, inside the band
   as it stands — so the band stays where Phase 13 left it. Recorded here
   because a ceiling only means anything if the phases that approach it say
-  so: this one came within 54 lines and stopped.
+  so: this one came within **14 lines** and stopped. Phase 15 should read
+  that number as the real state of the file — the next surface of any size
+  is the phase that has to make the argument here, and 4,800 is the number
+  it should argue for.
 
   *The line band was 3–4,000 through Phase 12 and is amended here, at Phase
   13, rather than quietly exceeded.* The argument: the band's stated purpose

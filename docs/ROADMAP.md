@@ -80,7 +80,7 @@ Neither finding changes a joy or a law. Both change what ships next.
 ## The phases (Act Two)
 
 *Phases 8–14 are shipped. Carta 7 stands at
-**v7.15.0, 4,446 lines, 55/55 pure tests**. Full prose for each is in
+**v7.15.0, 4,486 lines, 58/58 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -330,8 +330,10 @@ menu-dependent as rotating. `ARCHITECTURE.md` §7's table gained no row.
 **The tripwires, screened.** The rank is the model's own order, held in plain
 ink and never in the ember (that is a score you gave a cup, and nothing here
 has been drunk). No resolver, no rung, no gate. Every figure a finding leans
-on is stated beside it. The line band was **not** amended: budgeted at ~4,510,
-landed at 4,446, inside the 4,500 Phase 13 set.
+on is stated beside it — and **resolved back against the record**, so a figure
+Carta can open is a door onto its own cups and one it can't is plain text
+(`matchFigure`, pure and tested). The line band was **not** amended: budgeted
+at ~4,510, landed at 4,486, fourteen lines inside the 4,500 Phase 13 set.
 
 ## The horizon (unscheduled, revisited)
 

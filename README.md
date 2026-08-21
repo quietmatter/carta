@@ -65,6 +65,10 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   sleeper — with the figures off your own brief it was read from underneath,
   and what to ask for once you're at the counter. It names the places that
   are close but **aren't** the pick, and says why, instead of dropping them.
+  Those figures are checked back against your own record as they're drawn:
+  one Carta can open is underlined and taps through to the cups it was read
+  from, and one it can't produce is left as plain text rather than dressed up
+  as evidence.
   And it closes with what it would do standing there: the one strongest move,
   and the order to walk them in depending on what you're after. **Been ·
   Booked · Skip** on any of them feeds back into your record, so a café you

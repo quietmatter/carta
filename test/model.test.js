@@ -28,7 +28,7 @@ vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
-  askPromptText, parseAskJSON, menuOCRPrompt, parseMenuOCR, extractJSON,
+  askPromptText, parseAskJSON, matchFigure, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel };
 `, sandbox);
 const M = sandbox.__m;
@@ -426,6 +426,29 @@ assert.equal(parsed.findings.length, 8, 'the cap is enforced here, not trusted t
 parsed = M.parseAskJSON(JSON.stringify({ cafes: [{ name: 'X', verdict: 'a verdict far longer than any chip could ever hold on a phone screen' }] }));
 assert.ok(parsed.findings[0].verdict.length <= 40 && parsed.findings[0].verdict.endsWith('…'), 'an over-long verdict is trimmed to chip length, never passed through to overflow the row');
 ok('parseAskJSON holds every cap the prompt states, and trims rather than overflows');
+
+// ---- a figure the model wrote, resolved back to the item it echoed ----
+const tmFix = M.tasteModel(ledger());
+assert.equal(M.matchFigure('Washed 8.0/9, n=3', tmFix).kind, 'processes');
+assert.equal(M.matchFigure('Washed 8.0/9, n=3', tmFix).value, 'Washed');
+assert.equal(M.matchFigure('Ethiopia, n=3', tmFix).kind, 'origins');
+assert.equal(M.matchFigure("Sey's avg 8.7 over 3 cups", tmFix).kind, 'anchor', 'a roaster resolves to its anchor sheet, not to a vector bucket');
+assert.equal(M.matchFigure('Light (8.7/9, n=3)', tmFix).kind, 'roast');
+ok('matchFigure resolves a model-written figure to the taste-model item the brief echoed to it');
+
+assert.equal(M.matchFigure('your love of Guatemalan naturals', tmFix), null, 'a figure the record cannot produce never becomes a door — this is the honesty gate on the way back');
+assert.equal(M.matchFigure('', tmFix), null);
+assert.equal(M.matchFigure('Washed', null), null, 'no taste model, no doors');
+assert.equal(M.matchFigure('anything', { bar: {}, vector: {} }), null, 'an empty model resolves nothing and never throws');
+ok('matchFigure refuses anything the record cannot open, and never throws doing it');
+
+const tmLong = M.tasteModel({
+  coffees: [{ id: 'x1', roaster: 'R', name: 'A', origin: { country: 'Kenya', process: 'Anaerobic washed' } }],
+  cups: [{ id: 'y1', kind: 'bar', coffeeRef: 'x1', score: 9, descriptors: ['tea'] }], places: [],
+});
+assert.equal(M.matchFigure('Anaerobic washed 9.0/9, n=1', tmLong).value, 'Anaerobic washed', 'longest match wins — the specific process is never read as the generic one inside it');
+assert.equal(M.matchFigure('a cleaner, sweeter cup', tmLong), null, '"tea" must not be found inside "cleaner" — figures match on whole words');
+ok('matchFigure matches the longest whole-word figure, so a specific process is never flattened into a generic one');
 
 // ---- the menu's OCR (horizon list): the prompt, and the parse of what comes back ----
 const ocrPrompt = M.menuOCRPrompt();
