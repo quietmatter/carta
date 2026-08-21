@@ -37,6 +37,14 @@ Lotmark's desk. Old entries are never rewritten.*
   was in flight at the same time and asked the same question, and got the same
   answer.** Two sessions arriving independently at the same ceiling on the same
   afternoon. The amendment stands once, as Phase 17's.
+- **The founder's call on the overage, made on the PR: land over, split next.**
+  The alternative offered was splitting first and landing Phase 18 on top; the
+  reason not to was that a change to the headline invariant deserves its own PR
+  rather than riding in on a feature's. So the band is **overdrawn, not amended**
+  — 5,000 is still the number — and **Phase 19 is now written into `ROADMAP.md`
+  as the split**, seam and all: the real work there is deciding which file owns
+  `LANDS`/`LAND_TOPO` and their decoders, not moving the lines. Nothing new goes
+  into `index.html` before it lands.
 - **And then it went over.** Phase 17 shipped twice in a day — the live
   thumbnail, then its same-day correction to a drawn city shape — leaving
   `main` at 4,824 rather than 4,774. Phase 18's 219 lines of ground land on

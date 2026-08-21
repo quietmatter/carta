@@ -615,14 +615,60 @@ Then Phase 17 shipped a second time the same day — its correction traded the
 live thumbnail for a drawn city shape and left `main` at 4,824 rather than
 4,774. Phase 18's 219 lines land on top of that at **5,043 / 5,000: over.**
 
-That is the headline for whoever picks up Phase 19, and it is not a request
-for a fifth amendment. §1 records the overage as an **open debt** and says
-what both prior amendments already said would happen at this number: **the
-next move is the split** — `index.html` + `carta-map.js`, ~1,900 lines of map
-layer that are not the app. Two independent sessions reached 5,000 in one
-afternoon; the one-file law has come due exactly as Phases 13 and 15
-predicted. The byte ceiling is untouched and comfortable at 407 of 500 KB,
+That is not a request for a fifth amendment. §1 records the overage as an
+**open debt** and says what both prior amendments already said would happen at
+this number: **the next move is the split.** Two independent sessions reached
+5,000 in one afternoon; the one-file law has come due exactly as Phases 13 and
+15 predicted. The byte ceiling is untouched and comfortable at 407 of 500 KB,
 which is the point it was always making: bytes were never the problem.
+
+**The founder's call, made on the PR:** land Phase 18 over the ceiling with
+the debt recorded, and give the split a phase of its own rather than bundling
+it into a feature's PR. That phase is next, and it is written below rather
+than left to be rediscovered.
+
+### Phase 19 — the split (scheduled, not yet built)
+
+**The joy it serves:** none directly, and that is the honest framing. This is
+the first phase in the fourth turn whose whole job is to pay a debt, and it is
+scheduled because §1's own rule scheduled it, not because a surface wants it.
+The joy it protects is *a file one person can read whole* — the thing the line
+band was a proxy for all along.
+
+**What it does.** Move the map layer out of `index.html` into **`carta-map.js`**,
+loaded from the `<head>` with a plain `<script src>`:
+
+- the three custom elements (`<carta-belt>`, `<carta-plot>`, `<carta-streets>`)
+- the vendored `d3-array` + `d3-geo` (§1 — the count stays two)
+- `LANDS`, `LAND_TOPO`, `LAND_AKA` and their decoders
+
+Roughly **1,900 lines that are the map layer rather than the app.** `index.html`
+comes back to about 3,100 — inside the band with real room, and the band itself
+stays 3–5,000 for the app file. **This is not a build step:** no bundler, no npm,
+no lockfile, no transpile. Two static files, both droppable on a host, which is
+the promise the byte ceiling was always guarding.
+
+**The one real problem to solve, and it is not the file move.** The app script
+and the map layer are mutually coupled today: the elements call `landRingsRaw`,
+`landTopoRaw`, `BELT`, `AKA` and `fold`, while the app's own `passportSVG`,
+`tastedCountryMap`, `landKey` and `landAnchor` read `LANDS`/`LAND_TOPO` straight.
+So the split has to decide **which file owns the ground data and its decoders**,
+and make the load order safe in both directions. The likely shape: `carta-map.js`
+owns the data, the decoders and the elements, and publishes the handful the app
+reads on `window` the way `CARTA_LAND_NAMES` already goes the other way. Getting
+that seam wrong is the only way this phase breaks anything, so it is the part to
+design before moving a line.
+
+**What it must not become.** A refactor with opinions. Nothing gets rewritten,
+renamed, restyled or "improved" on the way across — the diff should read as a
+move plus the seam, and every browser check from Phases 12–18 should pass
+untouched afterward. If it starts wanting a module system, that is tripwire 2
+(`ARCHITECTURE.md` §1 and §10), and the answer is no.
+
+**Done when:** `index.html` is back inside the band on its own, `carta-map.js`
+stands beside it, the pure harness still slices its region out of `index.html`
+and passes, and the passport, the country contours, the city shape, the street
+and terrain surfaces all render in paper and dusk exactly as they do now.
 
 ## The horizon (unscheduled, revisited)
 

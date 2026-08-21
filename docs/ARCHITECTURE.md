@@ -65,8 +65,20 @@ Carta 7 is built exactly the way classic was, smaller:
   Both of the last two amendments named 5,000 as the number where the
   one-file law comes due, and two independent sessions reached it on the same
   afternoon. **This overage is recorded here as an open debt, not a
-  precedent** — the split is the founder's call to schedule, and until it is
-  made this line states the true figure rather than a comfortable one.
+  precedent**, and the line above states the true figure rather than a
+  comfortable one.
+
+  **The founder's call, made on this PR: land Phase 18 over the ceiling, and
+  make the split its own next phase** — the alternative offered was splitting
+  first and landing on top, and the reason not to was that the split is a
+  change to the headline invariant and deserves its own PR rather than riding
+  in on a feature's. So **Phase 19 is the split**, and it is written into
+  `ROADMAP.md` as such rather than left to be rediscovered. Until it lands the
+  band is *overdrawn, not amended*: 5,000 is still the number, 5,043 is still
+  a debt against it, and **nothing new goes into `index.html` before the split
+  does.** A phase that adds to this file in the meantime is not spending
+  headroom — there is none — it is deepening a debt the project has already
+  agreed to pay.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single

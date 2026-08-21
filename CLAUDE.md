@@ -51,7 +51,10 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–18 shipped**; Phase 19 is unwritten (and splits the file — §1).
+  read at every phase gate. **Phases 1–18 shipped**; **Phase 19 is written and
+  scheduled: it splits the file** (`index.html` + `carta-map.js`) to pay the
+  band debt Phase 18 landed with — read it before adding anything to
+  `index.html`.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -293,10 +296,13 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
   never contingent on that draft specifically).
   **The band is now overdrawn:** Phase 18 landed at **5,043 of 5,000** (bytes
   are fine, 407 of 500 KB). §1 records it as an open debt rather than a fifth
-  amendment — under its own rule the next move is the **split**, `index.html`
-  + `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
+  amendment, by the founder's own call — land over, and give the split its own
+  phase. That is **Phase 19**, written up in `ROADMAP.md`: `index.html` +
+  `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
   ~1,900 lines that are not the app). Two static files is still no build; it
-  is only no longer one file. Don't add to `index.html` before that lands.
+  is only no longer one file. **Until it lands, 5,000 is still the number and
+  nothing new goes into `index.html`** — there is no headroom to spend, only a
+  debt to deepen.
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written
