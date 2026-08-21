@@ -28,7 +28,8 @@ vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
-  askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink, menuOCRPrompt, parseMenuOCR, extractJSON,
+  askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
+  projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel };
 `, sandbox);
 const M = sandbox.__m;
@@ -492,6 +493,53 @@ assert.equal(M.cityOf({ village: 'Little Compton' }), 'Little Compton');
 assert.equal(M.cityOf({ county: 'Ventura County' }), '', 'a county alone is not a city — leave it blank rather than guess one level too coarse');
 assert.equal(M.cityOf(null), '');
 ok('cityOf reads the real city off a confirmed address, the same way hoodOf reads the neighborhood');
+
+
+// ---- the city's own shape (Phase 18) ----
+assert.deepEqual(M.convexHull([]), []);
+assert.deepEqual(M.convexHull([{x:1,y:1}]), [{x:1,y:1}]);
+assert.equal(M.convexHull([{x:0,y:0},{x:0,y:0},{x:1,y:1}]).length, 2, 'a duplicate point collapses before hulling');
+{
+  const square = [{x:0,y:0},{x:2,y:0},{x:2,y:2},{x:0,y:2},{x:1,y:1}]; // one point strictly inside
+  const hull = M.convexHull(square);
+  assert.equal(hull.length, 4, 'an interior point never survives onto the hull');
+  assert.ok(!hull.some(p => p.x === 1 && p.y === 1));
+}
+{
+  const line = [{x:0,y:0},{x:1,y:0},{x:2,y:0},{x:3,y:0}]; // perfectly collinear
+  const hull = M.convexHull(line);
+  assert.ok(hull.length <= 2, 'collinear points never produce a fake 2D hull — the middle ones drop out');
+}
+ok('convexHull returns the true boundary — interior and collinear points never survive it');
+
+{
+  const path = M.roundedHullPath([{x:0,y:0},{x:10,y:0},{x:10,y:10},{x:0,y:10}]);
+  assert.ok(path.startsWith('M ') && path.trim().endsWith('Z'), 'a valid path always opens with a move and closes formally');
+  assert.ok(/Q /.test(path), 'every corner is softened with a curve, never left as a sharp joint');
+}
+assert.equal(M.roundedHullPath([{x:0,y:0},{x:1,y:1}]), '', 'fewer than three points has no corners to round — refuses rather than drawing a fake shape');
+assert.equal(M.roundedHullPath([]), '');
+ok('roundedHullPath softens every real corner and refuses a degenerate hull rather than faking one');
+
+// a single café must still produce a real, closed, drawable shape — the
+// whole point of inflating before hulling was never having a special case
+let shape = M.cityShapePath([{lat: 34.10, lon: -118.29}]);
+assert.ok(shape && shape.path.startsWith('M ') && shape.path.endsWith('Z'));
+ok('cityShapePath draws a real closed shape for a single café, not a dot or a blank');
+
+// two cafés, and a spread cluster — same pipeline, both real shapes
+shape = M.cityShapePath([{lat: 34.10, lon: -118.29}, {lat: 34.04, lon: -118.23}]);
+assert.ok(shape && shape.path.startsWith('M '));
+shape = M.cityShapePath([
+  {lat: 34.10, lon: -118.29}, {lat: 34.04, lon: -118.23}, {lat: 33.98, lon: -118.22},
+  {lat: 34.06, lon: -118.40}, {lat: 34.02, lon: -118.30},
+]);
+assert.ok(shape && shape.path.startsWith('M '));
+assert.ok(/^-?[\d.]+ -?[\d.]+ [\d.]+ [\d.]+$/.test(shape.viewBox), 'the viewBox is four plain numbers, always drawable as-is');
+ok('cityShapePath handles two cafés and a spread cluster through the same pipeline, no special-casing either');
+
+assert.equal(M.cityShapePath([]), null, 'no cafés, no shape — never a fabricated outline for a city with nothing on the record');
+ok('cityShapePath refuses to draw anything for an empty city');
 
 // dedupeHits must key on city too — a garbage city query can genuinely pull
 // candidates from different real cities that happen to share a hood name
