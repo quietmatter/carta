@@ -552,6 +552,124 @@ never a rank, never a score dressed as geography.
 where the record actually reaches in it — instantly, offline, from the
 ledger alone — and never asks a map server, a pin, or a tile for any of it.
 
+### Phase 18 — the ground, and what grew on it
+
+**Shipped — v7.19.0.**
+
+**The joy it serves:** the record and the hunt at once — *where a coffee came
+from*, drawn as ground rather than as a name. Altitude is most of the reason a
+green from up there tastes the way it does, and until this phase the app held
+altitudes as text and drew countries as flat silhouettes.
+
+**Where this came from.** The founder, reading the Atlas on a phone: the map
+is unreadable at that size, a country you tap into has no definition, and a
+region is a list rather than a place. Four asks, in one sentence.
+
+**What shipped.**
+
+- **The passport at phone scale.** `carta-belt` drew into a fixed 1,000-unit
+  viewBox whatever the box actually was, so on a 390 px phone an 11 px country
+  name rendered at ~4 px and every hairline vanished. One SVG unit is one CSS
+  pixel now. The tasted frame also inset itself to 20–80% of the box, throwing
+  away 40% of a width a phone has none to spare of; it takes the width it has.
+  Labels gained the halo in their width estimate and a real edge margin — a
+  name that would run off the frame is **dropped, never clipped**, and the
+  chips underneath still name every country.
+- **A country shows its highlands.** `LAND_TOPO` — contours at 1,000 / 2,000 /
+  3,000 m for 48 countries — has been in the file since Phase 3 and only the
+  printed card ever drew it. `topo="on"` inks it back over a country's own
+  fill. Nothing was added to the file to do this.
+- **Its regions stand on it.** A region is marked where the record can place
+  it, tappable into its chapter. A region with nothing placed is listed and
+  never plotted — the ask's own rule, one scale down.
+- **A region opens onto real terrain.** OpenTopoMap over the Leaflet layer
+  that already ships (`ARCHITECTURE.md` §7 — a second tile URL on an existing
+  row, put to the founder before it was written), with a pin on every farm the
+  record can place, and the same on a farm's own page. Offline, it steps aside
+  and the drawn plot stands.
+- **A farm has a position.** `origin.lat`/`lon`/`geocoded` — two more optional
+  story fields, stated by a lookup that names the farm back or a pin the keeper
+  pastes, and takeable back with undo.
+
+**What it declined.** A `regions` collection (a coordinate on a region means
+matching region names to nodes — the gentle join applied to an origin story
+field, which §4 rules out; a region is the mean of its placed farms instead).
+Vendoring finer contour data for region-scale relief (**tripwire 2** — the
+count stays two; where the file can't draw real ground it asks for it, and
+draws nothing when it can't). Trusting a farm lookup: Nominatim answers
+*something* for almost any query, and for an unknown farm that something is
+the region around it — `namesBack` refuses it, so most smallholder farms stay
+honestly unplaced rather than quietly pinned in the same wrong spot.
+
+**The band, and what it means for the next phase.** This phase was built
+against `main` at 4,716 lines and asked the founder the band question itself,
+before a line was written — three real answers on the table (raise it, ship
+only the country half, or split the map layer). While it was in flight, Phase
+17 landed and **asked the same question and got the same answer**: the band
+stands amended once, at Phase 17, to **3–5,000**. Phase 18 therefore makes no
+amendment of its own; it spends what that one left, and nearly all of it,
+landing — after Phase 17's second, larger correction moved the floor — at
+**5,043 lines / 407 KB, over it.**
+
+Then Phase 17 shipped a second time the same day — its correction traded the
+live thumbnail for a drawn city shape and left `main` at 4,824 rather than
+4,774. Phase 18's 219 lines land on top of that at **5,043 / 5,000: over.**
+
+That is not a request for a fifth amendment. §1 records the overage as an
+**open debt** and says what both prior amendments already said would happen at
+this number: **the next move is the split.** Two independent sessions reached
+5,000 in one afternoon; the one-file law has come due exactly as Phases 13 and
+15 predicted. The byte ceiling is untouched and comfortable at 407 of 500 KB,
+which is the point it was always making: bytes were never the problem.
+
+**The founder's call, made on the PR:** land Phase 18 over the ceiling with
+the debt recorded, and give the split a phase of its own rather than bundling
+it into a feature's PR. That phase is next, and it is written below rather
+than left to be rediscovered.
+
+### Phase 19 — the split (scheduled, not yet built)
+
+**The joy it serves:** none directly, and that is the honest framing. This is
+the first phase in the fourth turn whose whole job is to pay a debt, and it is
+scheduled because §1's own rule scheduled it, not because a surface wants it.
+The joy it protects is *a file one person can read whole* — the thing the line
+band was a proxy for all along.
+
+**What it does.** Move the map layer out of `index.html` into **`carta-map.js`**,
+loaded from the `<head>` with a plain `<script src>`:
+
+- the three custom elements (`<carta-belt>`, `<carta-plot>`, `<carta-streets>`)
+- the vendored `d3-array` + `d3-geo` (§1 — the count stays two)
+- `LANDS`, `LAND_TOPO`, `LAND_AKA` and their decoders
+
+Roughly **1,900 lines that are the map layer rather than the app.** `index.html`
+comes back to about 3,100 — inside the band with real room, and the band itself
+stays 3–5,000 for the app file. **This is not a build step:** no bundler, no npm,
+no lockfile, no transpile. Two static files, both droppable on a host, which is
+the promise the byte ceiling was always guarding.
+
+**The one real problem to solve, and it is not the file move.** The app script
+and the map layer are mutually coupled today: the elements call `landRingsRaw`,
+`landTopoRaw`, `BELT`, `AKA` and `fold`, while the app's own `passportSVG`,
+`tastedCountryMap`, `landKey` and `landAnchor` read `LANDS`/`LAND_TOPO` straight.
+So the split has to decide **which file owns the ground data and its decoders**,
+and make the load order safe in both directions. The likely shape: `carta-map.js`
+owns the data, the decoders and the elements, and publishes the handful the app
+reads on `window` the way `CARTA_LAND_NAMES` already goes the other way. Getting
+that seam wrong is the only way this phase breaks anything, so it is the part to
+design before moving a line.
+
+**What it must not become.** A refactor with opinions. Nothing gets rewritten,
+renamed, restyled or "improved" on the way across — the diff should read as a
+move plus the seam, and every browser check from Phases 12–18 should pass
+untouched afterward. If it starts wanting a module system, that is tripwire 2
+(`ARCHITECTURE.md` §1 and §10), and the answer is no.
+
+**Done when:** `index.html` is back inside the band on its own, `carta-map.js`
+stands beside it, the pure harness still slices its region out of `index.html`
+and passes, and the passport, the country contours, the city shape, the street
+and terrain surfaces all render in paper and dusk exactly as they do now.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner
@@ -572,7 +690,10 @@ ledger alone — and never asks a map server, a pin, or a tile for any of it.
    `roastLevel` is a plain optional field, same as `process` — if it ever
    grows a scale, a rung, or a required tier, that's this tripwire firing.)
 2. **Tooling creep.** A bundler, a framework, a dependency → re-read
-   `ARCHITECTURE.md` §1. The kit stays light. (Phase 10's shortcut is a
+   `ARCHITECTURE.md` §1. The kit stays light. (Phase 18 is the worked
+   example of this firing and being obeyed: region relief wanted finer
+   contour data vendored into the file, and got a tile URL on an existing
+   network row instead — the count is still two.) (Phase 10's shortcut is a
    JSON array in a manifest that already exists — if it ever needs a
    native wrapper, stop. Phase 12's vendored `d3-array` + `d3-geo` are the
    one time this line has moved: 54 KB pasted into the file, no npm, no

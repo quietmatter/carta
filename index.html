@@ -259,7 +259,10 @@ nav.tabs[hidden]{display:none}
    their names knocked out of the shape in paper; the rest is a hairline ground */
 .passport{--ca-land-fill:var(--surface-sunk);--ca-land-line:var(--ca-ink-300);
   --ca-mk-fill:var(--ink);--ca-mk-line:var(--ink);--ca-mk-label:var(--surface-card);
-  --ca-mk-halo:transparent;--ca-mk-out:var(--ink)}
+  --ca-mk-halo:transparent;--ca-mk-out:var(--ink);
+  /* the highlands, and the regions standing on them — both knocked out of the
+     country's own ink the same way its name is, so they flip with the theme */
+  --ca-topo:var(--surface-card);--ca-rmk:var(--surface-card)}
 /* the drawn plot — offline, no tiles, the identity the streets hand back to */
 .plot{--ca-dot:var(--ink);--ca-dim:var(--ink-3);display:block;width:100%}
 .plot.frame{height:100%}
@@ -511,7 +514,7 @@ nav.tabs[hidden]{display:none}
   };
 
   class Belt extends HTMLElement {
-    static get observedAttributes() { return ['tasted', 'labels', 'fit', 'focus', 'lift']; }
+    static get observedAttributes() { return ['tasted', 'labels', 'fit', 'focus', 'lift', 'frame', 'topo', 'marks']; }
     connectedCallback() {
       this.style.display = 'block'; keepPos(this); this.paint();
       if (window.ResizeObserver && !this._ro) {
@@ -533,19 +536,28 @@ nav.tabs[hidden]{display:none}
       const focus = key(this.getAttribute('focus') || '');
       const frameTasted = this.getAttribute('frame') === 'tasted';
       const lift = this.getAttribute('lift') === 'on';
+      const wantTopo = this.getAttribute('topo') === 'on';
+      let marks2 = []; try { marks2 = JSON.parse(this.getAttribute('marks') || '[]'); } catch (e) { }
       const belt = feats.filter(f => BELT_SET.has(key(f.properties.name)));
       const cw = this.clientWidth || 480, ch = this.clientHeight || 0;
-      const W = 1000, H = cover ? Math.max(360, Math.round(W * (ch || 432) / cw)) : 470;
+      /* one SVG unit = one CSS pixel, so type and hairlines are drawn at the size
+         they are read at. The old fixed 1000-unit box scaled an 11px label down to
+         4px on a phone — the passport's own labels were the thing you couldn't read. */
+      const W = cover ? Math.max(300, Math.round(cw)) : 1000;
+      const H = cover ? Math.max(220, Math.round(ch || 432)) : 470;
       const proj = d3.geoEquirectangular();
       const target = focus ? belt.filter(f => key(f.properties.name) === focus)
         : frameTasted ? belt.filter(f => tasted.has(key(f.properties.name))) : belt;
       const coll = { type: 'FeatureCollection', features: target.length ? target : belt };
+      /* the growing belt is wide and a phone is not, so the tasted frame takes the
+         width it has (a 20%/80% inset threw away 40% of it) and sits high in the
+         box, clear of the headline the passport lays over its own bottom third. */
       if (cover) proj.fitExtent(frameTasted && target.length
-        ? [[W * .2, H * .22], [W * .8, H * .78]]
-        : [[26, 30], [W - 26, H - 30]], coll); else proj.fitSize([W, H], coll);
+        ? [[14, H * .2], [W - 14, H * .66]]
+        : [[18, 26], [W - 18, H - 26]], coll); else proj.fitSize([W, H], coll);
       const path = d3.geoPath(proj);
       const ground = [], marks = [];
-      const size = lift ? 15 : 11;
+      const size = Math.max(11, Math.min(lift ? 13 : 12, Math.round(W / 28)));
       const hit = (a, b) => !(a.x1 + 2 < b.x0 || b.x1 + 2 < a.x0 || a.y1 + 2 < b.y0 || b.y1 + 2 < a.y0);
       const placed = [];
       const items = [];
@@ -553,12 +565,26 @@ nav.tabs[hidden]{display:none}
         const d = path(f); if (!d) return;
         if (tasted.has(key(f.properties.name))) {
           const bb = path.bounds(f), c = path.centroid(f);
-          items.push({ d, bb, cx: c[0], cy: c[1], label: f.properties.name, area: (bb[1][0] - bb[0][0]) * (bb[1][1] - bb[0][1]) });
+          items.push({ d, bb, cx: c[0], cy: c[1], k: key(f.properties.name), label: f.properties.name, area: (bb[1][0] - bb[0][0]) * (bb[1][1] - bb[0][1]) });
         } else ground.push(`<path d="${d}" style="fill:var(--ca-land-fill, var(--surface-page));fill-opacity:.6;stroke:var(--ca-land-line, var(--line-2));stroke-width:${lift ? .8 : 1};stroke-linejoin:round;pointer-events:none"></path>`);
       });
+      /* the ground read for its shape: the 1,000 / 2,000 / 3,000 m contours the file
+         already carries (LAND_TOPO), inked back over a country's own fill. Altitude
+         is most of why a coffee tastes the way it does, so a country you have tasted
+         shows where it is high. Drawn only when a view asks — at world width they are
+         a smudge, which is the same refusal the printed passport already makes. */
+      const contours = k => {
+        const lv = wantTopo && window.landTopoRaw ? landTopoRaw(k) : null;
+        if (!lv) return '';
+        return lv.map((level, i) => level.map(r => {
+          let d = '';
+          for (const q of r) { const xy = proj([q.lon, q.lat]); if (!xy || !isFinite(xy[0])) return ''; d += (d ? 'L' : 'M') + xy[0].toFixed(1) + ' ' + xy[1].toFixed(1); }
+          return d ? `<path d="${d}Z" style="fill:var(--ca-topo, var(--surface-card));fill-opacity:.07;stroke:var(--ca-topo, var(--surface-card));stroke-opacity:${(.3 + i * .18).toFixed(2)};stroke-width:${(.7 + i * .3).toFixed(2)};stroke-linejoin:round;pointer-events:none"></path>` : '';
+        }).join('')).join('');
+      };
       items.sort((a, b) => b.area - a.area).forEach(it => {
         const d = it.d, bb = it.bb, cx = it.cx, cy = it.cy, label = it.label;
-        const tw = label.length * size * .52 + label.length * size * .06;   // Libre Franklin at .06em — close enough to place by
+        const tw = label.length * size * .58 + 5;   // Libre Franklin at .06em, plus the halo it paints outside itself
         const cands = [];
         if (tw < (bb[1][0] - bb[0][0]) - 6) cands.push({ x: cx, y: cy + 4, anchor: 'middle', inside: true, x0: cx - tw / 2, x1: cx + tw / 2 });
         [0, -1.3, 1.3].forEach(k => {
@@ -569,7 +595,8 @@ nav.tabs[hidden]{display:none}
         let put = null;
         for (const c of cands) {
           const box = { x0: c.x0, x1: c.x1, y0: c.y - size * .8, y1: c.y + size * .3 };
-          if (!isFinite(box.x0) || box.x0 < 4 || box.x1 > W - 4 || box.y0 < 4 || box.y1 > H - 4) continue;
+          const m = size * .5;   // a label that runs off the frame is worse than no label
+          if (!isFinite(box.x0) || box.x0 < m || box.x1 > W - m || box.y0 < m || box.y1 > H - m) continue;
           if (placed.some(p => hit(box, p))) continue;
           put = { c: c, box: box }; break;
         }
@@ -578,13 +605,40 @@ nav.tabs[hidden]{display:none}
           ? 'fill:var(--ca-mk-label, var(--ink-2));paint-order:stroke;stroke:var(--ca-mk-halo, var(--surface-card));stroke-width:4px;stroke-linejoin:round'
           : 'fill:var(--ca-mk-out, var(--ink-2));paint-order:stroke;stroke:var(--surface-card);stroke-width:3.5px;stroke-linejoin:round';
         marks.push(`<g class="mk" data-name="${label.replace(/"/g, '&quot;')}" style="cursor:pointer">
-            <path d="${d}" style="fill:var(--ca-mk-fill, var(--surface-page));fill-opacity:${lift ? 1 : .9};stroke:var(--ca-mk-line, var(--ink-2));stroke-width:${lift ? 1.1 : 1.3};stroke-linejoin:round"></path>
+            <path d="${d}" style="fill:var(--ca-mk-fill, var(--surface-page));fill-opacity:${lift ? 1 : .9};stroke:var(--ca-mk-line, var(--ink-2));stroke-width:${lift ? 1.1 : 1.3};stroke-linejoin:round"></path>${contours(it.k)}
             ${labels && put ? `<text x="${put.c.x.toFixed(1)}" y="${put.c.y.toFixed(1)}" text-anchor="${put.c.anchor}" style="font-family:var(--sans);font-size:${size}px;letter-spacing:.06em;${lstyle};pointer-events:none">${label}</text>` : ''}
           </g>`);
       });
-      host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="${cover ? 'xMidYMid slice' : 'xMidYMid meet'}" style="display:block;width:100%;height:${cover ? '100%' : 'auto'}">${ground.join('')}${marks.join('')}</svg>`;
+      /* the regions the record has actually found coffee from, standing on the
+         ground they came off. A region is drawn only where the record can place
+         it — the same rule the ask obeys for a café: what can't be confirmed is
+         listed, never plotted. Its label is dropped, never clipped, when the
+         frame has no room; the list underneath still names every one of them. */
+      const rmk = marks2.filter(m => isFinite(m.lat) && isFinite(m.lon)).map(m => {
+        const xy = proj([m.lon, m.lat]);
+        if (!xy || !isFinite(xy[0]) || xy[0] < 0 || xy[0] > W || xy[1] < 0 || xy[1] > H) return '';
+        const x = xy[0], y = xy[1], nm = String(m.label || '');
+        const tw = nm.length * 11 * .58 + 5;
+        const spots = [[x, y - 11, 'middle', x - tw / 2], [x + 9, y + 4, 'start', x + 9], [x - 9, y + 4, 'end', x - 9 - tw], [x, y + 18, 'middle', x - tw / 2]];
+        let put = null;
+        for (const sp of spots) {
+          const box = { x0: sp[3], x1: sp[3] + tw, y0: sp[1] - 9, y1: sp[1] + 3 };
+          if (box.x0 < 5 || box.x1 > W - 5 || box.y0 < 5 || box.y1 > H - 5) continue;
+          if (placed.some(q => hit(box, q))) continue;
+          placed.push(box); put = sp; break;
+        }
+        return `<g class="rmk" data-id="${String(m.id || '').replace(/"/g, '&quot;')}" style="cursor:pointer">
+            <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.6" style="fill:var(--ca-rmk, var(--surface-card));stroke:var(--ca-mk-line, var(--ink-2));stroke-width:1.4"></circle>
+            ${put ? `<text x="${put[0].toFixed(1)}" y="${put[1].toFixed(1)}" text-anchor="${put[2]}" style="font-family:var(--sans);font-size:11px;letter-spacing:.05em;fill:var(--ca-rmk, var(--surface-card));paint-order:stroke;stroke:var(--ca-mk-line, var(--ink-2));stroke-width:3px;stroke-linejoin:round;pointer-events:none">${nm.replace(/[<&]/g, '')}</text>` : ''}
+          </g>`;
+      }).join('');
+      host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="${cover ? 'xMidYMid slice' : 'xMidYMid meet'}" style="display:block;width:100%;height:${cover ? '100%' : 'auto'}">${ground.join('')}${marks.join('')}${rmk}</svg>`;
       host.querySelectorAll('g.mk').forEach(g => g.addEventListener('click', () => {
         this.dispatchEvent(new CustomEvent('carta:country-tap', { detail: { name: g.dataset.name }, bubbles: true, composed: true }));
+      }));
+      host.querySelectorAll('g.rmk').forEach(g => g.addEventListener('click', e => {
+        e.stopPropagation();
+        this.dispatchEvent(new CustomEvent('carta:pin-tap', { detail: { id: g.dataset.id }, bubbles: true, composed: true }));
       }));
     }
   }
@@ -635,7 +689,7 @@ nav.tabs[hidden]{display:none}
   /* real streets — OpenStreetMap through Leaflet, filtered to Carta's ink.
    */
   class Streets extends HTMLElement {
-    static get observedAttributes() { return ['pins', 'pins-from', 'zoom', 'theme', 'still']; }
+    static get observedAttributes() { return ['pins', 'pins-from', 'zoom', 'theme', 'still', 'terrain', 'names']; }
     connectedCallback() {
       this.style.display = 'block'; keepPos(this); this.style.background = 'var(--surface-sunk)';
       if (!this.style.zIndex) this.style.zIndex = '0';   // contain Leaflet's own pane z-indexes
@@ -654,7 +708,7 @@ nav.tabs[hidden]{display:none}
       const n = document.createElement('div');
       n.className = 'smap-note';
       if (box.dataset.noteStyle) n.setAttribute('style', box.dataset.noteStyle);
-      n.innerHTML = '<span>Streets unavailable — showing saved positions.</span>'
+      n.innerHTML = `<span>${this.getAttribute('terrain') === 'on' ? 'Terrain' : 'Streets'} unavailable — showing saved positions.</span>`
         + '<span class="text-action" onclick="render()">Retry</span>';
       box.appendChild(n);
     }
@@ -663,9 +717,14 @@ nav.tabs[hidden]{display:none}
     filter() {
       const dusk = (this.getAttribute('theme') || document.documentElement.getAttribute('data-theme')) === 'dusk';
       const pane = this._map && this._map.getPane('tilePane');
-      if (pane) pane.style.filter = dusk
-        ? 'grayscale(1) invert(1) brightness(.72) contrast(1.05) sepia(.35) hue-rotate(-12deg)'
-        : 'grayscale(1) sepia(.28) brightness(1.04) contrast(.92)';
+      /* streets are inverted for dusk; terrain never is — an inverted hillshade
+         reads as valleys where the mountains are, which is a lie about the one
+         thing this surface exists to show. It is darkened and drained instead. */
+      if (pane) pane.style.filter = this.getAttribute('terrain') === 'on'
+        ? (dusk ? 'grayscale(.82) brightness(.58) contrast(1.1) sepia(.45)' : 'grayscale(.78) sepia(.38) brightness(1.04) contrast(.96)')
+        : dusk
+          ? 'grayscale(1) invert(1) brightness(.72) contrast(1.05) sepia(.35) hue-rotate(-12deg)'
+          : 'grayscale(1) sepia(.28) brightness(1.04) contrast(.92)';
     }
     boot() {
       if (!window.L) { this.fell(); return; }
@@ -675,10 +734,15 @@ nav.tabs[hidden]{display:none}
         doubleClickZoom: !still, touchZoom: !still, keyboard: !still, tap: false, fadeAnimation: false,
         zoomSnap: 0, zoomDelta: .5, center: [55.6867, 12.5546], zoom: 12,
       });
-      window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors', maxZoom: 19,
+      const terrain = this.getAttribute('terrain') === 'on';
+      window.L.tileLayer(terrain ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png' : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: terrain ? '© OpenStreetMap contributors, SRTM · © OpenTopoMap (CC-BY-SA)' : '© OpenStreetMap contributors',
+        maxZoom: terrain ? 17 : 19, subdomains: terrain ? 'abc' : 'a',
       }).addTo(map);
       this.filter();
+      // Leaflet's own prefix is a flag emoji and a link to itself; the credit
+      // that has to be there is the map's, and VOICE.md rules out the emoji.
+      try { map.attributionControl.setPrefix(''); } catch (e) { }
       const at = this.querySelector('.leaflet-control-attribution');
       if (at) Object.assign(at.style, { font: '9px var(--sans)', background: 'transparent', color: 'var(--ink-3)', letterSpacing: '.02em', marginBottom: (this.getAttribute('attrib-lift') || '0') + 'px' });
       this.marks(true);
@@ -697,11 +761,14 @@ nav.tabs[hidden]{display:none}
       const map = this._map; if (!map) return;
       let pins = pinsOf(this).filter(p => isFinite(p.lat) && isFinite(p.lon));
       (this._layers || []).forEach(l => map.removeLayer(l));
+      const named = this.getAttribute('names') === 'on';
       this._layers = pins.map(p => {
         const been = p.score != null;
         const html = `<div style="position:relative;width:${been ? 13 : 12}px;height:${been ? 13 : 12}px;border-radius:50%;
           background:${been ? 'var(--ink)' : 'transparent'};border:${been ? '1.5px solid var(--surface-card)' : '1.5px solid var(--ink)'};
-          box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>`;
+          box-shadow:0 1px 3px rgba(0,0,0,.3)">${named && p.name ? `<span style="position:absolute;left:50%;top:${been ? 15 : 14}px;transform:translateX(-50%);white-space:nowrap;
+            font:600 10.5px var(--sans);letter-spacing:.04em;color:var(--ink);paint-order:stroke;
+            -webkit-text-stroke:3px var(--surface-card);text-shadow:0 0 3px var(--surface-card)">${String(p.name).replace(/[<&]/g, '')}</span>` : ''}</div>`;
         const m = window.L.marker([p.lat, p.lon], {
           icon: window.L.divIcon({ html, className: '', iconSize: [been ? 14 : 12, been ? 14 : 12], iconAnchor: [been ? 7 : 6, been ? 7 : 6] }),
           keyboard: true, title: p.name || '',
@@ -1382,7 +1449,7 @@ function parseMenuOCR(text){
   const lines=list.map(l=>String(l||'').trim()).filter(Boolean);
   return {ok:true,lines};
 }
-/* ---- the city's own shape (Phase 18) — not streets, not pins, not a live
+/* ---- the city's own shape (Phase 17, corrected) — not streets, not pins, not a live
  * map: a soft silhouette of where the record actually reaches in this city,
  * drawn purely from the same lat/lon already on the ledger. No tile, no key,
  * nothing to be offline from — the drawn plot's own promise, carried one
@@ -1481,6 +1548,37 @@ function cityShapePath(pts){
   return {path,viewBox:`${x0.toFixed(2)} ${y0.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`};
 }
 
+/* ---- where a green actually grew.
+ * `origin` is free text and stays free text; `lat`/`lon` join it as two more
+ * optional story fields, stated only where a real lookup confirmed the farm or
+ * the keeper pasted its pin — the same grounding rule a café obeys, and the
+ * same refusal: what can't be confirmed is listed, never plotted.
+ *
+ * A REGION has no coordinate of its own and is never given one. It stands
+ * where its own placed farms stand, recomputed on every read, because a region
+ * is a scope the greens imply, not a record — storing one would be minting a
+ * node out of an origin string, which is exactly the join origin fields never
+ * make (ARCHITECTURE.md §4). */
+function originPin(o){
+  const la=Number(o&&o.lat),lo=Number(o&&o.lon);
+  return isFinite(la)&&isFinite(lo)&&Math.abs(la)<=90&&Math.abs(lo)<=180&&(la||lo)?{lat:la,lon:lo}:null;
+}
+/* the honesty gate on a farm lookup. Nominatim answers *something* for almost
+ * any query, and for a farm it has never heard of that something is usually the
+ * region around it — which would pin every unknown farm on the same spot and
+ * call it confirmed. A hit counts as the farm only if the lookup names the farm
+ * back; everything else is left unplaced, which is the honest answer for most
+ * smallholder farms and is written as one. */
+function namesBack(hit,farm){
+  const a=fold(hit&&hit.name||''),b=fold(farm||'');
+  if(!a||!b)return false;
+  return a===b||a.includes(b)||b.includes(a)||lev(a,b)<=Math.min(3,Math.floor(b.length/4));
+}
+function meanPin(pins){
+  const ps=(pins||[]).filter(Boolean);
+  if(!ps.length)return null;
+  return {lat:ps.reduce((a,p)=>a+p.lat,0)/ps.length,lon:ps.reduce((a,p)=>a+p.lon,0)/ps.length};
+}
 /* ==== /pure ==== */
 
 /* ============ the gentle join — the thin wrappers, coupled to the live ledger ============ */
@@ -3558,7 +3656,7 @@ async function lookupPlace(name,neighborhood,city){
     return dedupeHits(list.map(x=>{
       const lat=Number(x.lat),lon=Number(x.lon);
       if(!isFinite(lat)||!isFinite(lon))return null;
-      return {lat,lon,hood:hoodOf(x.address),city:cityOf(x.address)};
+      return {lat,lon,name:String(x.name||'').trim(),hood:hoodOf(x.address),city:cityOf(x.address)};
     }).filter(Boolean));
   }catch(e){return []}
 }
@@ -3831,16 +3929,18 @@ function streetsHTML(list,o){
   const floor=`<div class="plotwrap" style="${o.plotWrap||'position:absolute;inset:0;padding:42px 34px'}">
       <carta-plot class="plot frame" fit="frame" pins="${pins}" dot="${o.dot||7}" labels="${o.labels||'off'}"></carta-plot>
     </div>`;
-  const note=`<div class="smap-note" style="${o.noteStyle||''}"><span>Streets unavailable — showing saved positions.</span><span class="text-action" onclick="render()">Retry</span></div>`;
-  const streets=`<carta-streets style="position:absolute;inset:0" pins="${pins}"${o.zoom?` zoom="${o.zoom}"`:''}${o.still?' still="on"':''}${o.insetBottom?` inset-bottom="${o.insetBottom}"`:''} attrib-lift="${o.attribLift||0}"></carta-streets>`;
+  const layer=o.terrain?'Terrain':'Streets';
+  const note=`<div class="smap-note" style="${o.noteStyle||''}"><span>${layer} unavailable — showing saved positions.</span><span class="text-action" onclick="render()">Retry</span></div>`;
+  const streets=`<carta-streets style="position:absolute;inset:0" pins="${pins}"${o.names?' names="on"':''}${o.terrain?' terrain="on"':''}${o.zoom?` zoom="${o.zoom}"`:''}${o.still?' still="on"':''}${o.insetBottom?` inset-bottom="${o.insetBottom}"`:''} attrib-lift="${o.attribLift||0}"></carta-streets>`;
   return `<div class="mapbox" style="${o.boxStyle||''}"${o.noteStyle?` data-note-style="${esc(o.noteStyle)}"`:''}>
     ${floor}${navigator.onLine?streets:note}
   </div>`;
 }
 // the thumbnail a city or a café carries in a list — the drawn plot, always,
 // never a tile: a row is read at a glance and a glance can't wait on a network.
-// Phase 17 tried a live map here and it was too much for what a glance needs;
-// Phase 18 is the correction — not a map at all, just the shape (below).
+// Phase 17's first draft tried a live map here and it was too much for what a
+// glance needs; its same-day correction is this — not a map at all, just the
+// shape (below).
 function plotThumbHTML(list){
   const pts=placed(list);
   if(!pts.length)return '<span class="mapthumb"></span>';
@@ -3890,6 +3990,10 @@ document.addEventListener('carta:country-tap',e=>{
 });
 document.addEventListener('carta:pin-tap',e=>{
   const id=String((e.detail&&e.detail.id)||'');if(!id)return;
+  const kind0=pageView&&pageView.kind;
+  // standing on a country, a pin on the ground is one of its regions
+  if(kind0==='country'&&pageView.id){openRegionChapter(pageView.id,id);return}
+  if(kind0==='region'){openProducerPage(pageView.id,id,pageView.region||'');return}
   if(askOf(id)){openAskFinding(id);return}   // an ask's own pin, inside its sheet
   const p=placeById(id);if(!p)return;
   const kind=pageView&&pageView.kind;
@@ -4349,6 +4453,49 @@ function vAtlas(){
 const originOf=c=>(c&&c.origin)||{};
 const growerOf=c=>String(originOf(c).farm||originOf(c).producer||'').trim();
 const regionOf=c=>String(originOf(c).region||'').trim();
+/* ---- the ground under a green (the thin ledger-coupled wrappers over originPin).
+ * A farm is placed the same two ways a café is, and by the same doors: one
+ * keyless Nominatim lookup, or a pin the keeper pastes off the map they already
+ * have. Neither invents one — a farm the lookup does not actually name back is
+ * left unplaced and simply listed, which is most smallholder farms and is not a
+ * failure. Placing writes to the coffees that name that farm in that country,
+ * which is the same fold the grower list on this page already groups by. */
+const farmPin=c=>originPin(originOf(c));
+const regionPin=list=>meanPin((list||[]).map(farmPin));
+function farmCoffees(country,farm){return countryCoffees(country).filter(c=>fold(growerOf(c))===fold(farm))}
+// a region stands where its placed farms stand — and is drawn only where some do
+function regionMarks(country){
+  return groupStated(countryCoffees(country),regionOf).map(r=>{
+    const at=regionPin(r.items);
+    return at?{id:r.label,label:r.label,lat:at.lat,lon:at.lon}:null;
+  }).filter(Boolean);
+}
+function setFarmPin(country,farm,at){
+  farmCoffees(country,farm).forEach(c=>{c.origin=c.origin||{};c.origin.lat=at.lat;c.origin.lon=at.lon;c.origin.geocoded=true;c.updatedAt=new Date().toISOString()});
+}
+function clearFarmPin(country,farm){
+  farmCoffees(country,farm).forEach(c=>{if(!c.origin)return;delete c.origin.lat;delete c.origin.lon;delete c.origin.geocoded;c.updatedAt=new Date().toISOString()});
+}
+let _farmBusy=false;
+async function placeFarms(country,region){
+  if(_farmBusy)return;_farmBusy=true;
+  const inScope=c=>region?fold(regionOf(c))===fold(region):true;
+  const farms=groupStated(countryCoffees(country).filter(inScope),growerOf)
+    .filter(g=>!g.items.some(farmPin)&&!g.items.every(c=>originOf(c).geocoded));
+  if(!farms.length){_farmBusy=false;toast('Every farm here is already placed, or none is named.');return}
+  let put=0;
+  for(const g of farms){
+    toast(`Placing ${g.label}…`);
+    const hits=await lookupPlace(g.label,region||regionOf(g.items[0]),country);
+    const hit=hits.find(h=>namesBack(h,g.label));
+    if(hit){setFarmPin(country,g.label,hit);put++}
+    else farmCoffees(country,g.label).forEach(c=>{c.origin=c.origin||{};c.origin.geocoded=true});
+    save();
+    if(g!==farms[farms.length-1])await sleep(1100);
+  }
+  _farmBusy=false;render();
+  toast(put?`${capFirst(words(put))} of ${words(farms.length)} placed.`:'None of these farms is on the map by name.');
+}
 const countryCoffees=name=>live('coffees').filter(c=>landKey(originOf(c).country||'')===landKey(name));
 function cupsOfCoffees(list){const ids=new Set(list.map(c=>c.id));return live('cups').filter(c=>ids.has(c.coffeeRef))}
 function avgOf(cups){const s=cups.filter(c=>c.score!=null);return s.length?s.reduce((a,c)=>a+c.score,0)/s.length:null}
@@ -4485,6 +4632,8 @@ function vCountryChapter(label){
   const noGrower=coffees.length-growers.reduce((s,g)=>s+g.items.length,0);
   const st=roadStations(coffees,cups);
   const filled=st.filter(s=>s.n).length;
+  const rmarks=regionMarks(label);
+  const unplaced=regions.filter(r=>!rmarks.some(m=>m.id===r.label));
   // where these greens have poured — a café you drank one in, by its own city
   const pourIds=[...new Set(cups.filter(c=>c.kind==='bar'&&c.placeRef).map(c=>c.placeRef))];
   const pours=pourIds.map(placeById).filter(Boolean);
@@ -4499,7 +4648,7 @@ function vCountryChapter(label){
     return `<div>
       <div style="position:relative">
         <div class="mapbox passport" style="height:300px">
-          <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" tasted="${esc(label)}" focus="${esc(label)}"></carta-belt>
+          <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" topo="on" tasted="${esc(label)}" focus="${esc(label)}"></carta-belt>
         </div>
         <div class="fade top" style="height:88px;z-index:3"></div>
         <button class="omini overlay" style="left:18px;top:18px" onclick="closePage()">← The passport</button>
@@ -4512,8 +4661,8 @@ function vCountryChapter(label){
   }
   return `<div>
     <div style="position:relative">
-      <div class="mapbox passport" style="height:296px">
-        <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" tasted="${esc(label)}" focus="${esc(label)}"></carta-belt>
+      <div class="mapbox passport" style="height:${rmarks.length?332:296}px">
+        <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" topo="on" tasted="${esc(label)}" focus="${esc(label)}" marks="${esc(JSON.stringify(rmarks))}"></carta-belt>
       </div>
       <div class="fade top" style="height:88px;z-index:3"></div>
       <button class="omini overlay" style="left:18px;top:18px" onclick="closePage()">← The passport</button>
@@ -4530,6 +4679,11 @@ function vCountryChapter(label){
 
       <div class="shead"><span class="l">Its regions</span>
         <span class="r">${words(regions.length)} named${silentRegion.length?` · ${words(silentRegion.length)} silent`:''}</span></div>
+      ${rmarks.length?`<div class="note" style="border:0;padding:0;margin:0 0 12px">${esc(`${capFirst(words(rmarks.length))} of them stand on the map above, on the ground their own farms were placed on. Tap one.`)}</div>`:''}
+      ${unplaced.length?`<button class="rowlink" style="padding:12px 0" onclick="placeFarms(${jsq(label)},'')">
+        <span style="min-width:0"><span class="t" style="display:block;font-size:16px">Place ${unplaced.length===regions.length?'these regions':'the rest'} on the map</span>
+        <span class="m" style="display:block;margin-top:2px">${esc(`${words(unplaced.length)} region${unplaced.length===1?'':'s'} · looks each farm up once, and leaves the ones it can't name`)}</span></span>
+        <span class="go">→</span></button>`:''}
       ${regions.map(r=>`<button class="lrow" onclick="openRegionChapter(${jsq(label)},${jsq(r.label)})">
         <span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc(greensMeta(r))}</span></span>
         <span class="sc${r.avg==null?' none':''}">${r.avg==null?'—':trimNum(r.avg)}</span>
@@ -4583,6 +4737,12 @@ function vCountryChapter(label){
 }
 
 /* ============ a region — the same question, at a finer grain ============ */
+function regionFarmPins(coffees){
+  return groupStated(coffees,growerOf).map(g=>{
+    const at=regionPin(g.items);
+    return at?{id:g.label,name:g.label,lat:at.lat,lon:at.lon,score:avgOf(cupsOfCoffees(g.items))}:null;
+  }).filter(Boolean);
+}
 function vRegionChapter(country,view){
   const region=(view&&view.region)||'';
   const all=countryCoffees(country);
@@ -4601,11 +4761,23 @@ function vRegionChapter(country,view){
     cups.length?` ${capFirst(words(cups.length))} cup${cups.length===1?'':'s'} read from ${coffees.length===1?'it':'them'}.`:'',
   ].join('')
     :(region?'Nothing from here on the record yet.':'Every coffee here named its region — nothing stopped at the country.');
+  /* the ground itself, where the record can stand on it. Altitude is most of why
+   * a coffee from here tastes the way it does, so the region's own relief is the
+   * page's first fact — real terrain over the drawn plot, which holds the same
+   * farms and simply stands when the tiles can't be reached (ARCHITECTURE.md §7).
+   * A farm with no confirmed position is listed below and never pinned up here. */
+  const fpins=regionFarmPins(coffees);
+  const unplaced=growers.length-fpins.length;
+  const head=fpins.length
+    ? streetsHTML(fpins,{terrain:true,names:true,zoom:11,dot:7,labels:'on',boxStyle:'height:322px',attribLift:2,
+        plotWrap:'position:absolute;inset:0;padding:54px 40px',
+        noteStyle:'position:absolute;left:0;right:0;bottom:0;z-index:3'})
+    : `<div class="mapbox passport" style="height:260px">
+        <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" topo="on" tasted="${esc(country)}" focus="${esc(country)}"></carta-belt>
+      </div>`;
   return `<div>
     <div style="position:relative">
-      <div class="mapbox passport" style="height:260px">
-        <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" tasted="${esc(country)}" focus="${esc(country)}"></carta-belt>
-      </div>
+      ${head}
       <div class="fade top" style="height:88px;z-index:3"></div>
       <button class="omini overlay" style="left:18px;top:18px" onclick="openCountryChapter(${jsq(country)})">← ${esc(country)}</button>
     </div>
@@ -4613,6 +4785,11 @@ function vRegionChapter(country,view){
       <div class="eyebrow" style="margin:4px 0 6px">A region · ${esc(country)}</div>
       <div class="display big">${esc(label)}</div>
       <div class="lede">${esc(lede)}</div>
+      ${fpins.length?`<div class="note" style="border:0;padding:0;margin:0 0 4px">${esc(`${capFirst(words(fpins.length))} farm${fpins.length===1?'':'s'} stand${fpins.length===1?'s':''} on the ground above${unplaced>0?`; ${words(unplaced)} more ${unplaced===1?'is':'are'} named but not placed`:''}. Tap a pin for its ledger.`)}</div>`:''}
+      ${unplaced>0&&region?`<button class="rowlink" style="padding:12px 0" onclick="placeFarms(${jsq(country)},${jsq(region)})">
+        <span style="min-width:0"><span class="t" style="display:block;font-size:16px">${esc(fpins.length?'Place the rest':'Put these farms on the ground')}</span>
+        <span class="m" style="display:block;margin-top:2px">${esc(`${words(unplaced)} farm${unplaced===1?'':'s'} · one lookup each, and the ones the map can't name back stay listed`)}</span></span>
+        <span class="go">→</span></button>`:''}
       ${altitudeBandHTML(coffees)}
 
       <div class="shead"><span class="l">The hands that grew it</span>
@@ -4693,6 +4870,7 @@ function vProducerPage(name,view){
       <div class="lede">${esc(lede)}</div>
       ${ledgerHTML(ledger)}
       <div class="note" style="border:0;padding:0;margin:12px 0 0">Unread is a state, not a low default. Nothing here is guessed to fill a line.</div>
+      ${farmGroundHTML(country,name,coffees)}
       <button class="btn btn-quiet" style="margin-top:14px" onclick="openCoffeeForm(${coffees[0]?`'${coffees[0].id}'`:''})">Add what the bag says</button>
 
       <div class="shead"><span class="l">The greens</span></div>
@@ -4714,6 +4892,46 @@ function vProducerPage(name,view){
       <div class="note" style="margin-top:22px">The roaster owns the roast, never the farm. This page is compiled from what the bags said, and it says who said it.</div>
     </div>
   </div>`;
+}
+
+/* the ground a farm stands on. A position is stated here the same two ways a
+ * café's is — one lookup that has to name the farm back, or a pin pasted off
+ * the map the keeper already has — and it is taken back the same way too. A
+ * farm the map cannot name is not a failed record; it is most farms, and the
+ * page says so in those words rather than leaving a blank. */
+function farmGroundHTML(country,name,coffees){
+  if(!country||!name)return '';
+  const at=regionPin(coffees);
+  const id='fm_'+fold(name).replace(/ /g,'_');
+  const paste=`<label class="f" style="margin-top:10px"><span class="l">Or paste a map link</span>
+    <input type="text" id="${id}" placeholder="Copied from Google or Apple Maps…"></label>
+    <button class="btn btn-quiet" style="min-height:40px" onclick="pasteFarmLink(${jsq(country)},${jsq(name)},'${id}')">Place it</button>`;
+  if(at)return `<div class="box" style="margin-top:20px">
+    <div class="eyebrow" style="margin-bottom:10px">Its ground</div>
+    ${streetsHTML([{id:name,name:name,lat:at.lat,lon:at.lon,score:1}],{terrain:true,zoom:12,dot:7,
+      boxStyle:'height:190px',attribLift:2,plotWrap:'position:absolute;inset:0;padding:48px 40px',
+      noteStyle:'position:absolute;left:0;right:0;bottom:0;z-index:3'})}
+    <div class="m" style="margin-top:12px">${esc(`${at.lat.toFixed(3)}, ${at.lon.toFixed(3)}`)} · <span class="text-action" onclick="unplaceFarm(${jsq(country)},${jsq(name)})">not here?</span></div>
+  </div>`;
+  return `<div class="box" style="margin-top:20px">
+    <div class="eyebrow" style="margin-bottom:4px">Its ground</div>
+    <div class="m">Not placed. Most farms are not on the map by name, which is a fact about the map.</div>
+    <div class="m" style="margin-top:12px"><span class="text-action" onclick="placeFarms(${jsq(country)},${jsq(regionOf(coffees[0])||'')})">Look it up</span></div>
+    ${paste}</div>`;
+}
+// a pin the keeper is vouching for needs no lookup to confirm it — it IS the
+// confirmation, the same reading Phase 16 settled on for a café
+function pasteFarmLink(country,name,inputId){
+  const el=document.getElementById(inputId);
+  const at=parseMapLink(el&&el.value);
+  if(!at){toast('Couldn\u2019t read a position from that — paste the map\u2019s own link, not a shortened share link.');return}
+  setFarmPin(country,name,at);save();render();
+  toast('Placed.',()=>{clearFarmPin(country,name);save();render()},'Undo');
+}
+function unplaceFarm(country,name){
+  const was=farmCoffees(country,name).map(c=>({c,lat:originOf(c).lat,lon:originOf(c).lon}));
+  clearFarmPin(country,name);save();render();
+  toast('Taken off the map.',()=>{was.forEach(w=>{if(w.lat!=null){w.c.origin.lat=w.lat;w.c.origin.lon=w.lon;w.c.origin.geocoded=true}});save();render()},'Undo');
 }
 
 /* ============ a city — streets, edge to edge, with the record over them ============
@@ -4778,8 +4996,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.19.0';
+const APP_VERSION='7.20.0';
 const CHANGELOG=[
+  {v:'7.20.0',d:"The ground, at the size a phone reads it. The passport was drawing itself into a fixed frame two and a half times wider than any phone, so every country's name came out at about four pixels and the whole map read as a smudge — it is drawn at the size it is looked at now, and the tasted countries take the width they have instead of throwing away a third of it. A country you tap into is no longer a flat silhouette: it shows its own highlands, the thousand-, two-thousand- and three-thousand-metre contours that were already in the file and never drawn, because altitude is most of the reason a coffee from up there tastes the way it does. The regions you've actually found coffee from stand on that ground and open with a tap. A region opens onto real terrain — contour lines, relief, the valley the road runs down — with a pin on every farm the record can place, and a farm's own page carries the same. A farm is placed the two ways a café already is: one lookup, or a map link you paste. The lookup has to name the farm back, so an unknown farm is left unplaced rather than quietly pinned on the region around it — and every pin can be taken off again. Offline the terrain steps aside and your saved positions simply stand, as the streets already do."},
   {v:'7.19.0',d:"Your cities, drawn differently. The live street map dropped into each city's thumbnail last version turned out to be exactly what a thumbnail shouldn't be — a moving map crammed into a space too small to read one in. It's a shape now instead: one soft outline of where your own cafés actually sit in that city, drawn straight from your own record, nothing fetched, nothing loading. One café reads as a small round place; a whole spread city reads as the true, particular outline of your own reach in it — never the same two cities twice, and never a street or a pin standing in for either."},
   {v:'7.18.0',d:"Your cities, drawn. The little map beside each city on the Atlas used to show nothing but bare pins in an empty box — a shape was never asked for. It draws the real streets now, the same way the city's own page already does, but only once that row is actually on your screen; scroll past it and the live map steps aside again rather than sitting there spending a request for nothing. If the streets can't be reached, the row falls back to what it always showed, without a word about it — a thumbnail has no room to say so, and the drawn pins underneath are enough."},
   {v:'7.17.0',d:"A pin, from your own hand. OpenStreetMap's search can miss a café that hasn't been mapped as its own point yet, even on a street it knows perfectly well. So where a name search comes up empty — or none of the branches on offer is the real one — Carta now takes a link instead: paste whatever Google or Apple Maps already gave you, and it reads the actual pin straight out of it, then asks the same map for the real neighborhood the way it already does for a search result. No key, no new network touch, nothing kept but the coordinate — a link you copy and paste is not a link Carta remembers."},

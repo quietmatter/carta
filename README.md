@@ -99,7 +99,8 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   itself (no map tiles, no network, nothing to be offline from). Tasted
   countries are inked and tappable with your own spelling written across
   them; untasted ones are a hairline invitation. Your cities read underneath,
-  each carrying its own shape.
+  each carrying its own shape. The passport is drawn at the size it is read
+  at, so it is legible on a phone rather than only on a desk.
 - **A country, and the walk down from it.** Tap a country for its chapter,
   under its own shape. It opens by stating **how far the record actually
   follows that ground** — grown, processed, milled, roasted, poured, read, as
@@ -108,11 +109,23 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   Coverage counts; it never grades, and a bag that said nothing is a record
   that was told less, not a lesser coffee. Under the road: its regions, the
   hands that grew it, the roasters working from it, the rooms it pours in,
-  and what you found there. **A region** opens from that list — the same
-  question at a finer grain, with the altitude band your bags actually stated
-  — and **a farm** from the region, where every line the record doesn't hold
-  says `unread` rather than sitting blank. You can also reach either from any
-  coffee.
+  and what you found there. The country is drawn with **its own highlands** —
+  the 1,000, 2,000 and 3,000 metre contours, carried in the file like the
+  outlines — because altitude is most of the reason a coffee from up there
+  tastes the way it does. **Its regions stand on that ground** and open with a
+  tap; a region the record can't place is listed rather than plotted.
+- **A region, on real terrain.** Contour lines, relief, the valley the road
+  runs down, with **a pin on every farm the record can place** and the
+  altitude band your bags actually stated. **A farm** opens from a pin or from
+  the list, carrying the same ground on its own page, and every line the
+  record doesn't hold says `unread` rather than sitting blank. You can also
+  reach either from any coffee.
+- **Putting a farm on the map.** The same two doors a café has: one lookup, or
+  a map link you paste. The lookup has to **name the farm back** — most farms
+  aren't on the map by name, and Carta leaves those unplaced rather than
+  quietly pinning them on the region around them. Any pin can be taken off
+  again. Offline, the terrain steps aside and your saved positions stand on
+  the drawn plot, the way the streets already do.
 - **A city's own map.** Tap a city and its streets fill the screen, your
   cafés listed on a sheet you pull up over them — pull it up and the map
   reframes rather than reloading, so the pins step clear of the paper. The
@@ -186,11 +199,13 @@ into the file beside the outlines it draws, so the map works with the network
 switched off. Everything lives in this browser's `localStorage`
 (`carta7.v1`). No account, no server — the ask is the one deliberate,
 keeper-initiated exception to offline (bring your own key or never touch it);
-the café place lookup and the city map's street tiles are the other two
-network touches, both keyless, both progressive enhancement that quietly
-stands down to what's already stored the moment the network doesn't answer —
-the street layer is fetched only when a map surface is actually on screen,
-and the drawn plot beneath it stands on its own when it can't be.
+the place lookup (a café, or a farm) and the map tiles — streets for a city,
+terrain for a region or a farm — are the other two network touches, both
+keyless, both progressive enhancement that quietly stands down to what's
+already stored the moment the network doesn't answer. Tiles are fetched only
+when a map surface is actually on screen, and the drawn plot beneath one
+stands on its own when it can't be. The passport and a country's contours ask
+for nothing at all: both are read out of the file itself.
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full technical
 spec and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the build order.
 
