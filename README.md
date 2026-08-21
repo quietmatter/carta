@@ -49,8 +49,9 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   you've already found there, so the answer isn't a rehash. **Copy** and
   **Keep** are strictly offline; nothing on this page makes a network call.
 - **The ask.** Carta can send the brief on your own behalf — a city, a
-  neighborhood, a country, a route, or a friend's taste, plus anything else
-  worth knowing — to a model you bring your own key for. This is the door
+  neighborhood, **a point to start from**, a country, a route, or a friend's
+  taste, plus **how far you'll actually go** and anything else worth
+  knowing — to a model you bring your own key for. This is the door
   that calls out in Carta, and only when you tap **Ask Carta** (the menu's
   **Read it for me**, below, is the same door, opened a second way); the
   key lives on this device and nowhere else. Every café it names is checked
@@ -59,9 +60,23 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   fails, and Carta falls back to the same plain-text brief, copied. The ask's
   own page states which key it would use, and what happens if there isn't
   one, before you tap anything. What comes back is **its own page, on its own
-  streets** — what was named, what was placed, and why each one; **Been ·
-  Booked · Skip** on each result feeds back into your record, so a café you
+  streets**, and it argues rather than lists: the cafés **ranked, each saying
+  what it is best for** — the cleanest cup, the one worth the drive, the
+  sleeper — with the figures off your own brief it was read from underneath,
+  and what to ask for once you're at the counter. It names the places that
+  are close but **aren't** the pick, and says why, instead of dropping them.
+  Those figures are checked back against your own record as they're drawn:
+  one Carta can open is underlined and taps through to the cups it was read
+  from, and one it can't produce is left as plain text rather than dressed up
+  as evidence.
+  And it closes with what it would do standing there: the one strongest move,
+  and the order to walk them in depending on what you're after. **Been ·
+  Booked · Skip** on any of them feeds back into your record, so a café you
   mark Been or Booked is on file the next time you type its name.
+
+  Carta makes **no web search**, so it never tells you what a café is pouring
+  today — where a recommendation depends on a menu that turns over, the row
+  says *program rotates* rather than inventing one.
 - **The passport.** Carta opens on it: the world frame full-bleed, every
   country your record can trace, drawn from outlines carried in the file
   itself (no map tiles, no network, nothing to be offline from). Tasted

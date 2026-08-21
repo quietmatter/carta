@@ -381,6 +381,22 @@ nav.tabs[hidden]{display:none}
 .pick.on{background:var(--ink);color:var(--text-on-fill);border-color:var(--ink)}
 .pick.mini{font-size:11.5px;padding:7px 12px;min-height:34px;color:var(--ink-3);border-color:var(--line)}
 .pick.mini.on{color:var(--text-on-fill);border-color:var(--ink)}
+/* a chip that only states — the model's verdict on a café, an honest distance,
+   a program that turns over. Same furniture as the marks beside it, minus the
+   affordance: nothing here is pressable, so nothing here ever fills. */
+.pick.tag{cursor:default;min-height:0;padding:6px 11px}
+.pick.tag.lead{color:var(--ink);border-color:var(--line-strong)}
+/* what Carta found: an entry, its place in the model's own order, and the one
+   sentence it argued. The rank is plain ink — the ember is a score you gave. */
+.find{border-bottom:1px solid var(--line);padding:16px 0}
+.find .rk{font-family:var(--sans);font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-3);margin-right:8px}
+.say{font-family:var(--serif);font-size:15.5px;line-height:1.5;color:var(--ink-2);margin-top:8px;max-width:var(--measure)}
+.m .k{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;color:var(--ink-3)}
+/* a route: what you want on the left, the order to walk it on the right */
+.route{display:flex;gap:12px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+.route:last-child{border-bottom:0;padding-bottom:0}
+.route .if{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);flex:none;max-width:44%}
+.route .ord{font-family:var(--serif);font-size:15px;color:var(--ink);text-align:right;flex:1}
 /* the file a sheet is waiting for, and the box a photo is dropped into */
 .pickzone{display:block;border:1px dashed var(--border-control);padding:18px;text-align:center;cursor:pointer;
   font-family:var(--serif);font-style:italic;font-size:var(--s15);color:var(--ink-3)}
@@ -1168,17 +1184,35 @@ function importClassicMap(json,existing){
  * for exactly one shape) and the parse (a model's wrongness here is invisible
  * otherwise — a bad parse just looks like Carta finding nothing). Grounding
  * (a real place lookup) and the call itself are network, and stay outside. */
-function askKindLabel(k){return {city:'A city',neighborhood:'A neighborhood',country:'A country',route:'A route',friend:'A friend'}[k]||'Somewhere'}
-function askPromptText(briefText,scopeKind,destination,question){
+function askKindLabel(k){return {city:'A city',neighborhood:'A neighborhood',near:'Near a point',country:'A country',route:'A route',friend:'A friend'}[k]||'Somewhere'}
+/* What the model is asked for is the whole difference between a list and an
+ * argument. Four things it must do that the first cut never asked for: rank,
+ * say what each café is best FOR, name the figures off the brief it leaned on,
+ * and close with what it would actually do. And one it must not: Carta makes
+ * no search, so a menu read back as fact would be an invention — the prompt
+ * asks for the half that keeps (a program, a posture, what to ask for at the
+ * counter) and makes the model mark whatever turns over. Every field is one
+ * sentence because the answer is read as a list of chips on a phone, not as
+ * prose — length here is the failure mode, not the goal. */
+const ASK_CAPS={cafes:8,mentions:4,fit:3,routes:4};
+function askPromptText(briefText,scopeKind,destination,question,reach){
   const kindLine={
     city:`I'm asking about the city: ${destination}.`,
     neighborhood:`I'm asking about this specific area: ${destination}.`,
+    near:`I'm starting from this point and want what's within reach of it: ${destination}.`,
     country:`I'm asking about the whole country or region: ${destination}.`,
     route:`I'm asking about this route or road trip: ${destination}.`,
     friend:`I'm asking on behalf of a friend, whose taste differs from mine like this: ${destination}.`,
   }[scopeKind]||`I'm asking about: ${destination}.`;
+  const reachLine=reach?`\nHow far I'll actually go: ${reach}.`:'';
   const askLine=question?`\nSomething else worth knowing: ${question}`:'';
-  return `${briefText}\n\n${kindLine}${askLine}\n\nRecommend specialty coffee cafés that match this taste. Reply with ONLY a JSON object, no other text, no markdown fences, in exactly this shape:\n{"cafes":[{"name":"...","neighborhood":"...","city":"...","why":"one sentence, tied to my taste above"}]}\nList at most 8. If you don't know real cafés here, return {"cafes":[]} rather than inventing one.`;
+  return `${briefText}\n\n${kindLine}${reachLine}${askLine}\n
+Recommend specialty coffee cafés that match this taste, and argue for them the way someone who drinks here would: rank them, say what each one is best FOR, and name the figures above you are leaning on.\n
+Two rules about what you know. You have no live access to any menu, so never state what a café is pouring today as fact — write what its program and character are reliably like, and set "stale" true for any café whose fit depends on a rotating menu. Never invent a café: if you don't know real ones here, return {"cafes":[]}.\n
+Keep every text field to ONE sentence. Short beats complete — this is read on a phone as a list, not as prose.\n
+Reply with ONLY a JSON object, no other text, no markdown fences, in exactly this shape:
+{"read":"one sentence on how the ground actually lies for this ask","cafes":[{"name":"...","neighborhood":"...","city":"...","verdict":"five words or fewer — what this one is best for","why":"one sentence, tied to my taste above","fit":["a figure from my taste this leans on, e.g. Alchemy fermentation 9.0/9, n=3"],"order":"what to ask for at the counter","travel":"honest distance from where I asked","stale":false}],"mentions":[{"name":"...","city":"...","instead":"one sentence — why it isn't the pick"}],"plan":{"move":"one sentence — the single strongest thing to do","routes":[{"if":"six words or fewer","order":["café","café","café"]}],"wildcard":{"name":"...","city":"...","why":"one sentence — why it's worth knowing though it sits outside the ranking"}}}
+At most ${ASK_CAPS.cafes} cafés, ${ASK_CAPS.mentions} mentions, ${ASK_CAPS.fit} fit strings each, ${ASK_CAPS.routes} routes. "mentions" is for places that are close or obvious but that I should know are NOT the pick, and why. Leave out any part you cannot fill honestly rather than padding it.`;
 }
 // a model's answer, fenced or bare, prose around it or not — the one door
 // every "ask the model for JSON" caller reads its reply through
@@ -1190,17 +1224,63 @@ function extractJSON(text){
   if(start===-1||end===-1||end<start)return null;
   try{return JSON.parse(body.slice(start,end+1))}catch(e){return null}
 }
+/* The caps are held here, not in the prompt — the prompt states them, this is
+ * what enforces them. And an answer in the old four-field shape still has to
+ * come out as something the screen can draw: every part beyond a name is
+ * optional, all the way up to the plan. */
+function askStr(v,n){const t=String(v==null?'':v).trim().replace(/\s+/g,' ');return t.length>n?t.slice(0,n-1).trimEnd()+'…':t}
+function askList(v,n,cap){return (Array.isArray(v)?v:[]).map(x=>askStr(x,n)).filter(Boolean).slice(0,cap)}
 function parseAskJSON(text){
   const data=extractJSON(text);
-  if(!data)return {ok:false,findings:[]};
-  const list=Array.isArray(data.cafes)?data.cafes:[];
-  const findings=list.map(c=>({
-    name:String((c&&c.name)||'').trim(),
-    neighborhood:String((c&&c.neighborhood)||'').trim(),
-    city:String((c&&c.city)||'').trim(),
-    why:String((c&&c.why)||'').trim(),
-  })).filter(f=>f.name);
-  return {ok:true,findings};
+  if(!data)return {ok:false,read:'',findings:[],mentions:[],plan:null};
+  const findings=(Array.isArray(data.cafes)?data.cafes:[]).map(c=>({
+    name:askStr(c&&c.name,80),neighborhood:askStr(c&&c.neighborhood,60),city:askStr(c&&c.city,60),
+    verdict:askStr(c&&c.verdict,40),why:askStr(c&&c.why,220),
+    fit:askList(c&&c.fit,60,ASK_CAPS.fit),order:askStr(c&&c.order,120),
+    travel:askStr(c&&c.travel,60),stale:!!(c&&c.stale),
+  })).filter(f=>f.name).slice(0,ASK_CAPS.cafes);
+  const mentions=(Array.isArray(data.mentions)?data.mentions:[]).map(m=>({
+    name:askStr(m&&m.name,80),city:askStr(m&&m.city,60),instead:askStr(m&&m.instead,220),
+  })).filter(m=>m.name).slice(0,ASK_CAPS.mentions);
+  const p=(data.plan&&typeof data.plan==='object')?data.plan:null;
+  const w=(p&&p.wildcard&&typeof p.wildcard==='object'&&askStr(p.wildcard.name,80))?p.wildcard:null;
+  const plan=p?{
+    move:askStr(p.move,220),
+    routes:(Array.isArray(p.routes)?p.routes:[]).map(r=>({
+      if:askStr(r&&r.if,60),order:askList(r&&r.order,80,4),
+    })).filter(r=>r.if&&r.order.length).slice(0,ASK_CAPS.routes),
+    wildcard:w?{name:askStr(w.name,80),city:askStr(w.city,60),why:askStr(w.why,220)}:null,
+  }:null;
+  const said=plan&&(plan.move||plan.routes.length||plan.wildcard);
+  return {ok:true,read:askStr(data.read,240),findings,mentions,plan:said?plan:null};
+}
+/* ---- a figure the model wrote, read back against the record.
+ * The brief is built from the taste model's own values, so when the model
+ * answers "Alchemy fermentation 9.0/9, n=3" it is echoing one of them back.
+ * That means the string can be resolved to the item it came from — and only
+ * a figure that resolves earns the tap that opens the cups underneath it.
+ * One that doesn't stays plain text, because there is nothing behind it to
+ * open, and a door onto nothing is worse than no door.
+ *
+ * It doubles as the honesty gate on the way back: a figure the record cannot
+ * produce simply never becomes a door, whatever the model claimed.
+ *
+ * Longest match wins, so "Anaerobic washed" is never read as "Washed", and
+ * both sides are matched on whole folded words, so "tea" is not found inside
+ * "cleaner". */
+function matchFigure(text,tm){
+  const t=' '+fold(text)+' ';
+  if(!tm||t==='  ')return null;
+  let best=null;
+  const consider=(kind,value)=>{
+    const v=fold(value);
+    if(!v||t.indexOf(' '+v+' ')===-1)return;
+    if(!best||v.length>best.v.length)best={kind,value:String(value),v};
+  };
+  (tm.bar&&tm.bar.anchors||[]).forEach(a=>consider('anchor',a.name));
+  ['descriptors','processes','origins','roast'].forEach(k=>
+    ((tm.vector&&tm.vector[k])||[]).forEach(x=>consider(k,x.value)));
+  return best?{kind:best.kind,value:best.value}:null;
 }
 /* ---- the menu's OCR (horizon list, ROADMAP.md — "a BYO-key vision call
  * through the same sanctioned channel as the scout's ask; one posture, two
@@ -1274,7 +1354,7 @@ function openTaste(){openScreen('taste')}
 function openBriefScreen(scopeId){openScreen('brief',null,{scopeId:scopeId||'',raw:false})}
 function openAskScreen(){openScreen('ask')}
 function openAskResultScreen(id){openScreen('askresult',id)}
-function openAskScreenFor(city){askDraft={kind:'city',dest:city||'',question:askDraft.question||''};openScreen('ask')}
+function openAskScreenFor(city){askDraft=Object.assign({},askDraft,{kind:'city',dest:city||''});openScreen('ask')}
 function openMenuScreen(menuId,placeId){openScreen('menu',menuId||null,{placeRef:placeId||(menuById(menuId)||{}).placeRef||null})}
 function openRecord(){openScreen('record')}
 function openSetupsScreen(){openScreen('setups')}
@@ -2955,7 +3035,7 @@ function askSectionHTML(){
   if(!asks.length)return '';
   return `<div class="shead"><span class="l">What Carta found</span><span class="r">${asks.length} ask${asks.length===1?'':'s'}</span></div>
   ${asks.map(a=>{
-    const n=a.findings.filter(f=>f.grounded).length;
+    const n=askNamed(a).filter(f=>f.grounded).length;
     return `<button class="lrow" onclick="openAskResultScreen('${a.id}')">
       <span class="mid"><span class="t">${esc(a.destination)}</span>
       <span class="m">${askKindLabel(a.kind)} · ${n} café${n===1?'':'s'} placed · ${fmtWhen(a.createdAt)}</span></span>
@@ -3167,7 +3247,10 @@ function lowStorageNoteHTML(){
  * model names is checked against a real place lookup (Nominatim, keyless)
  * before it's ever drawn as a pin — what can't be confirmed is listed, never
  * guessed onto the frame (the grounding rule, non-negotiable). */
-const ASK_MODEL_DEFAULT='claude-haiku-4-5-20251001';
+const ASK_MODEL_DEFAULT='claude-opus-5';
+// the ask is an argument, not a list: 1024 tokens was the ceiling the first
+// answers were hitting, and a truncated argument reads exactly like a thin one
+const ASK_MAX_TOKENS=8000;
 const askKey=()=>getPref('askKey','');
 const askModel=()=>getPref('askModel','')||ASK_MODEL_DEFAULT;
 function openAskKey(){
@@ -3193,8 +3276,12 @@ function clearAskKey(){setPref('askKey','');setPref('askModel','');openAskKey();
  * it would use is stated as a fact on the page, and the degrade — no key, or
  * a call that fails — is stated under the button before it is ever tapped.
  */
-const ASK_KINDS=[['city','A city'],['neighborhood','A neighborhood'],['country','A country'],['route','A route'],['friend',"A friend's taste"]];
-let askDraft={kind:'city',dest:'',question:''};
+const ASK_KINDS=[['city','A city'],['neighborhood','A neighborhood'],['near','Near a point'],['country','A country'],['route','A route'],['friend',"A friend's taste"]];
+// how far the keeper will actually go. Without it "worth driving for" is a
+// dodge; with it, it's an answer — so it rides on every ask that has a centre.
+const ASK_REACH=['on foot','a short drive','worth driving for'];
+const REACH_KINDS=new Set(['city','neighborhood','near']);
+let askDraft={kind:'city',dest:'',question:'',reach:'a short drive'};
 function openAsk(){openAskScreen()}
 // a chip that re-renders the screen must not drop what has already been typed
 function captureAskDraft(){
@@ -3203,6 +3290,8 @@ function captureAskDraft(){
   if(q)askDraft.question=q.value;
 }
 function pickAskKind(k){captureAskDraft();askDraft.kind=k;render()}
+function pickAskReach(r){captureAskDraft();askDraft.reach=r;render()}
+const askReach=()=>REACH_KINDS.has(askDraft.kind)?askDraft.reach:'';
 function vAsk(){
   const key=askKey();
   return `<div>
@@ -3221,8 +3310,13 @@ function vAsk(){
         ${ASK_KINDS.map(k=>`<button class="pick${askDraft.kind===k[0]?' on':''}" onclick="pickAskKind('${k[0]}')">${esc(k[1])}</button>`).join('')}
       </div>
 
+      ${REACH_KINDS.has(askDraft.kind)?`<div class="eyebrow" style="margin:22px 0 9px">How far you'll go</div>
+      <div class="picks">
+        ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach('${jsq(r)}')">${esc(r)}</button>`).join('')}
+      </div>`:''}
+
       <label class="f" style="margin-top:24px"><span class="l">Where</span>
-        <input type="text" id="ask_dest" value="${esc(askDraft.dest)}" placeholder="${askDraft.kind==='friend'?'She likes what I like, but darker':'Lisbon'}"></label>
+        <input type="text" id="ask_dest" value="${esc(askDraft.dest)}" placeholder="${askDraft.kind==='friend'?'She likes what I like, but darker':askDraft.kind==='near'?'Huntington Park':'Lisbon'}"></label>
       <label class="f"><span class="l">Anything else <span class="opt">optional</span></span>
         <textarea id="ask_question" style="min-height:70px" placeholder="Three days, mostly on foot…">${esc(askDraft.question)}</textarea></label>
 
@@ -3236,13 +3330,17 @@ function vAsk(){
     </div></div>`;
 }
 // the one door — content is either a plain prompt string (the ask) or a
-// content-block array carrying an image plus a prompt (the menu's OCR)
-async function callModel(content){
+// content-block array carrying an image plus a prompt (the menu's OCR). The
+// ceiling is the caller's: an OCR is a list of lines, an ask is an argument,
+// and 1024 tokens is what made the ask's answers read like a stub. A thinking
+// block, on a model that reasons by default, has no .text — so the join below
+// silently drops it and the parse only ever sees what was actually said.
+async function callModel(content,maxTokens){
   const key=askKey();if(!key)throw new Error('Set your key first.');
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:askModel(),max_tokens:1024,messages:[{role:'user',content}]}),
+    body:JSON.stringify({model:askModel(),max_tokens:maxTokens||1024,messages:[{role:'user',content}]}),
   });
   if(!r.ok){
     let msg=`The model call failed (${r.status}).`;
@@ -3252,7 +3350,7 @@ async function callModel(content){
   const j=await r.json();
   return (j.content||[]).map(b=>b.text||'').join('');
 }
-const callAskModel=prompt=>callModel(prompt);
+const callAskModel=prompt=>callModel(prompt,ASK_MAX_TOKENS);
 async function callVisionModel(prompt,imageDataUri){
   const m=String(imageDataUri||'').match(/^data:([^;]+);base64,([\s\S]*)$/);
   if(!m)throw new Error('Could not read that photo.');
@@ -3271,6 +3369,24 @@ async function geocodeCafe(name,neighborhood,city){
   }catch(e){return null}
 }
 let _askBusy=false;
+// grounding is one keyless Nominatim lookup per name, and there are more names
+// to place now — the findings, the ones named only to be talked out of, and the
+// wildcard. So it paces itself a second apart, the way geocodeCityPlaces does,
+// and the progress line says which name it's on rather than sitting on "Asking…"
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function groundNamed(list,fallbackCity,say){
+  const out=[];
+  for(let i=0;i<list.length;i++){
+    const f=list[i];
+    const city=f.city||fallbackCity||'';
+    if(i)await sleep(1000);
+    if(say)say(`Placing ${f.name}…`);
+    const geo=await geocodeCafe(f.name,f.neighborhood||'',city);
+    out.push(Object.assign({},f,{id:uid(),city,lat:geo?geo.lat:null,lon:geo?geo.lon:null,
+      grounded:!!geo,status:null,placeRef:null}));
+  }
+  return out;
+}
 async function runAsk(){
   if(_askBusy)return;
   captureAskDraft();
@@ -3278,56 +3394,105 @@ async function runAsk(){
   const kind=askDraft.kind||'city';
   const destination=(askDraft.dest||'').trim();
   const question=(askDraft.question||'').trim();
+  const reach=askReach();
   if(!destination){toast('Where should Carta ask about?');return}
   const box=document.getElementById('ask_result');if(!box)return;
   _askBusy=true;
-  box.innerHTML='<div class="muted" style="margin-top:12px">Asking…</div>';
+  const say=m=>{const b=document.getElementById('ask_result');if(b)b.innerHTML=`<div class="muted" style="margin-top:12px">${esc(m)}</div>`};
+  say('Asking…');
   try{
     const tm=tasteModelMemo();
     let scopeKind=null,scopeId=null;
     const knownCity=knownCities().find(c=>fold(c)===fold(destination));
-    if(kind==='city'&&knownCity){scopeKind='city';scopeId=knownCity}
+    if((kind==='city'||kind==='near')&&knownCity){scopeKind='city';scopeId=knownCity}
     else if(kind==='country'){scopeKind='country';scopeId=destination}
     const briefText=briefPlainText(D,scopeKind,scopeId,tm);
-    const prompt=askPromptText(briefText,kind,destination,question);
+    const prompt=askPromptText(briefText,kind,destination,question,reach);
     const raw=await callAskModel(prompt);
     const parsed=parseAskJSON(raw);
-    const findings=[];
-    for(const f of parsed.findings){
-      const geo=await geocodeCafe(f.name,f.neighborhood,f.city||(kind==='city'?destination:''));
-      findings.push({id:uid(),name:f.name,neighborhood:f.neighborhood,city:f.city||(kind==='city'?destination:''),
-        why:f.why,lat:geo?geo.lat:null,lon:geo?geo.lon:null,grounded:!!geo,status:null,placeRef:null});
-    }
-    const ask={id:uid(),createdAt:new Date().toISOString(),kind,destination,question,model:askModel(),findings};
+    const near=(kind==='city'||kind==='near')?destination:'';
+    const findings=await groundNamed(parsed.findings,near,say);
+    const mentions=await groundNamed(parsed.mentions,near,say);
+    const plan=parsed.plan?Object.assign({},parsed.plan,
+      {wildcard:parsed.plan.wildcard?(await groundNamed([parsed.plan.wildcard],near,say))[0]:null}):null;
+    const ask={id:uid(),createdAt:new Date().toISOString(),kind,destination,question,reach,
+      model:askModel(),read:parsed.read,findings,mentions,plan};
     D.asks.unshift(ask);save();
     _askBusy=false;
     openAskResultScreen(ask.id);
   }catch(e){
     _askBusy=false;
     const msg=(e&&e.message)||'Could not reach the model.';
-    box.innerHTML=`<div class="empty">${esc(msg)}</div>
+    const b=document.getElementById('ask_result');if(!b)return;
+    b.innerHTML=`<div class="empty">${esc(msg)}</div>
     <button class="btn btn-quiet" onclick="copyPlainText(briefPlainText(D,null,null,tasteModelMemo()),'Copied — paste it into your chat.')">Copy the brief instead</button>`;
   }
 }
-/* a finding, set as an entry rather than a card: the name, whether it stands on
- * real ground, where it is, why Carta named it, and the three marks that put it
+/* a finding, set as an entry rather than a card: where it sits in the model's
+ * own order, what it is best FOR, where it is, the figures off the brief it was
+ * argued from, what to ask for at the counter, and the three marks that put it
  * on your own record. What could not be confirmed says so plainly and is never
- * drawn on the map (the grounding rule, non-negotiable). */
+ * drawn on the map (the grounding rule, non-negotiable).
+ *
+ * The number is the order the model argued, not a score Carta computed — plain
+ * ink, never the ember. The ember is the 1–9 you gave a cup, and nothing here
+ * has been drunk yet.
+ */
 const FIND_MARKS=[['been','Been'],['booked','Booked'],['skip','Skip']];
-function findingRowHTML(f){
-  return `<div style="border-bottom:1px solid var(--line);padding:16px 0" id="find_${f.id}">
+const tag=(text,lead)=>`<span class="pick mini tag${lead?' lead':''}">${esc(text)}</span>`;
+const marksHTML=f=>`<div class="picks" style="margin-top:12px">
+  ${FIND_MARKS.map(m=>`<button class="pick mini${f.status===m[0]?' on':''}" onclick="setFindStatus('${f.id}','${m[0]}')">${m[1]}</button>`).join('')}
+</div>`;
+const groundHTML=f=>`<span class="ground${f.grounded?'':' no'}">${f.grounded?'placed':'not confirmed'}</span>`;
+// the thin ledger-coupled wrapper over the pure matchFigure, the same way
+// matchNode wraps matchNodes: a figure the record can open becomes the app's
+// own .fig and lands on the very sheet Your taste opens; one it can't stays
+// flat. The reader can tell them apart without being told — a door is inked.
+const figBacked=s=>matchFigure(s,tasteModelMemo());
+function fitFigureHTML(s){
+  const m=figBacked(s);
+  if(!m)return esc(s);
+  const call=m.kind==='anchor'?`openAnchorEvidence(${jsq(m.value)})`:`openVectorEvidence('${m.kind}',${jsq(m.value)})`;
+  return `<button class="fig" onclick="${call}">${esc(s)}</button>`;
+}
+// a model that answers "Compton, Compton" is answering honestly — the area and
+// the city are the same place. Saying it twice is Carta's bug, not the model's.
+const whereHTML=f=>esc([f.neighborhood,f.city].filter(Boolean)
+  .filter((v,i,a)=>a.findIndex(x=>fold(x)===fold(v))===i).join(', ')||'no address could be confirmed');
+function findingRowHTML(f,i){
+  const chips=[f.verdict?tag(f.verdict,true):'',f.travel?tag(f.travel):'',f.stale?tag('program rotates'):''].filter(Boolean).join('');
+  return `<div class="find" id="find_${f.id}">
     <div class="row">
-      <span style="font-family:var(--serif);font-size:17.5px">${esc(f.name)}</span>
-      <span class="ground${f.grounded?'':' no'}">${f.grounded?'placed':'not confirmed'}</span>
+      <span style="font-family:var(--serif);font-size:17.5px"><span class="rk">${i+1}</span>${esc(f.name)}</span>
+      ${groundHTML(f)}
     </div>
-    <div class="m" style="margin-top:3px">${esc([f.neighborhood,f.city].filter(Boolean).join(', ')||'no address could be confirmed')}</div>
-    ${f.why?`<div style="font-family:var(--serif);font-size:15.5px;line-height:1.5;color:var(--ink-2);margin-top:8px;max-width:36ch">${esc(f.why)}</div>`:''}
-    <div class="picks" style="margin-top:12px">
-      ${FIND_MARKS.map(m=>`<button class="pick mini${f.status===m[0]?' on':''}" onclick="setFindStatus('${f.id}','${m[0]}')">${m[1]}</button>`).join('')}
-    </div>
+    <div class="m" style="margin-top:3px">${whereHTML(f)}</div>
+    ${chips?`<div class="picks" style="margin-top:9px">${chips}</div>`:''}
+    ${f.why?`<div class="say">${esc(f.why)}</div>`:''}
+    ${(f.fit&&f.fit.length)?`<div class="m" style="margin-top:6px">${f.fit.map(fitFigureHTML).join(' · ')}</div>`:''}
+    ${f.order?`<div class="m" style="margin-top:6px"><span class="k">Ask for</span> ${esc(f.order)}</div>`:''}
+    ${marksHTML(f)}
   </div>`;
 }
-function askOf(findId){for(const a of D.asks){const f=a.findings.find(x=>x.id===findId);if(f)return {a,f}}return null}
+// a place named only so you know it isn't the pick — the same row, one rung
+// quieter, and markable all the same: talked out of is not the same as unwanted
+function mentionRowHTML(f){
+  return `<div class="find" id="find_${f.id}">
+    <div class="row">
+      <span style="font-family:var(--serif);font-size:16px;color:var(--ink-2)">${esc(f.name)}</span>
+      ${groundHTML(f)}
+    </div>
+    <div class="m" style="margin-top:3px">${whereHTML(f)}</div>
+    ${f.instead?`<div class="say">${esc(f.instead)}</div>`:''}
+    ${marksHTML(f)}
+  </div>`;
+}
+// every café an ask named, in one list — the marks, the pins and the taps all
+// read through this, so a mention and the wildcard are as markable as a finding
+function askNamed(a){
+  return (a.findings||[]).concat(a.mentions||[],(a.plan&&a.plan.wildcard)?[a.plan.wildcard]:[]);
+}
+function askOf(findId){for(const a of D.asks){const f=askNamed(a).find(x=>x&&x.id===findId);if(f)return {a,f}}return null}
 function setFindStatus(findId,status){
   const hit=askOf(findId);if(!hit)return;
   const {a,f}=hit;
@@ -3346,18 +3511,28 @@ function openAskFinding(findId){
   const row=document.getElementById('find_'+findId);
   if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
 }
-/* ============ what Carta found — the answer, on its own ground ============ */
+/* ============ what Carta found — the answer, on its own ground ============
+ * Four parts, in the order you'd actually want them: how the ground lies, what
+ * it found and what each one is for, what's close but isn't the pick, and what
+ * it would do standing there. Every part draws only if the model filled it, so
+ * an ask made before any of this existed still opens and still reads.
+ */
 function vAskResult(id){
   const a=D.asks.find(x=>x.id===id);
   if(!a)return `<div class="pad" style="padding-top:26px"><div class="empty">That ask isn’t on the record.</div>
     <button class="btn btn-quiet" onclick="openTaste()">Back to your taste</button></div>`;
-  const grounded=a.findings.filter(f=>f.grounded);
-  const unplaced=a.findings.length-grounded.length;
-  const pts=placed(grounded).map(f=>({id:f.id,name:f.name,lat:f.lat,lon:f.lon,
-    score:(f.status==='been'||f.status==='booked')?1:null,dim:f.status==='skip'}));
-  const lede=[`${capFirst(words(a.findings.length))} named, ${words(grounded.length)} placed.`,
+  const named=askNamed(a),mentions=a.mentions||[],plan=a.plan||null;
+  const wild=plan&&plan.wildcard;
+  const grounded=named.filter(f=>f.grounded);
+  const unplaced=named.length-grounded.length;
+  const pin=f=>({id:f.id,name:f.name,lat:f.lat,lon:f.lon,
+    score:(f.status==='been'||f.status==='booked')?1:null,
+    dim:f.status==='skip'||(mentions.indexOf(f)>-1&&!f.status)});
+  const pts=placed(named).map(pin);
+  const lede=[`${capFirst(words(named.length))} named, ${words(grounded.length)} placed.`,
     unplaced?`${unplaced===1?'The other':'The others'} could not be confirmed against a real address, so ${unplaced===1?'it is':'they are'} listed and not drawn.`:''
   ].filter(Boolean).join(' ');
+  const routeHTML=r=>`<div class="route"><span class="if">${esc(r.if)}</span><span class="ord">${esc((r.order||[]).join(' · '))}</span></div>`;
   return `<div>
     <div style="position:relative">
       ${pts.length?streetsHTML(pts,{boxStyle:'height:270px',dot:11,plotWrap:'position:absolute;inset:0;padding:78px 60px 34px'})
@@ -3366,14 +3541,37 @@ function vAskResult(id){
       <button class="omini overlay" style="left:18px;top:18px" onclick="openAskScreen()">← Ask</button>
     </div>
     <div class="lift pad" style="padding-top:20px">
-      <div class="eyebrow" style="margin:0 0 6px">${esc(askKindLabel(a.kind))} · asked in ${esc(fmtMonth(a.createdAt))}</div>
+      <div class="eyebrow" style="margin:0 0 6px">${esc(askKindLabel(a.kind))} · asked in ${esc(fmtMonth(a.createdAt))}${a.reach?' · '+esc(a.reach):''}</div>
       <div class="display" style="margin:0">${esc(a.destination)}</div>
-      <div class="lede" style="margin-top:8px;max-width:36ch">${esc(lede)}</div>
+      ${a.read?`<div class="lede" style="margin-top:8px">${esc(a.read)}</div>`:''}
+      <div class="m" style="margin-top:${a.read?'8px':'10px'}">${esc(lede)}</div>
       ${a.question?`<div class="note" style="border:0;padding:0;margin:10px 0 0">You asked: ${esc(a.question)}</div>`:''}
 
       <div class="shead"><span class="l">What Carta found</span><span class="r">been · booked · skip</span></div>
       ${a.findings.length?a.findings.map(findingRowHTML).join('')
         :'<div class="empty">Carta didn’t name anything it could stand behind here.</div>'}
+      ${a.findings.some(f=>(f.fit||[]).some(figBacked))?`<div class="note" style="border:0;padding:0;margin:12px 0 0">Tap an underlined figure for the cups it was read from. What isn’t underlined, the record can’t open.</div>`:''}
+      ${a.findings.some(f=>f.fit&&f.fit.length)?`<button class="btn btn-quiet" style="margin-top:12px" onclick="openBriefScreen()">The brief these were read from</button>`:''}
+
+      ${mentions.length?`<div class="shead"><span class="l">Close, but not the pick</span></div>
+      ${mentions.map(mentionRowHTML).join('')}`:''}
+
+      ${plan?`<div class="shead"><span class="l">What Carta would do</span></div>
+      <div class="box">
+        ${plan.move?`<div class="say" style="margin-top:0">${esc(plan.move)}</div>`:''}
+        ${plan.routes&&plan.routes.length?`<div style="margin-top:${plan.move?'12px':'0'}">${plan.routes.map(routeHTML).join('')}</div>`:''}
+      </div>
+      ${wild?`<div class="find" id="find_${wild.id}" style="border-bottom:0">
+        <div class="row">
+          <span style="font-family:var(--serif);font-size:17.5px">${esc(wild.name)}</span>
+          ${groundHTML(wild)}
+        </div>
+        <div class="m" style="margin-top:3px">${whereHTML(wild)}</div>
+        ${wild.why?`<div class="say">${esc(wild.why)}</div>`:''}
+        <div class="note" style="margin-top:8px">Outside the ranking — worth knowing anyway.</div>
+        ${marksHTML(wild)}
+      </div>`:''}`:''}
+
       <div class="note" style="margin-top:16px">Mark one Been or Booked and it is on file — the next time you type its name, Carta already knows it.</div>
       <button class="btn btn-quiet" style="margin-top:14px" onclick="openAskScreen()">Ask again</button>
     </div></div>`;
@@ -4247,8 +4445,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.14.0';
+const APP_VERSION='7.15.0';
 const CHANGELOG=[
+  {v:'7.15.0',d:"Ask Carta, arguing. It used to hand back a flat list of names with a sentence each; it ranks them now, and every one says what it is best FOR — the cleanest cup, the one worth the drive, the sleeper south of you — with the figures off your own brief it was read from sitting under it — underlined where Carta can open them, so one tap gets you the actual cups behind the claim, and left plain where your record can't back them — and what to ask for once you're at the counter. It names the places that are close but aren't the pick, and says why, instead of quietly dropping them. It closes with what it would actually do: the one strongest move, and the order to walk them in depending on what you're after. Two new things to ask: near a point rather than a city, and how far you'll actually go — which is what lets it say 'worth driving for' and mean it. Carta still makes no search, so it never claims what a café is pouring today; where a fit depends on a menu that turns over, the row says so. Every café it names is still checked against a real address before it is drawn, mentions included. And the model it asks by default is a much larger one, with the room to answer properly — your own key, your own choice, still on the device and nowhere else."},
   {v:'7.14.0',d:"The rest of the app. A country stopped being a dead end: it states how far the record actually follows that ground — grown, processed, milled, roasted, poured, read, dashed across whatever it can't reach — and then opens downward into its regions, the hands that grew it, the roasters working from it and the rooms it pours in. A region and a farm are pages now, walked down to from the country and back up from any coffee. Your taste dropped its meters and argues in a sentence instead, every figure in it tappable straight through to the cups it was read from. The brief left its drawer: it's a screen that says what goes out in four parts before it ever shows you the raw text, with the exact characters folded one tap away, and the ask that follows it names the key it would use and the degrade if you don't have one. What Carta found is its own page on its own streets. A café's menu is one screen at the counter rather than two sheets that never met. Your record — everything you own, the backup, what reads in, what sends out, your Setups, classic — has a page of its own, and a Setup finally keeps the grind history that is only ever true on it. Two new fields on a coffee, altitude and mill, both optional, both stated only where a bag states them. Nothing migrated; the ledger is the same file it was."},
   {v:'7.13.0',d:"The map, in front. Carta opens on the Atlas now — the passport full-bleed, every country you've tasted inked into it and tappable, your cities listed underneath with their own plots. Four rooms became three (Atlas · Journal · Shelf) with ＋ A cup standing beside them, reachable from anywhere instead of only from the top of one screen; Scout folded into the Atlas as \"Your taste\", because what it argues is geography. A city is streets edge to edge with your cafés on a sheet you pull up over them, a café has its own corner of the map, and a cup is finally a page — the photo at the size you took it for, the score set where you can read it. The record itself is untouched: same ledger, same file, nothing migrated. And the Journal opens with the last cup you brewed — its recipe, its finding, one tap to begin the next from it."},
   {v:'7.12.0',d:"A reason to come back, stated plainly. The first time a country or a city actually lands on your passport, Carta says so in one sentence — with a tap to share it while it's fresh — and then goes quiet about it forever after. Nothing already on your record gets announced retroactively. And a coffee you took home a while back with nothing brewed from it yet says so on the shelf, one line, no pressure. No streaks, no badges, no percent-complete — if it ever starts reading like a score, that's a bug, not a feature."},

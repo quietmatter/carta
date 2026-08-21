@@ -14,7 +14,16 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–4,500 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 13 it stands at **4,287 lines / 355 KB**.
+  cost, not the stack's.) At Phase 14 it stands at **4,486 lines / 369 KB**.
+
+  *Phase 14 planned an amendment to 4,800 and did not need one.* The ask's
+  rebuild was budgeted at ~4,510 lines and landed at 4,486, inside the band
+  as it stands — so the band stays where Phase 13 left it. Recorded here
+  because a ceiling only means anything if the phases that approach it say
+  so: this one came within **14 lines** and stopped. Phase 15 should read
+  that number as the real state of the file — the next surface of any size
+  is the phase that has to make the argument here, and 4,800 is the number
+  it should argue for.
 
   *The line band was 3–4,000 through Phase 12 and is amended here, at Phase
   13, rather than quietly exceeded.* The argument: the band's stated purpose
@@ -133,10 +142,15 @@ D = {
                        roaster?, name?, roastLevel?,   // parsed, editable
                        coffeeRef? }] }],               // set when tasted/taken home
   asks:    [{ id, createdAt, kind, destination,        // Phase 7 — the ask's history
-              question, model,
+              question, reach, model, read,            // reach + read: Phase 14
               findings:[{ id, name, neighborhood, city, why,
+                          verdict, fit:[], order,      // Phase 14 — what it's best FOR,
+                          travel, stale,               //   read off the brief, and how far
                           lat, lon, grounded,          // grounded === a real place lookup confirmed it
-                          status, placeRef }] }],      // status: been | booked | skip
+                          status, placeRef }],         // status: been | booked | skip
+              mentions:[{ ...same shape, instead }],   // named, and talked out of
+              plan:{ move, routes:[{ if, order:[] }],  // what it would actually do
+                     wildcard:{ ...same shape } } }],  // outside the ranking
   prefs:   { tempUnit, askKey, askModel,               // the key lives here and nowhere else
              exportedAt, autoExport, ... }
 }
@@ -149,7 +163,12 @@ none of them new objects: `coffees.roastLevel` (Phase 9), `coffees.home` +
 home), `prefs.exportedAt` / `prefs.autoExport` (Phase 8), `origin.mill`
 (Phase 13, read by the country road's Milled station). `asks` is the one
 collection the original six missed; it is the record of what was asked and
-what came back, and Phase 14 is the phase that reads it.
+what came back. **Phase 14 widened it and broke nothing:** every field it
+added is optional, so an ask stored under the Phase 7 shape still opens and
+still reads — the screen draws a part only where the model filled it. The
+three places an ask can name a café — `findings`, `mentions`, `plan.wildcard`
+— all carry the same `grounded`/`status`/`placeRef` trio, so a mention is as
+markable, and as un-pinnable-when-unconfirmed, as a finding.
 
 **The gentle join** (replaces the catalog, the resolver, and the fold):
 roasters and places are the graph's nodes, so each carries `aka[]` — other
@@ -254,7 +273,17 @@ one and the one that travels.
 | Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 
-That is the whole list. Two notes on what it no longer says:
+That is the whole list, and **Phase 14 deliberately kept it that way.** The
+obvious way to make the ask's answers sharper is to let the model search —
+the chat transcript the phase was tuned against owed its best lines to a live
+menu read. That would have been a fourth row here, and it was declined: the
+ask stays on training knowledge, and the prompt instead forbids stating any
+menu as fact and makes the model mark every café whose fit depends on one
+that turns over. What the screen shows is what Carta can stand behind. If
+search is ever wanted, it is a row in this table first, not a flag in the
+request.
+
+Two notes on what the table no longer says:
 
 - **The brand read (Microlink) was never built.** Carta 7 makes no call on
   saving a roaster or a place. Palettes exist on records only because the

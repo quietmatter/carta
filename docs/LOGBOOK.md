@@ -7,6 +7,82 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 14: the ask, tuned on a real ask
+
+- **Why, and what the citation actually was.** Phase 14 was written to be
+  built last, off real ask history rather than imagination. The evidence
+  turned up in a form §0 didn't predict: the founder's working method was
+  *leaving the app* — pasting `briefPlainText` into a chat with a frontier
+  model, because what came back was better than what the ask returned. The
+  transcript of one such ask, set beside the ask's own output, is the
+  citation. One prompt, one answer — so every difference between them was a
+  difference in what had been asked for, not in conversation.
+- **The four gaps, in the order they mattered.** (1) The model: Haiku 4.5 at
+  `max_tokens: 1024` — a small model, a thin prompt, a fifth of the room the
+  answer needed. Generic in, generic out. (2) The shape: one free-text `why`
+  per café, which is one generic sentence by construction. (3) The scope: the
+  real ask started from a centroid ("Huntington Park") and Carta had no such
+  kind, and no way to say how far the keeper would go. (4) The screen: one
+  flat row with nowhere to put a verdict, an evidence line, or a plan.
+- **Shipped — v7.15.0.** `claude-opus-5` at 8,000 tokens by default, the
+  `askModel` pref untouched so it's one field back to Haiku. The answer is
+  four parts: how the ground lies, the cafés **ranked with what each is best
+  FOR**, the places that are close but **aren't** the pick and why, and what
+  Carta would actually do — the strongest move, plus the order to walk them
+  in depending on what you're after, plus one wildcard outside the ranking.
+  Each finding carries the figures off your own brief it was argued from and
+  what to ask for at the counter. Two new scope controls: **near a point**,
+  and **how far you'll go**.
+- **The founder's own correction, and it changed the build.** The first read
+  of the transcript treated its prose as the target. It isn't: *"this should
+  be intelligent suggestion similar to ChatGPT, but in Carta's native design
+  language in the chips. It doesn't need to be a lot of free text."* So the
+  judgement is the model's and the register is Carta's — a verdict is a chip,
+  not a paragraph, every text field is capped to one sentence in the prompt
+  *and* trimmed in the parse, and length is the failure mode rather than the
+  goal. Prose was the thing being replaced, not added.
+- **What it refused: search.** The transcript's most vivid lines were live
+  menu reads ("actively selling a Tropical Co-ferment from Finca
+  Monteblanco"). Carta makes no search, so asking for that shape would have
+  been asking for invention. Declined deliberately — `ARCHITECTURE.md` §7's
+  table gained **no** row. The prompt asks for what keeps (a program, a
+  posture, what to ask for) and makes the model mark any fit that depends on
+  a menu that turns over; the row then reads *program rotates*. If search is
+  ever wanted it is a row in that table first, not a flag in the request.
+- **The band held, which is worth recording.** Budgeted at ~4,510 lines
+  against §1's 4,500, and an amendment to 4,800 was approved in advance.
+  It landed at **4,486** and the amendment was not taken. §1 says a ceiling
+  is not an allowance; this is the first phase to approach one and stop.
+- **One design call, made twice.** The plan had each finding's evidence
+  rendered as `.fig` — the dotted-underlined figure that taps through to the
+  cups it was read from. First pass said no: a `fit` string is written by the
+  model, so there are no cups behind it, and a tap that goes nowhere is a
+  fabricated affordance. That was right about the affordance and wrong about
+  the string. **The brief is built from the taste model's own values**, so a
+  `fit` string is an *echo* of one — `matchFigure(text, tm)` resolves it back
+  to the item it came from, and only a figure that resolves becomes a door.
+  It lands on the same `evidenceSheet` *Your taste* opens, with the same real
+  cups. What doesn't resolve stays flat grey, and the difference is legible
+  without being explained: a door is inked.
+- **And the resolver turned out to be the honesty gate on the return leg.** A
+  figure the record cannot produce — the model writing "your love of
+  Guatemalan naturals" over a record with no Guatemala in it — simply never
+  becomes a door, whatever was claimed. Carta doesn't argue with the model or
+  flag it in red; it just doesn't open. `matchFigure` is pure and tested,
+  matched on whole folded words, longest match winning, so "Anaerobic washed"
+  is never flattened to "Washed" and "tea" is never found inside "cleaner".
+- **Tripwires screened.** The rank is the model's own order, plain ink, never
+  the ember — the ember is a score *you* gave a cup and nothing here has been
+  drunk. No resolver, no rung, no gate, no streak. Every ask already on the
+  record still opens: every Phase 14 field is optional and the screen draws a
+  part only where one was filled.
+- **Parked, not absorbed:** a follow-up round on a result ("closer", "less
+  experimental", "what would you order") — the transcript turned out to be
+  one-shot, so the case for conversation isn't made yet and the closing
+  carries the conditional routes instead. Revisit when a real ask wants it.
+
+---
+
 ## 2026-08-20 — Phase 13: the rest of the app
 
 - **Why:** Phase 12 shipped the redesign, but the prototype it was drawn

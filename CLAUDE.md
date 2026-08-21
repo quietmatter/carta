@@ -51,7 +51,7 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. Phases 1–13 shipped; **Phase 14** is open.
+  read at every phase gate. **Phases 1–14 shipped**; Phase 15 is unwritten.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -207,11 +207,27 @@ server/               Classic's sync server — dormant
   instead of re-rendering, so a repaint never eats what has been typed beside
   it.
 - **the ask** — `vAsk` → `askPromptText` (the brief, verbatim) → `callModel`
-  (BYO-key, `api.anthropic.com`) → `parseAskJSON` → `geocodeCafe` **grounding
-  every café before it is drawn** → `vAskResult`, findings with Been · Booked
-  · Skip. The screen states the key it would use and its degrade before the
-  button is tapped; `askDraft` holds what has been typed across a chip tap.
-  `D.asks` is the history; Phase 14 is the phase that reads it.
+  (BYO-key, `api.anthropic.com`, `claude-opus-5` at `ASK_MAX_TOKENS`) →
+  `parseAskJSON` → `groundNamed` **grounding every café before it is drawn**,
+  paced a second apart → `vAskResult`. Phase 14 made the answer an argument
+  rather than a list: a `read` of the ground, findings **ranked** each with a
+  `verdict` (what it's best FOR), the `fit` figures off the brief, an `order`
+  and an honest `travel`, `mentions` named only to be talked out of, and a
+  `plan` — the move, the conditional routes, one wildcard. Scope gained
+  `near` (a centroid) and `ASK_REACH` (how far you'll go). **Carta makes no
+  search**, so the prompt forbids stating a menu as fact and the model marks
+  what rotates (`stale`). The caps are held in `parseAskJSON`, not trusted to
+  the prompt, and **every Phase 14 field is optional** so a Phase 7 ask still
+  opens. Findings, mentions and the wildcard all carry the same
+  `grounded`/`status`/`placeRef` trio — `askNamed(ask)` is the one list they
+  read through. `matchFigure` (pure, tested) resolves a model-written `fit`
+  string back to the taste-model item the brief echoed to it, so **only a
+  figure the record can actually open becomes a `.fig`** — landing on the
+  same `evidenceSheet` *Your taste* opens. What can't be resolved stays flat
+  text; that is the honesty gate on the answer's return leg. The screen states
+  the key it would use and its degrade before the button is tapped;
+  `askDraft` holds what has been typed across a chip tap. **The rank is the
+  model's own order, in plain ink — never the ember.**
 - **cards** — `coffeeCardHTML` / `placeCardHTML` / `passportCardHTML` /
   `yearCardHTML`, each a self-contained page on Carta paper with a live
   preview, shared through the OS share sheet or downloaded. A coffee or café
@@ -303,13 +319,13 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 49 cases
+node test/model.test.js        # zero deps, plain Node, 58 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
 out of `index.html` and evaluates it against fixture ledgers — no DOM, no
 `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
-`joinAlias`, `putAwayCore`, `restoreCore`, `parseRoastLevel` or
+`joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `parseRoastLevel` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**

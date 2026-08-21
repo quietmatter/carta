@@ -79,8 +79,8 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–13 are shipped; Phase 14 is the open one. Carta 7 stands at
-**v7.14.0, 4,287 lines, 49/49 pure tests**. Full prose for each is in
+*Phases 8–14 are shipped. Carta 7 stands at
+**v7.15.0, 4,486 lines, 58/58 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -274,6 +274,8 @@ to reach its reasons.
 
 ### Phase 14 — the scout, tuned on real asks
 
+**Shipped — v7.15.0.**
+
 **The joy it serves:** the hunt, refined with the one input Act One
 couldn't have — actual asks, actually made, in actual cities.
 
@@ -291,8 +293,47 @@ not in it:** building this from imagination the way Phase 7 had to — the
 whole point of ordering it last is that guessing here, before the data
 exists, is exactly the mistake §0 was written to stop making.
 
-**Done when:** a change is proposed, cited against actual ask history, not
-against a hypothetical.
+**Done when — met:** a change is proposed, cited against actual ask history,
+not against a hypothetical.
+
+**What the citation turned out to be.** Not the shape §0 guessed at. The
+founder's real usage pattern was *leaving* — pasting `briefPlainText` into a
+chat with a frontier model, because that came back better than the ask did.
+The evidence was that transcript set beside the ask's own output: one prompt,
+one answer, and every difference between them a difference in what had been
+asked for. Four, in the order they mattered:
+
+1. **The model, and its room.** `ASK_MODEL_DEFAULT` was Haiku 4.5 at
+   `max_tokens: 1024`. The answers read generic because a small model given a
+   thin prompt and a fifth of the necessary room produces generic answers.
+   Now `claude-opus-5` at 8,000, with the `askModel` pref unchanged so the
+   keeper can go back.
+2. **The shape asked for.** `{cafes:[{name,neighborhood,city,why}]}` has one
+   free-text slot, and one free-text slot gets one generic sentence. The
+   answer is four parts now: how the ground lies, the cafés ranked with what
+   each is *best for*, the places that are close but aren't the pick, and
+   what Carta would actually do — the strongest move plus the order to walk
+   them in depending on what you're after.
+3. **The scope.** The real ask was *"Huntington Park as the centroid"*.
+   `ASK_KINDS` gained **near a point**, and a **reach** chip — on foot / a
+   short drive / worth driving for — which is what makes "worth driving for"
+   an answer rather than a dodge.
+4. **The screen.** One flat row shape had nowhere to put any of it.
+
+**What it refused.** Web search, which is where the transcript's most vivid
+lines came from ("they're actively selling a Tropical Co-ferment from Finca
+Monteblanco"). Carta makes no search, so asking for that shape would have
+been asking for invention. The prompt asks for the half that keeps — a
+program, a posture, what to ask for at the counter — and marks anything
+menu-dependent as rotating. `ARCHITECTURE.md` §7's table gained no row.
+
+**The tripwires, screened.** The rank is the model's own order, held in plain
+ink and never in the ember (that is a score you gave a cup, and nothing here
+has been drunk). No resolver, no rung, no gate. Every figure a finding leans
+on is stated beside it — and **resolved back against the record**, so a figure
+Carta can open is a door onto its own cups and one it can't is plain text
+(`matchFigure`, pure and tested). The line band was **not** amended: budgeted
+at ~4,510, landed at 4,486, fourteen lines inside the 4,500 Phase 13 set.
 
 ## The horizon (unscheduled, revisited)
 
