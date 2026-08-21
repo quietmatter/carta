@@ -28,7 +28,7 @@ vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
-  askPromptText, parseAskJSON, matchFigure, menuOCRPrompt, parseMenuOCR, extractJSON,
+  askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, dedupeHits, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel };
 `, sandbox);
 const M = sandbox.__m;
@@ -449,6 +449,38 @@ const tmLong = M.tasteModel({
 assert.equal(M.matchFigure('Anaerobic washed 9.0/9, n=1', tmLong).value, 'Anaerobic washed', 'longest match wins — the specific process is never read as the generic one inside it');
 assert.equal(M.matchFigure('a cleaner, sweeter cup', tmLong), null, '"tea" must not be found inside "cleaner" — figures match on whole words');
 ok('matchFigure matches the longest whole-word figure, so a specific process is never flattened into a generic one');
+
+// ---- reading a neighborhood off a place lookup (Phase 15) ----
+// the five below are the verbatim address objects Nominatim returned for
+// "Blue Bottle Coffee, Los Angeles" — the real shape this has to survive
+assert.equal(M.hoodOf({ road: 'Ventura Freeway', suburb: 'Warner Center', city: 'Los Angeles' }), 'Warner Center');
+assert.equal(M.hoodOf({ road: 'Mateo Street', quarter: 'Arts District', suburb: 'Downtown', city: 'Los Angeles' }), 'Arts District',
+  'the finer name wins — a keeper says Arts District, not Downtown');
+assert.equal(M.hoodOf({ suburb: 'Studio City Neighborhood Council District', city: 'Los Angeles' }), 'Studio City',
+  'the administrative wording is trimmed, so the field reads the way a keeper would say it');
+assert.equal(M.hoodOf({ quarter: 'Los Feliz Neighborhood Council District', suburb: 'Los Feliz' }), 'Los Feliz',
+  'a council-district name that cleans to the same place as the suburb is no worse than it');
+assert.equal(M.hoodOf({ neighbourhood: 'Kreuzberg', suburb: 'Friedrichshain-Kreuzberg' }), 'Kreuzberg');
+ok('hoodOf reads the name a keeper would actually say off OSM\'s four inconsistent area keys');
+
+assert.equal(M.hoodOf({ road: 'Only a road', city: 'Lisbon' }), '', 'no area stated is a blank, never a guess from the road or the city');
+assert.equal(M.hoodOf(null), '');
+assert.equal(M.hoodOf('not an object'), '');
+assert.equal(M.cleanHood('  Downtown Council District '), 'Downtown');
+ok('hoodOf states nothing where the lookup states nothing, and never throws');
+
+const hits = [
+  { lat: 34.10, lon: -118.28, hood: 'Los Feliz' },
+  { lat: 34.04, lon: -118.23, hood: 'Arts District' },
+  { lat: 34.101, lon: -118.281, hood: 'los feliz' },
+];
+assert.equal(M.dedupeHits(hits).length, 2, 'the same area twice is one café, not a choice to put to the keeper');
+assert.deepEqual(M.dedupeHits(hits).map(h => h.hood), ['Los Feliz', 'Arts District']);
+assert.equal(M.dedupeHits([{ lat: 1.00001, lon: 2.00001, hood: '' }, { lat: 1.00002, lon: 2.00002, hood: '' }]).length, 1,
+  'with no area stated on either, the same corner is still the same café');
+assert.deepEqual(M.dedupeHits([]), []);
+assert.deepEqual(M.dedupeHits(null), []);
+ok('dedupeHits collapses one café returned twice, so only a real branch ever becomes a question');
 
 // ---- the menu's OCR (horizon list): the prompt, and the parse of what comes back ----
 const ocrPrompt = M.menuOCRPrompt();

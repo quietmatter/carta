@@ -1254,6 +1254,43 @@ function parseAskJSON(text){
   const said=plan&&(plan.move||plan.routes.length||plan.wildcard);
   return {ok:true,read:askStr(data.read,240),findings,mentions,plan:said?plan:null};
 }
+/* ---- reading a neighborhood off a place lookup (ROADMAP.md Phase 15).
+ * A café typed as "Maru, Los Angeles" is two real cafés; the lookup has always
+ * known that and Carta has always thrown it away by asking for one result.
+ * These two are the halves worth testing: which of the address's several
+ * area names is the one a keeper would actually say, and when two results are
+ * the same café twice rather than two branches.
+ *
+ * OSM carries the area under whichever of four keys the local mappers used,
+ * at inconsistent grain — "Downtown" as the suburb where "Arts District" is
+ * the quarter, and administrative names ("Studio City Neighborhood Council
+ * District") sitting in the same field as plain ones ("Brentwood"). So the
+ * council-district wording is trimmed off first, and then the finest name
+ * that survives wins: a keeper says Arts District, not Downtown. */
+const HOOD_KEYS=['neighbourhood','quarter','suburb','city_district','borough'];
+function cleanHood(s){
+  return String(s||'').trim()
+    .replace(/\s+(neighborhood|neighbourhood)\s+council\s+district$/i,'')
+    .replace(/\s+council\s+district$/i,'').trim();
+}
+function hoodOf(address){
+  if(!address||typeof address!=='object')return '';
+  for(const k of HOOD_KEYS){const v=cleanHood(address[k]);if(v)return v}
+  return '';
+}
+// two hits are the same café when they land on the same area, or — where
+// neither states one — on the same corner. Rounded to about a city block, so a
+// lookup that returns one café twice never reads as a choice to be made.
+function dedupeHits(hits){
+  const seen={},out=[];
+  for(const h of (hits||[])){
+    if(!h||h.lat==null||h.lon==null)return out.length?out:[];
+    const key=h.hood?'h:'+fold(h.hood):'p:'+h.lat.toFixed(3)+','+h.lon.toFixed(3);
+    if(seen[key])continue;
+    seen[key]=true;out.push(h);
+  }
+  return out;
+}
 /* ---- a figure the model wrote, read back against the record.
  * The brief is built from the taste model's own values, so when the model
  * answers "Alchemy fermentation 9.0/9, n=3" it is echoing one of them back.
@@ -2525,6 +2562,7 @@ function vCafe(id){
           <div class="ofnine">${cups.length===1?'1 cup':cups.length+' cups'}</div>
         </div>
       </div>
+      ${placeBranchHTML(p)}
       <button class="btn" style="margin:22px 0 8px;min-height:50px;background:var(--fill-strong);color:var(--text-on-fill);border:1px solid var(--fill-strong)" onclick="openDoorAt('${p.id}')">＋ Log a cup here</button>
       ${menu?`<div class="shead"><span class="l">What they're pouring</span><span class="r">${esc(fmtWhen(menu.createdAt))}</span></div>
         <button class="rowlink" style="padding:0 0 10px;border:0" onclick="openMenuScreen('${menu.id}')">
@@ -3356,17 +3394,33 @@ async function callVisionModel(prompt,imageDataUri){
   if(!m)throw new Error('Could not read that photo.');
   return callModel([{type:'image',source:{type:'base64',media_type:m[1],data:m[2]}},{type:'text',text:prompt}]);
 }
-async function geocodeCafe(name,neighborhood,city){
+/* One lookup, every branch it knows about. Carta asked for limit=1 from Phase
+ * 7 until Phase 15, which meant a café with several branches in one city got
+ * whichever one the lookup ranked first — arbitrarily, silently, and once,
+ * because geocodeCityPlaces stamps `geocoded` whether or not it worked. A
+ * wrong pin was permanent and there was no way in the app to say so.
+ * Asking for five and reading their areas costs the same one call. */
+async function lookupPlace(name,neighborhood,city){
   const q=[name,neighborhood,city].filter(Boolean).join(', ');
-  if(!q)return null;
+  if(!q)return [];
   try{
-    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
-    if(!r.ok)return null;
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+    if(!r.ok)return [];
     const list=await r.json();
-    if(!list||!list.length)return null;
-    const lat=Number(list[0].lat),lon=Number(list[0].lon);
-    return (isFinite(lat)&&isFinite(lon))?{lat,lon}:null;
-  }catch(e){return null}
+    if(!Array.isArray(list))return [];
+    return dedupeHits(list.map(x=>{
+      const lat=Number(x.lat),lon=Number(x.lon);
+      if(!isFinite(lat)||!isFinite(lon))return null;
+      return {lat,lon,hood:hoodOf(x.address)};
+    }).filter(Boolean));
+  }catch(e){return []}
+}
+// the ask's own grounding still wants one answer to a question it already
+// asked precisely — it supplies the model's neighborhood, so its lookup is
+// rarely the ambiguous kind. It takes the first and now keeps the area too.
+async function geocodeCafe(name,neighborhood,city){
+  const hits=await lookupPlace(name,neighborhood,city);
+  return hits.length?hits[0]:null;
 }
 let _askBusy=false;
 // grounding is one keyless Nominatim lookup per name, and there are more names
@@ -3382,7 +3436,10 @@ async function groundNamed(list,fallbackCity,say){
     if(i)await sleep(1000);
     if(say)say(`Placing ${f.name}…`);
     const geo=await geocodeCafe(f.name,f.neighborhood||'',city);
+    // the confirmed area outranks the model's own — one was looked up, the
+    // other was written from memory, and only one of them placed the pin
     out.push(Object.assign({},f,{id:uid(),city,lat:geo?geo.lat:null,lon:geo?geo.lon:null,
+      neighborhood:(geo&&geo.hood)||f.neighborhood||'',
       grounded:!!geo,status:null,placeRef:null}));
   }
   return out;
@@ -3680,13 +3737,21 @@ document.addEventListener('carta:pin-tap',e=>{
 // itself a second apart per Nominatim's own usage policy — a city chapter
 // is a handful of cafés, never a bulk job.
 let _geocoding=new Set(),_geoRenderT=null;
+/* A café is placed silently when the lookup knows exactly one of it — which is
+ * most cafés, and the keeper should never hear about those. Where it knows
+ * several, Carta does not pick: only the keeper knows which Maru they were
+ * actually in, and a pin chosen for them is a pin that is quietly wrong
+ * forever. The branches are kept on the record and the café says so, once,
+ * with its own real neighborhoods to choose from. That is the gentle join's
+ * posture — offer, never merge — applied to an address instead of a name. */
 async function geocodeCityPlaces(city){
   const targets=live('places').filter(p=>p.city&&fold(p.city)===fold(city)&&p.lat==null&&!p.geocoded&&!_geocoding.has(p.id));
   for(const p of targets){
     _geocoding.add(p.id);
-    const geo=await geocodeCafe(p.name,'',p.city);
+    const hits=await lookupPlace(p.name,'',p.city);
     p.geocoded=true;
-    if(geo){p.lat=geo.lat;p.lon=geo.lon}
+    if(hits.length===1)settlePlace(p,hits[0]);
+    else if(hits.length>1)p.branches=hits;
     _geocoding.delete(p.id);
     save();
     // one repaint once the batch settles, not one per café: a repaint replaces
@@ -3704,6 +3769,55 @@ async function geocodeCityPlaces(city){
     }
     await new Promise(r=>setTimeout(r,1100));
   }
+}
+// one branch, settled: the position and the area the lookup actually stated.
+// The area only ever comes from a confirmed position — an unplaced café is
+// never given a neighborhood, because there would be nothing behind it.
+function settlePlace(p,hit){
+  p.lat=hit.lat;p.lon=hit.lon;
+  if(hit.hood)p.neighborhood=hit.hood;
+  delete p.branches;
+}
+// the keeper answering the only question they can answer
+function pickBranch(placeId,i){
+  const p=placeById(placeId);if(!p||!p.branches)return;
+  const hit=p.branches[i];if(!hit)return;
+  const was={lat:p.lat,lon:p.lon,neighborhood:p.neighborhood,branches:p.branches};
+  settlePlace(p,hit);save();render();
+  toast(`Placed in ${hit.hood||p.city||'the city'}.`,()=>{
+    const q=placeById(placeId);if(!q)return;
+    q.lat=was.lat;q.lon=was.lon;q.neighborhood=was.neighborhood;q.branches=was.branches;
+    save();render();
+  },'Undo');
+}
+/* what the café says about its own ground. Three states, and only the middle
+ * one is a question: several of it in this city and the keeper has to say
+ * which; placed, stating where and offering the way back; or unplaced, which
+ * is a fact rather than a failure and is written as one. */
+function placeBranchHTML(p){
+  if(p.branches&&p.branches.length)return `<div class="box" style="margin-top:20px">
+    <div class="eyebrow" style="margin-bottom:4px">Which one</div>
+    <div class="m">${esc(capFirst(words(p.branches.length)))} of these in ${esc(p.city||'this city')}. Only you know which you were in.</div>
+    <div class="picks" style="margin-top:12px">
+      ${p.branches.map((b,i)=>`<button class="pick" onclick="pickBranch('${p.id}',${i})">${esc(b.hood||'Unnamed area')}</button>`).join('')}
+    </div></div>`;
+  // where it is, is already the eyebrow over its name — this line only has to
+  // carry the way back, which is the thing that never existed before
+  if(p.lat!=null)return `<div class="m" style="margin-top:16px">Placed · <span class="text-action" onclick="replaceCafe('${p.id}')">not right?</span></div>`;
+  return `<div class="m" style="margin-top:16px">Not placed yet · <span class="text-action" onclick="replaceCafe('${p.id}')">look it up</span></div>`;
+}
+// a pin can be wrong without being ambiguous — a café that moved, or a lookup
+// that matched the wrong thing outright. This is the way back: forget what was
+// settled and ask again, which is the correction path Phase 7 never built.
+async function replaceCafe(placeId){
+  const p=placeById(placeId);if(!p)return;
+  toast('Looking again…');
+  const hits=await lookupPlace(p.name,'',p.city);
+  const q=placeById(placeId);if(!q)return;
+  if(!hits.length){toast('No address could be confirmed for that name.');return}
+  q.lat=null;q.lon=null;q.geocoded=true;
+  if(hits.length===1){settlePlace(q,hits[0]);save();render();toast(`Placed in ${hits[0].hood||q.city||'the city'}.`);return}
+  q.branches=hits;save();render();
 }
 
 /* ============ the cards — the share (ROADMAP.md Phase 5) ============
@@ -4423,10 +4537,10 @@ function vCityChapter(city){
           const a=placeAvg(p.id),n=placeCups(p.id).length;
           return `<button class="lrow" style="min-height:60px" onclick="openCafeScreen('${p.id}')">
             <span class="mid"><span class="t">${esc(p.name)}</span>
-            <span class="m">${esc([p.neighborhood||'',a!=null?`${n} cup${n===1?'':'s'}`:'not scored yet'].filter(Boolean).join(' · '))}</span></span>
+            <span class="m">${esc([p.branches&&p.branches.length?'several here — place it':p.neighborhood||'',a!=null?`${n} cup${n===1?'':'s'}`:'not scored yet'].filter(Boolean).join(' · '))}</span></span>
             <span class="sc${a==null?' none':''}">${a==null?'—':a.toFixed(1)}</span></button>`;
         }).join(''):'<div class="empty">No cafés logged here yet.</div>'}
-        <div class="note">Positions confirmed once, then kept. Offline, the drawn plot stands on its own.</div>
+        <div class="note">Positions are confirmed against a real address, and any café can be looked up again. Offline, the drawn plot stands on its own.</div>
         <button class="btn btn-quiet" style="margin-top:10px" onclick="openAskScreenFor(${jsq(city)})">Ask Carta about ${esc(city)}</button>
       </div>
     </div>
@@ -4445,8 +4559,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.15.0';
+const APP_VERSION='7.16.0';
 const CHANGELOG=[
+  {v:'7.16.0',d:"The pin, corrected. A café you typed by hand used to be placed by a single best guess — so a café with more than one location in a city got whichever one came back first, and it stayed wrong, because Carta only ever looked once and gave you no way to say otherwise. It asks properly now. Where there is only one of something, it is placed quietly and keeps the neighborhood it was found in, which is the line that reads under its name. Where there are several, Carta doesn't choose: the café asks once, with the real neighborhoods to pick from, because only you know which one you were actually in. One tap places it, with an undo. And any café can be looked up again — a pin that was never right is no longer permanent."},
   {v:'7.15.0',d:"Ask Carta, arguing. It used to hand back a flat list of names with a sentence each; it ranks them now, and every one says what it is best FOR — the cleanest cup, the one worth the drive, the sleeper south of you — with the figures off your own brief it was read from sitting under it — underlined where Carta can open them, so one tap gets you the actual cups behind the claim, and left plain where your record can't back them — and what to ask for once you're at the counter. It names the places that are close but aren't the pick, and says why, instead of quietly dropping them. It closes with what it would actually do: the one strongest move, and the order to walk them in depending on what you're after. Two new things to ask: near a point rather than a city, and how far you'll actually go — which is what lets it say 'worth driving for' and mean it. Carta still makes no search, so it never claims what a café is pouring today; where a fit depends on a menu that turns over, the row says so. Every café it names is still checked against a real address before it is drawn, mentions included. And the model it asks by default is a much larger one, with the room to answer properly — your own key, your own choice, still on the device and nowhere else."},
   {v:'7.14.0',d:"The rest of the app. A country stopped being a dead end: it states how far the record actually follows that ground — grown, processed, milled, roasted, poured, read, dashed across whatever it can't reach — and then opens downward into its regions, the hands that grew it, the roasters working from it and the rooms it pours in. A region and a farm are pages now, walked down to from the country and back up from any coffee. Your taste dropped its meters and argues in a sentence instead, every figure in it tappable straight through to the cups it was read from. The brief left its drawer: it's a screen that says what goes out in four parts before it ever shows you the raw text, with the exact characters folded one tap away, and the ask that follows it names the key it would use and the degrade if you don't have one. What Carta found is its own page on its own streets. A café's menu is one screen at the counter rather than two sheets that never met. Your record — everything you own, the backup, what reads in, what sends out, your Setups, classic — has a page of its own, and a Setup finally keeps the grind history that is only ever true on it. Two new fields on a coffee, altitude and mill, both optional, both stated only where a bag states them. Nothing migrated; the ledger is the same file it was."},
   {v:'7.13.0',d:"The map, in front. Carta opens on the Atlas now — the passport full-bleed, every country you've tasted inked into it and tappable, your cities listed underneath with their own plots. Four rooms became three (Atlas · Journal · Shelf) with ＋ A cup standing beside them, reachable from anywhere instead of only from the top of one screen; Scout folded into the Atlas as \"Your taste\", because what it argues is geography. A city is streets edge to edge with your cafés on a sheet you pull up over them, a café has its own corner of the map, and a cup is finally a page — the photo at the size you took it for, the score set where you can read it. The record itself is untouched: same ledger, same file, nothing migrated. And the Journal opens with the last cup you brewed — its recipe, its finding, one tap to begin the next from it."},

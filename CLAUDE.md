@@ -51,7 +51,7 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–14 shipped**; Phase 15 is unwritten.
+  read at every phase gate. **Phases 1–15 shipped**; Phase 16 is unwritten.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -268,10 +268,12 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 ### Invariants to preserve
 
 - **One file, no build.** Vanilla JS, inline everything, nothing fetched at
-  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–4,500 lines / ≤ 500 KB**
-  (the line half was raised from 4,000 at Phase 13, with the argument written
-  into §1 — the byte ceiling has never moved and is the one that guards the
-  drop-it-on-a-static-host promise).
+  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–4,800 lines / ≤ 500 KB**
+  (the line half was raised from 4,000 at Phase 13 and from 4,500 at Phase 15,
+  each with the argument written into §1 — the byte ceiling has never moved
+  and is the one that guards the drop-it-on-a-static-host promise. §1 says
+  4,800 is a ceiling, not an allowance, and that a phase needing 5,000 means
+  the one-file law has come due rather than the band).
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written
@@ -319,13 +321,14 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 58 cases
+node test/model.test.js        # zero deps, plain Node, 61 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
 out of `index.html` and evaluates it against fixture ledgers — no DOM, no
 `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
-`joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `parseRoastLevel` or
+`joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `dedupeHits`,
+`parseRoastLevel` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**

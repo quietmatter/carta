@@ -7,6 +7,56 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 15: the pin, corrected
+
+- **Why.** The founder noticed hand-typed cafés were mis-pinned and proposed
+  letting the ask reconcile the corpus while it was already spending tokens.
+  Reading the code found a worse bug than the one reported: `geocodeCafe`
+  asked Nominatim for `limit=1`, so a café with several branches in one city
+  got whichever the lookup ranked first — and `p.geocoded` was stamped
+  whether or not it worked, never retried, with no surface in the app that
+  could edit a pin. **A wrong pin was permanent and silent.** Meanwhile
+  `places` already had a `neighborhood` field, already displayed on the café
+  page and in list rows, that only the classic importer ever filled.
+- **Shipped — v7.16.0.** The same one call now asks for five results with
+  `addressdetails`. One match → placed silently, keeping the neighborhood it
+  was found in. Several → **Carta does not choose**: the branches are held on
+  the record and the café asks once, with the real neighborhoods as chips,
+  one tap and an undo. Any café can be looked up again. `hoodOf` and
+  `dedupeHits` are pure and tested against the verbatim addresses Nominatim
+  returns for "Blue Bottle Coffee, Los Angeles" — OSM files the area under
+  four inconsistent keys at inconsistent grain, so the council-district
+  wording is trimmed and the finer name wins (Arts District, not Downtown).
+- **The proposal, half declined, and why it's the interesting half.** Most of
+  it needed no model: the lookup already knew the branches and Carta was
+  throwing them away. The rest of it *couldn't* work — **the model knows which
+  branches exist, not which one the keeper sat in.** A model guess rendered as
+  a pin is Carta pinning a hallucination, which is the one thing the ask was
+  built not to do. So the question goes to the only party holding the answer.
+  Worth keeping as a general shape: *when a feature wants inference, first ask
+  whether the datum is missing or merely discarded.* Here it was discarded.
+- **Tripwires, named out loud before building.** Auto-reconcile as proposed is
+  a silent merge, against the stated *"the gentle join offers, never merges"*;
+  it ships as an offer with a cheap undo, the same posture a name join has.
+  Not a resolver: nothing adjudicates whether two records are the same café —
+  it fills one empty field on one record from a confirmed lookup.
+- **The band moved, on schedule.** §1 amended 3–4,500 → **3–4,800**, at
+  4,601 lines / 376 KB. Phase 14 predicted this exactly: it declined the
+  amendment it had been given, stopped fourteen lines short, and wrote down
+  that the next surface of any size would have to make the argument. §1 now
+  also says 4,800 is a ceiling, not an allowance, and that a phase needing
+  5,000 means the one-file law has come due rather than the band — which is
+  two hundred lines away and should be a real question at Phase 16.
+- **Parked, not refused:** the ask's ride-along, for the cafés a lookup cannot
+  find at all, plus canonical naming ("ondo" → "Ondo Coffee Co"). Revisit with
+  evidence of how many those actually are, the way Phase 14 was tuned rather
+  than imagined.
+- **For Lotmark's desk:** nothing new. This deliberately stopped short of the
+  café-graph question — which branch is which across keepers — because that
+  is a resolver and it is theirs.
+
+---
+
 ## 2026-08-21 — Phase 14: the ask, tuned on a real ask
 
 - **Why, and what the citation actually was.** Phase 14 was written to be

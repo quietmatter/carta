@@ -77,6 +77,12 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   Carta makes **no web search**, so it never tells you what a café is pouring
   today — where a recommendation depends on a menu that turns over, the row
   says *program rotates* rather than inventing one.
+- **Where a café actually is.** Type a café's name and city and Carta looks it
+  up. Where there's only one of it, it's placed quietly and keeps the
+  neighborhood it was found in. Where there are several — two Marus in Los
+  Angeles — Carta doesn't pick one for you: the café asks once, with the real
+  neighborhoods to choose from, and one tap places it. Any café can be looked
+  up again, so a pin that was never right isn't stuck that way.
 - **The passport.** Carta opens on it: the world frame full-bleed, every
   country your record can trace, drawn from outlines carried in the file
   itself (no map tiles, no network, nothing to be offline from). Tasted

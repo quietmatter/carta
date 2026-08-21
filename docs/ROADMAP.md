@@ -79,8 +79,8 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–14 are shipped. Carta 7 stands at
-**v7.15.0, 4,486 lines, 58/58 pure tests**. Full prose for each is in
+*Phases 8–15 are shipped. Carta 7 stands at
+**v7.16.0, 4,601 lines, 61/61 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -334,6 +334,62 @@ on is stated beside it — and **resolved back against the record**, so a figure
 Carta can open is a door onto its own cups and one it can't is plain text
 (`matchFigure`, pure and tested). The line band was **not** amended: budgeted
 at ~4,510, landed at 4,486, fourteen lines inside the 4,500 Phase 13 set.
+
+### Phase 15 — the pin, corrected
+
+**Shipped — v7.16.0.**
+
+**The joy it serves:** the map fills in — and stops quietly lying while it
+does. A passport whose city layer pins your café to a branch you have never
+been to is worse than an empty one, because it looks finished.
+
+**The bug it closes, stated plainly.** `saveCafeCup` minted a place with a
+name and a city and nothing else. `geocodeCityPlaces` looked it up as
+`geocodeCafe(name, '', city)`, and `geocodeCafe` asked Nominatim for
+`limit=1`. So a café with several branches in one city got whichever the
+lookup ranked first — arbitrarily. Worse, `p.geocoded` was stamped whether or
+not anything came back and was never retried, and no surface in the app could
+edit a pin. **A wrong pin was permanent, and silent.** Meanwhile `places`
+already carried a `neighborhood` field, already rendered on the café page and
+in list rows, that nothing in Carta 7 ever filled — only the classic importer.
+
+**What ships.** The same one call asks for five results with `addressdetails`
+and reads the area off each. One match: placed silently, and the neighborhood
+it was found in is kept, which fills the field that was already being
+displayed. Several matches: **Carta does not choose.** The branches are held
+on the record, the café asks once with the real neighborhoods as chips, and
+one tap places it with an undo. Any café can be looked up again, which is the
+correction path Phase 7 never built. `hoodOf` reads the name a keeper would
+actually say off OSM's four inconsistent area keys — trimming "Neighborhood
+Council District" and preferring Arts District over Downtown — and
+`dedupeHits` collapses one café returned twice so only a real branch ever
+becomes a question. Both pure, both tested against the verbatim addresses
+Nominatim returns for "Blue Bottle Coffee, Los Angeles".
+
+**Explicitly not in it: the model.** The founder's proposal was to let the
+ask reconcile the corpus while it was already spending tokens. Two reasons it
+didn't. First, most of it needed no model at all — the lookup already knew
+the branches and Carta was discarding them, and the neighborhood field
+already existed. Second, and the part that would not have worked: **the model
+cannot know which branch the keeper visited.** It knows which exist. A model
+guess rendered as a pin is Carta pinning a hallucination — the one thing the
+ask was built not to do. So the question goes to the only party that holds
+the answer, once, in one tap. The ask's ride-along is **parked, not refused**:
+revisit it for the cafés a lookup cannot find at all, with real evidence of
+how many those are, the way Phase 14 was tuned.
+
+**The tripwires, screened.** Auto-reconcile as proposed would have been a
+silent merge and *"the gentle join offers, never merges"* is a stated
+invariant — so this offers, with a cheap undo, exactly as a name join does.
+No resolver: nothing here adjudicates whether two records are the same café.
+It fills one empty field on one record from a confirmed lookup, which is what
+`geocodeCafe` already did, minus the guessing. **The band was amended** to
+3–4,800 in `ARCHITECTURE.md` §1 — the phase Phase 14 said would have to make
+that argument, making it.
+
+**Done when — met:** a café with two branches in one city asks instead of
+guessing, a café with one is placed without a word and knows its
+neighborhood, and no pin in the app is permanent any more.
 
 ## The horizon (unscheduled, revisited)
 

@@ -12,18 +12,31 @@ part of the record.*
 Carta 7 is built exactly the way classic was, smaller:
 
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
-  **3–4,500 lines / ≤ 500 KB** including map data — a file one person can
+  **3–4,800 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 14 it stands at **4,486 lines / 369 KB**.
+  cost, not the stack's.) At Phase 15 it stands at **4,601 lines / 376 KB**.
 
-  *Phase 14 planned an amendment to 4,800 and did not need one.* The ask's
-  rebuild was budgeted at ~4,510 lines and landed at 4,486, inside the band
-  as it stands — so the band stays where Phase 13 left it. Recorded here
-  because a ceiling only means anything if the phases that approach it say
-  so: this one came within **14 lines** and stopped. Phase 15 should read
-  that number as the real state of the file — the next surface of any size
-  is the phase that has to make the argument here, and 4,800 is the number
-  it should argue for.
+  *The line band was 3–4,000 through Phase 12, 3–4,500 through Phase 14, and
+  is amended here, at Phase 15, to **3–4,800**.* Phase 14 wrote the warning
+  a phase early: it budgeted ~4,510, landed at 4,486, declined the amendment
+  it had been given, and recorded that fourteen lines were left and the next
+  surface of any size would have to make this argument. Phase 15 is that
+  surface, so here is the argument.
+
+  The band's stated purpose is a file one person can read whole, and the
+  ceiling that actually guards the drop-it-on-a-static-host promise is the
+  byte one — still **500 KB**, still never moved, with the file at 376 KB
+  and 75% of it. Phase 15 spends its lines on a correction path that did not
+  exist: a café placed by a single best guess, wrongly and permanently, with
+  nothing in the app that could say otherwise. Ninety lines to stop the atlas
+  quietly lying is the cheapest honest thing in the file.
+
+  **4,800 is a ceiling, not an allowance**, and the same rule carries: the
+  next phase past it makes its argument here first. The reading Phase 13 set
+  down still stands — if a phase ever needs 5,000, the honest conclusion is
+  that the one-file law itself has come due, not that the band needs raising
+  a fourth time. That is now two hundred lines away, which is close enough
+  that Phase 16 should treat it as a real question rather than a distant one.
 
   *The line band was 3–4,000 through Phase 12 and is amended here, at Phase
   13, rather than quietly exceeded.* The argument: the band's stated purpose
@@ -132,7 +145,10 @@ D = {
                                                         // never a rung, never required (§4 below)
               roastDate?, notes?, site?, palette?, archived? }],
   places:  [{ id, createdAt, name, aka?[], city?, lat?, lon?,
-              roasterRefs?[], notes?, site?, palette?, archived? }],
+              neighborhood?, geocoded?,           // both stated only by a real lookup
+              branches?:[{ lat, lon, hood }],     // Phase 15 — several of it in one city,
+              roasterRefs?, notes?, site?,        //   unanswered until the keeper says which
+              palette?, archived? }],
   roasters:[{ id, createdAt, name, aka?[], city?, story?, site?,
               palette?, archived? }],
   setups:  [{ ...classic's shape, unchanged }],
@@ -272,6 +288,16 @@ one and the one that travels.
 | Geocode (Nominatim) | placing a café; grounding an ask's answer | typed city, drawn plot |
 | Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
+
+The geocode row is unchanged in posture and was sharpened at Phase 15: the
+same one call now asks for five results with their address details instead of
+one bare hit. A café the lookup knows exactly one of is placed silently and
+keeps the neighborhood it was found in. Where it knows several, **Carta does
+not choose** — the branches are held on the record and the café asks once,
+with the real neighborhoods to pick from, because which branch the keeper sat
+in is not a fact any lookup or model holds. Same grounding rule, one rung
+more honest: a pin is drawn from a confirmed position or not at all, and now
+it can also be taken back.
 
 That is the whole list, and **Phase 14 deliberately kept it that way.** The
 obvious way to make the ask's answers sharper is to let the model search —
