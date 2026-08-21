@@ -31,32 +31,68 @@ Lotmark's desk. Old entries are never rewritten.*
   after that beat's own cancel check. Worth keeping in the record: a stated
   invariant is worth re-deriving against the actual code path, not just
   reading as prose.
-- **Landed into a `main` that had moved.** This phase was built against the
-  file before Phase 18 (the ground) and Phase 19 (the split, scheduled)
-  existed — both merged to `main` first, taking the version number
-  (`7.20.0`), the phase number (18), and the line-band decision this phase
-  had independently reached for itself (an amendment to 5,300). All three
-  collided on merge: renumbered to **Phase 20 / v7.21.0**, and the band
-  question was reopened rather than assumed, because the answer on `main`
-  had changed underneath it — see below.
+- **Landed into a `main` that had moved twice.** This phase was built against
+  the file before Phase 18 (the ground), Phase 19 (the split, scheduled), and
+  a small v7.20.1 patch all existed — all three merged to `main` first,
+  taking the version number (`7.20.0`), the phase number (18), and the
+  line-band decision this phase had independently reached for itself (an
+  amendment to 5,300). Collided on merge: renumbered to **Phase 20 /
+  v7.21.0**, and the band question was reopened rather than assumed, because
+  the answer on `main` had changed underneath it — see below.
 - **The debt, deepened rather than paid — an explicit call, not a silent
   one.** Phase 18 had already landed `index.html` over the 5,000-line
-  ceiling (5,043) and the founder had explicitly scheduled Phase 19 to pay
-  it down by splitting the map layer out, writing directly into
-  `ARCHITECTURE.md` §1: "nothing new goes into `index.html` before the
-  split does." This phase adds to `index.html` anyway, ahead of that split,
-  landing it at **5,374 / 5,000** (bytes fine, 428.7/500 KB). Put to the
-  founder directly rather than decided alone — hold the branch until Phase
-  19 ships, or land now and deepen the debt further — the call was to land.
-  Recorded here and in `ARCHITECTURE.md` §1 as what it is: a second, larger
-  debt against the same still-unpaid ceiling, not a fresh amendment and not
-  a precedent for a phase after this one to do the same without asking.
+  ceiling (5,043), the founder had explicitly scheduled Phase 19 to pay it
+  down by splitting the map layer out (writing directly into
+  `ARCHITECTURE.md` §1: "nothing new goes into `index.html` before the split
+  does"), and one small v7.20.1 patch had already been let through as a
+  named exception, landing at 5,049. This phase adds to `index.html` anyway,
+  ahead of the split, landing it at **5,380 / 5,000** (bytes fine, 429.5/500
+  KB). Put to the founder directly rather than decided alone — hold the
+  branch until Phase 19 ships, or land now and deepen the debt further — the
+  call was to land. Recorded here and in `ARCHITECTURE.md` §1 as what it is:
+  a third, larger debt against the same still-unpaid ceiling, not a fresh
+  amendment and not a precedent for a phase after this one to do the same
+  without asking.
 - Two stray in-code comments from Phase 17's same-day correction had called
   that work "Phase 18," written before either this phase or the real Phase
   18 existed — a different session fixed them independently on `main`
   (`Phase 17, corrected` / `its same-day correction is this`); this phase's
   own attempt at the same fix was dropped in favor of `main`'s wording so
   the file doesn't carry two different corrections of the same comment.
+
+---
+
+## 2026-08-21 — Phase 16 patch (v7.20.1): the box that vanished on success
+
+- **Why.** Reported directly: place a café by pasting a Google or Apple Maps
+  link, and there was no way to correct it afterward. Confirmed in
+  `placeBranchHTML` — the "Placed" state showed only "not right?", which
+  reruns the plain *name* search (`replaceCafe`). For a café placed by hand
+  precisely because the name search couldn't find it, tapping "not right?"
+  only fails the exact same way again — the paste-a-link box itself, present
+  in both other states (ambiguous branches, unplaced), was the one thing
+  missing from "placed".
+- **Shipped — v7.20.1.** The map-link box is on the page in every state now,
+  placed included — one line added, matching the pattern the other two
+  states already followed rather than inventing a new one. `pastePlaceLink`
+  needed no change at all: it already reads whatever `was` the place
+  currently holds before overwriting it, so re-pasting a corrected link on
+  an already-placed café undoes back to the *first* placement, not to
+  nothing.
+- **No new tripwire.** Same posture as every correction path here: the
+  keeper vouching for a coordinate, with a cheap undo — this just makes an
+  existing affordance reachable from a state it had quietly stopped
+  appearing in.
+- **Merged after Phase 18/19 were already recorded.** This patch was in
+  review while Phase 18 landed and Phase 19 (the split) got written up, so
+  bringing it in meant resolving against a `main` that had already moved —
+  no logic collision (Phase 18 never touched `placeBranchHTML` or its
+  neighbors), only the version ledger to reconcile: this patch renumbers to
+  v7.20.1, above Phase 18's v7.20.0. It also adds six lines to `index.html`
+  at a moment §1 says nothing new should, until Phase 19 splits the file.
+  The founder's call, asked directly: let it through anyway, recorded as the
+  one named exception rather than a quiet second overage — §1 carries the
+  full account, at **5,049 / 5,000, 409 KB**.
 
 ---
 

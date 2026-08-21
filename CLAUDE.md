@@ -328,13 +328,18 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
   own phase. That is **Phase 19**, written up in `ROADMAP.md`: `index.html` +
   `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
   ~1,900 lines that are not the app). Two static files is still no build; it
-  is only no longer one file. **Phase 20 landed before Phase 19 did, knowingly
-  deepening the debt further** — put to the founder directly rather than
-  assumed, the same way every prior line-band call was — to **5,374 of
-  5,000** (bytes still fine, 428.7 of 500 KB). §1 records this explicitly:
-  the debt is Phase 19's to pay, still, and it is larger now than when it was
-  scheduled. **Until Phase 19 lands, nothing further goes into `index.html`**
-  without the same explicit call.
+  is only no longer one file. **Until it lands, 5,000 is still the number and
+  nothing new goes into `index.html`** — there is no headroom to spend, only a
+  debt to deepen. One small bugfix (a Phase 16 patch, six lines) was let
+  through anyway before Phase 19 shipped, as the one named exception rather
+  than a quiet second overage — see §1's own account, at 5,049/409 KB. **Phase
+  20 then landed before Phase 19 did too, knowingly deepening the debt
+  further** — put to the founder directly rather than assumed, the same way
+  every prior line-band call was — to **5,380 of 5,000** (bytes still fine,
+  429.5 of 500 KB). §1 records this explicitly: the debt is Phase 19's to
+  pay, still, and it is larger now than when it was scheduled. **Until Phase
+  19 lands, nothing further goes into `index.html`** without the same
+  explicit call.
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written
