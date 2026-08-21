@@ -4099,8 +4099,13 @@ function placeBranchHTML(p){
     </div>
     <div class="m" style="margin-top:12px">None of these? ${mapLinkHTML(p)}</div></div>`;
   // where it is, is already the eyebrow over its name — this line only has to
-  // carry the way back, which is the thing that never existed before
-  if(p.lat!=null)return `<div class="m" style="margin-top:16px">Placed · <span class="text-action" onclick="replaceCafe('${p.id}')">not right?</span></div>`;
+  // carry the way back, which is the thing that never existed before. "Placed"
+  // was the one state that dropped the map-link box once settled — so a café
+  // fixed by hand, precisely because a name search could never find it, had
+  // no way back to that same fix once "not right?" tried that same search
+  // again and failed the same way. The box stays available in every state.
+  if(p.lat!=null)return `<div class="m" style="margin-top:16px">Placed · <span class="text-action" onclick="replaceCafe('${p.id}')">not right?</span></div>
+    ${mapLinkHTML(p)}`;
   return `<div class="m" style="margin-top:16px">Not placed yet · <span class="text-action" onclick="replaceCafe('${p.id}')">look it up</span></div>
     ${mapLinkHTML(p)}`;
 }
@@ -4996,8 +5001,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.20.0';
+const APP_VERSION='7.20.1';
 const CHANGELOG=[
+  {v:'7.20.1',d:"A pin, editable after it's already right. A café placed by pasting a map link had no way back to that same box once it was placed — the only correction on offer afterward tried a name search again, which is exactly the search that never worked for this café in the first place. Paste a map link is on the page now whatever the café's current state, so a placed café can be corrected the same way it was placed, not just the ones still waiting."},
   {v:'7.20.0',d:"The ground, at the size a phone reads it. The passport was drawing itself into a fixed frame two and a half times wider than any phone, so every country's name came out at about four pixels and the whole map read as a smudge — it is drawn at the size it is looked at now, and the tasted countries take the width they have instead of throwing away a third of it. A country you tap into is no longer a flat silhouette: it shows its own highlands, the thousand-, two-thousand- and three-thousand-metre contours that were already in the file and never drawn, because altitude is most of the reason a coffee from up there tastes the way it does. The regions you've actually found coffee from stand on that ground and open with a tap. A region opens onto real terrain — contour lines, relief, the valley the road runs down — with a pin on every farm the record can place, and a farm's own page carries the same. A farm is placed the two ways a café already is: one lookup, or a map link you paste. The lookup has to name the farm back, so an unknown farm is left unplaced rather than quietly pinned on the region around it — and every pin can be taken off again. Offline the terrain steps aside and your saved positions simply stand, as the streets already do."},
   {v:'7.19.0',d:"Your cities, drawn differently. The live street map dropped into each city's thumbnail last version turned out to be exactly what a thumbnail shouldn't be — a moving map crammed into a space too small to read one in. It's a shape now instead: one soft outline of where your own cafés actually sit in that city, drawn straight from your own record, nothing fetched, nothing loading. One café reads as a small round place; a whole spread city reads as the true, particular outline of your own reach in it — never the same two cities twice, and never a street or a pin standing in for either."},
   {v:'7.18.0',d:"Your cities, drawn. The little map beside each city on the Atlas used to show nothing but bare pins in an empty box — a shape was never asked for. It draws the real streets now, the same way the city's own page already does, but only once that row is actually on your screen; scroll past it and the live map steps aside again rather than sitting there spending a request for nothing. If the streets can't be reached, the row falls back to what it always showed, without a word about it — a thumbnail has no room to say so, and the drawn pins underneath are enough."},

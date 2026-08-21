@@ -7,6 +7,40 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 16 patch (v7.20.1): the box that vanished on success
+
+- **Why.** Reported directly: place a café by pasting a Google or Apple Maps
+  link, and there was no way to correct it afterward. Confirmed in
+  `placeBranchHTML` — the "Placed" state showed only "not right?", which
+  reruns the plain *name* search (`replaceCafe`). For a café placed by hand
+  precisely because the name search couldn't find it, tapping "not right?"
+  only fails the exact same way again — the paste-a-link box itself, present
+  in both other states (ambiguous branches, unplaced), was the one thing
+  missing from "placed".
+- **Shipped — v7.20.1.** The map-link box is on the page in every state now,
+  placed included — one line added, matching the pattern the other two
+  states already followed rather than inventing a new one. `pastePlaceLink`
+  needed no change at all: it already reads whatever `was` the place
+  currently holds before overwriting it, so re-pasting a corrected link on
+  an already-placed café undoes back to the *first* placement, not to
+  nothing.
+- **No new tripwire.** Same posture as every correction path here: the
+  keeper vouching for a coordinate, with a cheap undo — this just makes an
+  existing affordance reachable from a state it had quietly stopped
+  appearing in.
+- **Merged after Phase 18/19 were already recorded.** This patch was in
+  review while Phase 18 landed and Phase 19 (the split) got written up, so
+  bringing it in meant resolving against a `main` that had already moved —
+  no logic collision (Phase 18 never touched `placeBranchHTML` or its
+  neighbors), only the version ledger to reconcile: this patch renumbers to
+  v7.20.1, above Phase 18's v7.20.0. It also adds six lines to `index.html`
+  at a moment §1 says nothing new should, until Phase 19 splits the file.
+  The founder's call, asked directly: let it through anyway, recorded as the
+  one named exception rather than a quiet second overage — §1 carries the
+  full account, at **5,049 / 5,000, 409 KB**.
+
+---
+
 ## 2026-08-21 — Phase 18: the ground, and what grew on it
 
 - **Why.** The founder, reading the Atlas on a phone: the map is unreadable at

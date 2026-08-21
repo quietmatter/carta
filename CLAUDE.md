@@ -302,7 +302,10 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
   ~1,900 lines that are not the app). Two static files is still no build; it
   is only no longer one file. **Until it lands, 5,000 is still the number and
   nothing new goes into `index.html`** — there is no headroom to spend, only a
-  debt to deepen.
+  debt to deepen. One small bugfix (a Phase 16 patch, six lines) was let
+  through anyway before Phase 19 shipped, as the one named exception rather
+  than a quiet second overage — see §1's own account. The file now stands at
+  **5,049 / 5,000, 409 KB**.
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written
