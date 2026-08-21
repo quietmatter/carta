@@ -307,7 +307,9 @@ nav.tabs[hidden]{display:none}
 .lrow .sc.none{color:var(--text-disabled);font-size:22px}
 .lrow .kind{flex:none;width:40px;align-self:flex-start;padding-top:5px;font-family:var(--sans);
   font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-disabled)}
-.lrow .mapthumb{flex:none;width:60px;height:44px;border:1px solid var(--line);background:var(--surface-page);display:block;overflow:hidden;position:relative}
+.lrow .mapthumb{flex:none;width:60px;height:44px;border:1px solid var(--line);background:var(--surface-page);display:block;overflow:hidden}
+.cshape{display:block;width:100%;height:100%}
+.cshape path{fill:var(--ink);fill-opacity:.14;stroke:var(--ink);stroke-opacity:.5;stroke-width:1.4;vector-effect:non-scaling-stroke}
 .lrow .ph{flex:none;width:44px;height:44px;object-fit:cover;border:1px solid var(--line)}
 /* a country the record has tasted — a name and its weight, tappable */
 .cchip{display:inline-flex;align-items:baseline;gap:7px;background:none;border:1px solid var(--line-strong);
@@ -631,63 +633,22 @@ nav.tabs[hidden]{display:none}
   }
 
   /* real streets — OpenStreetMap through Leaflet, filtered to Carta's ink.
-   *
-   * thumb="on" (Phase 17) is the same element, mounted where a list row wants
-   * its shape rather than a screen wanting its map. OSM's own tile policy
-   * ties the courtesy to attention — tiles are for "the current viewport", not
-   * pre-seeded in bulk — so a thumbnail only boots Leaflet once it is actually
-   * on screen, and tears itself down again the moment it scrolls off, through
-   * one IntersectionObserver shared by every thumbnail on the page rather than
-   * one per row. A small concurrency cap is the margin under a policy that
-   * states no hard number, only that "capacity is limited". A thumbnail that
-   * fails degrades in total silence — the drawn plot underneath is already
-   * enough at 44×60px, and there is no room there for a "Retry" note sized
-   * for a screen. */
-  const THUMB_CAP = 6;
-  let _thumbLive = 0;
-  const _thumbIO = ('IntersectionObserver' in window) ? new IntersectionObserver(entries => {
-    entries.forEach(e => { const el = e.target; if (e.isIntersecting) el.thumbEnter(); else el.thumbLeave(); });
-  }, { rootMargin: '80px' }) : null;
+   */
   class Streets extends HTMLElement {
     static get observedAttributes() { return ['pins', 'pins-from', 'zoom', 'theme', 'still']; }
     connectedCallback() {
-      this.style.display = 'block'; keepPos(this);
-      // a thumbnail sits over the drawn plot until it actually has tiles to
-      // show — an opaque background here would black out the floor beneath
-      // it for however long it takes to scroll into view, or forever if it
-      // never does. boot() paints it once there is something to paint.
-      if (this.getAttribute('thumb') !== 'on') this.style.background = 'var(--surface-sunk)';
+      this.style.display = 'block'; keepPos(this); this.style.background = 'var(--surface-sunk)';
       if (!this.style.zIndex) this.style.zIndex = '0';   // contain Leaflet's own pane z-indexes
       this._mapHost = document.createElement('div');
       Object.assign(this._mapHost.style, { position: 'absolute', inset: '0' });
       this.appendChild(this._mapHost);
-      if (this.getAttribute('thumb') === 'on' && _thumbIO) { _thumbIO.observe(this); return; }
       if (!navigator.onLine || _lfDown) { this.fell(); return; }
       lfLoad().then(() => { if (this.isConnected) this.boot(); })
               .catch(() => { _lfDown = true; if (this.isConnected) this.fell(); });
     }
-    // a thumbnail scrolled into view — booted only if under the shared cap, so
-    // a long list never holds more live maps at once than are actually looked at
-    thumbEnter() {
-      if (this._map || this._thumbPending || !navigator.onLine || _lfDown || _thumbLive >= THUMB_CAP) return;
-      this._thumbPending = true; _thumbLive++;
-      lfLoad().then(() => { this._thumbPending = false; if (this.isConnected && this.getBoundingClientRect().width) this.boot(); else _thumbLive--; })
-              .catch(() => { this._thumbPending = false; _thumbLive--; _lfDown = true; });
-    }
-    // scrolled back out — release the slot for whatever else is on screen now
-    thumbLeave() {
-      if (this._thumbPending) { this._thumbPending = false; _thumbLive--; return; }
-      if (!this._map) return;
-      // boot() painted an opaque floor for the tiles that were here — without
-      // clearing it, the drawn plot stays hidden behind a blank sunk panel
-      // forever once this scrolls off, long after the map itself is gone
-      this.teardown(); this.style.background = ''; _thumbLive--;
-    }
-    // the drawn plot is already underneath — step aside and say so once, unless
-    // this is a thumbnail too small to say anything in at all
+    // the drawn plot is already underneath — step aside and say so once
     fell() {
       this.style.display = 'none';
-      if (this.getAttribute('thumb') === 'on') return;
       const box = this.parentElement;
       if (!box || box.querySelector(':scope>.smap-note')) return;
       const n = document.createElement('div');
@@ -697,11 +658,7 @@ nav.tabs[hidden]{display:none}
         + '<span class="text-action" onclick="render()">Retry</span>';
       box.appendChild(n);
     }
-    teardown() { if (this._mo) { this._mo.disconnect(); this._mo = null; } if (this._ro) this._ro.disconnect(); if (this._map) { try { this._map.remove(); } catch (e) { } this._map = null; } }
-    disconnectedCallback() {
-      if (this.getAttribute('thumb') === 'on') { if (_thumbIO) _thumbIO.unobserve(this); if (this._map || this._thumbPending) _thumbLive--; }
-      this.teardown();
-    }
+    disconnectedCallback() { if (this._mo) { this._mo.disconnect(); this._mo = null; } if (this._ro) this._ro.disconnect(); if (this._map) { try { this._map.remove(); } catch (e) { } this._map = null; } }
     attributeChangedCallback(n) { if (!this._map) return; if (n === 'theme') this.filter(); else this.marks(); }
     filter() {
       const dusk = (this.getAttribute('theme') || document.documentElement.getAttribute('data-theme')) === 'dusk';
@@ -712,14 +669,9 @@ nav.tabs[hidden]{display:none}
     }
     boot() {
       if (!window.L) { this.fell(); return; }
-      this.style.background = 'var(--surface-sunk)';
-      const still = this.getAttribute('still') === 'on' || this.getAttribute('thumb') === 'on';
-      const thumb = this.getAttribute('thumb') === 'on';
-      // a 44×60px row has no legible room for attribution text, and cramming
-      // it in reads as broken, not compliant — the same city's own full map,
-      // reached by tapping this exact row, already carries it in full
+      const still = this.getAttribute('still') === 'on';
       const map = this._map = window.L.map(this._mapHost, {
-        zoomControl: false, attributionControl: !thumb, dragging: !still, scrollWheelZoom: false,
+        zoomControl: false, attributionControl: true, dragging: !still, scrollWheelZoom: false,
         doubleClickZoom: !still, touchZoom: !still, keyboard: !still, tap: false, fadeAnimation: false,
         zoomSnap: 0, zoomDelta: .5, center: [55.6867, 12.5546], zoom: 12,
       });
@@ -1430,6 +1382,105 @@ function parseMenuOCR(text){
   const lines=list.map(l=>String(l||'').trim()).filter(Boolean);
   return {ok:true,lines};
 }
+/* ---- the city's own shape (Phase 18) — not streets, not pins, not a live
+ * map: a soft silhouette of where the record actually reaches in this city,
+ * drawn purely from the same lat/lon already on the ledger. No tile, no key,
+ * nothing to be offline from — the drawn plot's own promise, carried one
+ * step further than a scatter of dots.
+ *
+ * The shape is one café's territory folded into as many as the city holds:
+ * every point is first given a small round footprint of its own — so one
+ * café reads as a place, not a dot — and the silhouette is the convex hull
+ * of all of those footprints together, corners softened into one continuous
+ * curve. A single café and a whole spread city fall out of the same pipeline
+ * with no special case for either. */
+// the same flat, cos-latitude-scaled projection <carta-plot> already uses —
+// fine at city grain, and every distance below only ever matters relative to
+// another one from this same projection, never against a real-world unit.
+function projectFlat(pts){
+  if(!pts.length)return [];
+  const la0=pts.reduce((a,p)=>a+p.lat,0)/pts.length;
+  const k=Math.cos(la0*Math.PI/180);
+  return pts.map(p=>({x:p.lon*111.32*k,y:p.lat*111.32}));
+}
+// Andrew's monotone chain — the standard, simplest correct convex hull.
+// Duplicate points collapse first; a hull of one or two survivors is handed
+// back as-is rather than forced through a loop that needs at least three.
+function convexHull(pts){
+  const uniq=[...new Map(pts.map(p=>[p.x.toFixed(6)+','+p.y.toFixed(6),p])).values()]
+    .sort((a,b)=>a.x-b.x||a.y-b.y);
+  if(uniq.length<=2)return uniq;
+  const cross=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x);
+  const build=list=>{
+    const h=[];
+    for(const p of list){
+      while(h.length>=2&&cross(h[h.length-2],h[h.length-1],p)<=0)h.pop();
+      h.push(p);
+    }
+    return h;
+  };
+  const lower=build(uniq),upper=build(uniq.slice().reverse());
+  lower.pop();upper.pop();
+  return lower.concat(upper);
+}
+// every point inflated to a small footprint before hulling, so the result is
+// always a real 2D shape — one point's octagon, two points' hull-of-two-
+// octagons (a soft capsule), a whole city's hull-of-many, no case-by-case.
+function cityShapeHull(pts,radius){
+  const inflated=[];
+  pts.forEach(p=>{
+    for(let i=0;i<10;i++){
+      const a=(i/10)*Math.PI*2;
+      inflated.push({x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius});
+    }
+  });
+  return convexHull(inflated);
+}
+// the hull's straight joins, softened into one continuous curve: cut a
+// little off each side of every corner and bridge the cut with a quadratic
+// curve through the original vertex. The cut never exceeds 42% of whichever
+// adjacent edge is shorter, so this holds even on a very tight cluster.
+function roundedHullPath(hull){
+  const n=hull.length;
+  if(n<3)return '';
+  const cutAt=i=>{
+    const p=hull[i],prev=hull[(i-1+n)%n],next=hull[(i+1)%n];
+    const dPrev=Math.hypot(p.x-prev.x,p.y-prev.y),dNext=Math.hypot(next.x-p.x,next.y-p.y);
+    const r=Math.min(dPrev,dNext)*.42;
+    const a=r/Math.max(dPrev,1e-9),b=r/Math.max(dNext,1e-9);
+    return {in:{x:p.x+(prev.x-p.x)*a,y:p.y+(prev.y-p.y)*a},
+            out:{x:p.x+(next.x-p.x)*b,y:p.y+(next.y-p.y)*b}};
+  };
+  const cuts=hull.map((_,i)=>cutAt(i));
+  const f=v=>v.toFixed(2);
+  let d=`M ${f(cuts[0].in.x)} ${f(cuts[0].in.y)}`;
+  for(let i=0;i<n;i++){
+    const c=cuts[i],p=hull[i],nextIn=cuts[(i+1)%n].in;
+    d+=` Q ${f(p.x)} ${f(p.y)} ${f(c.out.x)} ${f(c.out.y)} L ${f(nextIn.x)} ${f(nextIn.y)}`;
+  }
+  return d+' Z';
+}
+// the whole pipeline, and the one thing a caller actually needs: an SVG path
+// and the square viewBox it was drawn against. The inflate radius is a
+// fraction of the cluster's own span, with a floor for a single café or a
+// tight cluster — and since everything downstream fits to a box anyway, that
+// floor's absolute value never matters, only its ratio to real spread does.
+function cityShapePath(pts){
+  const proj=projectFlat(pts);
+  if(!proj.length)return null;
+  const spanX=Math.max(...proj.map(p=>p.x))-Math.min(...proj.map(p=>p.x));
+  const spanY=Math.max(...proj.map(p=>p.y))-Math.min(...proj.map(p=>p.y));
+  const radius=Math.max(.35,Math.max(spanX,spanY)*.24);
+  const hull=cityShapeHull(proj,radius);
+  const path=roundedHullPath(hull);
+  if(!path)return null;
+  const xs=hull.map(p=>p.x),ys=hull.map(p=>p.y);
+  const pad=radius*.15;
+  const x0=Math.min(...xs)-pad,y0=Math.min(...ys)-pad;
+  const w=Math.max(...xs)-x0+pad,h=Math.max(...ys)-y0+pad;
+  return {path,viewBox:`${x0.toFixed(2)} ${y0.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`};
+}
+
 /* ==== /pure ==== */
 
 /* ============ the gentle join — the thin wrappers, coupled to the live ledger ============ */
@@ -3788,16 +3839,14 @@ function streetsHTML(list,o){
 }
 // the thumbnail a city or a café carries in a list — the drawn plot, always,
 // never a tile: a row is read at a glance and a glance can't wait on a network.
-// the drawn plot is the floor here too, the same law as every other map
-// surface — it renders first, instantly, offline; the streets only ever
-// layer on top of it, never replace it, and only once something is actually
-// looking at this row (thumb="on", Phase 17). A low zoom cap keeps a
-// thumbnail's own tile need to the few, wide tiles its 60×44px can even show.
+// Phase 17 tried a live map here and it was too much for what a glance needs;
+// Phase 18 is the correction — not a map at all, just the shape (below).
 function plotThumbHTML(list){
   const pts=placed(list);
   if(!pts.length)return '<span class="mapthumb"></span>';
-  const pins=pinsAttr(pts);
-  return `<span class="mapthumb"><carta-plot class="plot frame" pins="${pins}" dot="12" fit="frame"></carta-plot><carta-streets style="position:absolute;inset:0" thumb="on" zoom="11" pins="${pins}"></carta-streets></span>`;
+  const shape=cityShapePath(pts);
+  if(!shape)return '<span class="mapthumb"></span>';
+  return `<span class="mapthumb"><svg viewBox="${shape.viewBox}" preserveAspectRatio="xMidYMid meet" class="cshape"><path d="${shape.path}"></path></svg></span>`;
 }
 
 /* the city's sheet — pulled up over its own streets, and the map re-framing
@@ -4729,8 +4778,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.18.0';
+const APP_VERSION='7.19.0';
 const CHANGELOG=[
+  {v:'7.19.0',d:"Your cities, drawn differently. The live street map dropped into each city's thumbnail last version turned out to be exactly what a thumbnail shouldn't be — a moving map crammed into a space too small to read one in. It's a shape now instead: one soft outline of where your own cafés actually sit in that city, drawn straight from your own record, nothing fetched, nothing loading. One café reads as a small round place; a whole spread city reads as the true, particular outline of your own reach in it — never the same two cities twice, and never a street or a pin standing in for either."},
   {v:'7.18.0',d:"Your cities, drawn. The little map beside each city on the Atlas used to show nothing but bare pins in an empty box — a shape was never asked for. It draws the real streets now, the same way the city's own page already does, but only once that row is actually on your screen; scroll past it and the live map steps aside again rather than sitting there spending a request for nothing. If the streets can't be reached, the row falls back to what it always showed, without a word about it — a thumbnail has no room to say so, and the drawn pins underneath are enough."},
   {v:'7.17.0',d:"A pin, from your own hand. OpenStreetMap's search can miss a café that hasn't been mapped as its own point yet, even on a street it knows perfectly well. So where a name search comes up empty — or none of the branches on offer is the real one — Carta now takes a link instead: paste whatever Google or Apple Maps already gave you, and it reads the actual pin straight out of it, then asks the same map for the real neighborhood the way it already does for a search result. No key, no new network touch, nothing kept but the coordinate — a link you copy and paste is not a link Carta remembers."},
   {v:'7.16.1',d:"The city, corrected along with the pin. Placing a café by its real address fixed the pin, but a café first added by pasting a street address into the City field stayed filed under that address forever — the Atlas groups by whatever was typed, and nothing had ever told it otherwise. The same confirmed lookup that places the pin now corrects the city too, exactly the way it already corrects the neighborhood: silently where there was nothing to say, and named in the toast where it actually changed something. A chapter open on a since-corrected name now follows you to the real one instead of quietly emptying out under you."},
