@@ -29,7 +29,7 @@ vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
   askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink, menuOCRPrompt, parseMenuOCR, extractJSON,
-  ROAST_LEVELS, parseRoastLevel };
+  ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -581,5 +581,31 @@ ok('parseRoastLevel refuses everywhere the word "roast" isn\'t adjacent — neve
 
 assert.deepEqual(M.ROAST_LEVELS, ['Light', 'Medium-light', 'Medium', 'Medium-dark', 'Dark']);
 ok('ROAST_LEVELS is the fixed short scale the phase names — no rung, no ladder, just five words (ROADMAP.md\'s own tripwire)');
+
+// ---- originPin / meanPin / namesBack: where a green actually grew ----
+assert.deepEqual(M.originPin({ lat: 6.15, lon: 38.2 }), { lat: 6.15, lon: 38.2 });
+assert.equal(M.originPin({ country: 'Ethiopia' }), null, 'an origin with no coordinate is unplaced, not 0,0');
+assert.equal(M.originPin({}), null);
+assert.equal(M.originPin(undefined), null, 'never throws on a coffee with no origin at all');
+assert.equal(M.originPin({ lat: 'x', lon: 3 }), null, 'a non-numeric coordinate is no coordinate');
+assert.equal(M.originPin({ lat: 91, lon: 0 }), null, 'out of range is refused rather than drawn off the frame');
+assert.equal(M.originPin({ lat: 0, lon: 0 }), null, 'null island is the shape of a bug, never a farm');
+ok('originPin states a position only where the record actually holds one — every other case is unplaced');
+
+assert.deepEqual(M.meanPin([{ lat: 2, lon: 4 }, { lat: 4, lon: 8 }]), { lat: 3, lon: 6 });
+assert.equal(M.meanPin([]), null, 'a region with no placed farm has no position — it is listed, never plotted');
+assert.equal(M.meanPin([null, null]), null, 'unplaced farms drop out rather than averaging as zero');
+assert.deepEqual(M.meanPin([null, { lat: 5, lon: 5 }]), { lat: 5, lon: 5 });
+ok('meanPin stands a region on its own placed farms, and nowhere at all when it has none');
+
+assert.equal(M.namesBack({ name: 'Konga' }, 'Konga'), true);
+assert.equal(M.namesBack({ name: 'Konga Coffee Washing Station' }, 'Konga'), true, 'the lookup naming more than was asked still names it back');
+assert.equal(M.namesBack({ name: 'Finca El Injerto' }, 'El Injerto'), true);
+assert.equal(M.namesBack({ name: 'Yirgacheffe' }, 'Konga'), false, 'the region a farm sits in is NOT the farm — this is the whole gate');
+assert.equal(M.namesBack({ name: 'Huila' }, 'El Paraiso'), false);
+assert.equal(M.namesBack({ name: '' }, 'Konga'), false, 'a hit with no name confirms nothing');
+assert.equal(M.namesBack(null, 'Konga'), false, 'never throws on a missing hit');
+assert.equal(M.namesBack({ name: 'Konga' }, ''), false);
+ok('namesBack refuses a lookup that answered with the region instead of the farm — Carta never pins a hallucination');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);
