@@ -80,7 +80,7 @@ Neither finding changes a joy or a law. Both change what ships next.
 ## The phases (Act Two)
 
 *Phases 8–17 are shipped. Carta 7 stands at
-**v7.19.0, 4,824 lines, 71/71 pure tests**. Full prose for each is in
+**v7.19.1, 4,830 lines, 71/71 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -472,6 +472,15 @@ so using it means standing up a query service, which is a server and not
 Carta's to build. It is a plausible source for the "published atlas, keyless,
 readBrand-posture" `ARCHITECTURE.md` §7 already names as Lotmark's future
 interchange with Carta. Logged for that desk, not built here.
+
+**Patch, v7.19.1 — the box that vanished on success.** A café placed by
+pasting a link had no way back to that same box afterward: "not right?" in
+the placed state only reran the plain name search, which is exactly the
+search that had already failed for this café once. The map-link box is on
+the page in every state now, placed included — the one line the other two
+states already had. `pastePlaceLink` needed no change: it already reads
+whatever the place currently holds before overwriting it, so a corrected
+paste undoes back to the first placement, not to nothing.
 
 ### Phase 17 — the thumbnail, twice
 

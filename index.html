@@ -3995,8 +3995,13 @@ function placeBranchHTML(p){
     </div>
     <div class="m" style="margin-top:12px">None of these? ${mapLinkHTML(p)}</div></div>`;
   // where it is, is already the eyebrow over its name — this line only has to
-  // carry the way back, which is the thing that never existed before
-  if(p.lat!=null)return `<div class="m" style="margin-top:16px">Placed · <span class="text-action" onclick="replaceCafe('${p.id}')">not right?</span></div>`;
+  // carry the way back, which is the thing that never existed before. "Placed"
+  // was the one state that dropped the map-link box once settled — so a café
+  // fixed by hand, precisely because a name search could never find it, had
+  // no way back to that same fix once "not right?" tried that same search
+  // again and failed the same way. The box stays available in every state.
+  if(p.lat!=null)return `<div class="m" style="margin-top:16px">Placed · <span class="text-action" onclick="replaceCafe('${p.id}')">not right?</span></div>
+    ${mapLinkHTML(p)}`;
   return `<div class="m" style="margin-top:16px">Not placed yet · <span class="text-action" onclick="replaceCafe('${p.id}')">look it up</span></div>
     ${mapLinkHTML(p)}`;
 }
@@ -4778,8 +4783,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.19.0';
+const APP_VERSION='7.19.1';
 const CHANGELOG=[
+  {v:'7.19.1',d:"A pin, editable after it's already right. A café placed by pasting a map link had no way back to that same box once it was placed — the only correction on offer afterward tried a name search again, which is exactly the search that never worked for this café in the first place. Paste a map link is on the page now whatever the café's current state, so a placed café can be corrected the same way it was placed, not just the ones still waiting."},
   {v:'7.19.0',d:"Your cities, drawn differently. The live street map dropped into each city's thumbnail last version turned out to be exactly what a thumbnail shouldn't be — a moving map crammed into a space too small to read one in. It's a shape now instead: one soft outline of where your own cafés actually sit in that city, drawn straight from your own record, nothing fetched, nothing loading. One café reads as a small round place; a whole spread city reads as the true, particular outline of your own reach in it — never the same two cities twice, and never a street or a pin standing in for either."},
   {v:'7.18.0',d:"Your cities, drawn. The little map beside each city on the Atlas used to show nothing but bare pins in an empty box — a shape was never asked for. It draws the real streets now, the same way the city's own page already does, but only once that row is actually on your screen; scroll past it and the live map steps aside again rather than sitting there spending a request for nothing. If the streets can't be reached, the row falls back to what it always showed, without a word about it — a thumbnail has no room to say so, and the drawn pins underneath are enough."},
   {v:'7.17.0',d:"A pin, from your own hand. OpenStreetMap's search can miss a café that hasn't been mapped as its own point yet, even on a street it knows perfectly well. So where a name search comes up empty — or none of the branches on offer is the real one — Carta now takes a link instead: paste whatever Google or Apple Maps already gave you, and it reads the actual pin straight out of it, then asks the same map for the real neighborhood the way it already does for a search result. No key, no new network touch, nothing kept but the coordinate — a link you copy and paste is not a link Carta remembers."},

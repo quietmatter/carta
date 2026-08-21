@@ -111,6 +111,30 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 16 patch (v7.19.1): the box that vanished on success
+
+- **Why.** Reported directly: place a café by pasting a Google or Apple Maps
+  link, and there was no way to correct it afterward. Confirmed in
+  `placeBranchHTML` — the "Placed" state showed only "not right?", which
+  reruns the plain *name* search (`replaceCafe`). For a café placed by hand
+  precisely because the name search couldn't find it, tapping "not right?"
+  only fails the exact same way again — the paste-a-link box itself, present
+  in both other states (ambiguous branches, unplaced), was the one thing
+  missing from "placed".
+- **Shipped — v7.19.1.** The map-link box is on the page in every state now,
+  placed included — one line added, matching the pattern the other two
+  states already followed rather than inventing a new one. `pastePlaceLink`
+  needed no change at all: it already reads whatever `was` the place
+  currently holds before overwriting it, so re-pasting a corrected link on
+  an already-placed café undoes back to the *first* placement, not to
+  nothing.
+- **No new tripwire.** Same posture as every correction path here: the
+  keeper vouching for a coordinate, with a cheap undo — this just makes an
+  existing affordance reachable from a state it had quietly stopped
+  appearing in.
+
+---
+
 ## 2026-08-21 — Phase 16: the pin, in your own hand
 
 - **Why.** The founder asked how to bridge the gap between OSM and the

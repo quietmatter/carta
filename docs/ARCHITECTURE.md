@@ -14,7 +14,7 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–5,000 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 17 it stands at **4,824 lines / 391 KB**.
+  cost, not the stack's.) At Phase 17 it stands at **4,830 lines / 392 KB**.
 
   *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
   Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
@@ -32,7 +32,7 @@ Carta 7 is built exactly the way classic was, smaller:
   the file first, with the 5,000-line reading in front of them, not around
   it. The byte ceiling is the one that was never touched across all four
   amendments and is the one that actually guards the drop-it-on-a-static-host
-  promise — still **500 KB**, with the file at 391 KB. If a future phase
+  promise — still **500 KB**, with the file at 392 KB. If a future phase
   needs to go past 5,000 in turn, it does not get to treat this crossing as
   precedent for a fifth quiet one; it re-earns the argument from here, same
   as every phase before it had to.
