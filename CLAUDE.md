@@ -137,11 +137,10 @@ server/               Classic's sync server — dormant
   - `<carta-plot>` — the drawn plot: a handful of points fit to a box, offline.
   - `<carta-streets>` — a city or a single café: **Leaflet + OpenStreetMap
     tiles, injected at runtime** from unpkg. Unreachable, it hides itself and
-    the drawn plot underneath simply stands. `thumb="on"` (Phase 17) is the
-    same element for a list row: one shared `IntersectionObserver` boots it
-    only while actually on screen and tears it down the moment it scrolls
-    off, under a small shared concurrency cap — the tile-server citizenship
-    every full map already had, extended to the surface that never got it.
+    the drawn plot underneath simply stands. (Phase 17 tried a `thumb="on"`
+    mode here — a gated, cap'd live mount for list rows — and took it back
+    out the same day: too much map for a 44×60px row, however carefully
+    fetched. This element is unchanged from before that phase.)
     `terrain="on"` (Phase 18) swaps in OpenTopoMap for a region or a farm
     (same §7 row, one different URL — never inverted for dusk, since an
     inverted hillshade reads as valleys where the mountains are); `names="on"`
@@ -289,12 +288,15 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
   amendment to 5,000 is recorded as a **reopened decision**, not a routine
   fourth bump: both of the prior two amendments had named 5,000 by name as
   the point past which the one-file law itself, not the band, is what's come
-  due — see §1's own account of it).
-  **There is no room left:** Phase 18 landed at **4,992 of 5,000**, so §1 now
-  says the next phase of any size **splits the file** — `index.html` +
-  `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
-  ~1,900 lines that are not the app) — rather than a fifth amendment. Two
-  static files is still no build; it is only no longer one file.
+  due — see §1's own account of it. The decision stood even after Phase 17's
+  own first draft was replaced same-day by a smaller, simpler one — it was
+  never contingent on that draft specifically).
+  **The band is now overdrawn:** Phase 18 landed at **5,043 of 5,000** (bytes
+  are fine, 407 of 500 KB). §1 records it as an open debt rather than a fifth
+  amendment — under its own rule the next move is the **split**, `index.html`
+  + `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
+  ~1,900 lines that are not the app). Two static files is still no build; it
+  is only no longer one file. Don't add to `index.html` before that lands.
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
   the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
   **two**. A third needs an argument written into §10 before it is written
@@ -342,14 +344,15 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 69 cases
+node test/model.test.js        # zero deps, plain Node, 74 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
 out of `index.html` and evaluates it against fixture ledgers — no DOM, no
 `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
-`parseMapLink`, `parseRoastLevel`, `originPin`, `meanPin`, `namesBack` or
+`parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel`,
+`originPin`, `meanPin`, `namesBack` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**

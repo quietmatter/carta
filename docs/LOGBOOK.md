@@ -32,24 +32,28 @@ Lotmark's desk. Old entries are never rewritten.*
   placed by a lookup or a pasted pin, taken back with undo. 4,934 lines /
   402 KB, 69 pure tests.
 - **Two founder calls, both put before any code** — the line band and the
-  terrain tile row (§7). And a thing worth recording honestly: this phase was
-  built against `main` at 4,716 lines and asked the band question itself;
-  **Phase 17 was in flight at the same time and asked the same question, and
-  got the same answer.** Two sessions arriving independently at the same
-  ceiling on the same afternoon. The amendment stands once, as Phase 17's;
-  Phase 18 makes none and simply spends what was left — landing at **4,992 of
-  5,000, eight lines clear.**
-- **So the next phase splits the file.** §1 says it plainly now rather than
-  leaving it to be rediscovered: `index.html` + `carta-map.js` (~1,900 lines
-  of map layer that are not the app). Not a band to raise a fifth time — the
-  one-file law has come due at exactly the number Phases 13 and 15 said it
-  would. Written down while it is still cheap to say.
-- **Merge note.** Phase 17 and Phase 18 both edited `carta-streets`. The merge
-  keeps both whole: `thumb="on"`'s IntersectionObserver gating and teardown,
-  and `terrain="on"`/`names="on"` — including the one real interaction, which
-  is that a thumbnail suppresses its attribution control while terrain must
-  keep OpenTopoMap's CC-BY-SA credit. Every browser check re-run against the
-  merged class.
+  terrain tile row (§7). Worth recording honestly: this phase was built
+  against `main` at 4,716 lines and asked the band question itself; **Phase 17
+  was in flight at the same time and asked the same question, and got the same
+  answer.** Two sessions arriving independently at the same ceiling on the same
+  afternoon. The amendment stands once, as Phase 17's.
+- **And then it went over.** Phase 17 shipped twice in a day — the live
+  thumbnail, then its same-day correction to a drawn city shape — leaving
+  `main` at 4,824 rather than 4,774. Phase 18's 219 lines of ground land on
+  top of that at **5,043 / 5,000**. Recorded in §1 as an **open debt, not a
+  precedent**: under the rule both amendments already wrote, the next move is
+  the split (`index.html` + `carta-map.js`, ~1,900 lines of map layer that are
+  not the app), which is the founder's to schedule. Bytes are untroubled at
+  407 of 500 KB — as they have been through all four amendments, which is the
+  point the byte ceiling was always making.
+- **Merge notes, two of them.** Phase 17's first draft and this phase both
+  edited `carta-streets`; its correction then took the whole `thumb="on"`
+  machinery back out. The merged class is pre-Phase-17 plus this phase's
+  `terrain="on"`/`names="on"` — verified by hand, not trusted to the
+  auto-merge. And `main`'s city-shape code comments called themselves
+  "Phase 18" (its branch was named that) while its own roadmap and logbook
+  call it Phase 17 corrected; those two comments are aligned to the record
+  here, so the file doesn't claim two different Phase 18s.
 - **Tripwire 2 fired and was obeyed.** Region-scale relief could have been had
   by vendoring finer contour data. It wasn't: the count is still two, and where
   the file can't draw real ground it asks for it and draws nothing when it
@@ -72,6 +76,55 @@ Lotmark's desk. Old entries are never rewritten.*
   published atlas §7 already names: OSM knows washing stations and cooperatives
   far better than it knows farms, and the gap is exactly the trade-side record
   Lotmark would hold. Carta will keep asking the keeper instead.
+
+---
+
+## 2026-08-21 — Phase 17, corrected same day: the shape, not the map
+
+- **The founder's verdict on v7.18.0, read within the hour:** *"I don't love
+  what shipped... a city should be drawn with a shape, and that's it — we
+  don't need pins on the thumbnail and the leaflet map, it's too much."*
+  Draft one had done exactly what it set out to do — a live map, gated
+  carefully to OSM's own tile policy — and the verdict was that the goal
+  itself was wrong, not the execution. Worth keeping in the record plainly:
+  good engineering in service of the wrong shape is still the wrong shape.
+- **Shipped — v7.19.0.** The Leaflet-thumbnail machinery came back out
+  whole: the `thumb="on"` mode, its `IntersectionObserver`, its concurrency
+  cap, its attribution workaround — all of it, and the `Streets` class
+  reads exactly as it did before Phase 17 touched it. In its place: every
+  café's own lat/lon inflated into a small round territory, the convex hull
+  of all those territories together, corners softened into one continuous
+  curve. One café, two close together, two far apart, a tight cluster, a
+  dead-straight row, a whole spread city — one pipeline, no special case for
+  any of them, because inflating before hulling is what turns even a single
+  point into a real 2D shape. Rendered as a plain `<svg>` in the same soft
+  ink-wash the passport and the export cards already use. No network, no
+  custom element, nothing to gate or tear down, because nothing runs.
+- **`convexHull` and `roundedHullPath` are pure and tested** (Andrew's
+  monotone chain; quadratic-Bezier corner cuts capped so they never eat more
+  of an edge than exists) — fixture cases: duplicates, an interior point,
+  a dead-straight row, a single café, a full spread city, an empty city
+  (refuses to draw anything, which is correct — no cafés, no shape). 66→71
+  pure tests.
+- **The line band stayed reopened.** The 3–5,000 amendment from draft one
+  wasn't contingent on Leaflet specifically — it was made on the project's
+  trajectory — so it stands even though draft two, at 4,824 lines, needed
+  more lines than draft one's own 4,774, not fewer as might be assumed from
+  "simpler." (Removing a whole class + adding real, tested geometry plus
+  its coverage nets out slightly larger, not smaller — worth recording since
+  it's counterintuitive.)
+- **`ARCHITECTURE.md` §7 lost the row it gained that morning.** A citizenship
+  note for a touch that no longer exists is worse than no note at all — it
+  reads as a rule for something the file doesn't do. Removed rather than
+  left stale.
+- **The general shape of the lesson, worth keeping:** the tripwire screening
+  this session ran on draft one (OSM tile policy, concurrency, attribution)
+  was real and correctly done — and none of it was the actual question. The
+  actual question was scale-appropriateness: does a 44×60px row want a map
+  at all, however well-behaved. Checking that a thing is built responsibly
+  is not the same check as whether it should be built that way in the first
+  place, and this phase is the record of catching the second only after
+  shipping the first.
 
 ---
 

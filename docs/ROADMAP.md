@@ -80,7 +80,7 @@ Neither finding changes a joy or a law. Both change what ships next.
 ## The phases (Act Two)
 
 *Phases 8–17 are shipped. Carta 7 stands at
-**v7.18.0, 4,774 lines, 66/66 pure tests**. Full prose for each is in
+**v7.19.0, 4,824 lines, 71/71 pure tests**. Full prose for each is in
 `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -473,65 +473,84 @@ Carta's to build. It is a plausible source for the "published atlas, keyless,
 readBrand-posture" `ARCHITECTURE.md` §7 already names as Lotmark's future
 interchange with Carta. Logged for that desk, not built here.
 
-### Phase 17 — the thumbnail, alive when it's actually looked at
+### Phase 17 — the thumbnail, twice
 
-**Shipped — v7.18.0.**
+**Shipped — v7.19.0, in two drafts the same day. Both are kept in the
+record, because the second only makes sense next to the first.**
 
 **The joy it serves:** the map fills in, at a surface Phase 12 built and
 never finished — the Atlas's city thumbnails have shown bare pins in an
 empty box since the day they shipped, the one place in the app that draws a
 map and never asked for its shape.
 
-**Checked before writing code, the way Phase 16 was.** OpenStreetMap's tile
-usage policy states no hard rate number, but is explicit that "capacity is
-limited," usage that "degrades the service" can be blocked without notice,
-and that tiles are for "the current viewport" — bulk or pre-seeded fetching
-is barred outright. That reframes the fix: not "add tiles to the thumbnail,"
-but "add tiles the way the policy actually asks for them" — tied to what a
-person is looking at, not to what merely exists in the DOM.
+**Draft one — a live map, gated carefully.** Checked before writing code,
+the way Phase 16 was: OpenStreetMap's tile usage policy states no hard rate
+number, but is explicit that "capacity is limited," usage that "degrades the
+service" can be blocked without notice, and tiles are for "the current
+viewport." So `<carta-streets>` gained a `thumb="on"` mode — one shared
+`IntersectionObserver` booting Leaflet only once a row was actually visible,
+tearing it down the instant it scrolled off, under a small concurrency cap.
+Three real bugs surfaced testing it end-to-end in a browser rather than
+trusting the design on paper (an opaque background hiding the plot before
+boot; the same background never clearing after teardown; Leaflet's
+attribution control coming out as illegible clipped text at 44×60px) — all
+fixed, all shipped as v7.18.0.
 
-**What ships.** `<carta-streets>` gains a `thumb="on"` mode: one shared
-`IntersectionObserver` — a single instance for every thumbnail on a screen,
-not one per row — boots Leaflet only once a row is actually visible, and
-tears the map down the instant it scrolls off. A small concurrency cap (6)
-is the margin under a policy that names no number of its own. A thumbnail
-that can't reach the streets degrades in total silence: the "Streets
-unavailable · Retry" note is sized for a screen, and a 44×60px row has no
-home for it — the drawn plot underneath already reads fine alone.
+**It worked exactly as designed, and it was still wrong.** The founder's
+verdict, read the same day: *"a city should be drawn with a shape, and
+that's it — we don't need pins on the thumbnail and the leaflet map, it's
+too much."* Every citizenship discipline in draft one was aimed at *how*
+tiles get fetched; the actual problem was that a live, individually-tappable
+street map was never the right thing to put in a 44×60px row, however
+carefully it's fetched. Good engineering in service of the wrong shape.
 
-**Three things the browser test caught that the design alone would have
-missed.** An opaque background painted on mount, hiding the plot underneath
-until (or unless) the thumbnail ever scrolled into view. The same
-background staying opaque forever after a booted thumbnail scrolled away
-and tore its map down — the plot stayed hidden behind a blank panel long
-after the reason for it was gone. And Leaflet's attribution control,
-rendered at thumbnail scale, coming out as illegible clipped text — removed
-for thumbnails, since the same city's full map is one tap from the same row
-and already carries it properly. All three needed the actual DOM lifecycle
-exercised in a real browser to surface; none would show up in a design
-review or a pure-function test.
+**Draft two — no map, no pins, a shape.** Every café's own footprint —
+literally, its own lat/lon — folded into one soft silhouette: each point
+first given a small round territory of its own (so a single café reads as
+*a place*, not a dot), then the convex hull of all of those territories
+together, corners softened into one continuous curve. One café, two close
+together, two cities apart, a tight cluster, a whole spread city, a
+perfectly straight row of them — one pipeline handles all of it with no
+special case, because the inflate-then-hull step is what turns a single
+point or a degenerate line into a real 2D shape before the hull is even
+computed. `convexHull` (Andrew's monotone chain) and `roundedHullPath`
+(quadratic-Bezier corner cuts, capped so they never eat more of an edge than
+exists) are pure and tested — fixture point sets covering duplicates,
+interior points, dead-straight rows, a single café, and a full spread city.
+Rendered as a plain inline `<svg>`, styled in the same soft ink-wash the
+passport and the export cards already use (`fill:var(--ink)` at low opacity,
+a thin stroke) — no custom element, no lifecycle, no network, nothing to
+gate or tear down, because there is nothing running.
 
-**The line band, reopened rather than bumped a fourth time.** `main` stood
-at 4,716/4,800 lines when this phase was scoped — 84 free. Both of the
-prior two amendments (Phase 14 and Phase 15) had explicitly named **5,000**
-as the number past which raising the band again stops being the honest
-answer and "the one-file law itself has come due" starts being it. Put to
-the founder directly rather than decided in the phase's own PR — the
-answer was to amend to 5,000 now, with the 5,000-line reading in view, not
-worked around. `ARCHITECTURE.md` §1 records this as a **reopened decision**,
-per this document's own rule that a decided thing stays decided until it is
-deliberately reopened. Landed at 4,774/5,000; the byte ceiling, untouched
-across all four amendments, sits at 388/500 KB.
+**Everything draft one built for network citizenship, draft two simply
+removed.** No `IntersectionObserver`, no concurrency cap, no attribution
+workaround, no tile row in `ARCHITECTURE.md` §7 — the full-screen city
+chapter and café page keep their real Leaflet streets exactly as they were
+before either draft; only the thumbnail changed, and it no longer touches
+the network at all.
 
-**Tripwires.** A genuinely new class of touch — a live map inside a
-scrolling list, not a single open screen — so it's recorded as its own row
-in `ARCHITECTURE.md` §7 rather than folded silently into the existing
-Nominatim/Leaflet rows. No resolver, no gamification, no new dependency.
+**The line band, reopened at draft one and left that way.** `main` stood at
+4,716/4,800 when this phase was scoped — 84 free — and both of the prior two
+amendments (Phase 14, Phase 15) had explicitly named **5,000** as the number
+past which raising the band again stops being honest and "the one-file law
+itself has come due" starts being it. Put to the founder directly; the
+answer was to amend to 5,000 now, recorded in `ARCHITECTURE.md` §1 as a
+**reopened decision**, not a routine bump. That decision doesn't get undone
+just because draft two happened to need fewer lines than draft one did —
+it was made on the project's trajectory, not on one phase's byte count.
+Final tally: **4,824/5,000**, byte ceiling untouched at 391/500 KB.
 
-**Done when — met:** a city's thumbnail shows the real shape of the ground
-underneath its pins whenever it's actually on screen, asks OpenStreetMap's
-tile server for no more than that, and falls back to exactly what it always
-showed when it can't.
+**Tripwires, both times.** Draft one recorded a genuinely new class of touch
+(a live map inside a scrolling list) as its own §7 row rather than folding it
+in silently. Draft two removed that row again rather than leaving a stale
+citizenship note for a touch that no longer exists. Neither a resolver, a
+gamified mark, nor a new dependency at any point. No proof of anything
+either — the shape is read off the same lat/lon the record already keeps,
+never a rank, never a score dressed as geography.
+
+**Done when — met:** a city's thumbnail shows the true, particular shape of
+where the record actually reaches in it — instantly, offline, from the
+ledger alone — and never asks a map server, a pin, or a tile for any of it.
 
 ### Phase 18 — the ground, and what grew on it
 
@@ -589,15 +608,21 @@ only the country half, or split the map layer). While it was in flight, Phase
 17 landed and **asked the same question and got the same answer**: the band
 stands amended once, at Phase 17, to **3–5,000**. Phase 18 therefore makes no
 amendment of its own; it spends what that one left, and nearly all of it,
-landing at **4,992 lines / 406 KB — eight lines under the ceiling.**
+landing — after Phase 17's second, larger correction moved the floor — at
+**5,043 lines / 407 KB, over it.**
 
-That is the headline for whoever picks up Phase 19: there is no room left.
-§1 now says plainly that **the next phase of any size splits the file**
-(`index.html` + `carta-map.js`, ~1,900 lines of map layer that are not the
-app), rather than raising the band a fifth time. Two phases arriving at the
-same ceiling in the same afternoon is itself the argument — the one-file law
-has come due, exactly as Phases 13 and 15 predicted it would at this number.
-The byte ceiling is still 500 KB and still untouched, at 406.
+Then Phase 17 shipped a second time the same day — its correction traded the
+live thumbnail for a drawn city shape and left `main` at 4,824 rather than
+4,774. Phase 18's 219 lines land on top of that at **5,043 / 5,000: over.**
+
+That is the headline for whoever picks up Phase 19, and it is not a request
+for a fifth amendment. §1 records the overage as an **open debt** and says
+what both prior amendments already said would happen at this number: **the
+next move is the split** — `index.html` + `carta-map.js`, ~1,900 lines of map
+layer that are not the app. Two independent sessions reached 5,000 in one
+afternoon; the one-file law has come due exactly as Phases 13 and 15
+predicted. The byte ceiling is untouched and comfortable at 407 of 500 KB,
+which is the point it was always making: bytes were never the problem.
 
 ## The horizon (unscheduled, revisited)
 

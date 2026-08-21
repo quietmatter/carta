@@ -14,7 +14,7 @@ Carta 7 is built exactly the way classic was, smaller:
 - **One file.** `index.html`, all CSS and JS inline, self-contained. Target
   **3–5,000 lines / ≤ 500 KB** including map data — a file one person can
   read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 18 it stands at **4,992 lines / 406 KB**.
+  cost, not the stack's.) At Phase 18 it stands at **5,043 lines / 407 KB — 43 over the ceiling, see below**.
 
   *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
   Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
@@ -32,30 +32,41 @@ Carta 7 is built exactly the way classic was, smaller:
   the file first, with the 5,000-line reading in front of them, not around
   it. The byte ceiling is the one that was never touched across all four
   amendments and is the one that actually guards the drop-it-on-a-static-host
-  promise — still **500 KB**, with the file at 389 KB. If a future phase
+  promise — still **500 KB**, with the file at 391 KB. If a future phase
   needs to go past 5,000 in turn, it does not get to treat this crossing as
   precedent for a fifth quiet one; it re-earns the argument from here, same
   as every phase before it had to.
 
-  Phase 17 itself spent its lines on tile-server citizenship for the one
-  offline-first surface that never got it — a city thumbnail that used to
-  show bare pins in an empty box now shows the shape underneath them, without
-  ever asking OpenStreetMap's tile server for more than what is actually on
-  screen at the time.
+  Phase 17 itself shipped twice in one sitting, and both drafts are worth
+  recording. The first spent its lines on tile-server citizenship — a live
+  Leaflet map, gated to boot only while a thumbnail was actually on screen —
+  for the one offline-first surface that never had it. It worked, and it
+  still wasn't right: a moving map with individually tappable pins is more
+  than a 44×60px row can read, whatever discipline governs how it's fetched.
+  The correction dropped the live map and the network touch entirely — a
+  city's thumbnail is a single soft shape now (§7), computed once from the
+  same lat/lon already on the ledger, no fetch of any kind. It reads as the
+  first draft's replacement, not a second amendment; the line count above is
+  the corrected version's, and §7's geocode table no longer carries a
+  thumbnail row, because there is nothing left there to be a citizen of.
 
-  **Phase 18 spends what Phase 17 left, and very nearly all of it** — it lands
-  at 4,992 lines, eight under a ceiling raised one phase earlier. That is not
-  headroom, and this document will not pretend it is: **the next phase of any
-  size splits the file.** The split is already scouted — `index.html` +
-  `carta-map.js` (the three custom elements, the vendored d3, `LANDS` and
-  `LAND_TOPO`: roughly 1,900 lines that are the map layer rather than the
-  app). Two static files is still no build, no bundler, no npm, and still one
-  thing you drop on a host; it is only no longer *one file*, which is a brand
-  cost to pay in the open rather than a band to raise a fifth time. Phase 17's
-  own condition holds — a phase past this point "re-earns the argument from
-  here" — and what it will re-earn is the split, because both amendments
-  before it had already named 5,000 as where the one-file law comes due. The
-  byte ceiling is still 500 KB and still untouched, at 406.
+  **Phase 18 is the first phase to land over the ceiling, and it says so
+  rather than quietly sitting there.** It merges into a `main` that Phase 17's
+  correction left at 4,824 and adds 219 lines of ground — contours, region
+  marks, farm positions and the terrain surface — landing at **5,043 / 5,000**.
+  The byte ceiling is untouched and comfortable, at 407 of 500 KB.
+
+  Under the rule written directly above, that is not a fifth amendment to ask
+  for: **it is the split coming due.** `index.html` + `carta-map.js` — the
+  three custom elements, the vendored d3, `LANDS` and `LAND_TOPO`: roughly
+  1,900 lines that are the map layer rather than the app. Two static files is
+  still no build, no bundler, no npm, and still something you drop on a host;
+  it is only no longer *one file*, which is a brand cost to pay in the open.
+  Both of the last two amendments named 5,000 as the number where the
+  one-file law comes due, and two independent sessions reached it on the same
+  afternoon. **This overage is recorded here as an open debt, not a
+  precedent** — the split is the founder's call to schedule, and until it is
+  made this line states the true figure rather than a comfortable one.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -315,7 +326,6 @@ one and the one that travels.
 |---|---|---|
 | Geocode (Nominatim) | placing a café; grounding an ask's answer; reading a pasted map link's real address (Phase 16) | typed city, drawn plot |
 | Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
-| Leaflet + tiles, thumbnail mode | a city row is actually on screen (Phase 17) | the drawn plot, in total silence |
 | Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 18) | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 
@@ -329,19 +339,18 @@ in is not a fact any lookup or model holds. Same grounding rule, one rung
 more honest: a pin is drawn from a confirmed position or not at all, and now
 it can also be taken back.
 
-**Phase 17 is a citizenship note, not a new touch.** OSM's tile usage
-policy ties its courtesy to attention: tiles are for the viewport a person is
-actually looking at, not pre-seeded in bulk, and while it states no hard
-number it reserves the right to block usage that "degrades the service."
-Every full-screen map already asks for tiles only while its own screen is
-open; the Atlas's city-list thumbnails did not carry that same discipline —
-they mounted nothing before this phase, so the question never arose, but the
-fix for the empty thumbnail is itself a live map, and that map needs the same
-discipline the full screens already have. So a thumbnail only boots Leaflet
-once an `IntersectionObserver` says it is actually on screen, tears itself
-down the moment it scrolls off, and holds to a small shared concurrency cap
-as the margin under a policy that names no number. One `IntersectionObserver`
-instance is shared across every thumbnail on a screen, not one per row.
+**Phase 17 tried a fourth touch here and took it back out the same day.**
+The first draft gave the Atlas's city thumbnails their own gated Leaflet
+mount — booted only while a row was on screen, torn down the moment it
+scrolled off, capped and citizenship-minded about OSM's tile policy. It
+worked exactly as designed and was still the wrong shape for a 44×60px row:
+a live, individually-tappable street map is more than a glance can use, no
+matter how carefully it's fetched. The correction — `ROADMAP.md`'s Phase 17
+entry has the full account — removed the touch entirely rather than tuning
+it: a thumbnail draws a shape now, computed once from the ledger's own
+coordinates, nothing fetched. So this table is exactly as short as it
+was through Phase 16; the fourth row was tried, and the honest outcome was
+that it didn't belong here, not that it needed refining.
 
 The terrain row is **the same row asked for a different picture**, added at
 Phase 18 and written down rather than slipped in: the same Leaflet, injected
