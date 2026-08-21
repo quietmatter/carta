@@ -7,6 +7,61 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-21 — Phase 17: the thumbnail, alive when it's actually looked at
+
+- **Why.** Asked directly: the city thumbnails on the Atlas showed bare pins
+  in an empty box, never a shape. True by construction — `<carta-plot>` is
+  documented as deliberately tile-less, and `plotThumbHTML` had simply never
+  been wired to the street layer at all; every full-size map view already
+  had it, thumbnails never did.
+- **Checked before writing code.** Fetched OpenStreetMap's actual tile usage
+  policy rather than work from memory. No hard rate number, but explicit
+  language that "capacity is limited," usage that "degrades the service" can
+  be blocked without notice, and tiles are for "the current viewport" a
+  person is actually looking at — bulk/pre-seeded fetching is barred outright.
+  That framing shaped the whole design: attention-gated, not presence-gated.
+- **Shipped — v7.18.0.** `<carta-streets>` gains `thumb="on"`. A single
+  shared `IntersectionObserver` (one instance for every thumbnail on the
+  page, not one per row) boots Leaflet only once a row is actually on
+  screen, and tears it down the moment it scrolls off — verified in the
+  browser: max 6 concurrent live maps holding through a full scroll of ten
+  cities (the cap), zero left live once scrolled away. A thumbnail that
+  fails degrades in total silence; the "Streets unavailable · Retry" note
+  is sized for a screen and has no home at 44×60px — the drawn plot
+  underneath is already enough there.
+- **Two real bugs the browser test caught, not the design.** (1) The
+  element painted an opaque background the instant it mounted, hiding the
+  drawn plot underneath for however long it took to scroll into view —
+  fixed by deferring the background paint to `boot()` itself. (2) Once a
+  thumbnail booted and later scrolled away, the background stayed opaque
+  forever even after the live map tore down, permanently hiding the plot —
+  fixed by clearing it on teardown. (3) Leaflet's attribution control,
+  rendered at 44×60px, came out as illegible clipped text
+  ("eaflet | © nStreetMap tributors") — disabled for thumbnails; the same
+  city's own full map, one tap away via the same row, already carries it
+  properly.
+- **`unpkg.com` is unreachable at all from this session's sandbox** (a
+  proxy-level connection reset, unrelated to the app). Verified the mount/
+  cap/teardown logic by serving a locally vendored copy of the exact same
+  Leaflet 1.9.4 release in place of the network fetch — proves the logic,
+  not reachability to unpkg, which this phase didn't touch.
+- **The line band, reopened rather than quietly bumped.** `main` stood at
+  4,716/4,800 — 84 lines of headroom. Both of the prior two amendments
+  (Phase 14, Phase 15) had explicitly named 5,000 as the number past which
+  "raise the band again" stops being honest and "the one-file law has come
+  due" starts being it. Asked the founder directly rather than deciding it
+  myself; **amend to 5,000 now** was the answer. Recorded in
+  `ARCHITECTURE.md` §1 as a reopened decision, per `ROADMAP.md`'s own rule
+  that a decided thing stays decided until deliberately reopened — not a
+  fourth routine bump. Landed at 4,774/5,000, byte ceiling untouched at
+  388/500 KB.
+- **No other tripwire.** Same Nominatim-adjacent posture extended to tiles:
+  recorded as a new row in §7 rather than folded silently into the existing
+  one, since it's a genuinely new class of touch (a live map inside a
+  scrolling list, not a single open screen).
+
+---
+
 ## 2026-08-21 — Phase 16: the pin, in your own hand
 
 - **Why.** The founder asked how to bridge the gap between OSM and the
