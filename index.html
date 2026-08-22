@@ -1163,6 +1163,17 @@ function parseCfSearch(text,blankKeys){
   });
   return out;
 }
+// reading a Visualizer shot into Carta's dial fields (ROADMAP.md Phase 24) —
+// null wherever the shot didn't state a number, never guessed. label is for
+// the picker only; Phase 24 never writes a coffee record from this.
+function parseVisualizerShot(d){
+  d=d||{};
+  const num=v=>{if(v==null||v==='')return null;const n=Number(v);return isNaN(n)?null:n};
+  const time=Number(d.duration);
+  return {dose:num(d.bean_weight),water:num(d.drink_weight),time:isNaN(time)?null:Math.round(time),
+    grind:num(d.grinder_setting),
+    label:[d.bean_brand,d.bean_type].map(s=>(s||'').trim()).filter(Boolean).join(' — ')||'Untitled shot'};
+}
 /* ---- the city's own shape (Phase 17, corrected) — not streets, not pins, not a live
  * map: a soft silhouette of where the record actually reaches in this city,
  * drawn purely from the same lat/lon already on the ledger. No tile, no key,
@@ -1815,48 +1826,6 @@ function saveSetup(id){
   if(id){Object.assign(setupById(id),rec,{updatedAt:new Date().toISOString()})}
   else{D.setups.push({id:uid(),createdAt:new Date().toISOString(),...rec})}
   save();closeSheet();toast('Setup saved');
-}
-function openBrewFlow(coffeeId,editId){
-  const coffee=coffeeById(coffeeId);
-  if(!coffee){toast('Pick a coffee first');return}
-  const noSetup=!D.setups.length;
-  const editing=editId?brewById(editId):null;
-  const last=editing||D.brews.filter(b=>b.coffeeRef===coffeeId).sort(byNew)[0]||D.brews.slice().sort(byNew)[0];
-  const setup=noSetup?null:(editing?setupById(editing.setupId):(last?setupById(last.setupId):D.setups[D.setups.length-1]));
-  const setups=D.setups.filter(x=>!x.archived||(setup&&x.id===setup.id));
-  const techs=[...new Set(D.brews.map(x=>x.technique).filter(Boolean))];
-  const setupSel=noSetup
-    ?`<label class="f"><span class="l">Your grinder <span class="opt">named once, remembered always</span></span><input type="text" id="n_grinder" placeholder="Encore, Ode, a hand mill"></label>
-      <label class="f"><span class="l">Your brewer</span><input type="text" id="n_brewer" placeholder="V60 · 02"></label>`
-    :setups.length>1
-      ?`<label class="f"><span class="l">Setup</span><select id="b_setup" onchange="onSetupChange()">
-        ${setups.map(x=>`<option value="${x.id}" ${setup&&x.id===setup.id?'selected':''}>${esc(x.name)}${x.archived?' · retired':''}</option>`).join('')}
-        </select></label>`
-      :`<input type="hidden" id="b_setup" value="${setup?setup.id:''}">
-      <div class="row" style="margin:14px 0 6px"><h2 style="margin:0;border:0;padding:0">The Setup</h2>
-        <button class="btn mini btn-quiet" style="width:auto" onclick="closeSheet();openSetupForm('${setup?setup.id:''}')">Adjust</button></div>
-      <div class="card">
-        <div class="kv"><span class="k">Grinder</span><span class="v">${esc((setup&&setup.grinder)||'—')}</span></div>
-        <div class="kv"><span class="k">Brewer</span><span class="v">${esc((setup&&setup.brewer)||'—')}</span></div>
-      </div>`;
-  openSheet(`
-  <div class="eyebrow">${esc(coffeeLabel(coffee))}</div>
-  <h3>${editing?'Correct the brew':(last?'Begin from the last cup':'The first brew')}</h3>
-  <div class="sub">${last?'Every dial carried from your last brew.':'Fair defaults — turn one dial, taste, and the next brew remembers.'}</div>
-  ${setupSel}
-  <label class="f"><span class="l">Technique <span class="opt">optional</span></span>
-    <input type="text" id="b_technique" list="techlist" value="${esc((last&&last.technique)||'')}" placeholder="V60 · Aeropress · espresso">
-    <datalist id="techlist">${techs.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></label>
-  ${editing?'':timerHTML()}
-  <div class="dialrow">
-    <div id="dialbox_grind">${grindDialHTML(setup,last?last.grind:20)}</div>
-    ${dial('dose','Dose','g',last?last.doseG:18,0.1,0,null,1)}
-    ${dial('water','Water','g',last?last.waterG:36,1,0,null,0)}
-    <div id="dialbox_temp">${tempDialHTML(last?last.tempC:94)}</div>
-  </div>
-  ${dial('time','Time','',last?last.timeSec:28,1,0,null,0,{kind:'time'})}
-  <button class="btn btn-primary" onclick="saveBrewFlow('${coffeeId}','${editId||''}')">${editing?'Save changes':'To the cup →'}</button>
-  ${editing?'':'<button class="btn btn-quiet" onclick="closeSheet()">Not now</button>'}`);
 }
 function saveBrewFlow(coffeeId,editId){
   let setupId=val('b_setup');
@@ -2835,6 +2804,8 @@ function vBrew(coffeeId,view){
       <label class="f"><span class="l">Technique <span class="opt">optional</span></span>
         <input type="text" id="b_technique" list="techlist" value="${esc((last&&last.technique)||'')}" placeholder="V60 · Aeropress · espresso">
         <datalist id="techlist">${techs.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></label>
+      <button class="btn btn-quiet" style="margin-bottom:4px" onclick="openVisualizerPicker()">Pull from Visualizer</button>
+      <div id="viz_picker"></div>
       ${editing?'':timerHTML()}
       <div class="dialrow">
         <div id="dialbox_grind">${grindDialHTML(setup,last?last.grind:20)}</div>
@@ -2846,6 +2817,66 @@ function vBrew(coffeeId,view){
       <button class="btn btn-primary" style="min-height:52px;margin-top:6px" onclick="saveBrewFlow('${coffeeId}','${editId}')">${editing?'Save changes':'To the cup →'}</button>
       ${editing?'':'<button class="btn btn-quiet" onclick="closePage()">Not now</button>'}
     </div></div>`;
+}
+/* ============ Visualizer — pulled, not typed (ROADMAP.md Phase 24) ============
+ * BYO Basic Auth, named for what it is in openVisualizerKey(): Visualizer's
+ * docs want OAuth here, but that needs a fixed redirect URL and a safe place
+ * for a client secret, neither of which a static app has. One tap, one brew,
+ * no sweep, manual entry untouched underneath. No scalar temp field exists
+ * (only curves), so the temp dial stays exactly as manual as it always was. */
+const visualizerEmail=()=>getPref('visualizerEmail','');
+const visualizerPassword=()=>getPref('visualizerPassword','');
+const visualizerAuthHeader=()=>{
+  const e=visualizerEmail(),p=visualizerPassword();
+  return e&&p?'Basic '+btoa(`${e}:${p}`):null;
+};
+function openVisualizerKey(){
+  openSheet(`<h3>Your Visualizer account</h3>
+  <div class="sub">Your Visualizer email and password, kept on this device only — sent to nobody but visualizer.coffee, and only when you pull a shot. This is your real account login, not a separate key; Visualizer's own docs recommend against this for an app like Carta, and the tradeoff is yours to take.</div>
+  <label class="f"><span class="l">Email</span><input type="text" id="viz_email" value="${esc(visualizerEmail())}" placeholder="you@example.com"></label>
+  <label class="f"><span class="l">Password</span><input type="password" id="viz_password" value="${esc(visualizerPassword())}"></label>
+  <div class="btnrow">
+    ${visualizerEmail()?`<button class="btn btn-quiet" onclick="clearVisualizerKey()">Remove</button>`:''}
+    <button class="btn btn-primary" onclick="saveVisualizerKey()">Save</button>
+  </div>`);
+}
+function saveVisualizerKey(){setPref('visualizerEmail',val('viz_email'));setPref('visualizerPassword',val('viz_password'));closeSheet();toast('Saved — on this device only.');}
+function clearVisualizerKey(){setPref('visualizerEmail','');setPref('visualizerPassword','');openVisualizerKey();}
+const VISUALIZER_BASE='https://visualizer.coffee/api/shots';
+async function callVisualizer(path){
+  const auth=visualizerAuthHeader();if(!auth)throw new Error('Set your Visualizer account first.');
+  const r=await fetch(VISUALIZER_BASE+path,{headers:{'Authorization':auth}});
+  if(!r.ok)throw new Error(r.status===401?"Visualizer didn't recognize that email or password.":`Visualizer call failed (${r.status}).`);
+  return r.json();
+}
+function applyVisualizerShot(shot){['dose','water','time','grind'].forEach(k=>{if(shot[k]!=null)setDial(k,shot[k])});}
+let _vizBusy=false,_vizShots=[];
+async function openVisualizerPicker(){
+  if(_vizBusy)return;
+  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  const box=document.getElementById('viz_picker');if(!box)return;
+  _vizBusy=true;
+  box.innerHTML='<div class="muted small" style="margin-top:8px">Loading your shots…</div>';
+  try{
+    const list=(await callVisualizer('?page=1&items=8')).data||[];
+    if(!list.length){box.innerHTML='<div class="muted small" style="margin-top:8px">No shots on your Visualizer account yet.</div>';_vizBusy=false;return}
+    const rows=(await Promise.all(list.map(async s=>{
+      try{return {...parseVisualizerShot(await callVisualizer(`/${s.id}/download?essentials=true`)),clock:s.clock,id:s.id}}
+      catch(e){return null}
+    }))).filter(Boolean);
+    _vizShots=rows;
+    box.innerHTML=rows.length?rows.map(r=>`<button class="lrow" onclick="vizShotPicked('${r.id}')"><span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc([r.time?fmtTime(r.time):'',fmtWhen(new Date(r.clock*1000).toISOString())].filter(Boolean).join(' · '))}</span></span></button>`).join('')
+      :'<div class="muted small" style="margin-top:8px">Could not read your shots.</div>';
+  }catch(e){
+    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>`;
+  }
+  _vizBusy=false;
+}
+function vizShotPicked(id){
+  const shot=_vizShots.find(s=>s.id===id);if(!shot)return;
+  applyVisualizerShot(shot);
+  const box=document.getElementById('viz_picker');
+  if(box)box.innerHTML='<div class="muted small" style="margin-top:8px">Filled from Visualizer — temperature isn\'t part of a shot\'s record, so set that by hand.</div>';
 }
 /* ============ your taste — the hunt, folded into the Atlas ============
  * Scout was a room whose output was geography, so it stopped being a room: it
@@ -4927,8 +4958,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.25.0';
+const APP_VERSION='7.26.0';
 const CHANGELOG=[
+  {v:'7.26.0',d:"Pull from Visualizer. Dose, yield, time, grind — a Decent machine or a Bluetooth scale often records these the moment a shot or a pour finishes, and until now Carta had no way to know that and asked you to type them all in again. Dialing in a brew now offers a button beside the usual fields: pick a recent shot from your Visualizer account, and the numbers land in the dials already turned to it, still yours to correct. Nothing runs until you tap it, nothing is fetched beyond the one shot you pick, and typing it in by hand works exactly as it always has for everyone else."},
   {v:'7.25.0',d:"A coffee's own cups, not just their count. A coffee's page used to state \"Cups so far: 4\" and stop there — every cup behind that number stayed invisible, whether it was the bag you brewed at home or the same coffee you first had at the café it came from. It lists them now, newest first: each home brew with its Setup and technique, each café cup with the place you had it, every one with its own reading beside it — one tap into any of them, and a café cup carries you on to that café itself."},
   {v:'7.24.0',d:"Search for more. Adding a coffee from a café's menu rarely gets you the whole story — the region, the process, the altitude a bag never printed usually meant a separate sitting later, hunting a roaster's own site or an importer's listing by hand. There's a button for that now, beside any coffee's own fields: it searches the web, on your own key, for exactly the coffee in front of you, and fills in only what's still blank — each fact naming where it came from, every one still yours to correct. Nothing is guessed, nothing already typed is touched, and nothing runs until you tap it."},
   {v:'7.23.0',d:"The coffee, never lost to a swipe. Adding or editing a coffee used to hold everything you typed only in the form itself — dismiss the sheet before tapping Save, on purpose or by an accidental swipe, and it was gone. It saves as you type now, the moment a roaster or a name is on the page, so starting an entry at the bar and finishing the rest once there's time to look it up actually works: swipe away, put the phone down, come back later — whatever was typed is already on the Shelf, right where you left it."},

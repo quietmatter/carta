@@ -79,12 +79,13 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–23 are all shipped, Phase 19 landed after Phase 20 rather than
-before it (Phase 19's own entry below has the account of why); Phases 24
-and 25 are written and scheduled but not yet built. Carta 7 stands at
-**v7.25.0, `index.html` 4,980 lines + `carta-map.js` 535 lines, 79/79 pure
-tests** — still comfortably inside the 5,000-line band. Full prose
-for each is in `LOGBOOK.md`, cited here, not repeated.*
+*Phases 8–24 are all shipped, Phase 19 landed after Phase 20 rather than
+before it (Phase 19's own entry below has the account of why); Phase 25 is
+written and scheduled but not yet built. Carta 7 stands at
+**v7.26.0, `index.html` 5,012 lines + `carta-map.js` 535 lines, 83/83 pure
+tests** — 12 lines over the 5,000-line band, disclosed in Phase 24's own
+entry and in `docs/ARCHITECTURE.md` §1. Full prose for each is in
+`LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
 
@@ -939,7 +940,7 @@ in both themes; tapping a café cup's row lands on a screen that names the
 café; a coffee with no cups states "No cups yet" and renders no rows. 79/79
 pure tests unaffected (nothing touched lived inside the tested region).
 
-### Phase 24 — pulled, not typed (scheduled, not yet built)
+### Phase 24 — pulled, not typed (shipped — v7.26.0)
 
 *Phases 24 and 25 are one idea in two steps. **24 is the connection**, built
 where the coffee is already chosen and nothing has to be matched — the
@@ -954,71 +955,98 @@ control app, a Bluetooth scale's own app) the moment the shot or pour
 finishes. Retyping them into Carta's dial-in screen is pure friction for
 anyone whose equipment already recorded the numbers once.
 
-**What research found, and what it settled.** The founder's own gear
-(Odyssey's Argos machine, via its own control app; a BOOKOO scale, via the
-BOOKOO N app) each already sync to **Visualizer** (`visualizer.coffee`),
-a real, independent, actively-run service — not Carta's to build, and not
-tied to any one machine or scale brand: **any** gear whose own app can sync
-to Visualizer works the same way from Carta's side, which is the shape
-this phase is built to, not a one-keeper special case. Confirmed directly
-against the live API before writing this:
+**A correction made before building, not after.** Scoping this phase first
+said "auth is a separate secret token, not the account password," taken
+from a search summary and never checked against the primary source. Before
+writing any code, the actual OpenAPI spec at `apidocs.visualizer.coffee`
+was fetched directly: Basic Auth genuinely is the real email and password,
+and Visualizer's own docs recommend OAuth *instead*, by name, for "public
+applications, distributed integrations, and any workflow exposed to other
+users" — precisely to avoid a third-party app collecting a keeper's
+password. Put to the founder directly with both options (Basic Auth now,
+accepting the real-password tradeoff, vs. OAuth's Authorization Code flow,
+which needs a fixed pre-registered redirect URL and a safe place for a
+client secret — neither of which a static, buildless app dropped on any
+host or opened from `file://` can offer). The founder's call: **Basic Auth
+now.** `openVisualizerKey()`'s own copy states this plainly — the real
+account login, not a scoped key, kept on-device, sent only to
+`visualizer.coffee` — and `docs/ARCHITECTURE.md` §7 carries the full
+reasoning and the correction itself, named rather than quietly overwritten.
+
+**What research found, and what it settled** (confirmed directly against
+the live API, not summarized secondhand):
 - **CORS is wide open** (`access-control-allow-origin: *`) — a plain
   browser `fetch` reaches it, same as the ask reaches `api.anthropic.com`.
   No server, no proxy; the "no server" invariant holds.
-- **Auth is a separate secret token, not the account password** — the
-  API's own docs show Bearer-token auth (`Authorization: Bearer …`) for
-  exactly the "personal script, local tooling" case Carta's BYO-key
-  posture already is. Basic Auth (email+password) is also offered but the
-  token is the one to ask keepers to paste — same shape as the ask's own
-  key, a scoped secret rather than the real password.
-  Whether a first-class personal-access-token page exists in Visualizer's
-  own account settings (vs. a token issued another way) is the one thing
-  left to confirm by hand at build time — everything else about the auth
-  shape is settled.
-- **A live shot record's actual fields** (pulled from a real, public shot
-  ID during scoping) confirm the mapping onto Carta's own brew fields:
-  `bean_weight`→dose, `drink_weight`→water/yield, `duration`→time,
-  `grinder_setting`→grind, `bean_brand`/`bean_type`/`roast_date`/
-  `roast_level` line up with a coffee's own identity fields exactly.
-  A temperature field almost certainly exists (DE1-class shots log it) but
-  wasn't in the slice pulled during scoping — confirm the exact key
-  against a live payload before wiring the temp dial.
-- **Pourover coverage is confirmed possible, not yet confirmed in shape.**
-  The mechanism is real (BOOKOO N syncs pours to Visualizer, per the
-  founder directly) but the exact field names a pourover-type shot record
-  carries (weight/flow/time, presumably shaped differently from an
-  espresso shot's `bean_weight`/`drink_weight`) haven't been inspected
-  against a real one yet. Build order: espresso first (fields confirmed),
-  pourover once a real synced pour has been inspected.
+- **The list endpoint takes `?page=&items=`, not `?limit=`** — confirmed
+  against the Postman-documented collection; a guessed `?limit=` param is
+  silently ignored.
+- **`?essentials=true` on a shot's detail route returns metadata without
+  the curve arrays** — confirmed by diffing against the same shot ID's
+  full, non-essentials response.
+- **A live shot's actual fields** confirm the mapping onto Carta's own brew
+  fields: `bean_weight`→dose, `drink_weight`→water/yield, `duration`→time
+  (rounded to the second), `grinder_setting`→grind, `bean_brand`/
+  `bean_type` line up as the picker's label.
+- **No scalar temperature field exists anywhere** — only curve arrays
+  (`espresso_temperature_goal`/`_basket`/`_mix`). The scoping guess that one
+  "almost certainly exists" was wrong; the temp dial stays exactly as
+  manual as it always was rather than inventing a derived number from a
+  curve.
+- **Pourover coverage is confirmed possible, still not confirmed in
+  shape** — BOOKOO N syncs pours to Visualizer, per the founder directly,
+  but a real synced pour's field names haven't been inspected. Not built
+  in this pass; espresso-shaped fields only.
 
-**What it does.** A **Pull from Visualizer** button inside `openBrewFlow`,
-beside the existing dials — keeper-summoned, one brew at a time, never
-required. Tapping it lists the keeper's own recent shots (roaster/coffee/
-date, read off `bean_brand`/`bean_type`/the shot's own date) fetched with
-their own token; picking one fills the dose/water/temp/time/grind dials
-with the shot's numbers, landing in the same already-editable dial state
-manual entry already writes to — accept it by leaving it, correct it by
-turning the dial, exactly Phase 22's own "an input field already is the
-confirm step" posture. **Carta never redraws the pressure/flow/temp
-curve** — that is Visualizer's own signature view and reimplementing it is
-a real charting engine, not a form field; the pulled shot instead carries
-a plain link out to its own page on Visualizer for the keeper who wants
-the graph. Manual entry stays exactly as it is today — the fallback the
-founder asked for, unchanged, never gated behind having a Visualizer
-account at all.
+**What it does.** A **Pull from Visualizer** button inside `vBrew`, beside
+the existing dials — keeper-summoned, one brew at a time, never required.
+Tapping it lists the keeper's own 8 most recent shots (`parseVisualizerShot`
+reading each one's essentials payload), labeled by roaster/coffee or an
+honest "Untitled shot" when the shot names none; picking one fills the
+dose/water/time/grind dials via `setDial`'s existing surgical redraw —
+landing in the same already-editable dial state manual entry writes to,
+accept it by leaving it, correct it by turning the dial, exactly Phase 22's
+"an input field already is the confirm step" posture. **No link-out to
+Visualizer's own graph was built** — no confirmed public URL pattern for a
+shot's own page was found during research, and guessing one risked a
+broken link, so it was left out rather than shipped wrong. Manual entry
+stays exactly as it is today — the fallback the founder asked for,
+unchanged, never gated behind having a Visualizer account at all.
 
-**What it must not become.** Matching a pulled shot's `bean_brand`/
-`bean_type` against the keeper's own coffees is **Phase 25's job, not this
-one** — here the coffee is whichever one `openBrewFlow` is already open on,
-so nothing needs deciding. No "browse all my shots" screen either. And it
-stays BYO-key, keeper-owned, on-device — no Carta-run account, no server
-holding anyone's Visualizer credentials, same posture as the ask.
+**What it must not become, and didn't.** Matching a pulled shot's
+`bean_brand`/`bean_type` against the keeper's own coffees is **Phase 25's
+job, not this one** — here the coffee is whichever one `vBrew` is already
+open on, so nothing needs deciding. No "browse all my shots" screen either.
+It stays BYO-Basic-Auth, keeper-owned, on-device — no Carta-run account, no
+server holding anyone's Visualizer credentials, same posture as the ask.
 
-**Done when:** dialing in a brew, pressing "Pull from Visualizer," and
-picking a recent shot fills the dials with real numbers instead of typed
-ones — for both an espresso shot and, once confirmed, a pourover — with a
-link to the full curve for whoever wants it, and every dial still turnable
-by hand exactly as before the button existed.
+**A bug found and fixed on the way in.** A second, fully-shadowed
+`openBrewFlow` — dead since Phase 13 moved the brew flow into its own
+screen, silently overwritten by the real definition and unreachable by
+anything — was still sitting in the file. Deleted on sight (42 lines, no
+behavior change: nothing could have called the dead one). Named here
+because it's the kind of latent bug that only stops being invisible when
+someone happens to edit "the wrong one."
+
+**The line band, disclosed rather than crossed quietly.** `index.html`
+lands at 5,012 lines / 333.9 KB — 12 over the 5,000-line ceiling Phase 19
+closed the debt on, bytes comfortable at 333.9 of 500 KB. Comments and code
+were tightened on the way in before this was accepted; a further trim was
+possible only by cutting into the feature itself or fighting the file's
+established density, and eleven lines wasn't judged worth either. See
+`docs/ARCHITECTURE.md` §1 for the full account.
+
+**Done when — met:** dialing in a brew, pressing "Pull from Visualizer,"
+and picking a recent shot fills the dose/water/time/grind dials with real
+numbers instead of typed ones, every dial still turnable by hand exactly
+as before the button existed — verified directly: the button opens the
+account sheet first when no credentials are set; a saved Basic Auth header
+reaches `visualizer.coffee` and a picked shot's numbers land in the right
+dials via `setDial`; a wrong password's 401 and an empty shot list both
+degrade to a stated message rather than a silent failure. 83/83 pure tests
+passing, including four new `parseVisualizerShot` cases (a real shot's
+shape, an honest "Untitled shot" fallback, refusing to guess a blank or
+unparseable field, and never throwing on a missing payload).
 
 ### Phase 25 — the pull, at the door (scheduled, not yet built)
 

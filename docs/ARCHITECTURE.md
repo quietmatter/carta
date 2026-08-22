@@ -135,6 +135,21 @@ Carta 7 is built exactly the way classic was, smaller:
   `index.html` exactly as before, since none of the tested functions lived in
   the moved region). `index.html` is back inside the band, per the figures
   above — the debt this section tracked since Phase 18 is closed.
+
+  **Phase 24 is the first small re-crossing since that debt closed.** The
+  Visualizer picker (settings sheet, `callVisualizer`, `parseVisualizerShot`,
+  `openVisualizerPicker`) added real lines, and a genuine bug was fixed in
+  the same pass — a dead, fully-shadowed `openBrewFlow` from before Phase 13
+  moved the brew flow into its own screen, still sitting in the file and
+  silently overwritten by the real one, deleted on sight (42 lines, no
+  behavior change: nothing could have called the dead one). Comments and
+  code were tightened on the way in rather than left at their first draft's
+  length. `index.html` still lands at **5,012 lines / 333.9 KB** — 12 over
+  the line ceiling, bytes comfortable. Recorded here rather than silently
+  crossed, per this section's own rule, and named for what it is: eleven
+  lines, not the kind of debt Phase 18 or 20 left — a further trim was
+  possible only by cutting into the feature itself or fighting the file's
+  own established density, and eleven lines wasn't judged worth either.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -399,6 +414,26 @@ one and the one that travels.
 | Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 18) | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 | **Search for more** (BYO-key, same `api.anthropic.com` row, Anthropic's server-side web-search tool) | the keeper taps "Search for more" on one coffee (Phase 22) | the field stays blank, typed in by hand |
+| **Pull from Visualizer** (BYO Basic Auth, `visualizer.coffee/api/shots`) | the keeper taps "Pull from Visualizer" on one brew (Phase 24) | the dials stay exactly as manual as they always were |
+
+**The Visualizer row's auth is the keeper's real account login, not a
+scoped key — named plainly rather than softened, and worth recording why.**
+Visualizer's own API docs recommend OAuth for "public applications,
+distributed integrations, and any workflow exposed to other users" — which
+this is, by Phase 25's own design — specifically to avoid third-party apps
+collecting a keeper's password. Carta uses Basic Auth (email + password)
+anyway, because OAuth's Authorization Code flow needs a fixed, pre-registered
+redirect URL and, for a public client with no server, a way to complete the
+exchange without a client secret (PKCE) that was never confirmed available.
+A static file dropped on any host, or opened straight from `file://`, has
+neither a fixed URL nor anywhere safe to hold a secret even if it did. Basic
+Auth is the option that actually works from anywhere, at the cost of the
+real account password living in `localStorage` rather than a revocable
+scoped token — stated in `openVisualizerKey()`'s own copy, not euphemised,
+and put to the founder directly before building against it (this doc
+originally read "a separate secret token, not the account password," taken
+from a search summary never checked against the primary source; the
+correction is recorded here rather than quietly overwritten).
 
 The geocode row is unchanged in posture and was sharpened at Phase 15: the
 same one call now asks for five results with their address details instead of
