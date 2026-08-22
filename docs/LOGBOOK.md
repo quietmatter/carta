@@ -7,6 +7,43 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — Phase 19: the split, paying down the debt Phase 20 deepened
+
+- **Shipped — v7.22.0.** The map layer — the three custom elements
+  (`<carta-belt>`, `<carta-plot>`, `<carta-streets>`), the vendored
+  `d3-array` + `d3-geo`, and the ground data (`LANDS`, `LAND_TOPO`,
+  `LAND_AKA`) with its decoders (`landRingsRaw`, `landTopoRaw`, `landKey`,
+  `landAnchor`) — moved out of `index.html` into its own file,
+  `carta-map.js`, loaded from the `<head>` with a plain `<script src>`.
+  `index.html` is back to **4,854 lines / 321.5 KB**, comfortably inside the
+  3–5,000-line band with real room again; `carta-map.js` holds **535 lines /
+  108.4 KB**. No lines were cut, only moved — the app is the same size it
+  was, just no longer one file.
+- **The seam, exactly as designed.** `carta-map.js` owns the data, the
+  decoders and the elements, and publishes the handful the app reads —
+  `LANDS`, `landRingsRaw`, `landTopoRaw`, `landKey`, `landAnchor` — onto
+  `window`, the same way `CARTA_LAND_NAMES` already flows the other way.
+  The custom elements' own private `BELT`/`AKA`/`fold` (self-contained in
+  their own closure, distinct from the app's ledger-facing `fold`) needed no
+  change at all. No rewrite, no rename, no restyle — the diff is a move plus
+  that seam, checked against the pure harness (still 74/74, sliced out of
+  `index.html` exactly as before) and by loading the app in both paper and
+  dusk: the passport, a seeded tasted country and its topo-contoured
+  chapter all rendered unchanged.
+- **Landed after Phase 20, not before it, and paying a larger debt than
+  scheduled.** Phase 19 was written and scheduled first; Phase 20 collided
+  with it on `main` and landed anyway, by the founder's own explicit call,
+  knowingly deepening the line-band debt this phase exists to pay — from
+  Phase 18's 5,043 to 5,380 (`ARCHITECTURE.md` §1, Phase 20's own logbook
+  entry). This phase closes that debt at last: the founder's original
+  schedule held even though the number it had to pay down grew twice in the
+  meantime.
+- Nothing for Lotmark's desk, nothing parked. This was pure debt service —
+  the kind of phase that serves no joy directly and exists so the ones that
+  do can keep landing in a file that's still readable whole.
+
+---
+
 ## 2026-08-21 — Phase 20: Ask Carta, at the front door
 
 - **Shipped — v7.21.0.** The ask moved off a button at the bottom of the

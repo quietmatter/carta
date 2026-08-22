@@ -31,7 +31,8 @@ JS inline, no build step, no accounts, no server.
 came before it, Carta 6.18.x, is frozen whole at `classic/index.html`. They
 are two different apps in one repo, and the distinction matters constantly:
 
-1. **Carta 7** (`index.html`, ~4,900 lines) — the product. Every phase of
+1. **Carta 7** (`index.html`, ~4,900 lines, plus `carta-map.js`, the map
+   layer split out at Phase 19) — the product. Every phase of
    `docs/ROADMAP.md` ships here.
 2. **Classic** (`classic/index.html`, ~12,500 lines) — **frozen. No fixes, no
    features, lights on.** Its own architecture map is `classic/CLAUDE.md`;
@@ -51,12 +52,10 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–18 and 20 shipped**; **Phase 19 is
-  written and scheduled but not yet built: it splits the file**
-  (`index.html` + `carta-map.js`) to pay the band debt Phase 18 landed with.
-  Phase 20 landed ahead of it — a founder-level call, made knowing it deepens
-  rather than pays down that debt — so read Phase 19 before adding anything
-  further to `index.html`.
+  read at every phase gate. **Phases 1–20 shipped.** Phase 20 landed ahead of
+  Phase 19 — a founder-level call, made knowing it deepened the line-band
+  debt Phase 18 landed rather than paying it down — and **Phase 19 then paid
+  that debt**, splitting the map layer out into `carta-map.js`.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -77,7 +76,8 @@ commission Phase 12 built.
 ## Repository layout
 
 ```
-index.html            Carta 7 — the entire app, inline <style> and <script>
+index.html            Carta 7 — the app, inline <style> and <script>
+carta-map.js          Carta 7's map layer, split out at Phase 19 (loaded from index.html's <head>)
 test/model.test.js    The pure-block harness (zero deps, plain Node)
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
@@ -138,13 +138,16 @@ server/               Classic's sync server — dormant
   breathing ember tip, and `.settle` for an answer that writes itself in
   rather than arriving flat). All still, correctly, under
   `prefers-reduced-motion`.
-- **the map layer** — three light-DOM custom elements defined above the app's
-  own script, so page tokens (`var(--ink)`) resolve inside them. Taps leave as
-  bubbling events (`carta:country-tap`, `carta:pin-tap`).
+- **the map layer** — three light-DOM custom elements, split out at Phase 19
+  into `carta-map.js` (loaded from `index.html`'s `<head>`, before the app's
+  own script, which reads its published `LANDS`/decoders as plain globals —
+  see `ARCHITECTURE.md` §1 for the seam). Light DOM so page tokens
+  (`var(--ink)`) resolve inside them. Taps leave as bubbling events
+  (`carta:country-tap`, `carta:pin-tap`).
   - `<carta-belt>` — **the passport**, the app's home surface. Draws the
-    `LANDS` outlines already in this file, fitted to the box. **No fetch, no
-    tile, nothing to be offline from.** One SVG unit is one CSS pixel, so its
-    type is drawn at the size it is read at (Phase 18 — the fixed 1,000-unit
+    `LANDS` outlines the file already carries, fitted to the box. **No
+    fetch, no tile, nothing to be offline from.** One SVG unit is one CSS
+    pixel, so its type is drawn at the size it is read at (Phase 18 — the fixed 1,000-unit
     box was what made it illegible on a phone). `topo="on"` inks `LAND_TOPO`'s
     1,000/2,000/3,000 m contours over a country's own fill; `marks="[…]"`
     stands its regions on the ground their farms were placed on.
@@ -311,40 +314,38 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 ### Invariants to preserve
 
-- **One file, no build.** Vanilla JS, inline everything, nothing fetched at
-  load. `docs/ARCHITECTURE.md` §1 sets the band: **3–5,000 lines / ≤ 500 KB**
-  (raised from 4,000 at Phase 13, 4,500 at Phase 15, 4,800 at Phase 16, each
-  with the argument written into §1 — the byte ceiling has never moved and is
-  the one that guards the drop-it-on-a-static-host promise. Phase 17's
-  amendment to 5,000 is recorded as a **reopened decision**, not a routine
-  fourth bump: both of the prior two amendments had named 5,000 by name as
-  the point past which the one-file law itself, not the band, is what's come
-  due — see §1's own account of it. The decision stood even after Phase 17's
-  own first draft was replaced same-day by a smaller, simpler one — it was
-  never contingent on that draft specifically).
-  **The band is overdrawn, not amended:** Phase 18 landed at 5,043 of 5,000
-  (bytes fine, 407 of 500 KB), recorded as an open debt rather than a fifth
-  amendment, by the founder's own call — land over, and give the split its
-  own phase. That is **Phase 19**, written up in `ROADMAP.md`: `index.html` +
-  `carta-map.js` (the custom elements, the vendored d3, `LANDS`/`LAND_TOPO`,
-  ~1,900 lines that are not the app). Two static files is still no build; it
-  is only no longer one file. **Until it lands, 5,000 is still the number and
-  nothing new goes into `index.html`** — there is no headroom to spend, only a
-  debt to deepen. One small bugfix (a Phase 16 patch, six lines) was let
-  through anyway before Phase 19 shipped, as the one named exception rather
-  than a quiet second overage — see §1's own account, at 5,049/409 KB. **Phase
-  20 then landed before Phase 19 did too, knowingly deepening the debt
-  further** — put to the founder directly rather than assumed, the same way
-  every prior line-band call was — to **5,380 of 5,000** (bytes still fine,
-  429.5 of 500 KB). §1 records this explicitly: the debt is Phase 19's to
-  pay, still, and it is larger now than when it was scheduled. **Until Phase
-  19 lands, nothing further goes into `index.html`** without the same
-  explicit call.
-- **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted into
-  the file verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10). The count is
-  **two**. A third needs an argument written into §10 before it is written
-  into the file — the tooling-creep tripwire (`ROADMAP.md`) is what this rule
-  is guarding.
+- **Two files, no build.** Vanilla JS, inline everything, nothing fetched at
+  load beyond `carta-map.js` itself. `docs/ARCHITECTURE.md` §1 sets the band
+  for `index.html`: **3–5,000 lines / ≤ 500 KB** (raised from 4,000 at Phase
+  13, 4,500 at Phase 15, 4,800 at Phase 16, each with the argument written
+  into §1 — the byte ceiling has never moved and is the one that guards the
+  drop-it-on-a-static-host promise. Phase 17's amendment to 5,000 is recorded
+  as a **reopened decision**, not a routine fourth bump: both of the prior
+  two amendments had named 5,000 by name as the point past which the
+  one-file law itself, not the band, is what's come due — see §1's own
+  account of it).
+  **The band went overdrawn, not amended, twice — and Phase 19 then paid it
+  down.** Phase 18 landed at 5,043 of 5,000 (bytes fine, 407 of 500 KB),
+  recorded as an open debt rather than a fifth amendment, by the founder's
+  own call — land over, and give the split its own phase. One small bugfix
+  (a Phase 16 patch, six lines) was let through anyway before the split
+  shipped, as a named exception, at 5,049/409 KB. Phase 20 then landed before
+  Phase 19 did too, knowingly deepening the debt further — put to the
+  founder directly, the same way every prior line-band call was — to
+  5,380/5,000 (429.5 of 500 KB). **Phase 19 has now shipped**: the map layer
+  (the three custom elements, the vendored d3, `LANDS`/`LAND_TOPO`/`LAND_AKA`
+  and their decoders) moved out into `carta-map.js`, loaded from
+  `index.html`'s `<head>` with a plain `<script src>` — no bundler, no
+  build, still two files you drop on a static host. `index.html` now stands
+  at **4,854 lines / 321.5 KB**, comfortably back inside the band;
+  `carta-map.js` holds **535 lines / 108.4 KB**. The debt is closed; see
+  `ARCHITECTURE.md` §1 for the seam (`window`-published globals) and the
+  full run of amendments and overages.
+- **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted in
+  verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10; living in `carta-map.js`
+  since Phase 19, not `index.html`). The count is **two**. A third needs an
+  argument written into §10 before it is written into either file — the
+  tooling-creep tripwire (`ROADMAP.md`) is what this rule is guarding.
 - **Offline-first; every network touch degrades to nothing.** The whole list is
   `ARCHITECTURE.md` §7: Nominatim (placing a café, grounding an ask), Leaflet +
   OSM tiles (a street surface), and the ask itself. Each is keyless or

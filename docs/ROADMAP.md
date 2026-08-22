@@ -79,11 +79,13 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–18 and 20 are shipped; Phase 19 (the split) is written and
-scheduled but not yet built. Carta 7 stands at
-**v7.21.0, 5,380 lines, 74/74 pure tests** — 380 lines over the 5,000-line
-band, an acknowledged debt Phase 19 exists to pay down (`ARCHITECTURE.md`
-§1). Full prose for each is in `LOGBOOK.md`, cited here, not repeated.*
+*Phases 8–20 are all shipped, Phase 19 landed after Phase 20 rather than
+before it (Phase 19's own entry below has the account of why). Carta 7
+stands at
+**v7.22.0, `index.html` 4,854 lines + `carta-map.js` 535 lines, 74/74 pure
+tests** — back inside the 5,000-line band, the debt Phase 18 opened and
+Phase 20 knowingly deepened now paid down (`ARCHITECTURE.md` §1). Full prose
+for each is in `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
 
@@ -638,48 +640,61 @@ the debt recorded, and give the split a phase of its own rather than bundling
 it into a feature's PR. That phase is next, and it is written below rather
 than left to be rediscovered.
 
-### Phase 19 — the split (scheduled, not yet built)
+### Phase 19 — the split
 
-**The joy it serves:** none directly, and that is the honest framing. This is
-the first phase in the fourth turn whose whole job is to pay a debt, and it is
-scheduled because §1's own rule scheduled it, not because a surface wants it.
-The joy it protects is *a file one person can read whole* — the thing the line
-band was a proxy for all along.
+**Shipped — v7.22.0.** Landed after Phase 20, not before it: Phase 20 was
+already built against the pre-split file when the two collided on `main`,
+and the founder's call at that point was to land Phase 20 anyway and let
+this phase pay a larger debt than it was scheduled against (`LOGBOOK.md`'s
+Phase 20 entry and `ARCHITECTURE.md` §1 carry the full account).
 
-**What it does.** Move the map layer out of `index.html` into **`carta-map.js`**,
-loaded from the `<head>` with a plain `<script src>`:
+**The joy it serves:** none directly, and that was the honest framing going
+in. This is the first phase in the fourth turn whose whole job was to pay a
+debt, scheduled because §1's own rule scheduled it, not because a surface
+wanted it. The joy it protects is *a file one person can read whole* — the
+thing the line band was a proxy for all along.
+
+**What it did.** Moved the map layer out of `index.html` into
+**`carta-map.js`**, loaded from the `<head>` with a plain `<script src>`:
 
 - the three custom elements (`<carta-belt>`, `<carta-plot>`, `<carta-streets>`)
 - the vendored `d3-array` + `d3-geo` (§1 — the count stays two)
 - `LANDS`, `LAND_TOPO`, `LAND_AKA` and their decoders
+  (`landRingsRaw`, `landTopoRaw`, `landKey`, `landAnchor`)
 
-Roughly **1,900 lines that are the map layer rather than the app.** `index.html`
-comes back to about 3,100 — inside the band with real room, and the band itself
-stays 3–5,000 for the app file. **This is not a build step:** no bundler, no npm,
-no lockfile, no transpile. Two static files, both droppable on a host, which is
-the promise the byte ceiling was always guarding.
+535 lines that are the map layer rather than the app. `index.html` came back
+to **4,854 lines / 321.5 KB** — inside the band with real room again, and the
+band itself stays 3–5,000 for the app file. `carta-map.js` is **535 lines /
+108.4 KB**. Combined, the app is the same size it always was — this phase
+moved lines, it didn't cut anything. **Not a build step:** no bundler, no
+npm, no lockfile, no transpile. Two static files, both droppable on a host,
+which is the promise the byte ceiling was always guarding.
 
-**The one real problem to solve, and it is not the file move.** The app script
-and the map layer are mutually coupled today: the elements call `landRingsRaw`,
-`landTopoRaw`, `BELT`, `AKA` and `fold`, while the app's own `passportSVG`,
-`tastedCountryMap`, `landKey` and `landAnchor` read `LANDS`/`LAND_TOPO` straight.
-So the split has to decide **which file owns the ground data and its decoders**,
-and make the load order safe in both directions. The likely shape: `carta-map.js`
-owns the data, the decoders and the elements, and publishes the handful the app
-reads on `window` the way `CARTA_LAND_NAMES` already goes the other way. Getting
-that seam wrong is the only way this phase breaks anything, so it is the part to
-design before moving a line.
+**The one real problem, solved.** The app script and the map layer were
+mutually coupled: the elements call `landRingsRaw`, `landTopoRaw`, and their
+own private `BELT`/`AKA`/`fold` (self-contained in the elements' own closure,
+untouched by the split), while the app's own `passportSVG`,
+`tastedCountryMap`, `landKey` and `landAnchor` read `LANDS`/`LAND_TOPO`
+straight. The shape this section predicted is the shape it shipped:
+`carta-map.js` owns the ground data, the decoders and the elements, and
+publishes the handful the app reads — `LANDS`, `landRingsRaw`, `landTopoRaw`,
+`landKey`, `landAnchor` — on `window`, the same way `CARTA_LAND_NAMES`
+already goes the other way. (Classic scripts sharing one page already share
+a global scope, so the bare identifiers would have resolved either way; the
+explicit `window` publish was kept anyway; it documents the seam rather than
+relying on that alone, and costs nothing.)
 
-**What it must not become.** A refactor with opinions. Nothing gets rewritten,
-renamed, restyled or "improved" on the way across — the diff should read as a
-move plus the seam, and every browser check from Phases 12–18 should pass
-untouched afterward. If it starts wanting a module system, that is tripwire 2
-(`ARCHITECTURE.md` §1 and §10), and the answer is no.
+**What it didn't become.** A refactor with opinions. Nothing was rewritten,
+renamed, restyled or "improved" on the way across — the diff reads as a move
+plus the seam, verified against every browser check from Phases 12–18 and
+Phase 20's own front-door composer, unchanged.
 
-**Done when:** `index.html` is back inside the band on its own, `carta-map.js`
-stands beside it, the pure harness still slices its region out of `index.html`
-and passes, and the passport, the country contours, the city shape, the street
-and terrain surfaces all render in paper and dusk exactly as they do now.
+**Done when — met:** `index.html` is back inside the band on its own,
+`carta-map.js` stands beside it, the pure harness still slices its region
+out of `index.html` and passes (74/74), and the passport, the country
+contours, the city shape and the street surfaces all render in paper and
+dusk exactly as they did before — checked by loading the app, seeding a
+tasted country, and opening its chapter to confirm the topo contours draw.
 
 ### Phase 20 — Ask Carta, at the front door
 
