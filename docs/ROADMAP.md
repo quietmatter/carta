@@ -79,10 +79,10 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–21 are all shipped, Phase 19 landed after Phase 20 rather than
-before it (Phase 19's own entry below has the account of why); Phase 22 is
-written and scheduled but not yet built. Carta 7 stands at
-**v7.23.0, `index.html` 4,879 lines + `carta-map.js` 535 lines, 74/74 pure
+*Phases 8–22 are all shipped, Phase 19 landed after Phase 20 rather than
+before it (Phase 19's own entry below has the account of why). Carta 7
+stands at
+**v7.24.0, `index.html` 4,956 lines + `carta-map.js` 535 lines, 79/79 pure
 tests** — still comfortably inside the 5,000-line band. Full prose
 for each is in `LOGBOOK.md`, cited here, not repeated.*
 
@@ -828,10 +828,12 @@ paths) against a fresh `D.coffees` mint via a backdrop tap, an edit to an
 already-existing coffee closed the same way, roaster-resolution firing on
 blur, and an empty form swiped shut minting nothing.
 
-### Phase 22 — search, on your own key (scheduled, not yet built)
+### Phase 22 — search, on your own key
+
+**Shipped — v7.24.0.**
 
 **The joy it serves:** #1 and #3, same as Phase 21 — the part of adding a
-coffee that today means a separate sitting later, at home, typing roaster
+coffee that used to mean a separate sitting later, at home, typing roaster
 names into a search bar by hand to find the region, process and altitude a
 café's menu never states.
 
@@ -841,40 +843,64 @@ roasters and importers, reconcile what they disagree on, then update what's
 already on the shelf — is `docs/RESOLVER.md`'s own machinery: a fingerprint
 scorer, propose-and-confirm, merge and split. That's Lotmark's ladder, not
 Carta's (`ROADMAP.md` tripwire 1), and it's exactly why `classic/` reached
-12,500 lines. This phase is the cut that stays on Carta's side of that
-line: one BYO-key model call, keeper-summoned, scoped to the one coffee
-open in the form right now, its answer landing as an editable suggestion —
-never a sweep across the shelf, never a comparison between two of the
-keeper's own coffees, never a silent overwrite.
+12,500 lines. This phase stayed on Carta's side of that line: one BYO-key
+model call, keeper-summoned, scoped to the one coffee open in the form
+right now, its answer landing as an editable suggestion — never a sweep
+across the shelf, never a comparison between two of the keeper's own
+coffees, never a silent overwrite.
 
-**What it does.** A button on `openCoffeeForm`, beside Save — **Search for
-more** — live once the same gate Phase 21 mints on is met (a roaster or a
-name typed). One call, through the same channel the ask and the menu OCR
-already use (`ARCHITECTURE.md` §7's one sanctioned exception, BYO-key,
-`callModel`/`api.anthropic.com`) — not a new network citizen, the same row
-asked to use its search tool. The model gets what's already in the form and
-comes back with values for the fields still blank — region, process,
-variety, altitude, mill — each landing in a plain, already-editable input,
-with one line under it saying where it came from. Accept it by leaving it,
-correct it by typing over it, the same as any autofill anywhere else in the
-app. Nothing needs a separate "confirm the suggestion" step, because after
-Phase 21 an input field already is that step — whatever's typed (or left
-as suggested) is what's on the record.
+**What it does.** A button on `openCoffeeForm`, beside Done — **Search for
+more** — hidden until the same gate Phase 21 mints on is met (a roaster or
+a name typed; visible immediately when editing an already-minted coffee,
+unhidden the moment `cfAutosave` mints a new one). One call, through the
+same channel the ask and the menu OCR already use (`callModel`, `POST
+api.anthropic.com/v1/messages`, BYO-key) — not a new network citizen,
+`callModel` only gained an optional `tools` argument so the same row could
+be asked to use Anthropic's server-side web-search tool
+(`web_search_20260209`). The prompt (`cfSearchPrompt`, pure and tested)
+states what's already on the form and asks for real values for only the
+fields still blank — country, region, farm, producer, variety, process,
+altitude, mill — each one required to name an actual source or be left
+out entirely; the parser (`parseCfSearch`, pure and tested) restricts the
+model's answer to exactly the blank keys it was asked about, so even a
+model that volunteers a value for an already-filled field can't touch it.
+Whatever comes back fills the matching input directly — a plain, already-
+editable field, accept it by leaving it, correct it by typing over it, the
+same as any autofill anywhere else in the app. Nothing needs a separate
+"confirm the suggestion" step, because after Phase 21 an input field
+already is that step.
+
+One deviation from the original write-up: rather than one attribution line
+under every individual field, the result lands as a single status line
+below the button ("Filled from search: Region (Sey's own product page),
+Process (an importer listing). Couldn't verify Altitude, Mill — left
+blank.") — simpler to build, and it reads as one settled fact rather than
+several fragmented notes. The source is still named per field, just
+gathered in one place rather than scattered under eight inputs.
 
 Re-openable per coffee, one at a time, from the Shelf — the same button on
 the same form, whether the coffee was minted five minutes or five weeks
-ago. Explicitly not a batch job: no "search all" over the shelf, no
-background sweep, no field changed on a coffee the keeper hasn't opened.
+ago. Not a batch job: no "search all" over the shelf, no background sweep,
+no field changed on a coffee the keeper hasn't opened. A coffee with every
+field already filled short-circuits before spending a call at all
+("Every field here is already filled in.").
 
-**What it must not become.** Anything that runs without the keeper opening
-that one coffee and pressing that one button. Anything that compares two
-of the keeper's own coffees to each other, or writes a confidence or grain
-onto a field — that is the resolver's ladder (`RESOLVER.md` §6), not this.
+**What it must not become, and didn't.** Anything that runs without the
+keeper opening that one coffee and pressing that one button. Anything that
+compares two of the keeper's own coffees to each other, or writes a
+confidence or grain onto a field — that is the resolver's ladder
+(`RESOLVER.md` §6), not this.
 
-**Done when:** opening any coffee — freshly minted or long since put on
-the shelf — and pressing "Search for more" fills in whatever origin fields
-are still blank, sourced and editable, without touching a field already
-typed, and without any call happening unless that button was pressed.
+**Done when — met:** opening any coffee — freshly minted or long since put
+on the shelf — and pressing "Search for more" fills in whatever origin
+fields are still blank, sourced and editable, without touching a field
+already typed, and without any call happening unless that button was
+pressed. Verified with Playwright against a stubbed `fetch`: the request
+actually carries the web-search tool; a field already typed survives even
+when the (adversarially malformed) mock response tries to overwrite it; no
+key set opens the key sheet instead of calling out; an all-filled coffee
+never reaches the network at all. `cfSearchPrompt`/`parseCfSearch` are
+pure and now in `test/model.test.js` (79/79 pure tests).
 
 ## The horizon (unscheduled, revisited)
 

@@ -1134,6 +1134,35 @@ function parseMenuOCR(text){
   const lines=list.map(l=>String(l||'').trim()).filter(Boolean);
   return {ok:true,lines};
 }
+/* ---- searching for a coffee's own origin facts (ROADMAP.md Phase 22) ----
+ * The fields a menu or a bag never states — region, farm, process, altitude —
+ * found the way the keeper already did it by hand: search the web for this
+ * exact coffee, on the keeper's own key, through the same channel the ask and
+ * the menu OCR already use, now handed the model's own web-search tool. Asks
+ * for ONLY the fields still blank, and only ones the model can point to an
+ * actual source for — no guess, no corpus-wide match, no merge; the answer
+ * lands as a plain editable suggestion, never a silent overwrite. */
+const CF_SEARCH_FIELDS=[['country','Country'],['region','Region'],['farm','Farm'],
+  ['producer','Producer'],['variety','Variety'],['process','Process'],
+  ['altitude','Altitude'],['mill','Mill']];
+function cfSearchLabel(key){const f=CF_SEARCH_FIELDS.find(x=>x[0]===key);return f?f[1]:key}
+function cfSearchPrompt(known,blankKeys){
+  const lines=Object.entries(known||{}).filter(([,v])=>v).map(([k,v])=>`${cfSearchLabel(k)}: ${v}`).join('\n');
+  const labels=blankKeys.map(cfSearchLabel).join(', ');
+  return `A specialty coffee keeper is filling in a coffee's origin story that their café's menu or the bag never stated. Search the web for this exact coffee — the roaster's own product page, an importer's lot listing, a review that states it plainly — and report back only what you can verify from a real source.\n\nWhat's already on the record:\n${lines||'(nothing yet)'}\n\nFind real values for ONLY these fields, and only where you can point to an actual source: ${labels}.\n\nReply with nothing but a JSON object, no markdown fence, no other text. Each field you can verify becomes a key, using exactly these lowercase names: ${blankKeys.join(', ')}. Each value is {"value":"...","source":"a short, honest description of where this came from"}. Leave out any field you cannot verify — never guess, never estimate a plausible-sounding value, never invent a source.`;
+}
+function parseCfSearch(text,blankKeys){
+  const data=extractJSON(text);
+  const out={};
+  if(!data)return out;
+  (blankKeys||[]).forEach(k=>{
+    const entry=data[k];
+    if(!entry||typeof entry!=='object')return;
+    const value=askStr(entry.value,120),source=askStr(entry.source,140);
+    if(value)out[k]={value,source};
+  });
+  return out;
+}
 /* ---- the city's own shape (Phase 17, corrected) — not streets, not pins, not a live
  * map: a soft silhouette of where the record actually reaches in this city,
  * drawn purely from the same lat/lon already on the ledger. No tile, no key,
@@ -1910,6 +1939,8 @@ function openCoffeeForm(id){
   </div>
   <label class="f"><span class="l">Notes <span class="opt">optional</span></span><textarea id="cf_notes" oninput="cfAutosave()">${esc(c.notes||'')}</textarea></label>
   <button class="btn btn-primary" onclick="cfDone()">Done</button>
+  <button class="btn btn-quiet" id="cf_search_btn" onclick="cfSearchMore()" style="${id?'':'display:none'}">Search for more</button>
+  <div id="cf_search_status"></div>
   ${id?(c.archived
     ?`<button class="btn btn-quiet" onclick="restore('coffees','${id}');closeSheet()">Restore</button>`
     :`<button class="btn btn-quiet" onclick="putAway('coffees','${id}');closeSheet()">Put away</button>`):''}
@@ -1923,6 +1954,7 @@ function cfAutosave(){
   if(!_cfId){
     if(!f.roaster&&!f.name)return;   // an empty sheet swiped shut still leaves nothing behind
     D.coffees.push({id:_cfId=uid(),createdAt:new Date().toISOString(),home:true,...f});
+    const sb=document.getElementById('cf_search_btn');if(sb)sb.style.display='';
   }else{
     Object.assign(coffeeById(_cfId),f,{updatedAt:new Date().toISOString()});
   }
@@ -1937,6 +1969,48 @@ function cfRoasterSettled(){
 }
 function cfCountrySettled(){newGroundToast('country',val('cf_country'))}
 function cfDone(){cfRoasterSettled();closeSheet()}
+// the one BYO-key model call this form makes, on the same channel the ask and
+// menu OCR already use, now handed the model's own web-search tool
+// (ROADMAP.md Phase 22). Never a batch job: one coffee, one keeper-tapped call.
+const CF_SEARCH_TOOLS=[{type:'web_search_20260209',name:'web_search',max_uses:3}];
+let _cfSearchBusy=false;
+function cfKnownFields(){
+  const known={roaster:val('cf_roaster'),coffee:val('cf_name')};
+  CF_SEARCH_FIELDS.forEach(([k])=>{const v=val('cf_'+k);if(v)known[k]=v});
+  return known;
+}
+async function cfSearchMore(){
+  if(_cfSearchBusy||!_cfId)return;
+  if(!askKey()){openAskKey();return}
+  const status=document.getElementById('cf_search_status');
+  const blankKeys=CF_SEARCH_FIELDS.map(([k])=>k).filter(k=>!val('cf_'+k));
+  if(!blankKeys.length){
+    if(status)status.innerHTML='<div class="muted small" style="margin-top:6px">Every field here is already filled in.</div>';
+    return;
+  }
+  _cfSearchBusy=true;
+  const btn=document.getElementById('cf_search_btn');if(btn)btn.disabled=true;
+  if(status)status.innerHTML='<div class="muted small" style="margin-top:6px">Searching…</div>';
+  try{
+    const raw=await callModel(cfSearchPrompt(cfKnownFields(),blankKeys),4000,undefined,CF_SEARCH_TOOLS);
+    const found=parseCfSearch(raw,blankKeys);
+    const filled=[],missed=[];
+    blankKeys.forEach(k=>{
+      if(val('cf_'+k))return;   // typed during the call — never overwrite it
+      const hit=found[k];
+      if(hit){const el=document.getElementById('cf_'+k);if(el)el.value=hit.value;filled.push(`${cfSearchLabel(k)} (${hit.source})`)}
+      else missed.push(cfSearchLabel(k));
+    });
+    if(filled.length)cfAutosave();
+    if(status)status.innerHTML=filled.length
+      ?`<div class="muted small" style="margin-top:6px">Filled from search: ${esc(filled.join(', '))}.${missed.length?` Couldn't verify ${esc(missed.join(', '))} — left blank.`:''}</div>`
+      :'<div class="muted small" style="margin-top:6px">Couldn\'t verify anything for this coffee — nothing changed.</div>';
+  }catch(e){
+    if(status)status.innerHTML=`<div class="muted small" style="margin-top:6px">${esc((e&&e.message)||'Could not search for this coffee.')}</div>`;
+  }
+  _cfSearchBusy=false;
+  if(btn)btn.disabled=false;
+}
 // closeSheet() calls this for every sheet in the app; it no-ops unless the coffee form's autosave is the one open
 function cfFlush(){if(_cfId===null)return;clearTimeout(_cfTimer);_cfTimer=null;save();_cfId=null;render();}
 
@@ -3245,12 +3319,14 @@ function vAsk(){
 // and 1024 tokens is what made the ask's answers read like a stub. A thinking
 // block, on a model that reasons by default, has no .text — so the join below
 // silently drops it and the parse only ever sees what was actually said.
-async function callModel(content,maxTokens,signal){
+async function callModel(content,maxTokens,signal,tools){
   const key=askKey();if(!key)throw new Error('Set your key first.');
+  const body={model:askModel(),max_tokens:maxTokens||1024,messages:[{role:'user',content}]};
+  if(tools)body.tools=tools;   // server-side tools (e.g. web search) — results land back in this same response
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:askModel(),max_tokens:maxTokens||1024,messages:[{role:'user',content}]}),
+    body:JSON.stringify(body),
     signal:signal||undefined,
   });
   if(!r.ok){
@@ -4828,8 +4904,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.23.0';
+const APP_VERSION='7.24.0';
 const CHANGELOG=[
+  {v:'7.24.0',d:"Search for more. Adding a coffee from a café's menu rarely gets you the whole story — the region, the process, the altitude a bag never printed usually meant a separate sitting later, hunting a roaster's own site or an importer's listing by hand. There's a button for that now, beside any coffee's own fields: it searches the web, on your own key, for exactly the coffee in front of you, and fills in only what's still blank — each fact naming where it came from, every one still yours to correct. Nothing is guessed, nothing already typed is touched, and nothing runs until you tap it."},
   {v:'7.23.0',d:"The coffee, never lost to a swipe. Adding or editing a coffee used to hold everything you typed only in the form itself — dismiss the sheet before tapping Save, on purpose or by an accidental swipe, and it was gone. It saves as you type now, the moment a roaster or a name is on the page, so starting an entry at the bar and finishing the rest once there's time to look it up actually works: swipe away, put the phone down, come back later — whatever was typed is already on the Shelf, right where you left it."},
   {v:'7.22.0',d:"The file, split in two. Nothing changes on the screen — this is the debt Phase 18 landed and Phase 20 knowingly deepened, paid down at last. The map layer (the passport's outlines, its highland contours, the street and drawn-plot surfaces, and the vendored projection math underneath them) moves out of index.html into its own file, carta-map.js, loaded the same way a font or an icon already is. Two static files, still nothing to build, still nothing to fetch — one is just no longer one."},
   {v:'7.21.0',d:"Ask Carta, at the front door. The ask was a button at the bottom of the Atlas, under everything the record had already done. It is the first thing the Atlas says now — one field standing on the passport itself, and what Carta has already found sits directly under the fold, one tap from being reopened. The composer states what goes out with the ask as a ledger before anything leaves — the bar, the scores, what's excluded by name, the scope — and opens the brief itself if you want every character of it. The wait is a screen of its own and narrates the work rather than spinning: your record read back in its own counted figures, the bar you hold, the call itself, then each name placed one at a time, landing on the plot as its address confirms. Cancel is a real cancel — the call aborts and nothing is written down. The answer settles in the order it was argued instead of arriving flat."},

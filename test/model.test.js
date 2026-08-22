@@ -30,7 +30,7 @@ vm.runInContext(pureSrc + `
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
   askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
-  ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack };
+  ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -611,6 +611,31 @@ ok('parseMenuOCR degrades to empty, never throws, on a non-JSON answer — never
 assert.deepEqual(M.extractJSON('{"a":1}'), { a: 1 });
 assert.equal(M.extractJSON('not json at all'), null);
 ok('extractJSON is the one shape-reading door shared by every "ask the model for JSON" caller');
+
+// ---- searching for a coffee's own origin facts (ROADMAP.md Phase 22) ----
+const searchPrompt = M.cfSearchPrompt({ roaster: "Sey's", coffee: 'Ethiopia Gedeb', country: 'Ethiopia' }, ['region', 'process']);
+assert.ok(searchPrompt.includes('Ethiopia Gedeb') && searchPrompt.includes("Sey's"), 'the prompt states what the keeper already typed');
+assert.ok(searchPrompt.includes('region, process'), 'the prompt names exactly the blank fields asked for, nothing else');
+assert.ok(/never guess/i.test(searchPrompt), 'the honesty gate is stated in the prompt itself, not left to the model to assume');
+ok("cfSearchPrompt states what's already known and asks for only the fields still blank");
+
+let found = M.parseCfSearch('{"region":{"value":"Gedeb, Yirgacheffe","source":"the roaster\'s own product page"},"process":{"value":"Washed"}}', ['region', 'process']);
+assert.equal(found.region.value, 'Gedeb, Yirgacheffe');
+assert.equal(found.region.source, "the roaster's own product page");
+ok('parseCfSearch reads a verified field with its source straight');
+
+found = M.parseCfSearch('{"region":{"value":"Gedeb"},"altitude":{"value":"1,900m"}}', ['region', 'process']);
+assert.ok(!found.altitude, 'a field the caller never asked for is dropped even if the model volunteers it');
+assert.ok(found.region, 'a field that was asked for still comes through');
+ok('parseCfSearch only ever fills the fields it was told were blank — never a field outside that list');
+
+found = M.parseCfSearch('{"region":"Gedeb","process":{"value":""}}', ['region', 'process']);
+assert.deepEqual(found, {}, 'neither a bare string nor an empty value counts as a verified field');
+ok('parseCfSearch refuses a field with no real value or the wrong shape, rather than guessing at it');
+
+found = M.parseCfSearch("I couldn't verify anything about this coffee.", ['region']);
+assert.deepEqual(found, {});
+ok('parseCfSearch degrades to nothing, never throws, on a non-JSON answer — never invents a fact');
 
 // ---- parseRoastLevel (ROADMAP.md Phase 9): the door/menu-capture parsing ----
 assert.equal(M.parseRoastLevel("Sey's — Ethiopia Gedeb, light roast"), 'Light');

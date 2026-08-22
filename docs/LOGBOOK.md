@@ -7,6 +7,44 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — Phase 22: search, on your own key
+
+- **Shipped — v7.24.0.** A "Search for more" button on the coffee form,
+  beside Done, hidden until a roaster or name has minted the coffee
+  (Phase 21's own gate). One BYO-key model call — `callModel` gained an
+  optional `tools` argument so the same `api.anthropic.com` row already
+  used by the ask and the menu OCR could be handed Anthropic's server-side
+  web-search tool (`web_search_20260209`) — searches for the exact coffee
+  and fills in only the origin fields still blank: country, region, farm,
+  producer, variety, process, altitude, mill. Each fill names its source
+  in one status line under the button; nothing already typed is ever
+  touched, and a coffee with every field already filled never spends a
+  call at all.
+- **The tripwire named at scoping time held.** The fuller version — cross-
+  source matching, corpus-wide correction — stayed exactly what it was
+  flagged as: `docs/RESOLVER.md`'s own machinery, Lotmark's, not built here.
+  This phase's own prompt states plainly that a field with no real source
+  gets left out, never guessed.
+- **One deviation from the scoped write-up, recorded honestly:** the design
+  called for one attribution line under every individual field; it shipped
+  as a single shared status line below the button instead — simpler to
+  build, reads as one settled fact rather than eight fragmented notes, and
+  still names the source per field. `ROADMAP.md`'s Phase 22 entry carries
+  the full account.
+- `cfSearchPrompt` and `parseCfSearch` are pure and now tested
+  (`test/model.test.js`, 79/79) — the parser was checked directly against
+  an adversarial case: a mock response volunteering a value for a field
+  the keeper had already typed, which the parser correctly refused to
+  pass through, since it only ever fills the keys it was told were blank.
+- Verified with Playwright against a stubbed `fetch` (no real key spent):
+  the request actually carries the search tool, the no-key path opens the
+  key sheet instead of calling out, and the all-filled short-circuit never
+  reaches the network.
+- Both Phases 21 and 22 — the whole ingest-upgrade conversation — are
+  closed out now. Nothing further parked from this thread.
+
+---
+
 ## 2026-08-22 — Phase 21: the coffee is the draft
 
 - **Shipped — v7.23.0.** The coffee form autosaves once it's named. Typing a
