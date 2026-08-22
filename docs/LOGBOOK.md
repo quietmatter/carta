@@ -7,6 +7,29 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — Phase 23: the cup, compared
+
+- **Shipped — v7.25.0.** A coffee's own page listed a bare cup count and
+  nothing behind it; it now lists every cup, home and café both, newest
+  first. A café cup states the place; a home brew states its Setup and
+  technique. Each carries its own score, and a photo where the cup has
+  one — the same lead the Journal's own rows already use.
+- **No new door.** Tapping a row opens that cup's own screen, which
+  already carries a café cup on to the café itself — the "tappable
+  through to the place" the phase asked for needed nothing new, `vCup`
+  already does it.
+- **No average, no rank — the one thing the phase named as off-limits.**
+  Every figure shown is one cup's own reading, never a figure computed
+  across the coffee's cups.
+- Verified with Playwright: a coffee with a home cup and a café cup lists
+  both correctly, in both themes; tapping the café row lands on a screen
+  naming the café; a coffee with no cups states "No cups yet" and renders
+  no rows. 79/79 pure tests unaffected.
+- Phases 24 and 25 (the Visualizer pull, and its home at the door) are
+  still scoped and waiting, unbuilt.
+
+---
+
 ## 2026-08-22 — The pull moves to the door: Phase 24 re-aimed, Phase 25 added
 
 - **Not shipped — a design decision, taken before either phase was built.**

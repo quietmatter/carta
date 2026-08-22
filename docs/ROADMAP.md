@@ -79,10 +79,10 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–22 are all shipped, Phase 19 landed after Phase 20 rather than
-before it (Phase 19's own entry below has the account of why). Carta 7
-stands at
-**v7.24.0, `index.html` 4,956 lines + `carta-map.js` 535 lines, 79/79 pure
+*Phases 8–23 are all shipped, Phase 19 landed after Phase 20 rather than
+before it (Phase 19's own entry below has the account of why); Phases 24
+and 25 are written and scheduled but not yet built. Carta 7 stands at
+**v7.25.0, `index.html` 4,980 lines + `carta-map.js` 535 lines, 79/79 pure
 tests** — still comfortably inside the 5,000-line band. Full prose
 for each is in `LOGBOOK.md`, cited here, not repeated.*
 
@@ -902,33 +902,42 @@ key set opens the key sheet instead of calling out; an all-filled coffee
 never reaches the network at all. `cfSearchPrompt`/`parseCfSearch` are
 pure and now in `test/model.test.js` (79/79 pure tests).
 
-### Phase 23 — the cup, compared (scheduled, not yet built)
+### Phase 23 — the cup, compared
+
+**Shipped — v7.25.0.**
 
 **The joy it serves:** #3 (take it home) and #2 (the hunt) — a coffee's own
-page (`openCoffeeDetail`) currently states "Cups so far: 4" and nothing
-else. It doesn't show a single one of those cups: not the home pulls, not
-the café cups, not where each café one was drunk. The comparison the
-founder actually wants — *does my own pull of this coffee compare to the
-one I had at the café it came from* — is already structurally there
-(every cup carries the same `coffeeRef`); it has simply never been drawn.
+page (`openCoffeeDetail`) used to state "Cups so far: 4" and nothing else.
+It showed none of the cups behind that number: not the home pulls, not the
+café cups, not where each café one was drunk. The comparison the founder
+actually wants — *does my own pull of this coffee compare to the one I had
+at the café it came from* — was already structurally there (every cup
+carries the same `coffeeRef`); it had simply never been drawn.
 
-**What it does.** Replace the bare count with an actual list: every cup of
-this coffee, newest first, each stating its kind (home brew or café),
-its score, and — for a café cup — the place it was drunk (tappable
-through to that café's own page, the same door `vCafe` already opens
-elsewhere). A home brew states its Setup and technique instead. No new
-data, no new model, no resolver — this is the taste model's own evidence
-list (`matchFigure`'s `evidenceSheet`, `ARCHITECTURE.md`'s own pattern of
-"a recommendation never travels without its reasons") turned toward one
+**What it does.** The bare count is now an actual list (`coffeeCupRowHTML`):
+every cup of this coffee, newest first, each stating its kind (home or
+café) via the same lead the Journal's own rows already use — a photo if
+the cup has one, `home`/`out` otherwise — and its score. A café cup states
+the place itself as its title, neighborhood or city as its meta. A home
+brew states its Setup (name, or grinder · brewer) and technique instead.
+Tapping any row opens that cup's own screen (`openCupDetail` → `vCup`),
+which already carries a café cup the rest of the way to the café's own
+page (its ledger's "Café" row, and the streets button beneath it) — so
+"reachable from the coffee's own page" needed no new door, just the one
+`vCup` already opens. No new data, no new model, no resolver — this is the
+taste model's own "a figure travels with its reasons" turned toward one
 coffee instead of one figure.
 
-**What it must not become.** An average, a rank, or a score comparing the
-keeper's own cups against anyone else's — that reads as a resolver's
-corpus, not a personal record. Every figure here stays scoped to this one
-keeper's own ledger, exactly like the taste model already is.
+**What it must not become, and didn't.** An average, a rank, or a score
+comparing the keeper's own cups against anyone else's — every figure here
+stays this one keeper's own cups, read back, nothing computed across them.
 
-**Done when:** opening any coffee with more than one cup shows every one
-of them, home and café both, each linked back to where it happened.
+**Done when — met:** opening any coffee shows every cup of it, home and
+café both, each linked through to where it happened — verified directly
+(Playwright): a coffee with a home cup and a café cup lists both correctly
+in both themes; tapping a café cup's row lands on a screen that names the
+café; a coffee with no cups states "No cups yet" and renders no rows. 79/79
+pure tests unaffected (nothing touched lived inside the tested region).
 
 ### Phase 24 — pulled, not typed (scheduled, not yet built)
 

@@ -2505,6 +2505,28 @@ function shelfRowHTML(c){
     </div>
   </div>`;
 }
+// one cup of this coffee, read against the others rather than counted
+// (ROADMAP.md Phase 23) — home and café both, newest first, each stating
+// where it actually happened: a café cup names the place (reachable from
+// its own screen, `openCupDetail` → `vCup` → `openCafeScreen`), a home cup
+// its Setup and technique. No average, no rank — the taste model's own
+// "a figure travels with its reasons" turned toward one coffee.
+function coffeeCupRowHTML(cup){
+  const place=cup.kind==='bar'?placeById(cup.placeRef):null;
+  const brew=cup.brewRef?brewById(cup.brewRef):null;
+  const setup=brew?setupById(brew.setupId):null;
+  const title=cup.kind==='bar'?(place?place.name:'A café')
+    :(setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):'Home brew');
+  const meta=(cup.kind==='bar'?[place&&(place.neighborhood||place.city),fmtWhen(cup.at)]:[brew&&brew.technique,fmtWhen(cup.at)])
+    .filter(Boolean).join(' · ');
+  const lead=cup.photo
+    ?`<img class="ph" src="${getCupPhoto(cup.id)||''}" alt="">`
+    :`<span class="kind">${cup.kind==='bar'?'out':'home'}</span>`;
+  return `<button class="lrow" onclick="closeSheet();openCupDetail('${cup.id}')">
+    ${lead}
+    <span class="mid"><span class="t">${esc(title)}</span><span class="m">${esc(meta)}</span></span>
+    <span class="sc${cup.score==null?' none':''}">${cup.score==null?'—':cup.score}</span></button>`;
+}
 function openCoffeeDetail(id){
   const c=coffeeById(id);if(!c)return;
   const cups=D.cups.filter(x=>x.coffeeRef===id).sort(byNew);
@@ -2514,9 +2536,10 @@ function openCoffeeDetail(id){
   <div class="card">
     ${c.roastDate?`<div class="kv"><span class="k">Roasted</span><span class="v">${esc(c.roastDate)}${rest?' · '+esc(rest):''}</span></div>`:''}
     ${c.notes?`<div class="kv"><span class="k">Notes</span><span class="v">${esc(c.notes)}</span></div>`:''}
-    <div class="kv"><span class="k">Cups so far</span><span class="v num">${cups.length}</span></div>
   </div>
   ${c.home?'':'<div class="muted small" style="margin:-4px 2px 12px">Tasted, not yet on the shelf.</div>'}
+  <div class="eyebrow" style="margin:20px 2px 10px">${cups.length?`Cups so far · ${cups.length}`:'No cups yet'}</div>
+  ${cups.map(coffeeCupRowHTML).join('')}
   <button class="btn btn-primary" onclick="closeSheet();openBrewFlow('${id}')">Brew it</button>
   <button class="btn btn-quiet" onclick="closeSheet();openCafeCup('${id}')">Had it at a café</button>
   ${growerOf(c)&&c.origin.country?`<button class="btn btn-quiet" onclick="closeSheet();openProducerPage(${jsq(c.origin.country)},${jsq(growerOf(c))},${jsq(regionOf(c))})">The farm →</button>`:''}
@@ -4904,8 +4927,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.24.0';
+const APP_VERSION='7.25.0';
 const CHANGELOG=[
+  {v:'7.25.0',d:"A coffee's own cups, not just their count. A coffee's page used to state \"Cups so far: 4\" and stop there — every cup behind that number stayed invisible, whether it was the bag you brewed at home or the same coffee you first had at the café it came from. It lists them now, newest first: each home brew with its Setup and technique, each café cup with the place you had it, every one with its own reading beside it — one tap into any of them, and a café cup carries you on to that café itself."},
   {v:'7.24.0',d:"Search for more. Adding a coffee from a café's menu rarely gets you the whole story — the region, the process, the altitude a bag never printed usually meant a separate sitting later, hunting a roaster's own site or an importer's listing by hand. There's a button for that now, beside any coffee's own fields: it searches the web, on your own key, for exactly the coffee in front of you, and fills in only what's still blank — each fact naming where it came from, every one still yours to correct. Nothing is guessed, nothing already typed is touched, and nothing runs until you tap it."},
   {v:'7.23.0',d:"The coffee, never lost to a swipe. Adding or editing a coffee used to hold everything you typed only in the form itself — dismiss the sheet before tapping Save, on purpose or by an accidental swipe, and it was gone. It saves as you type now, the moment a roaster or a name is on the page, so starting an entry at the bar and finishing the rest once there's time to look it up actually works: swipe away, put the phone down, come back later — whatever was typed is already on the Shelf, right where you left it."},
   {v:'7.22.0',d:"The file, split in two. Nothing changes on the screen — this is the debt Phase 18 landed and Phase 20 knowingly deepened, paid down at last. The map layer (the passport's outlines, its highland contours, the street and drawn-plot surfaces, and the vendored projection math underneath them) moves out of index.html into its own file, carta-map.js, loaded the same way a font or an icon already is. Two static files, still nothing to build, still nothing to fetch — one is just no longer one."},
