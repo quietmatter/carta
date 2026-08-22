@@ -227,7 +227,16 @@ server/               Classic's sync server — dormant
   Carta reads a roaster and a coffee out of it, offers the gentle join, and
   asks where the cup was in the same step. Opening it from a café skips that
   question. **No adjudication, no propose, no resolver** — that is the third
-  turn's machinery and it stayed there.
+  turn's machinery and it stayed there. Phase 25 added a third way in,
+  `doorPull`/`doorPullPicked`/`doorPullResolveCoffee`/`doorPullJoin`/
+  `doorPullFinish`: **Pull it from Visualizer** (hidden from a café-context
+  door — a synced shot is always a home brew) reads a shot's own roaster and
+  coffee, gentle-joins each against the shelf exactly as typed entry does,
+  and lands straight on `openImpression` — the coffee and the brew both
+  minted from the shot, only the taste still typed. The Setup gets a
+  narrower version of the same match, silent-only, no ask
+  (`matchSetupByGrinder`, `resolveOrMintSetupForShot` — see
+  `ARCHITECTURE.md` §4).
 - **the cup paths** — `openCafeCup`/`saveCafeCup` (the bar path) and
   `openSetupForm`/`openBrewFlow`/`saveBrewFlow`/`openImpression`/`saveHomeCup`
   (the home path, through the dials and the timer). A brew always needs a
@@ -402,7 +411,7 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 74 cases
+node test/model.test.js        # zero deps, plain Node, 85 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
@@ -410,7 +419,8 @@ out of `index.html` and evaluates it against fixture ledgers — no DOM, no
 `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
 `parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel`,
-`originPin`, `meanPin`, `namesBack`, `cfSearchPrompt`, `parseCfSearch` or
+`originPin`, `meanPin`, `namesBack`, `cfSearchPrompt`, `parseCfSearch`,
+`parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**

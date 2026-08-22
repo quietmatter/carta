@@ -146,10 +146,25 @@ Carta 7 is built exactly the way classic was, smaller:
   code were tightened on the way in rather than left at their first draft's
   length. `index.html` still lands at **5,012 lines / 333.9 KB** — 12 over
   the line ceiling, bytes comfortable. Recorded here rather than silently
-  crossed, per this section's own rule, and named for what it is: eleven
+  crossed, per this section's own rule, and named for what it is: twelve
   lines, not the kind of debt Phase 18 or 20 left — a further trim was
   possible only by cutting into the feature itself or fighting the file's
-  own established density, and eleven lines wasn't judged worth either.
+  own established density, and twelve lines wasn't judged worth either.
+
+  **Phase 25 crossed further, on real new surface, not a patch.** The
+  door's own gentle-join for a pulled shot's roaster and coffee, its Setup
+  resolution, and a shot-fetching helper now shared by both pickers all
+  landed at once — a new entry path with its own matching logic, not one
+  button on an existing screen. Two near-identical join sheets (roaster,
+  coffee) were folded into one before this was accepted, the same
+  discipline Phase 24 used, and comments were kept to what the WHY actually
+  needed. `index.html` now stands at **5,141 lines / 341.0 KB** — 141 over
+  the line ceiling, bytes still comfortable at 341.0 of 500 KB. Named
+  plainly rather than minimized: this is a real overage, larger than Phase
+  24's, and it is the founder's to decide whether a future phase should
+  give it its own split the way Phase 19 did for Phase 18 and 20's debt, or
+  whether the band itself is due another look — not a call made silently
+  here.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -318,6 +333,18 @@ bodies. **Origin story fields never join** — Huila spelled three ways is
 three strings on three cards, and only the atlas's *display* folds them
 (`foldNames`-style, presentation only), stating what it folded.
 
+**Phase 25 reuses the matching, not the mechanism, twice more.** A coffee
+pulled from Visualizer at the door is matched against that roaster's own
+coffees (`matchNodes`, scoped to `coffees` filtered by `roasterRef`) with
+the same exact-joins/near-asks/else-new shape — but a coffee never gains an
+`aka[]` field the way a roaster or place does; a "yes" just re-points the
+pulled shot's brew at the existing coffee's id, nothing is written back
+onto the coffee record itself. A Setup gets a narrower version still:
+`matchSetupByGrinder` joins only on an *exact* fold match against the
+Setup's own `grinder` field, with no near-match ask at all — a shot never
+says which Setup pulled it, so a wrong silent guess would be worse than
+simply falling back to whichever Setup is already current.
+
 ## 5. The taste model and the brief
 
 **`tasteModel()`** is a pure derivation over the ledger — computed, memoized
@@ -414,7 +441,7 @@ one and the one that travels.
 | Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 18) | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 | **Search for more** (BYO-key, same `api.anthropic.com` row, Anthropic's server-side web-search tool) | the keeper taps "Search for more" on one coffee (Phase 22) | the field stays blank, typed in by hand |
-| **Pull from Visualizer** (BYO Basic Auth, `visualizer.coffee/api/shots`) | the keeper taps "Pull from Visualizer" on one brew (Phase 24) | the dials stay exactly as manual as they always were |
+| **Pull from Visualizer** (BYO Basic Auth, `visualizer.coffee/api/shots`) | the keeper taps "Pull from Visualizer" on one brew (Phase 24), or "Pull it from Visualizer" at the door (Phase 25) | the dials, or the door's paste/type step, stay exactly as manual as they always were |
 
 **The Visualizer row's auth is the keeper's real account login, not a
 scoped key — named plainly rather than softened, and worth recording why.**

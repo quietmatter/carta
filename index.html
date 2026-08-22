@@ -1163,16 +1163,39 @@ function parseCfSearch(text,blankKeys){
   });
   return out;
 }
-// reading a Visualizer shot into Carta's dial fields (ROADMAP.md Phase 24) —
-// null wherever the shot didn't state a number, never guessed. label is for
-// the picker only; Phase 24 never writes a coffee record from this.
+// reading a Visualizer shot into Carta's own fields (Phases 24-25) — null or ''
+// wherever the shot didn't state something, never guessed; label is a picker's.
 function parseVisualizerShot(d){
   d=d||{};
   const num=v=>{if(v==null||v==='')return null;const n=Number(v);return isNaN(n)?null:n};
+  const str=v=>(v||'').trim();
   const time=Number(d.duration);
+  const roaster=str(d.bean_brand),coffeeName=str(d.bean_type);
   return {dose:num(d.bean_weight),water:num(d.drink_weight),time:isNaN(time)?null:Math.round(time),
-    grind:num(d.grinder_setting),
-    label:[d.bean_brand,d.bean_type].map(s=>(s||'').trim()).filter(Boolean).join(' — ')||'Untitled shot'};
+    grind:num(d.grinder_setting),roaster,coffeeName,
+    roastDate:normalizeRoastDate(d.roast_date),roastLevel:normalizeRoastLevel(d.roast_level),
+    grinderModel:str(d.grinder_model),
+    label:[roaster,coffeeName].filter(Boolean).join(' — ')||'Untitled shot'};
+}
+// Visualizer's roast_level field is already known to BE a roast level, unlike a
+// pasted bag's free text — so no "roast" adjacency, just the word (cf. parseRoastLevel).
+function normalizeRoastLevel(s){
+  const t=' '+fold(s||'')+' ';
+  if(t.includes(' medium light '))return 'Medium-light';
+  if(t.includes(' medium dark '))return 'Medium-dark';
+  if(t.includes(' light '))return 'Light';
+  if(t.includes(' dark '))return 'Dark';
+  if(t.includes(' medium '))return 'Medium';
+  return '';
+}
+// roast_date has no confirmed format — keep only a leading YYYY-MM-DD, never a guess
+function normalizeRoastDate(s){const m=String(s||'').trim().match(/^(\d{4}-\d{2}-\d{2})/);return m?m[1]:'';}
+// a Setup joins silently only on an exact grinder-name match — no asking, unlike
+// a roaster or place (ROADMAP.md Phase 25); anything else is left to doorPullFinish
+function matchSetupByGrinder(setups,grinderModel){
+  if(!grinderModel)return null;
+  const m=matchNodes((setups||[]).map(s=>({id:s.id,name:s.grinder||''})),grinderModel);
+  return m.exact?m.exact.id:null;
 }
 /* ---- the city's own shape (Phase 17, corrected) — not streets, not pins, not a live
  * map: a soft silhouette of where the record actually reaches in this city,
@@ -1634,11 +1657,33 @@ function paintDoor(){
   const s=doorState;
   if(s.step==='text'){
     openSheet(`<h3>＋ A cup</h3>
-    <div class="sub">Paste the bag, or just type it.</div>
+    <div class="sub">Paste the bag, type it, or pull it from Visualizer.</div>
     <label class="f"><textarea id="d_text" placeholder="Sey's — Ethiopia Gedeb, washed">${esc(s.text)}</textarea></label>
     <button class="btn btn-primary" onclick="doorNext1()">Continue</button>
+    ${s.preset?'':'<button class="btn btn-quiet" onclick="doorPull()">Pull it from Visualizer</button>'}
     <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>
     <div class="note">Carta reads a roaster and a coffee out of it. Nothing is guessed, and nothing is merged without asking.</div>`);
+    return;
+  }
+  if(s.step==='pull'){
+    const rows=s._pullShots;
+    openSheet(`<h3>Pull it from Visualizer</h3>
+    <div class="sub">Your recent shots — the coffee and the brew arrive already right; only the taste is still yours to type.</div>
+    ${rows==null?(s._pullError?`<div class="muted small" style="margin-top:8px">${esc(s._pullError)}</div>`:'<div class="muted small" style="margin-top:8px">Loading your shots…</div>')
+      :!rows.length?'<div class="muted small" style="margin-top:8px">No shots on your Visualizer account yet.</div>'
+      :rows.map(r=>vizShotRowHTML(r,'doorPullPicked')).join('')}
+    <button class="btn btn-quiet" onclick="doorState.step='text';paintDoor()">Back</button>`);
+    return;
+  }
+  if(s.step==='pullJoin'){
+    const roaster=s._joinKind==='roaster',m=roaster?s._pullRoasterMatch:s._pullCoffeeMatch;
+    openSheet(`<h3>Same ${roaster?'roaster':'coffee'}?</h3>
+    <div class="sub">You've logged <strong>${esc(m.name)}</strong>${roaster?'':' from this roaster'} before. Is this it?</div>
+    <div class="btnrow">
+      <button class="btn btn-quiet" onclick="doorPullJoin(false)">No, different</button>
+      <button class="btn btn-primary" onclick="doorPullJoin(true)">Yes, same</button>
+    </div>
+    <div class="note">${roaster?'Carta asks once and never merges two names on its own. Say no and both stand, apart.':'Say no and Carta adds this as its own coffee, apart from the one you already have.'}</div>`);
     return;
   }
   if(s.step==='confirm'){
@@ -1718,6 +1763,82 @@ function doorKind(kind){
   doorState=null;
   newGroundToast('country',c.origin&&c.origin.country);
   if(kind==='bar')openCafeCup(c.id,preset);else openBrewFlow(c.id);
+}
+
+/* ============ the pull, at the door (ROADMAP.md Phase 25) ============
+ * A synced shot already carries two of the home path's three records (the
+ * coffee, the brew), so the door skips straight to openImpression rather than
+ * asking either — always a home brew, since a synced shot is one by
+ * definition. The roaster and the coffee each get one gentle-join question if
+ * Carta isn't sure; the Setup gets none (see matchSetupByGrinder). */
+async function doorPull(){
+  const s=doorState;
+  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  s.step='pull';s._pullShots=null;s._pullError=null;paintDoor();
+  try{s._pullShots=await fetchVisualizerShots(8);}
+  catch(e){s._pullError=(e&&e.message)||'Could not reach Visualizer.';}
+  if(doorState===s)paintDoor();
+}
+function doorPullPicked(id){
+  const s=doorState,shot=(s._pullShots||[]).find(x=>x.id===id);if(!shot)return;
+  s._pullShot=shot;
+  if(shot.roaster){
+    const m=matchNode('roasters',shot.roaster);
+    if(m.exact){s._pullRoasterRef=m.exact.id;doorPullResolveCoffee();return}
+    if(m.near){s._pullRoasterMatch=m.near;s._joinKind='roaster';s.step='pullJoin';paintDoor();return}
+  }
+  s._pullRoasterRef=null;
+  doorPullResolveCoffee();
+}
+function doorPullResolveCoffee(){
+  const s=doorState,shot=s._pullShot;
+  const roasterCoffees=s._pullRoasterRef?live('coffees').filter(c=>c.roasterRef===s._pullRoasterRef):[];
+  if(shot.coffeeName&&roasterCoffees.length){
+    const m=matchNodes(roasterCoffees,shot.coffeeName);
+    if(m.exact){s._pullCoffeeId=m.exact.id;doorPullFinish();return}
+    if(m.near){s._pullCoffeeMatch=m.near;s._joinKind='coffee';s.step='pullJoin';paintDoor();return}
+  }
+  s._pullCoffeeId=null;
+  doorPullFinish();
+}
+function doorPullJoin(yes){
+  const s=doorState;
+  if(s._joinKind==='roaster'){
+    if(yes){joinAlias(s._pullRoasterMatch,s._pullShot.roaster);s._pullRoasterRef=s._pullRoasterMatch.id;}else s._pullRoasterRef=null;
+    doorPullResolveCoffee();
+  }else{s._pullCoffeeId=yes?s._pullCoffeeMatch.id:null;doorPullFinish();}
+}
+// a Setup a pulled shot never names outright: matched silently against the
+// keeper's own grinder names, or left as whichever Setup is already current —
+// the same fallback vBrew itself uses for a coffee with no brew of its own yet
+function resolveOrMintSetupForShot(grinderModel){
+  const setups=live('setups');
+  if(!setups.length){
+    if(!grinderModel)return null;
+    const st={id:uid(),createdAt:new Date().toISOString(),name:grinderModel,grinder:grinderModel};
+    D.setups.push(st);return st.id;
+  }
+  const exact=matchSetupByGrinder(setups,grinderModel);if(exact)return exact;
+  const lastBrew=D.brews.slice().sort(byNew)[0];
+  return lastBrew?lastBrew.setupId:setups[setups.length-1].id;
+}
+function doorPullFinish(){
+  const s=doorState,shot=s._pullShot;
+  const setupId=resolveOrMintSetupForShot(shot.grinderModel);
+  if(!setupId){doorState=null;toast('Refused: a brew requires a Setup');return}
+  const roasterRef=mintRoasterIfNeeded(shot.roaster,s._pullRoasterRef);
+  let coffeeId=s._pullCoffeeId;
+  if(!coffeeId){
+    const c={id:uid(),createdAt:new Date().toISOString(),
+      roaster:shot.roaster||(roasterRef?roasterById(roasterRef).name:''),roasterRef,name:shot.coffeeName,
+      origin:{},roastLevel:shot.roastLevel||'',roastDate:shot.roastDate||'',home:true};
+    D.coffees.push(c);coffeeId=c.id;
+  }
+  const brew={id:uid(),createdAt:new Date().toISOString(),coffeeRef:coffeeId,setupId,technique:'',
+    grind:shot.grind,doseG:shot.dose,waterG:shot.water,tempC:null,timeSec:shot.time};
+  D.brews.push(brew);save();
+  doorState=null;
+  openImpression(brew);
 }
 
 /* ============ café cup (the bar path) ============ */
@@ -2850,6 +2971,18 @@ async function callVisualizer(path){
   return r.json();
 }
 function applyVisualizerShot(shot){['dose','water','time','grind'].forEach(k=>{if(shot[k]!=null)setDial(k,shot[k])});}
+// shared by both pickers (dial-in's, door's — Phase 25): the list route only
+// names {clock,id}, so each shot's essentials are fetched in parallel, capped at n.
+async function fetchVisualizerShots(n){
+  const list=(await callVisualizer(`?page=1&items=${n}`)).data||[];
+  return (await Promise.all(list.map(async s=>{
+    try{return {...parseVisualizerShot(await callVisualizer(`/${s.id}/download?essentials=true`)),clock:s.clock,id:s.id}}
+    catch(e){return null}
+  }))).filter(Boolean);
+}
+function vizShotRowHTML(r,onclickFn){
+  return `<button class="lrow" onclick="${onclickFn}('${r.id}')"><span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc([r.time?fmtTime(r.time):'',fmtWhen(new Date(r.clock*1000).toISOString())].filter(Boolean).join(' · '))}</span></span></button>`;
+}
 let _vizBusy=false,_vizShots=[];
 async function openVisualizerPicker(){
   if(_vizBusy)return;
@@ -2858,15 +2991,10 @@ async function openVisualizerPicker(){
   _vizBusy=true;
   box.innerHTML='<div class="muted small" style="margin-top:8px">Loading your shots…</div>';
   try{
-    const list=(await callVisualizer('?page=1&items=8')).data||[];
-    if(!list.length){box.innerHTML='<div class="muted small" style="margin-top:8px">No shots on your Visualizer account yet.</div>';_vizBusy=false;return}
-    const rows=(await Promise.all(list.map(async s=>{
-      try{return {...parseVisualizerShot(await callVisualizer(`/${s.id}/download?essentials=true`)),clock:s.clock,id:s.id}}
-      catch(e){return null}
-    }))).filter(Boolean);
+    const rows=await fetchVisualizerShots(8);
     _vizShots=rows;
-    box.innerHTML=rows.length?rows.map(r=>`<button class="lrow" onclick="vizShotPicked('${r.id}')"><span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc([r.time?fmtTime(r.time):'',fmtWhen(new Date(r.clock*1000).toISOString())].filter(Boolean).join(' · '))}</span></span></button>`).join('')
-      :'<div class="muted small" style="margin-top:8px">Could not read your shots.</div>';
+    box.innerHTML=rows.length?rows.map(r=>vizShotRowHTML(r,'vizShotPicked')).join('')
+      :'<div class="muted small" style="margin-top:8px">No shots on your Visualizer account yet.</div>';
   }catch(e){
     box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>`;
   }
@@ -4958,8 +5086,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.26.0';
+const APP_VERSION='7.27.0';
 const CHANGELOG=[
+  {v:'7.27.0',d:"The pull, at the door. Pulling a shot from Visualizer used to mean opening a coffee's own dial-in screen first, so the coffee itself still had to be added by hand. The door now offers a third way in beside pasting and typing: pull it from Visualizer, and the coffee and the brew both arrive already right, read straight off the shot — the roaster and the coffee matched gently against what's already on the shelf, asked about once if Carta isn't sure, never merged without saying so. It lands on \"What was in the cup?\" with nothing typed but the taste itself. The dial-in screen's own button is still there, for a Setup or a hand pourover with nothing to sync."},
   {v:'7.26.0',d:"Pull from Visualizer. Dose, yield, time, grind — a Decent machine or a Bluetooth scale often records these the moment a shot or a pour finishes, and until now Carta had no way to know that and asked you to type them all in again. Dialing in a brew now offers a button beside the usual fields: pick a recent shot from your Visualizer account, and the numbers land in the dials already turned to it, still yours to correct. Nothing runs until you tap it, nothing is fetched beyond the one shot you pick, and typing it in by hand works exactly as it always has for everyone else."},
   {v:'7.25.0',d:"A coffee's own cups, not just their count. A coffee's page used to state \"Cups so far: 4\" and stop there — every cup behind that number stayed invisible, whether it was the bag you brewed at home or the same coffee you first had at the café it came from. It lists them now, newest first: each home brew with its Setup and technique, each café cup with the place you had it, every one with its own reading beside it — one tap into any of them, and a café cup carries you on to that café itself."},
   {v:'7.24.0',d:"Search for more. Adding a coffee from a café's menu rarely gets you the whole story — the region, the process, the altitude a bag never printed usually meant a separate sitting later, hunting a roaster's own site or an importer's listing by hand. There's a button for that now, beside any coffee's own fields: it searches the web, on your own key, for exactly the coffee in front of you, and fills in only what's still blank — each fact naming where it came from, every one still yours to correct. Nothing is guessed, nothing already typed is touched, and nothing runs until you tap it."},
