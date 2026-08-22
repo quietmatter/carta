@@ -7,6 +7,56 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — Phase 24: pulled, not typed
+
+- **Shipped — v7.26.0.** A **Pull from Visualizer** button on `vBrew`
+  fetches the keeper's own recent shots from `visualizer.coffee` and fills
+  the dose/water/time/grind dials with a picked one's numbers, landing in
+  the same editable dial state manual entry already writes to. Manual
+  entry is unchanged and never gated behind having an account.
+- **A correction, made before building, not after.** Scoping had said
+  "auth is a separate secret token, not the account password," taken from
+  a search summary never checked against the primary source. Fetching
+  Visualizer's actual OpenAPI spec directly showed Basic Auth is genuinely
+  the real email and password — and that Visualizer's own docs recommend
+  OAuth instead, by name, for exactly this shape of integration, to avoid
+  a third-party app collecting a keeper's password. Put to the founder
+  directly with both options; the call was **Basic Auth now**, accepting
+  the tradeoff. `openVisualizerKey()`'s own copy states this plainly
+  rather than softening it, and `docs/ARCHITECTURE.md` §7 carries the
+  correction and the full reasoning, named rather than quietly overwritten.
+- **What the live API settled that scoping had guessed at:** the list
+  endpoint takes `?page=&items=`, not `?limit=`; `?essentials=true` on a
+  shot's detail route omits the curve arrays (confirmed by diffing against
+  the full response); and — the one real surprise — **no scalar
+  temperature field exists anywhere**, only curve arrays. The scoping
+  guess that one "almost certainly" existed was wrong; the temp dial stays
+  exactly as manual as it always was rather than inventing a number from a
+  curve. Pourover is still confirmed-possible-not-confirmed-in-shape and
+  stays unbuilt this pass.
+- **No link out to Visualizer's own graph.** No confirmed public URL
+  pattern for a shot's own page turned up during research; guessing one
+  risked shipping a broken link, so it was left out rather than shipped
+  wrong.
+- **A bug found and fixed on the way in.** A second, fully-shadowed
+  `openBrewFlow` — dead since Phase 13 moved the brew flow into its own
+  screen, silently overwritten by the real one and unreachable — was still
+  sitting in the file. Deleted (42 lines, no behavior change).
+- **The line band, disclosed rather than crossed quietly.** `index.html`
+  lands at 5,012 lines / 333.9 KB, 12 over the 5,000-line ceiling Phase 19
+  closed the debt on. Comments and code were tightened before this was
+  accepted; the remainder wasn't judged worth cutting into the feature
+  for. See `ARCHITECTURE.md` §1.
+- Verified directly: the button opens the account sheet first with no
+  credentials set; a saved Basic Auth header reaches Visualizer and a
+  picked shot's numbers land in the right dials; a wrong password's 401
+  and an empty shot list both degrade to a stated message. 83/83 pure
+  tests, including four new `parseVisualizerShot` cases.
+- Phase 25 (moving the pull to the door) is still scoped and waiting,
+  unbuilt.
+
+---
+
 ## 2026-08-22 — Phase 23: the cup, compared
 
 - **Shipped — v7.25.0.** A coffee's own page listed a bare cup count and

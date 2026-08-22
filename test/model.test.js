@@ -30,7 +30,8 @@ vm.runInContext(pureSrc + `
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
   askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
-  ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch };
+  ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
+  parseVisualizerShot };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -636,6 +637,31 @@ ok('parseCfSearch refuses a field with no real value or the wrong shape, rather 
 found = M.parseCfSearch("I couldn't verify anything about this coffee.", ['region']);
 assert.deepEqual(found, {});
 ok('parseCfSearch degrades to nothing, never throws, on a non-JSON answer — never invents a fact');
+
+// ---- parseVisualizerShot (ROADMAP.md Phase 24): a real shot payload's shape ----
+let shot = M.parseVisualizerShot({
+  duration: 25.649, bean_weight: '18.0', drink_weight: '36.7', grinder_setting: '135.0',
+  bean_brand: 'District Roasters', bean_type: 'Ethiopia | Yirgacheffe Gargari Gutity Natural',
+});
+assert.equal(shot.dose, 18);
+assert.equal(shot.water, 36.7);
+assert.equal(shot.time, 26, 'duration rounds to the nearest second, the unit timeSec is stored in');
+assert.equal(shot.grind, 135);
+assert.equal(shot.label, 'District Roasters — Ethiopia | Yirgacheffe Gargari Gutity Natural');
+ok("parseVisualizerShot reads a real shot's dose/water/time/grind and labels it by its coffee");
+
+shot = M.parseVisualizerShot({ duration: 20, bean_weight: '18.0', drink_weight: '36.0' });
+assert.equal(shot.label, 'Untitled shot', 'a shot with no stated coffee is labeled honestly, never blank');
+ok('parseVisualizerShot falls back to an honest label when the shot names no coffee');
+
+shot = M.parseVisualizerShot({ bean_weight: '', grinder_setting: null, duration: 'not a number' });
+assert.equal(shot.dose, null);
+assert.equal(shot.grind, null);
+assert.equal(shot.time, null, 'an unparseable duration is null, never NaN or a guessed number');
+ok('parseVisualizerShot refuses to guess a field the shot left blank or unparseable');
+
+assert.deepEqual(M.parseVisualizerShot(), { dose: null, water: null, time: null, grind: null, label: 'Untitled shot' });
+ok('parseVisualizerShot never throws on a missing payload');
 
 // ---- parseRoastLevel (ROADMAP.md Phase 9): the door/menu-capture parsing ----
 assert.equal(M.parseRoastLevel("Sey's — Ethiopia Gedeb, light roast"), 'Light');
