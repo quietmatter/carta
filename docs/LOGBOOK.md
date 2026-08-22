@@ -7,6 +7,47 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — Phases 21 and 22 scoped: the coffee is the draft, then search on your own key
+
+- **Not shipped — scoped only.** The founder described a real ingest upgrade:
+  an AI model with search matching a photographed menu coffee against other
+  roasters, importers, any site that might carry better origin facts, plus
+  "correction" of coffees already on the shelf. Run through the four-question
+  test: that fuller version is `docs/RESOLVER.md` by another name — a
+  fingerprint scorer and corpus-wide correction across sources is tripwire 1
+  (third-turn relapse), Lotmark's, not Carta's. Named once; the founder asked
+  for the smaller cut scoped as a phase instead.
+- **A second, sharper problem surfaced in the same conversation:** the actual
+  workflow is see the menu, start the coffee entry while sipping, get pulled
+  away before finishing, come back once there's time to research the rest —
+  and a swipe-dismiss on the coffee form today discards everything typed,
+  because `closeSheet()` wipes the sheet's DOM unconditionally and nothing
+  persists before "Save." This is a data-loss bug wearing a feature request's
+  clothes, and it's the more urgent of the two.
+- **Phase 21 — the coffee is the draft.** No shadow draft object; the coffee
+  record itself is minted the moment a roaster or name is typed (the same
+  move the menu capture already makes) and every further keystroke autosaves
+  into it. A swipe, a backdrop tap, the phone put away — whatever's typed
+  stays on the Shelf, picked back up exactly where it was left. Scoped to the
+  coffee form only, not a blanket autosave-every-sheet.
+- **Phase 22 — search, on your own key.** The in-bounds cut of the founder's
+  original ask: one BYO-key model call (the same `callModel`/`api.anthropic.com`
+  channel the ask and menu OCR already use, asked to use its search tool),
+  keeper-summoned per coffee via a "Search for more" button, filling only the
+  blank origin fields as plain editable suggestions. Never a shelf-wide sweep,
+  never a comparison between two of the keeper's own coffees, never a silent
+  overwrite.
+- **For Lotmark's desk:** the fuller version — matching a coffee's identity
+  across roaster sites, importer lists, and other keepers' records, then
+  reconciling and correcting a corpus from it — is exactly the resolver
+  `docs/RESOLVER.md` already designed. If Lotmark ever wants an ingest
+  assist built on real cross-source matching, that ladder is already spec'd;
+  it doesn't belong here.
+- Full phase write-ups (joy, risk, what it does, what it must not become,
+  done-when) are in `ROADMAP.md`, Phases 21–22, scheduled but not yet built.
+
+---
+
 ## 2026-08-22 — Phase 19: the split, paying down the debt Phase 20 deepened
 
 - **Shipped — v7.22.0.** The map layer — the three custom elements

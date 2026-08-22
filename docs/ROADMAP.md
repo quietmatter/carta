@@ -766,6 +766,108 @@ field, states what it's about to send before the key is spent, narrates its
 one network call rather than hiding it, and a cancelled ask leaves nothing
 behind.
 
+### Phase 21 — the coffee is the draft (scheduled, not yet built)
+
+**The joy it serves:** #1 (the cup, caught) and #3 (take it home) —
+protecting work already done, the same durability register as Phase 8. Not
+a new surface; a fix to one that already loses what you put into it.
+
+**The risk it closes.** `openSheet`/`closeSheet` hold no state of their
+own: a swipe-dismiss or a tap on the dimmed backdrop calls `closeSheet()`,
+which does `s.innerHTML=''` unconditionally. Every field in the coffee form
+(`openCoffeeForm` / `saveCoffeeForm`) is plain DOM state until "Save" is
+pressed — dismiss the sheet first, and it's gone. Reported directly, and it
+matches how the founder actually adds a coffee: read the menu, order,
+type what's known while sipping, get pulled away before finishing, meaning
+to come back once there's time to look the rest up. Today that return trip
+starts from zero, because the sheet doesn't remember it was ever open.
+
+**What it does.** No shadow "draft" object living alongside the real
+record — that's a second, unsynced copy of the same fact, exactly the kind
+of parallel state `ARCHITECTURE.md`'s invariants exist to prevent. Instead
+the coffee becomes the record the moment it has enough to exist, the same
+move the menu capture already makes (a line's coffee is minted, and the
+menu item points at it, before its cup form even opens, "so the link
+survives whether or not the cup itself gets finished"). Concretely:
+- The coffee form's fields autosave (debounced) into `D.coffees` once the
+  same gate `saveCoffeeForm` already enforces is met — a roaster or a name
+  typed. Nothing is minted before that; an empty sheet swiped shut leaves
+  nothing behind, same as today.
+- Once minted, every further keystroke lands the way `save()` already
+  lands everything else in this app. A swipe, a backdrop tap, the phone
+  put away mid-sip: whatever was typed is on the Shelf, not lost. Reopening
+  that coffee later (`openCoffeeForm(id)`) continues from exactly what's
+  there — no separate "resume the draft" screen, because there's no
+  separate draft.
+- The gentle join still fires once, on the roaster field settling, not on
+  every keystroke — unchanged from `saveCoffeeForm`'s single call today.
+- "Save" stops being the only thing that persists and becomes what it
+  already reads as: *I'm done here for now.* The empty state this leans on
+  is already designed — the form's own note ("A field left blank is
+  unread, not wrong") was written for exactly this shape and needs no new
+  copy.
+
+**What it must not become.** A staging schema, an "unpublished" flag, or a
+second copy of a coffee reconciled into the real one later — any of those
+is new machinery for a problem the record already solves by being allowed
+to stay sparse. And it stays scoped to the coffee form specifically — the
+one that actually loses work today — not a blanket "autosave every sheet";
+if the café-cup or Setup forms are ever felt to have the same problem,
+that's its own phase, not assumed here.
+
+**Done when:** typing a roaster or name into the coffee form, then swiping
+the sheet away (or backgrounding the app, or force-closing it), leaves that
+coffee on the Shelf with whatever was typed. Reopening it picks up exactly
+there, never blank.
+
+### Phase 22 — search, on your own key (scheduled, not yet built)
+
+**The joy it serves:** #1 and #3, same as Phase 21 — the part of adding a
+coffee that today means a separate sitting later, at home, typing roaster
+names into a search bar by hand to find the region, process and altitude a
+café's menu never states.
+
+**The tripwire, screened once.** Cross-source entity matching and
+corpus-wide "correction" — search other sites, match a coffee across
+roasters and importers, reconcile what they disagree on, then update what's
+already on the shelf — is `docs/RESOLVER.md`'s own machinery: a fingerprint
+scorer, propose-and-confirm, merge and split. That's Lotmark's ladder, not
+Carta's (`ROADMAP.md` tripwire 1), and it's exactly why `classic/` reached
+12,500 lines. This phase is the cut that stays on Carta's side of that
+line: one BYO-key model call, keeper-summoned, scoped to the one coffee
+open in the form right now, its answer landing as an editable suggestion —
+never a sweep across the shelf, never a comparison between two of the
+keeper's own coffees, never a silent overwrite.
+
+**What it does.** A button on `openCoffeeForm`, beside Save — **Search for
+more** — live once the same gate Phase 21 mints on is met (a roaster or a
+name typed). One call, through the same channel the ask and the menu OCR
+already use (`ARCHITECTURE.md` §7's one sanctioned exception, BYO-key,
+`callModel`/`api.anthropic.com`) — not a new network citizen, the same row
+asked to use its search tool. The model gets what's already in the form and
+comes back with values for the fields still blank — region, process,
+variety, altitude, mill — each landing in a plain, already-editable input,
+with one line under it saying where it came from. Accept it by leaving it,
+correct it by typing over it, the same as any autofill anywhere else in the
+app. Nothing needs a separate "confirm the suggestion" step, because after
+Phase 21 an input field already is that step — whatever's typed (or left
+as suggested) is what's on the record.
+
+Re-openable per coffee, one at a time, from the Shelf — the same button on
+the same form, whether the coffee was minted five minutes or five weeks
+ago. Explicitly not a batch job: no "search all" over the shelf, no
+background sweep, no field changed on a coffee the keeper hasn't opened.
+
+**What it must not become.** Anything that runs without the keeper opening
+that one coffee and pressing that one button. Anything that compares two
+of the keeper's own coffees to each other, or writes a confidence or grain
+onto a field — that is the resolver's ladder (`RESOLVER.md` §6), not this.
+
+**Done when:** opening any coffee — freshly minted or long since put on
+the shelf — and pressing "Search for more" fills in whatever origin fields
+are still blank, sourced and editable, without touching a field already
+typed, and without any call happening unless that button was pressed.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner
