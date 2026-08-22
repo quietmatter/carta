@@ -7,6 +7,104 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — The pull moves to the door: Phase 24 re-aimed, Phase 25 added
+
+- **Not shipped — a design decision, taken before either phase was built.**
+  The founder asked the right question about the scoping done earlier the
+  same day: if a Visualizer pull becomes the *primary* way a home cup gets
+  recorded, then a button inside the dial-in screen is the wrong home for
+  it, and the manual logger — the app's own first idea — is no longer the
+  main path. Where does the pull actually live?
+- **The finding that settled it.** Read the live shot payload against
+  Carta's own three-record home path (coffee → brew → cup): a synced shot
+  carries **two of the three already filled in**. `bean_brand`/`bean_type`/
+  `roast_date`/`roast_level` is the coffee; `bean_weight`/`drink_weight`/
+  `duration`/`grinder_setting` is the brew. The only thing it cannot carry
+  is Carta's own reading — so the pull doesn't fill a form, it **replaces
+  the first two steps of the home path and lands on `openImpression`**.
+- **So: the door, not "add a coffee."** `openCoffeeForm` is a shelf
+  operation (a thing you own, no cup attached); a synced shot is an
+  **event**, which is exactly what `＋ A cup` is for. And the door already
+  does this work — `doorParse` reads a roaster and a coffee out of pasted
+  text and offers the gentle join; a pull reads the same two facts out of
+  JSON and offers the same join. One more branch on an existing screen,
+  not a new subsystem.
+- **Adopted, and written into `ROADMAP.md`:** Phase 24 stays the
+  *connection*, built inside the brew flow where the coffee is already
+  chosen and nothing must be matched — the smallest place to prove it end
+  to end. **Phase 25 (new)** moves the entrance to the door. Sequenced
+  that way on purpose: the risk lives in the connection (token, shot list,
+  the still-unconfirmed pourover shape), not the navigation.
+- **This un-parks the matching item parked this morning** — entering from
+  the door, there is no coffee context, so Carta must decide which coffee a
+  shot is. Recorded as still *not* a resolver: the roaster goes through the
+  existing `matchNode`, the coffee name through the same pure `matchNodes`
+  against that roaster's own coffees, exact joins silently, near asks once.
+  Same law as the paste path, one more field. If it ever wants a score or a
+  rung, it's Lotmark's.
+- **`espresso_enjoyment` is deliberately never mapped to Carta's 1–9.** A
+  converted figure couldn't state its reasons, and the taste model rests on
+  figures that can. The keeper's reading stays typed, always.
+- **The manual path is re-roled, not demoted.** The dial-in screen fuses
+  *recording* (which a pull takes) with *planning* — "begin from the last
+  cup, change one thing" — which happens before any shot exists and no
+  sync can take. That's joy #4 and it survives untouched. Nothing about the
+  typed path is removed, gated, or hidden behind having an account.
+- **Newly parked:** a batch "sync all my shots" importer — one event at a
+  time is the door's discipline, and a sweep would mass-mint coffees never
+  tasted, the same shape Phase 22 refused for the shelf.
+
+---
+
+## 2026-08-22 — Phases 23 and 24 scoped: the cup, compared; pulled, not typed
+
+- **Not shipped — scoped only.** The founder asked for a Visualizer
+  integration on the dial-in screen: pull shot data from an Argos machine
+  (via its own app) or a BOOKOO scale (via BOOKOO N), rather than retype
+  dose/yield/time/grind by hand, with manual entry kept as the fallback —
+  plus deeper linking between a home pull and the café cups of the same
+  coffee, drawn from the Atlas. Explicitly framed as a general Visualizer
+  integration, not gear-specific: any keeper with any Visualizer-synced
+  equipment should get the same pull, which is exactly the shape scoped.
+- **Researched before scoping, not assumed.** Confirmed directly against
+  the live API: Visualizer (`visualizer.coffee`, an independent, actively
+  run community service — `github.com/miharekar/visualizer`) has
+  wide-open CORS (`access-control-allow-origin: *`), so a plain browser
+  `fetch` reaches it with no server — the "no server" invariant holds. Its
+  own docs show Bearer-token auth for exactly Carta's "personal script"
+  shape, meaning keepers paste a separate secret token, not their real
+  account password. A real shot record's fields were pulled and inspected
+  directly, confirming a clean map onto Carta's own brew fields
+  (`bean_weight`→dose, `drink_weight`→yield, `duration`→time,
+  `grinder_setting`→grind, `bean_brand`/`bean_type`/`roast_date`/
+  `roast_level`→a coffee's own identity fields).
+- **Split into two phases, sequenced by dependency and risk:**
+  - **Phase 23 — the cup, compared.** No Visualizer dependency at all,
+    ships regardless: a coffee's own page currently states a bare cup
+    count and shows none of them. Every cup — home and café both, each
+    café one linked to its place — replaces that count. Pure UI on data
+    Carta already carries.
+  - **Phase 24 — pulled, not typed.** The actual integration: BYO
+    Visualizer token, a "Pull from Visualizer" button inside the existing
+    brew flow, filling the dial-in fields from a picked shot. Explicitly
+    does not redraw Visualizer's own pressure/flow curve inside Carta —
+    that's a charting engine, not a form field — a pulled shot links out
+    to its own Visualizer page instead. Espresso's field shape is
+    confirmed; pourover is confirmed *possible* (BOOKOO N does sync pours)
+    but its exact field shape still needs inspecting against a real synced
+    pour before that half is built — named as an open item, not guessed
+    at.
+- **Deliberately parked, not built into v1:** matching a pulled shot's
+  `bean_brand`/`bean_type` against the keeper's own coffees to suggest a
+  new coffee record — v1 only ever attaches a pull to the coffee already
+  open in the brew flow. A real identity-matching pass across pulled
+  shots is a good idea for a later phase, not this one.
+- Full write-ups (joy, what's confirmed vs. still open, what it must not
+  become, done-when) are in `ROADMAP.md`, Phases 23–24, scheduled but not
+  yet built.
+
+---
+
 ## 2026-08-22 — Phase 22: search, on your own key
 
 - **Shipped — v7.24.0.** A "Search for more" button on the coffee form,
