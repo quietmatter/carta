@@ -79,12 +79,11 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–20 are all shipped, Phase 19 landed after Phase 20 rather than
-before it (Phase 19's own entry below has the account of why). Carta 7
-stands at
-**v7.22.0, `index.html` 4,854 lines + `carta-map.js` 535 lines, 74/74 pure
-tests** — back inside the 5,000-line band, the debt Phase 18 opened and
-Phase 20 knowingly deepened now paid down (`ARCHITECTURE.md` §1). Full prose
+*Phases 8–21 are all shipped, Phase 19 landed after Phase 20 rather than
+before it (Phase 19's own entry below has the account of why); Phase 22 is
+written and scheduled but not yet built. Carta 7 stands at
+**v7.23.0, `index.html` 4,879 lines + `carta-map.js` 535 lines, 74/74 pure
+tests** — still comfortably inside the 5,000-line band. Full prose
 for each is in `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -766,21 +765,23 @@ field, states what it's about to send before the key is spent, narrates its
 one network call rather than hiding it, and a cancelled ask leaves nothing
 behind.
 
-### Phase 21 — the coffee is the draft (scheduled, not yet built)
+### Phase 21 — the coffee is the draft
+
+**Shipped — v7.23.0.**
 
 **The joy it serves:** #1 (the cup, caught) and #3 (take it home) —
 protecting work already done, the same durability register as Phase 8. Not
-a new surface; a fix to one that already loses what you put into it.
+a new surface; a fix to one that already lost what you put into it.
 
-**The risk it closes.** `openSheet`/`closeSheet` hold no state of their
+**The risk it closed.** `openSheet`/`closeSheet` held no state of their
 own: a swipe-dismiss or a tap on the dimmed backdrop calls `closeSheet()`,
-which does `s.innerHTML=''` unconditionally. Every field in the coffee form
-(`openCoffeeForm` / `saveCoffeeForm`) is plain DOM state until "Save" is
-pressed — dismiss the sheet first, and it's gone. Reported directly, and it
-matches how the founder actually adds a coffee: read the menu, order,
-type what's known while sipping, get pulled away before finishing, meaning
-to come back once there's time to look the rest up. Today that return trip
-starts from zero, because the sheet doesn't remember it was ever open.
+which did `s.innerHTML=''` unconditionally. Every field in the coffee form
+was plain DOM state until "Save" was pressed — dismiss the sheet first, and
+it was gone. Reported directly, and it matches how the founder actually
+adds a coffee: read the menu, order, type what's known while sipping, get
+pulled away before finishing, meaning to come back once there's time to
+look the rest up. The return trip started from zero, because the sheet
+never remembered it had been open.
 
 **What it does.** No shadow "draft" object living alongside the real
 record — that's a second, unsynced copy of the same fact, exactly the kind
@@ -789,36 +790,43 @@ the coffee becomes the record the moment it has enough to exist, the same
 move the menu capture already makes (a line's coffee is minted, and the
 menu item points at it, before its cup form even opens, "so the link
 survives whether or not the cup itself gets finished"). Concretely:
-- The coffee form's fields autosave (debounced) into `D.coffees` once the
-  same gate `saveCoffeeForm` already enforces is met — a roaster or a name
-  typed. Nothing is minted before that; an empty sheet swiped shut leaves
-  nothing behind, same as today.
-- Once minted, every further keystroke lands the way `save()` already
-  lands everything else in this app. A swipe, a backdrop tap, the phone
-  put away mid-sip: whatever was typed is on the Shelf, not lost. Reopening
-  that coffee later (`openCoffeeForm(id)`) continues from exactly what's
-  there — no separate "resume the draft" screen, because there's no
-  separate draft.
-- The gentle join still fires once, on the roaster field settling, not on
-  every keystroke — unchanged from `saveCoffeeForm`'s single call today.
-- "Save" stops being the only thing that persists and becomes what it
-  already reads as: *I'm done here for now.* The empty state this leans on
-  is already designed — the form's own note ("A field left blank is
-  unread, not wrong") was written for exactly this shape and needs no new
-  copy.
+- `openCoffeeForm`'s fields call `cfAutosave()` on every `oninput`. Nothing
+  is minted into `D.coffees` until the same gate `saveCoffeeForm` used to
+  enforce before its one final Save is met — a roaster or a name typed. An
+  empty sheet swiped shut still leaves nothing behind.
+- Once minted, every field writes straight into the real record on each
+  keystroke; only the `save()` call itself (the localStorage write) is
+  debounced 400ms, so rapid typing doesn't thrash storage — the in-memory
+  write a swipe can't lose already happened by then regardless. `closeSheet`
+  now calls `cfFlush()` unconditionally (a no-op for every other sheet in
+  the app, since it only does anything when the coffee form's own autosave
+  is live) — a final `save()`, then a `render()` so the Shelf behind
+  reflects it immediately, however the sheet closed.
+- The gentle join still fires once: `cfRoasterSettled()` runs `resolveRoaster`
+  on the roaster field's `blur`, not on every keystroke, exactly as
+  `saveCoffeeForm`'s single call used to. "New ground" (Phase 12) is the
+  same — `cfCountrySettled()` fires it once, on the country field's blur,
+  never mid-keystroke.
+- The button beside the form is **Done**, not Save — closing the sheet is
+  now literally all that's left for it to do. The empty state this leans on
+  was already designed: the form's own note ("A field left blank is
+  unread, not wrong") needed only one added sentence ("Everything above
+  saves as you type"), no new copy invented.
 
-**What it must not become.** A staging schema, an "unpublished" flag, or a
-second copy of a coffee reconciled into the real one later — any of those
-is new machinery for a problem the record already solves by being allowed
-to stay sparse. And it stays scoped to the coffee form specifically — the
-one that actually loses work today — not a blanket "autosave every sheet";
-if the café-cup or Setup forms are ever felt to have the same problem,
-that's its own phase, not assumed here.
+**What it must not become, and didn't.** No staging schema, no
+"unpublished" flag, no second copy of a coffee reconciled into the real one
+later. And it stays scoped to the coffee form specifically — the one that
+actually lost work — not a blanket "autosave every sheet"; the café-cup and
+Setup forms are untouched, and if they're ever felt to have the same
+problem, that's its own phase.
 
-**Done when:** typing a roaster or name into the coffee form, then swiping
-the sheet away (or backgrounding the app, or force-closing it), leaves that
-coffee on the Shelf with whatever was typed. Reopening it picks up exactly
-there, never blank.
+**Done when — met:** typing a roaster or name into the coffee form, then
+swiping the sheet away, tapping the backdrop, or reloading the page mid-sit,
+leaves that coffee on the Shelf with whatever was typed. Reopening it picks
+up exactly there, never blank — checked directly (Playwright, both open
+paths) against a fresh `D.coffees` mint via a backdrop tap, an edit to an
+already-existing coffee closed the same way, roaster-resolution firing on
+blur, and an empty form swiped shut minting nothing.
 
 ### Phase 22 — search, on your own key (scheduled, not yet built)
 

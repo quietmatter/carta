@@ -7,6 +7,35 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — Phase 21: the coffee is the draft
+
+- **Shipped — v7.23.0.** The coffee form autosaves once it's named. Typing a
+  roaster or a name mints the coffee into the real ledger right then — no
+  shadow draft object, the same move the menu capture already makes for its
+  own coffee — and every field after that writes straight into the record on
+  each keystroke, with only the localStorage write itself debounced. A swipe,
+  a backdrop tap, the phone put away mid-sip: whatever was typed is on the
+  Shelf, not lost. `closeSheet()` now flushes and re-renders through a hook
+  (`cfFlush`) that no-ops for every other sheet in the app — nothing else
+  changed behavior.
+- The gentle join still fires once, on the roaster field's blur — never
+  mid-keystroke, matching the single call `saveCoffeeForm` used to make. Same
+  for Phase 12's "new ground" toast, moved to the country field's blur.
+- **Save became Done.** With saving continuous, the button's only job left
+  was closing the sheet — relabeled honestly rather than left saying
+  something it no longer quite did.
+- Verified directly (Playwright): a fresh coffee minted via backdrop-tap
+  close survives a full page reload; editing an existing coffee and closing
+  the same way keeps the edit; an empty form swiped shut still mints
+  nothing; roaster-resolution fires correctly on blur. 74/74 pure tests
+  unaffected (nothing touched lived inside the tested region).
+- Deliberately not done: autosave for any other sheet (café-cup, Setup) —
+  scoped to the one form that actually lost work, per the phase's own
+  written boundary.
+- Phase 22 (search, on your own key) is still scoped and waiting, unbuilt.
+
+---
+
 ## 2026-08-22 — Phases 21 and 22 scoped: the coffee is the draft, then search on your own key
 
 - **Not shipped — scoped only.** The founder described a real ingest upgrade:
