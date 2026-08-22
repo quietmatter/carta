@@ -1386,6 +1386,7 @@ function openSheet(html){const s=document.getElementById('sheet');
   s.scrollTop=0;}
 function closeSheet(){const s=document.getElementById('sheet');
   s.classList.remove('open');document.getElementById('sheetbg').classList.remove('open');stopTimer(false);
+  cfFlush();
   s.innerHTML='';
 }
 (function initSheetDrag(){
@@ -1873,49 +1874,71 @@ function saveHomeCup(brewId,skip){
   save();closeSheet();go('journal');toast(skip?'The brew is on the record.':'Kept.');
 }
 
-/* ============ coffee form (add to the shelf directly, or edit) ============ */
+/* ============ coffee form — autosaves once named, so nothing typed is ever
+ * lost to a swipe (ROADMAP.md Phase 21) ============
+ * No shadow draft object: the coffee IS the draft, the same move the menu
+ * capture already makes for its own coffee ("minted before the cup form even
+ * opens, so the link survives whether or not the cup itself gets finished").
+ * Nothing is minted until a roaster or a name is typed — the same gate this
+ * form used to enforce before one final Save — and every keystroke after
+ * that lands the way save() already lands everything else. The gentle join
+ * still fires once, on the roaster field settling, not on every keystroke. */
+let _cfId=null,_cfTimer=null;
 function openCoffeeForm(id){
+  _cfId=id||null;
   const c=id?coffeeById(id):{origin:{}};
   const o=c.origin||{};
   openSheet(`<h3>${id?'Edit the coffee':'Add a coffee'}</h3>
-  <label class="f"><span class="l">Roaster</span><input type="text" id="cf_roaster" value="${esc(c.roaster||'')}" placeholder="Sey's"></label>
-  <label class="f"><span class="l">Name</span><input type="text" id="cf_name" value="${esc(c.name||'')}" placeholder="Ethiopia Gedeb"></label>
+  <label class="f"><span class="l">Roaster</span><input type="text" id="cf_roaster" value="${esc(c.roaster||'')}" placeholder="Sey's" oninput="cfAutosave()" onblur="cfRoasterSettled()"></label>
+  <label class="f"><span class="l">Name</span><input type="text" id="cf_name" value="${esc(c.name||'')}" placeholder="Ethiopia Gedeb" oninput="cfAutosave()"></label>
   <div class="grid2">
-    <label class="f"><span class="l">Country</span><input type="text" id="cf_country" value="${esc(o.country||'')}"></label>
-    <label class="f"><span class="l">Region</span><input type="text" id="cf_region" value="${esc(o.region||'')}"></label>
-    <label class="f"><span class="l">Farm</span><input type="text" id="cf_farm" value="${esc(o.farm||'')}"></label>
-    <label class="f"><span class="l">Producer</span><input type="text" id="cf_producer" value="${esc(o.producer||'')}"></label>
-    <label class="f"><span class="l">Variety</span><input type="text" id="cf_variety" value="${esc(o.variety||'')}"></label>
-    <label class="f"><span class="l">Process</span><input type="text" id="cf_process" value="${esc(o.process||'')}"></label>
-    <label class="f"><span class="l">Altitude <span class="opt">as stated</span></span><input type="text" id="cf_altitude" value="${esc(o.altitude||'')}" placeholder="1,900 – 2,100 m"></label>
-    <label class="f"><span class="l">Mill <span class="opt">as stated</span></span><input type="text" id="cf_mill" value="${esc(o.mill||'')}"></label>
+    <label class="f"><span class="l">Country</span><input type="text" id="cf_country" value="${esc(o.country||'')}" oninput="cfAutosave()" onblur="cfCountrySettled()"></label>
+    <label class="f"><span class="l">Region</span><input type="text" id="cf_region" value="${esc(o.region||'')}" oninput="cfAutosave()"></label>
+    <label class="f"><span class="l">Farm</span><input type="text" id="cf_farm" value="${esc(o.farm||'')}" oninput="cfAutosave()"></label>
+    <label class="f"><span class="l">Producer</span><input type="text" id="cf_producer" value="${esc(o.producer||'')}" oninput="cfAutosave()"></label>
+    <label class="f"><span class="l">Variety</span><input type="text" id="cf_variety" value="${esc(o.variety||'')}" oninput="cfAutosave()"></label>
+    <label class="f"><span class="l">Process</span><input type="text" id="cf_process" value="${esc(o.process||'')}" oninput="cfAutosave()"></label>
+    <label class="f"><span class="l">Altitude <span class="opt">as stated</span></span><input type="text" id="cf_altitude" value="${esc(o.altitude||'')}" placeholder="1,900 – 2,100 m" oninput="cfAutosave()"></label>
+    <label class="f"><span class="l">Mill <span class="opt">as stated</span></span><input type="text" id="cf_mill" value="${esc(o.mill||'')}" oninput="cfAutosave()"></label>
   </div>
   <div class="grid2">
-    <label class="f"><span class="l">Roast level <span class="opt">optional</span></span><select id="cf_roastlevel">
+    <label class="f"><span class="l">Roast level <span class="opt">optional</span></span><select id="cf_roastlevel" onchange="cfAutosave()">
       <option value="">—</option>
       ${ROAST_LEVELS.map(r=>`<option value="${r}"${c.roastLevel===r?' selected':''}>${r}</option>`).join('')}
     </select></label>
-    <label class="f"><span class="l">Roast date <span class="opt">optional</span></span><input type="date" id="cf_roastdate" value="${esc(c.roastDate||'')}"></label>
+    <label class="f"><span class="l">Roast date <span class="opt">optional</span></span><input type="date" id="cf_roastdate" value="${esc(c.roastDate||'')}" oninput="cfAutosave()"></label>
   </div>
-  <label class="f"><span class="l">Notes <span class="opt">optional</span></span><textarea id="cf_notes">${esc(c.notes||'')}</textarea></label>
-  <button class="btn btn-primary" onclick="saveCoffeeForm('${id||''}')">Save</button>
+  <label class="f"><span class="l">Notes <span class="opt">optional</span></span><textarea id="cf_notes" oninput="cfAutosave()">${esc(c.notes||'')}</textarea></label>
+  <button class="btn btn-primary" onclick="cfDone()">Done</button>
   ${id?(c.archived
     ?`<button class="btn btn-quiet" onclick="restore('coffees','${id}');closeSheet()">Restore</button>`
     :`<button class="btn btn-quiet" onclick="putAway('coffees','${id}');closeSheet()">Put away</button>`):''}
-  <div class="note">A field left blank is unread, not wrong. Two facts are enough for this green to meet another keeper’s record; one, and it stays a green only you can see.</div>`);
+  <div class="note">A field left blank is unread, not wrong. Two facts are enough for this green to meet another keeper’s record; one, and it stays a green only you can see. Everything above saves as you type.</div>`);
 }
-function saveCoffeeForm(id){
-  const fields={roaster:val('cf_roaster'),name:val('cf_name'),
+function cfAutosave(){
+  const f={roaster:val('cf_roaster'),name:val('cf_name'),
     origin:{country:val('cf_country'),region:val('cf_region'),farm:val('cf_farm'),producer:val('cf_producer'),
       variety:val('cf_variety'),process:val('cf_process'),altitude:val('cf_altitude'),mill:val('cf_mill')},
     roastLevel:val('cf_roastlevel'),roastDate:val('cf_roastdate'),notes:val('cf_notes')};
-  if(!fields.roaster&&!fields.name){toast('Name the roaster or the coffee');return}
-  const rr=resolveRoaster(fields.roaster);fields.roasterRef=rr.ref;if(rr.name)fields.roaster=rr.name;
-  if(id){Object.assign(coffeeById(id),fields,{updatedAt:new Date().toISOString()})}
-  else{D.coffees.push({id:uid(),createdAt:new Date().toISOString(),...fields,home:true})}
-  save();closeSheet();render();
-  newGroundToast('country',fields.origin.country,'Saved to the shelf');
+  if(!_cfId){
+    if(!f.roaster&&!f.name)return;   // an empty sheet swiped shut still leaves nothing behind
+    D.coffees.push({id:_cfId=uid(),createdAt:new Date().toISOString(),home:true,...f});
+  }else{
+    Object.assign(coffeeById(_cfId),f,{updatedAt:new Date().toISOString()});
+  }
+  clearTimeout(_cfTimer);_cfTimer=setTimeout(save,400);   // debounced: the write into D above is what a swipe can't lose
 }
+function cfRoasterSettled(){
+  if(!_cfId)return;
+  const rr=resolveRoaster(val('cf_roaster'));
+  const el=document.getElementById('cf_roaster');if(el)el.value=rr.name;
+  Object.assign(coffeeById(_cfId),{roaster:rr.name,roasterRef:rr.ref,updatedAt:new Date().toISOString()});
+  save();
+}
+function cfCountrySettled(){newGroundToast('country',val('cf_country'))}
+function cfDone(){cfRoasterSettled();closeSheet()}
+// closeSheet() calls this for every sheet in the app; it no-ops unless the coffee form's autosave is the one open
+function cfFlush(){if(_cfId===null)return;clearTimeout(_cfTimer);_cfTimer=null;save();_cfId=null;render();}
 
 /* ============ the menu — capture, read, and the walk from a line to a cup ============
  * A café's menu, typed while you read it (ROADMAP.md Phase 4) — a photo is
@@ -4805,8 +4828,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.22.0';
+const APP_VERSION='7.23.0';
 const CHANGELOG=[
+  {v:'7.23.0',d:"The coffee, never lost to a swipe. Adding or editing a coffee used to hold everything you typed only in the form itself — dismiss the sheet before tapping Save, on purpose or by an accidental swipe, and it was gone. It saves as you type now, the moment a roaster or a name is on the page, so starting an entry at the bar and finishing the rest once there's time to look it up actually works: swipe away, put the phone down, come back later — whatever was typed is already on the Shelf, right where you left it."},
   {v:'7.22.0',d:"The file, split in two. Nothing changes on the screen — this is the debt Phase 18 landed and Phase 20 knowingly deepened, paid down at last. The map layer (the passport's outlines, its highland contours, the street and drawn-plot surfaces, and the vendored projection math underneath them) moves out of index.html into its own file, carta-map.js, loaded the same way a font or an icon already is. Two static files, still nothing to build, still nothing to fetch — one is just no longer one."},
   {v:'7.21.0',d:"Ask Carta, at the front door. The ask was a button at the bottom of the Atlas, under everything the record had already done. It is the first thing the Atlas says now — one field standing on the passport itself, and what Carta has already found sits directly under the fold, one tap from being reopened. The composer states what goes out with the ask as a ledger before anything leaves — the bar, the scores, what's excluded by name, the scope — and opens the brief itself if you want every character of it. The wait is a screen of its own and narrates the work rather than spinning: your record read back in its own counted figures, the bar you hold, the call itself, then each name placed one at a time, landing on the plot as its address confirms. Cancel is a real cancel — the call aborts and nothing is written down. The answer settles in the order it was argued instead of arriving flat."},
   {v:'7.20.1',d:"A pin, editable after it's already right. A café placed by pasting a map link had no way back to that same box once it was placed — the only correction on offer afterward tried a name search again, which is exactly the search that never worked for this café in the first place. Paste a map link is on the page now whatever the café's current state, so a placed café can be corrected the same way it was placed, not just the ones still waiting."},
