@@ -398,6 +398,7 @@ one and the one that travels.
 | Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
 | Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 18) | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
+| **Search for more** (BYO-key, same `api.anthropic.com` row, Anthropic's server-side web-search tool) | the keeper taps "Search for more" on one coffee (Phase 22) | the field stays blank, typed in by hand |
 
 The geocode row is unchanged in posture and was sharpened at Phase 15: the
 same one call now asks for five results with their address details instead of
@@ -433,15 +434,29 @@ terrain. The tiles are never inverted for dusk (an inverted hillshade reads as
 valleys where the mountains are) and Leaflet's own emoji attribution prefix is
 cleared, but OpenTopoMap's CC-BY-SA credit is not.
 
-That is the whole list, and **Phase 14 deliberately kept it that way.** The
-obvious way to make the ask's answers sharper is to let the model search —
-the chat transcript the phase was tuned against owed its best lines to a live
-menu read. That would have been a fourth row here, and it was declined: the
-ask stays on training knowledge, and the prompt instead forbids stating any
-menu as fact and makes the model mark every café whose fit depends on one
-that turns over. What the screen shows is what Carta can stand behind. If
-search is ever wanted, it is a row in this table first, not a flag in the
-request.
+That was the whole list through Phase 21, and **Phase 14 deliberately kept
+it that way** for the ask specifically. The obvious way to make the ask's
+answers sharper is to let the model search — the chat transcript the phase
+was tuned against owed its best lines to a live menu read. That would have
+been a fourth row here, and it was declined: the ask stays on training
+knowledge, and the prompt instead forbids stating any menu as fact and
+makes the model mark every café whose fit depends on one that turns over.
+What the screen shows is what Carta can stand behind. **That decision
+stands, unreopened** — `callAskModel` still calls `callModel` with no
+`tools` argument, so the ask itself still searches nothing.
+
+**Phase 22 is search, wanted for a different reason, added as its own row
+rather than a flag.** A coffee's origin story — region, process, altitude —
+is a fact to verify, not a recommendation to argue; the honesty risk the
+ask's decision was guarding against (stating a café's menu as settled when
+it turns over weekly) doesn't apply to a roaster's own product page. So
+when "Search for more" was built, it got its own named row above rather
+than quietly flipping a flag on the shared `callModel` — exactly what this
+section asked for the day it declined the ask's own case. The two calls
+share nothing but the HTTP function: `callModel` gained an optional `tools`
+argument, only `cfSearchMore`'s own call passes it, and the prompt itself
+repeats the same honesty gate in its own words — no source, no value,
+never a guess.
 
 Two notes on what the table no longer says:
 
@@ -458,13 +473,15 @@ Two notes on what the table no longer says:
   map surface with no network story to tell.
 
 Everything else — the model, the brief, the passport, the cards — is offline
-by construction. The ask is the **one sanctioned outbound question**, and its
-second use (menu-photo OCR) goes through the same channel, same posture:
-keeper-initiated, keyed by the keeper, the key on the device and nowhere
-else, degrading to a manual path, never required. Grounding rule: a café
-named in an answer is drawn only after a real place lookup confirms it
-exists — Carta never pins a hallucination; what can't be confirmed is
-listed, not plotted.
+by construction. The ask is the **one sanctioned channel for an outbound
+question**, and every other use of it — menu-photo OCR, and now Phase 22's
+coffee search — goes through the same posture: keeper-initiated, keyed by
+the keeper, the key on the device and nowhere else, degrading to a manual
+path, never required. Grounding rule: a café named in an answer is drawn
+only after a real place lookup confirms it exists — Carta never pins a
+hallucination; what can't be confirmed is listed, not plotted. The same
+honesty discipline governs Phase 22's own answers: a fact with no real
+source is left out, not stated.
 
 ## 8. Migration (classic → 7)
 

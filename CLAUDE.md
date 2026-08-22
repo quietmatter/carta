@@ -232,6 +232,20 @@ server/               Classic's sync server — dormant
   `openSetupForm`/`openBrewFlow`/`saveBrewFlow`/`openImpression`/`saveHomeCup`
   (the home path, through the dials and the timer). A brew always needs a
   Setup.
+- **the coffee form** (`openCoffeeForm`) — autosaves once named (Phase 21):
+  the coffee mints itself into `D.coffees` the moment a roaster or name is
+  typed, the same move the menu capture already makes for its own coffee,
+  and every field after that writes straight into the record on each
+  keystroke (`cfAutosave`), debounced only on the `localStorage` write
+  itself. `closeSheet()` flushes it (`cfFlush`) no matter how the sheet
+  closes — swipe, backdrop tap, Done — so nothing typed is ever lost to a
+  dismissal the way it used to be. **Search for more** (`cfSearchMore`,
+  Phase 22) is a second, keeper-tapped button beside it: one call through
+  `callModel` — now carrying an optional `tools` argument so the ask's own
+  channel could be handed Anthropic's web-search tool without the ask
+  itself gaining it — fills in only the origin fields still blank, each
+  named to its source, never touching a field already typed and never
+  running as a sweep across the shelf.
 - **menus** — one screen, `vMenu`: what they're pouring, and the box to add to
   it. `openMenuScreen(menuId, placeId)` opens either an existing menu or a
   fresh capture; `saveMenuCapture` appends to the menu you are standing on
@@ -396,7 +410,7 @@ out of `index.html` and evaluates it against fixture ledgers — no DOM, no
 `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
 `parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel`,
-`originPin`, `meanPin`, `namesBack` or
+`originPin`, `meanPin`, `namesBack`, `cfSearchPrompt`, `parseCfSearch` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**
