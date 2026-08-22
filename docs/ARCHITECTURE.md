@@ -11,11 +11,20 @@ part of the record.*
 
 Carta 7 is built exactly the way classic was, smaller:
 
-- **One file.** `index.html`, all CSS and JS inline, self-contained. Target
-  **3–5,000 lines / ≤ 500 KB** including map data — a file one person can
-  read whole. (Classic reached 12,480 lines; the size was the third turn's
-  cost, not the stack's.) At Phase 20 it stands at **5,380 lines / 429.5 KB —
-  380 over the ceiling, see below**.
+- **Two files, not one, since Phase 19.** `index.html`, all CSS and JS
+  inline, self-contained, was the whole app through Phase 20. Target
+  **3–5,000 lines / ≤ 500 KB** for it — a file one person can read whole.
+  (Classic reached 12,480 lines; the size was the third turn's cost, not the
+  stack's.) Phase 20 landed it at **5,380 lines / 429.5 KB — 380 over the
+  ceiling**, an acknowledged debt against that ceiling (the run of amendments
+  and overages is kept below as the record of how it got there). **Phase 19
+  paid that debt down**, moving the map layer out into its own file,
+  `carta-map.js`, loaded from `index.html`'s own `<head>` with a plain
+  `<script src>` — no bundler, no build, still two files you drop on a static
+  host. `index.html` now stands at **4,854 lines / 321.5 KB**, comfortably
+  inside the band with real room again; `carta-map.js` holds the map layer
+  proper at **535 lines / 108.4 KB**. Combined, the app is the same size it
+  was — the debt was paid by moving lines, not cutting them.
 
   *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
   Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
@@ -104,6 +113,28 @@ Carta 7 is built exactly the way classic was, smaller:
   more on the same reasoning — the rule stands exactly as Phase 18 wrote it,
   and Phase 19 is still the fix. What changed, twice now, is only that the
   debt it will pay is larger than when it was scheduled.
+
+  **Phase 19 shipped, paying the debt down exactly as scheduled.** The three
+  custom elements (`<carta-belt>`, `<carta-plot>`, `<carta-streets>`), the
+  vendored `d3-array` + `d3-geo`, and the ground data (`LANDS`, `LAND_TOPO`,
+  `LAND_AKA`) with its decoders (`landRingsRaw`, `landTopoRaw`, `landKey`,
+  `landAnchor`) all moved into `carta-map.js` — the shape this section named
+  in advance, unchanged. The one real design question was the seam: the app's
+  own `passportSVG`, `tastedCountryMap`, `landKey` callers and the country/
+  region/city chapters all read `LANDS` and the decoders as plain globals,
+  the same way `CARTA_LAND_NAMES` already flows the other way (`carta-map.js`
+  reads it off `window`, guarded, since it's ledger-derived and stays app-side).
+  `carta-map.js` publishes its handful — `LANDS`, `landRingsRaw`,
+  `landTopoRaw`, `landKey`, `landAnchor` — on `window` explicitly, as this
+  section anticipated, even though classic scripts sharing one page already
+  share a global scope; the explicit publish documents the seam rather than
+  relying on that alone. Nothing else changed: no rewrite, no rename, no
+  restyle — the diff is a move plus that seam, verified by loading the
+  passport, a tasted country's contours and a city's drawn shape in both
+  paper and dusk, and by the pure harness (still 74/74, sliced out of
+  `index.html` exactly as before, since none of the tested functions lived in
+  the moved region). `index.html` is back inside the band, per the figures
+  above — the debt this section tracked since Phase 18 is closed.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -112,12 +143,14 @@ Carta 7 is built exactly the way classic was, smaller:
   2, moved in the open rather than slipped past)*. The passport's projection
   needs real spherical geometry, and freehanding one is the kind of "small"
   maths that is wrong in ways nobody sees. So `d3-array` 3.2.4 and `d3-geo`
-  3.1.1 (ISC, Mike Bostock) are **pasted into the file verbatim from their
-  dist builds** — 54 KB, the two modules `geoEquirectangular` / `geoPath`
+  3.1.1 (ISC, Mike Bostock) are **pasted in verbatim from their dist builds**
+  — 54 KB, the two modules `geoEquirectangular` / `geoPath`
   and their fit/bounds/centroid actually need; full d3 is 280 KB for three
   calls. This costs the law nothing it was protecting: no npm, no build, no
   lockfile, no fetch, no version resolution, and the file is still one file
-  you can drop on a static host. Upgrading is re-pasting a dist file.
+  you can drop on a static host. Upgrading is re-pasting a dist file. Since
+  Phase 19, both live in `carta-map.js` rather than `index.html` — the count
+  is still two, unchanged by the move.
   What it *does* cost is auditability-by-reading, which is why the number is
   two and the bar for a third is a deliberate amendment here, not a
   judgement call in a PR.

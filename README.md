@@ -200,11 +200,14 @@ long as you want it.
 
 ## The stack
 
-One file, `index.html` — all CSS and JS inline, self-contained, zero
-dependencies, zero build. That includes the map layer: the passport's
-projection (d3-array + d3-geo, the two modules it actually uses) is vendored
-into the file beside the outlines it draws, so the map works with the network
-switched off. Everything lives in this browser's `localStorage`
+Two static files, `index.html` and `carta-map.js` — all CSS and JS inline,
+self-contained, zero dependencies, zero build. `carta-map.js` is the map
+layer: the passport's outlines and highland contours, the drawn-plot and
+street surfaces, and the projection they need (d3-array + d3-geo, the two
+modules it actually uses, vendored verbatim), loaded from `index.html`'s own
+`<head>` — so the map works with the network switched off. Drop both files
+on any static host; there's still nothing to build. Everything lives in this
+browser's `localStorage`
 (`carta7.v1`). No account, no server — the ask is the one deliberate,
 keeper-initiated exception to offline (bring your own key or never touch it);
 the place lookup (a café, or a farm) and the map tiles — streets for a city,
@@ -248,6 +251,7 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 | Path | Purpose |
 |---|---|
 | `index.html` | Carta 7 — the current app. |
+| `carta-map.js` | Carta 7's map layer — the passport, its contours, and the street/drawn-plot surfaces. |
 | `classic/index.html` | Carta 6.18.x, frozen. See `classic/README.md`. |
 | `fonts/` | Self-hosted typefaces (Spectral, Libre Franklin; woff2). |
 | `manifest.json`, `icon-*.svg` | PWA metadata and homescreen icons. |
