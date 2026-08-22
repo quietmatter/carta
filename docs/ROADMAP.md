@@ -902,6 +902,109 @@ key set opens the key sheet instead of calling out; an all-filled coffee
 never reaches the network at all. `cfSearchPrompt`/`parseCfSearch` are
 pure and now in `test/model.test.js` (79/79 pure tests).
 
+### Phase 23 — the cup, compared (scheduled, not yet built)
+
+**The joy it serves:** #3 (take it home) and #2 (the hunt) — a coffee's own
+page (`openCoffeeDetail`) currently states "Cups so far: 4" and nothing
+else. It doesn't show a single one of those cups: not the home pulls, not
+the café cups, not where each café one was drunk. The comparison the
+founder actually wants — *does my own pull of this coffee compare to the
+one I had at the café it came from* — is already structurally there
+(every cup carries the same `coffeeRef`); it has simply never been drawn.
+
+**What it does.** Replace the bare count with an actual list: every cup of
+this coffee, newest first, each stating its kind (home brew or café),
+its score, and — for a café cup — the place it was drunk (tappable
+through to that café's own page, the same door `vCafe` already opens
+elsewhere). A home brew states its Setup and technique instead. No new
+data, no new model, no resolver — this is the taste model's own evidence
+list (`matchFigure`'s `evidenceSheet`, `ARCHITECTURE.md`'s own pattern of
+"a recommendation never travels without its reasons") turned toward one
+coffee instead of one figure.
+
+**What it must not become.** An average, a rank, or a score comparing the
+keeper's own cups against anyone else's — that reads as a resolver's
+corpus, not a personal record. Every figure here stays scoped to this one
+keeper's own ledger, exactly like the taste model already is.
+
+**Done when:** opening any coffee with more than one cup shows every one
+of them, home and café both, each linked back to where it happened.
+
+### Phase 24 — pulled, not typed (scheduled, not yet built)
+
+**The joy it serves:** #4 (the dial-in) — dose, yield, time and grind are
+often already captured by the keeper's own gear (an espresso machine's own
+control app, a Bluetooth scale's own app) the moment the shot or pour
+finishes. Retyping them into Carta's dial-in screen is pure friction for
+anyone whose equipment already recorded the numbers once.
+
+**What research found, and what it settled.** The founder's own gear
+(Odyssey's Argos machine, via its own control app; a BOOKOO scale, via the
+BOOKOO N app) each already sync to **Visualizer** (`visualizer.coffee`),
+a real, independent, actively-run service — not Carta's to build, and not
+tied to any one machine or scale brand: **any** gear whose own app can sync
+to Visualizer works the same way from Carta's side, which is the shape
+this phase is built to, not a one-keeper special case. Confirmed directly
+against the live API before writing this:
+- **CORS is wide open** (`access-control-allow-origin: *`) — a plain
+  browser `fetch` reaches it, same as the ask reaches `api.anthropic.com`.
+  No server, no proxy; the "no server" invariant holds.
+- **Auth is a separate secret token, not the account password** — the
+  API's own docs show Bearer-token auth (`Authorization: Bearer …`) for
+  exactly the "personal script, local tooling" case Carta's BYO-key
+  posture already is. Basic Auth (email+password) is also offered but the
+  token is the one to ask keepers to paste — same shape as the ask's own
+  key, a scoped secret rather than the real password.
+  Whether a first-class personal-access-token page exists in Visualizer's
+  own account settings (vs. a token issued another way) is the one thing
+  left to confirm by hand at build time — everything else about the auth
+  shape is settled.
+- **A live shot record's actual fields** (pulled from a real, public shot
+  ID during scoping) confirm the mapping onto Carta's own brew fields:
+  `bean_weight`→dose, `drink_weight`→water/yield, `duration`→time,
+  `grinder_setting`→grind, `bean_brand`/`bean_type`/`roast_date`/
+  `roast_level` line up with a coffee's own identity fields exactly.
+  A temperature field almost certainly exists (DE1-class shots log it) but
+  wasn't in the slice pulled during scoping — confirm the exact key
+  against a live payload before wiring the temp dial.
+- **Pourover coverage is confirmed possible, not yet confirmed in shape.**
+  The mechanism is real (BOOKOO N syncs pours to Visualizer, per the
+  founder directly) but the exact field names a pourover-type shot record
+  carries (weight/flow/time, presumably shaped differently from an
+  espresso shot's `bean_weight`/`drink_weight`) haven't been inspected
+  against a real one yet. Build order: espresso first (fields confirmed),
+  pourover once a real synced pour has been inspected.
+
+**What it does.** A **Pull from Visualizer** button inside `openBrewFlow`,
+beside the existing dials — keeper-summoned, one brew at a time, never
+required. Tapping it lists the keeper's own recent shots (roaster/coffee/
+date, read off `bean_brand`/`bean_type`/the shot's own date) fetched with
+their own token; picking one fills the dose/water/temp/time/grind dials
+with the shot's numbers, landing in the same already-editable dial state
+manual entry already writes to — accept it by leaving it, correct it by
+turning the dial, exactly Phase 22's own "an input field already is the
+confirm step" posture. **Carta never redraws the pressure/flow/temp
+curve** — that is Visualizer's own signature view and reimplementing it is
+a real charting engine, not a form field; the pulled shot instead carries
+a plain link out to its own page on Visualizer for the keeper who wants
+the graph. Manual entry stays exactly as it is today — the fallback the
+founder asked for, unchanged, never gated behind having a Visualizer
+account at all.
+
+**What it must not become.** A second identity ladder matching a pulled
+shot's `bean_brand`/`bean_type` against the keeper's own coffees — useful
+someday, explicitly parked rather than built here; v1 only ever attaches a
+pulled shot to the coffee the keeper is already dial-in on inside
+`openBrewFlow`, never a separate "browse all my shots" screen. And it
+stays BYO-key, keeper-owned, on-device — no Carta-run account, no server
+holding anyone's Visualizer credentials, same posture as the ask.
+
+**Done when:** dialing in a brew, pressing "Pull from Visualizer," and
+picking a recent shot fills the dials with real numbers instead of typed
+ones — for both an espresso shot and, once confirmed, a pourover — with a
+link to the full curve for whoever wants it, and every dial still turnable
+by hand exactly as before the button existed.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner

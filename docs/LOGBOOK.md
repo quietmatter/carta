@@ -7,6 +7,55 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — Phases 23 and 24 scoped: the cup, compared; pulled, not typed
+
+- **Not shipped — scoped only.** The founder asked for a Visualizer
+  integration on the dial-in screen: pull shot data from an Argos machine
+  (via its own app) or a BOOKOO scale (via BOOKOO N), rather than retype
+  dose/yield/time/grind by hand, with manual entry kept as the fallback —
+  plus deeper linking between a home pull and the café cups of the same
+  coffee, drawn from the Atlas. Explicitly framed as a general Visualizer
+  integration, not gear-specific: any keeper with any Visualizer-synced
+  equipment should get the same pull, which is exactly the shape scoped.
+- **Researched before scoping, not assumed.** Confirmed directly against
+  the live API: Visualizer (`visualizer.coffee`, an independent, actively
+  run community service — `github.com/miharekar/visualizer`) has
+  wide-open CORS (`access-control-allow-origin: *`), so a plain browser
+  `fetch` reaches it with no server — the "no server" invariant holds. Its
+  own docs show Bearer-token auth for exactly Carta's "personal script"
+  shape, meaning keepers paste a separate secret token, not their real
+  account password. A real shot record's fields were pulled and inspected
+  directly, confirming a clean map onto Carta's own brew fields
+  (`bean_weight`→dose, `drink_weight`→yield, `duration`→time,
+  `grinder_setting`→grind, `bean_brand`/`bean_type`/`roast_date`/
+  `roast_level`→a coffee's own identity fields).
+- **Split into two phases, sequenced by dependency and risk:**
+  - **Phase 23 — the cup, compared.** No Visualizer dependency at all,
+    ships regardless: a coffee's own page currently states a bare cup
+    count and shows none of them. Every cup — home and café both, each
+    café one linked to its place — replaces that count. Pure UI on data
+    Carta already carries.
+  - **Phase 24 — pulled, not typed.** The actual integration: BYO
+    Visualizer token, a "Pull from Visualizer" button inside the existing
+    brew flow, filling the dial-in fields from a picked shot. Explicitly
+    does not redraw Visualizer's own pressure/flow curve inside Carta —
+    that's a charting engine, not a form field — a pulled shot links out
+    to its own Visualizer page instead. Espresso's field shape is
+    confirmed; pourover is confirmed *possible* (BOOKOO N does sync pours)
+    but its exact field shape still needs inspecting against a real synced
+    pour before that half is built — named as an open item, not guessed
+    at.
+- **Deliberately parked, not built into v1:** matching a pulled shot's
+  `bean_brand`/`bean_type` against the keeper's own coffees to suggest a
+  new coffee record — v1 only ever attaches a pull to the coffee already
+  open in the brew flow. A real identity-matching pass across pulled
+  shots is a good idea for a later phase, not this one.
+- Full write-ups (joy, what's confirmed vs. still open, what it must not
+  become, done-when) are in `ROADMAP.md`, Phases 23–24, scheduled but not
+  yet built.
+
+---
+
 ## 2026-08-22 — Phase 22: search, on your own key
 
 - **Shipped — v7.24.0.** A "Search for more" button on the coffee form,
