@@ -7,6 +7,49 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-22 — Phase 25: the pull, at the door
+
+- **Shipped — v7.27.0.** `＋ A cup` gains a third way in beside pasting and
+  typing: **Pull it from Visualizer.** A synced shot already carries two of
+  the home path's three records (the coffee, the brew), so picking one
+  skips straight to "What was in the cup?" — nothing typed but the taste.
+  The roaster and the coffee each get one gentle-join question if Carta
+  isn't sure (exact spelling joins silently, near asks once, else it's a
+  new record); the Setup gets no question at all, matched silently on an
+  exact grinder-name fold or left as whichever Setup is already current.
+  Always a home brew — a synced shot is one by definition, so the button
+  is hidden from a door opened at a café.
+- **The manual dial-in screen keeps its own job.** A pull only replaces
+  *recording* numbers a machine already wrote down; *planning* — "begin
+  from the last cup, change one thing" — happens before any shot exists
+  and no sync can take it over. Nothing about the typed path changed.
+- **A finding, logged rather than folded into this phase.** While bumping
+  `APP_VERSION` and writing this phase's own `CHANGELOG` entry, no code
+  anywhere in `index.html` was found reading either constant back out —
+  **the What's New sheet `CLAUDE.md` describes does not exist in the
+  shipped file.** Every changelog entry since v7.0.0 has been written and
+  shown to no one. Not fixed here — it's a real but separate gap, and
+  building that sheet deserves its own small pass rather than riding along
+  inside this phase's diff. For the founder to pick up.
+- **The line band, disclosed rather than crossed quietly.** This phase's
+  matching logic is real new surface — a new entry path with its own
+  roaster/coffee/Setup resolution, not a patch. `index.html` lands at
+  5,141 lines / 341.0 KB, 141 over the 5,000-line ceiling Phase 19 closed
+  the debt on (bytes still comfortable). Larger than Phase 24's 12-line
+  remainder because this is a bigger phase; whether it deserves its own
+  future split, or whether the band itself is due another look, is put to
+  the founder rather than decided here. See `ARCHITECTURE.md` §1.
+- Verified directly: the button is absent at a café-context door; an exact
+  roaster or coffee joins with no question, a near one asks once each, and
+  declining still finishes the pull as its own new record; a Setup matches
+  silently or falls back to the current one, and a fresh ledger with none
+  at all mints one from the shot's own grinder name; a shot matching no
+  Setup and naming none refuses the same way manual entry already does.
+  85/85 pure tests, including extended `parseVisualizerShot` coverage and
+  new `normalizeRoastLevel`/`matchSetupByGrinder` cases.
+
+---
+
 ## 2026-08-22 — Phase 24: pulled, not typed
 
 - **Shipped — v7.26.0.** A **Pull from Visualizer** button on `vBrew`

@@ -31,7 +31,7 @@ vm.runInContext(pureSrc + `
   askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
-  parseVisualizerShot };
+  parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -638,30 +638,56 @@ found = M.parseCfSearch("I couldn't verify anything about this coffee.", ['regio
 assert.deepEqual(found, {});
 ok('parseCfSearch degrades to nothing, never throws, on a non-JSON answer — never invents a fact');
 
-// ---- parseVisualizerShot (ROADMAP.md Phase 24): a real shot payload's shape ----
+// ---- parseVisualizerShot (ROADMAP.md Phases 24-25): a real shot payload's shape ----
 let shot = M.parseVisualizerShot({
   duration: 25.649, bean_weight: '18.0', drink_weight: '36.7', grinder_setting: '135.0',
   bean_brand: 'District Roasters', bean_type: 'Ethiopia | Yirgacheffe Gargari Gutity Natural',
+  roast_date: '2026-07-01T00:00:00Z', roast_level: 'Medium Light', grinder_model: 'Niche Zero',
 });
 assert.equal(shot.dose, 18);
 assert.equal(shot.water, 36.7);
 assert.equal(shot.time, 26, 'duration rounds to the nearest second, the unit timeSec is stored in');
 assert.equal(shot.grind, 135);
+assert.equal(shot.roaster, 'District Roasters');
+assert.equal(shot.coffeeName, 'Ethiopia | Yirgacheffe Gargari Gutity Natural');
+assert.equal(shot.roastDate, '2026-07-01', 'a stray timestamp is trimmed to the leading date, never stored whole');
+assert.equal(shot.roastLevel, 'Medium-light');
+assert.equal(shot.grinderModel, 'Niche Zero');
 assert.equal(shot.label, 'District Roasters — Ethiopia | Yirgacheffe Gargari Gutity Natural');
-ok("parseVisualizerShot reads a real shot's dose/water/time/grind and labels it by its coffee");
+ok("parseVisualizerShot reads a real shot's numbers and its coffee's own identity fields alike");
 
 shot = M.parseVisualizerShot({ duration: 20, bean_weight: '18.0', drink_weight: '36.0' });
 assert.equal(shot.label, 'Untitled shot', 'a shot with no stated coffee is labeled honestly, never blank');
+assert.equal(shot.roaster, '');
+assert.equal(shot.coffeeName, '');
 ok('parseVisualizerShot falls back to an honest label when the shot names no coffee');
 
-shot = M.parseVisualizerShot({ bean_weight: '', grinder_setting: null, duration: 'not a number' });
+shot = M.parseVisualizerShot({ bean_weight: '', grinder_setting: null, duration: 'not a number', roast_date: 'not a date' });
 assert.equal(shot.dose, null);
 assert.equal(shot.grind, null);
 assert.equal(shot.time, null, 'an unparseable duration is null, never NaN or a guessed number');
+assert.equal(shot.roastDate, '', 'a roast_date with no leading YYYY-MM-DD is left blank, never guessed');
 ok('parseVisualizerShot refuses to guess a field the shot left blank or unparseable');
 
-assert.deepEqual(M.parseVisualizerShot(), { dose: null, water: null, time: null, grind: null, label: 'Untitled shot' });
+assert.deepEqual(M.parseVisualizerShot(), { dose: null, water: null, time: null, grind: null,
+  roaster: '', coffeeName: '', roastDate: '', roastLevel: '', grinderModel: '', label: 'Untitled shot' });
 ok('parseVisualizerShot never throws on a missing payload');
+
+// ---- normalizeRoastLevel (ROADMAP.md Phase 25): Visualizer's own field needs no "roast" adjacency ----
+assert.equal(M.normalizeRoastLevel('Medium'), 'Medium');
+assert.equal(M.normalizeRoastLevel('medium-light'), 'Medium-light');
+assert.equal(M.normalizeRoastLevel('Medium Dark'), 'Medium-dark');
+assert.equal(M.normalizeRoastLevel('City+'), '', 'a roast-shop term Carta\'s own scale has no word for is left blank, never guessed');
+assert.equal(M.normalizeRoastLevel(''), '');
+ok("normalizeRoastLevel reads Visualizer's own roast_level onto Carta's five words, or leaves it blank");
+
+// ---- matchSetupByGrinder (ROADMAP.md Phase 25): silent only on an exact fold match ----
+const setups = [{ id: 's1', grinder: 'Niche Zero' }, { id: 's2', grinder: 'Baratza Encore' }];
+assert.equal(M.matchSetupByGrinder(setups, 'niche zero'), 's1', 'case/diacritics-only difference still joins silently');
+assert.equal(M.matchSetupByGrinder(setups, 'Niche Zeroo'), null, 'a near-but-not-exact grinder name is never silently assumed');
+assert.equal(M.matchSetupByGrinder(setups, ''), null);
+assert.equal(M.matchSetupByGrinder([], 'Niche Zero'), null);
+ok("matchSetupByGrinder joins a Setup only on an exact name match, and never invents a join for less");
 
 // ---- parseRoastLevel (ROADMAP.md Phase 9): the door/menu-capture parsing ----
 assert.equal(M.parseRoastLevel("Sey's — Ethiopia Gedeb, light roast"), 'Light');

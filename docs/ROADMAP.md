@@ -79,13 +79,12 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–24 are all shipped, Phase 19 landed after Phase 20 rather than
-before it (Phase 19's own entry below has the account of why); Phase 25 is
-written and scheduled but not yet built. Carta 7 stands at
-**v7.26.0, `index.html` 5,012 lines + `carta-map.js` 535 lines, 83/83 pure
-tests** — 12 lines over the 5,000-line band, disclosed in Phase 24's own
-entry and in `docs/ARCHITECTURE.md` §1. Full prose for each is in
-`LOGBOOK.md`, cited here, not repeated.*
+*Phases 8–25 are all shipped, Phase 19 landed after Phase 20 rather than
+before it (Phase 19's own entry below has the account of why). Carta 7
+stands at **v7.27.0, `index.html` 5,141 lines + `carta-map.js` 535 lines,
+85/85 pure tests** — 141 lines over the 5,000-line band, disclosed in
+Phase 25's own entry and in `docs/ARCHITECTURE.md` §1. Full prose for each
+is in `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
 
@@ -1048,7 +1047,7 @@ passing, including four new `parseVisualizerShot` cases (a real shot's
 shape, an honest "Untitled shot" fallback, refusing to guess a blank or
 unparseable field, and never throwing on a missing payload).
 
-### Phase 25 — the pull, at the door (scheduled, not yet built)
+### Phase 25 — the pull, at the door (shipped — v7.27.0)
 
 **The joy it serves:** #1 (the cup, caught) — the same joy the door was
 built for, extended to a keeper whose gear already wrote most of the entry
@@ -1109,7 +1108,20 @@ without a tap. If it ever wants more than that, it is Lotmark's
 The Setup gets the same treatment, not a new mechanism: a shot's
 `grinder_model` is *offered* against the keeper's existing Setups, falling
 back to the current one. A brew still requires a Setup — that invariant
-does not bend for a pulled shot.
+does not bend for a pulled shot. **Matched silently, though, not asked** —
+unlike the roaster and the coffee, a Setup never gets a "same one?" sheet:
+`matchSetupByGrinder` joins only on an exact fold match on the Setup's own
+grinder name (`ARCHITECTURE.md` §4's gentle join, minus the asking), and
+anything else falls to whichever Setup is already current — the same
+fallback `vBrew` itself uses for a coffee with no brew of its own yet. A
+keeper with no Setup at all mints one from the shot's own grinder name,
+same as the dial-in screen already does when it finds none.
+
+**One judgment call, made and named rather than silently decided:** the
+door hides "Pull it from Visualizer" when it was opened from inside a café
+(`openDoorAt`'s preset) — a synced shot is a home brew by definition, and
+offering a home-only path on a screen already answering "at this café"
+would be a button that could never do anything honest there.
 
 **What this does to the manual path — re-roled, not deprecated.** The
 dial-in screen fuses two jobs today, and a pull only eats one of them:
@@ -1129,10 +1141,43 @@ door's whole discipline, and a "sync all my shots" sweep would mass-mint
 coffees never tasted and cups never read — the same shape Phase 22
 refused for the shelf. Parked, not built.
 
-**Done when:** a keeper with synced gear opens `＋ A cup`, taps "Pull it
-from Visualizer", picks the shot they just pulled, is asked once about the
-coffee if Carta isn't sure, and lands on "What was in the cup?" with the
-coffee and the brew already right — having typed nothing but the taste.
+**The line band, disclosed rather than crossed quietly.** This phase's
+matching logic (the door's three new steps, the roaster/coffee gentle join
+reused at the door, the Setup resolution, and the shared shot-fetching
+helper now used by both pickers) is real new surface, not a small patch —
+`index.html` lands at **5,141 lines / 341.0 KB**, 141 over the 5,000-line
+ceiling Phase 19 closed the debt on, bytes still comfortable at 341.0 of
+500 KB. Comments were tightened and two near-identical join sheets (roaster,
+coffee) were folded into one before this was accepted, the same discipline
+Phase 24 used; a further trim was possible only by cutting into the
+matching logic itself, which wasn't judged worth it for a phase this shape
+of new. Bigger than Phase 24's 12-line remainder because this phase is a
+bigger phase — a whole new entry path with its own matching, not one
+button on an existing screen.
+
+**A finding, surfaced rather than folded into this phase's own scope.**
+While bumping `APP_VERSION` and prepending this phase's own `CHANGELOG`
+entry, no code anywhere in `index.html` was found reading either constant
+back out — the What's New sheet `CLAUDE.md`'s own "version" section names
+does not exist in the shipped file. Every changelog entry since v7.0.0 has
+been written faithfully and shown to no one. Not fixed here — building
+that sheet is its own small feature, not a Phase 25 concern, and grafting
+it into this phase's diff would bury a real gap inside an unrelated one.
+Logged plainly in `LOGBOOK.md` for the founder to pick up.
+
+**Done when — met:** a keeper with synced gear opens `＋ A cup`, taps "Pull
+it from Visualizer", picks the shot they just pulled, is asked once about
+the coffee if Carta isn't sure, and lands on "What was in the cup?" with
+the coffee and the brew already right — having typed nothing but the
+taste. Verified directly: the button is absent from a café-context door;
+an exact-spelling roaster or coffee joins with no question asked, a near
+spelling asks once each, and declining either still finishes the pull as
+its own new record; a Setup matches silently or falls back to the current
+one, and a ledger with no Setup at all mints one from the shot's own
+grinder name; a shot with no matching Setup and no grinder name refuses
+with the same message manual entry already uses. 85/85 pure tests passing,
+including new `parseVisualizerShot` coverage for the roaster/coffee/roast
+fields and dedicated `normalizeRoastLevel`/`matchSetupByGrinder` cases.
 
 ## The horizon (unscheduled, revisited)
 
