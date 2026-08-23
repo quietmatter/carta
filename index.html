@@ -1356,6 +1356,15 @@ function parseCfSearch(text,blankKeys){
  * yield is the water it took, which is what its ratio is argued in — the
  * `drink_weight` a shot uses is what landed in the cup, and for a filter brew
  * those are two different figures. */
+// the first of several keys that actually says something — the string half of
+// the same best-effort hunt shotCurve does over the series
+function firstStr(d,keys){
+  for(let i=0;i<keys.length;i++){
+    const v=d[keys[i]];
+    if(typeof v==='string'&&v.trim())return v.trim();
+  }
+  return '';
+}
 function parseVisualizerShot(d){
   d=d||{};
   const num=v=>{if(v==null||v==='')return null;const n=Number(v);return isNaN(n)?null:n};
@@ -1363,8 +1372,13 @@ function parseVisualizerShot(d){
   const time=Number(d.duration);
   const roaster=str(d.bean_brand),coffeeName=str(d.bean_type);
   const curve=shotCurve(d),method=(curve&&curve.method)||'espresso';
+  const pre=method==='espresso'?shotPreinfusion(curve):null;
   const pours=method==='pourover'&&curve?shotPours(curve):[];
-  const waterIn=curve&&curve.wIn?curve.wIn[curve.wIn.length-1]:null;
+  // the water a filter brew took: the most the scale ever read, not its last
+  // sample. A real scale wobbles a tenth either way and can settle down a
+  // little at the end, and the total poured is the high-water mark.
+  const waterIn=curve&&curve.wIn
+    ?Math.round(curve.wIn.reduce((a,b)=>b>a?b:a,curve.wIn[0])*10)/10:null;
   return {method,pours,
     dose:num(d.bean_weight),
     water:method==='pourover'?(num(d.drink_weight)!=null&&!waterIn?num(d.drink_weight):waterIn):num(d.drink_weight),
@@ -1379,10 +1393,29 @@ function parseVisualizerShot(d){
     // stated or nothing: both read `unread` on the plate's ledger wherever the
     // file stayed silent. The water is what the basket was told to hold —
     // Visualizer's own "basket temp goal" — read by shotTempGoal below.
-    tempC:shotTempGoal(d),preinfusionSec:num(d.preinfusion),
+    tempC:shotTempGoal(d),
+    /* pre-infusion, preferring what the file states outright and falling back
+     * to what its own pressure line says (v7.31.1). Visualizer carries a
+     * `preinfusion` field on some shots and not on others, and the curve knew
+     * all along: the fill holds at a low pressure and levels off before the
+     * ramp, and that levelling-off is where pre-infusion ends. Reading it is
+     * not the inference the honesty gate forbids — it is reading the series
+     * the shot actually recorded, the same way the peak is read. Where the
+     * profile ramps straight to nine bar there is no plateau and nothing is
+     * stated. */
+    preinfusionSec:num(d.preinfusion)!=null?num(d.preinfusion):(pre?pre.sec:null),
+    preinfusionBar:pre?pre.bar:null,
+    /* the machine, which Visualizer states and Carta was not reading — the
+     * other half of the Setup a brew was made on, beside the grinder it
+     * already read. Hunted across the plausible names rather than pinned to
+     * one, the same way every other field here is: what writes a shot file
+     * varies, and a key that isn't there simply reads `unread`. */
+    machine:firstStr(d,['machine','espresso_machine','machine_name','device','machine_model']),
     // the brewer, and the paper in it: it matters for a filter brew the way a
     // basket does for a shot. Stated or nothing, like everything else here.
-    brewer:str(d.brewer)||str(d.drink_type)||str(d.profile_title),
+    brewer:firstStr(d,['brewer','brewing_device','drink_type']),
+    // the profile it was pulled on — a stated fact, and not the machine
+    profile:str(d.profile_title),
     curve,
     label:[roaster,coffeeName].filter(Boolean).join(' — ')||'Untitled shot'};
 }
@@ -2112,7 +2145,7 @@ function doorPullFinish(){
   if(shot.method==='pourover'){
     brew.method='pourover';
     if(shot.pours&&shot.pours.length)brew.pours=shot.pours;
-    if(shot.brewer)brew.brewer=shot.brewer;
+    if(brewerOf(shot))brew.brewer=brewerOf(shot);
   }
   // the shot this brew was read from, so a re-brew can start from it and the
   // cup can draw its own curve back (Phase 26). The curve itself keeps out of
@@ -3431,6 +3464,7 @@ function fetchShotFull(id){
  * never overwriting a figure already stated, which is what keeps a shot
  * corrected at the door from being quietly reverted by a later fetch. */
 const SHOT_FILLED=['dose','water','time','timeExact','grind','tempC','preinfusionSec',
+  'preinfusionBar','machine','brewer','profile','method',
   'roaster','coffeeName','roastDate','roastLevel','grinderModel'];
 function ensureShotCurve(shot){
   if(!shot||shot.id==null||shot.curve)return Promise.resolve(shot);
@@ -3471,25 +3505,32 @@ function vShot(id,view){
   const g=platePaths(shot,PLATE_FULL),fg=shotFigures(shot),when=shotWhen(shot);
   const setup=setupById(matchSetupByGrinder(live('setups'),shot.grinderModel));
   const pour=shotMethod(shot)==='pourover';
-  const setupLine=setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):(shot.grinderModel||'');
+  const setupLine=setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · '))
+    :([shot.machine,shot.grinderModel].filter(Boolean).join(' · ')||'');
+  // "4.2 s at 2.9 bar" — the duration and what it held, since a pre-infusion
+  // is argued about in both. Where only the duration is stated, only it is said.
+  const preLine=shot.preinfusionSec==null?''
+    :fig1(shot.preinfusionSec)+' s'+(shot.preinfusionBar==null?'':' at '+fig1(shot.preinfusionBar)+' bar');
   // the ledger is not the same ledger. A shot is argued with preinfusion and a
   // roast date; a filter brew with the paper it ran through and the hand that
   // stirred it — and the hand is half the recipe with no instrument recording
   // it, which is where `unread` lands hardest in the whole app.
   const led=pour?[
     ['Coffee',shot.label==='Untitled shot'?'':shot.label],
-    ['Brewer',shot.brewer||''],
+    ['Brewer',brewerOf(shot)],
     ['Grind',[setup&&setup.grinder?setup.grinder:shot.grinderModel,shot.grind==null?'':String(shot.grind)].filter(Boolean).join(' · ')],
     ['Water',shot.tempC==null?'':fmtTempStated(shot.tempC)+', stated once'],
     ['Agitation',''],
   ]:[
     ['Coffee',shot.label==='Untitled shot'?'':shot.label],
     ['Setup',setupLine],
+    ['Machine',shot.machine||''],
+    ['Profile',shot.profile||''],
     ['Grind',shot.grind==null?'':String(shot.grind)],
     ['Water',fmtTempStated(shot.tempC)],
-    ['Preinfusion',shot.preinfusionSec==null?'':fig1(shot.preinfusionSec)+' s'],
+    ['Preinfusion',preLine],
     ['Roast date',shot.roastDate?fmtDateLong(shot.roastDate+'T00:00'):''],
-  ];
+  ].filter(r=>!((r[0]==='Machine'||r[0]==='Profile')&&!r[1]));
   return `<div>
     <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
       <button class="omini bare" style="flex:none" onclick="${view&&view.back==='shots'?'openShotsScreen()':'closePage()'}" aria-label="Back">←</button>
@@ -3531,13 +3572,31 @@ const fmtClock=iso=>iso?new Date(iso).toLocaleTimeString(undefined,{hour:'2-digi
 // "V60 02 · Cafec Abaca" is the ledger's reading, where the paper is half the
 // recipe. A hero and a list row want the brewer on its own.
 const brewerShort=b=>String(b||'').split('·')[0].trim();
+// a filter brew's brewer is whichever of the two fields the file actually
+// filled in: some writers put "Kalita Wave 185" under `machine`, because that
+// is the only field they have for it
+const brewerOf=shot=>(shot&&(shot.brewer||shot.machine))||'';
 // stated or nothing: a shot file that named no temperature gets `unread`, not
 // a figure read off a curve that was never a scalar (SPEC §4, ARCHITECTURE §4)
 const fmtTempStated=c=>c==null?'':(tempUnit()==='F'?`${Math.round(c2f(c)*10)/10} °F`:`${c} °C`);
 // the same gentle join the door already runs, entered from the shot's own
 // screen: an exact match asks nothing and station 05 never appears
+/* the guard this keeper's own ledger asked for (v7.31.1): a shot already
+ * written as a cup was being written again, and again — three brews and two
+ * cups off one pull, because nothing between the shots list and here ever
+ * asked whether the record already had it. The hero knew (`cupOfShot` is what
+ * keeps a written shot from coming back to it); this door simply never
+ * checked. It states the fact and opens the cup that exists, rather than
+ * refusing outright — the keeper can still put that cup away and pull again,
+ * which is the honest way to redo one. */
 function shotIsTheCup(id,correct){
   const shot=vizShotById(id);if(!shot)return;
+  const already=cupOfShot(id);
+  if(already){
+    openScreen('cup',already.id);
+    toast('Already written — this is that cup.');
+    return;
+  }
   doorState={step:'pullJoin',_pullShots:[shot],_correct:!!correct};
   doorPullPicked(shot.id);
 }
@@ -3688,7 +3747,7 @@ function shotRowHTML(shot){
   const cup=cupOfShot(shot.id),fg=shotFigures(shot),when=shotWhen(shot);
   const pour=fg.method==='pourover';
   const meta=[when?fmtAgo(when):'',shot.label==='Untitled shot'?'no coffee named':'',
-    pour?(brewerShort(shot.brewer)||null):null,
+    pour?(brewerShort(brewerOf(shot))||null):null,
     fg.ratio==null?null:'1:'+fig1(fg.ratio),
     fg.total==null?null:(pour?mmss(fg.total):fig1(fg.total)+'s'),
     pour?null:(fg.peak==null?null:fig1(fg.peak)+' bar')].filter(Boolean).join(' · ');
@@ -5233,7 +5292,7 @@ function homeShotHeroHTML(shot){
   // what the brew was made on, said the way each method says it: a shot names
   // the machine it was pulled on, a filter brew the brewer it ran through
   const sub=pour
-    ?[shot.roaster,shot.brewer?'a '+brewerShort(shot.brewer)+', read off the scale':'read off the scale'].filter(Boolean).join(' · ')
+    ?[shot.roaster,brewerOf(shot)?'a '+brewerShort(brewerOf(shot))+', read off the scale':'read off the scale'].filter(Boolean).join(' · ')
     :[shot.roaster,shot.roastLevel?shot.roastLevel.toLowerCase():'',
       shot.grinderModel?'on the '+shot.grinderModel:''].filter(Boolean).join(' · ');
   return `<div class="fade bottom deep shot" style="height:470px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 20px">
@@ -5880,8 +5939,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.31.0';
+const APP_VERSION='7.31.1';
 const CHANGELOG=[
+  {v:'7.31.1',d:"The staircase, actually recognised. A pour-over read off a scale was being filed as an espresso — the plate drew an arc, the figures argued peak bar, and the water came out blank. Visualizer files every brew in the same shape whatever made it, so a filter brew arrives carrying a pressure line that never rises, and Carta was reading the presence of that line as proof a machine had been involved. It reads what the line says now: no pressure applied, no espresso, however the file is shaped. The water a filter brew took comes back with it. A shot's pre-infusion no longer depends on Visualizer having filled that field in either — the pressure curve has always shown it, holding low while the basket fills and levelling off before the ramp, so Carta reads it there and states how long it ran and what it held. Where a profile ramps straight to full pressure there was no pre-infusion, and it says nothing rather than nothing-shaped-like-zero. The machine a brew was made on is read too, and named: the espresso ledger states it beside the profile it was pulled on, and a filter brew takes it as its brewer. And a brew already written as a cup can no longer be written a second time — the door now says so and opens the cup that exists."},
   {v:'7.31.0',d:"A pour-over is a staircase. An espresso is one arc under pressure — peak, decline, done inside half a minute — and until now that was the only shape Carta could draw, so a filter brew read off a scale had nowhere to go. It has its own drawing now. Water goes in as a staircase, the cup fills behind it, and the gap between the two is the bed holding on; each pour is a band with what it added written over it, and the wait after it is drawn by being left empty. There is no pressure line, because there is no pressure. The figures change with the shape: a shot is argued about by its peak, a pour-over by its drawdown — how long the bed took to let go once you stopped pouring — with the bloom and the ratio beside it, and the pours listed as they were actually made. Drag across the curve and the readout names what was happening at that second: blooming, pouring pour 3, drawing down, in the cup. Your recent brews holds both methods in one list, because they land in one journal, with a scope if you want only one of them — and no icon or badge saying which is which, because at the size the little curve is drawn an arc and a staircase are already unmistakable. Agitation reads unread, and always will: the hand is half the recipe for a filter brew and no instrument records it. The line we used to print — that a pour-over leaves no shot file — was true of a machine and wrong about a scale, and it is retired. Typing a brew is untouched, and is now what it should always have been: the way in for a brew nothing was watching."},
   {v:'7.30.0',d:"Off the frame, and onto the paper. Carta drew itself inside two ruled borders — an edge around the whole app and a margin just inside it — and every screen now runs to the edge of the glass instead, the way the design board always had them. Every button in the app speaks one size: the larger, lettered shape the board draws, on a permission box that is now a real mark in ink rather than the browser's own control. Four things the shot flow only half did: a shot pulled while Carta was already open in the background is looked for again when you come back to it, not only when the app is loaded cold; the grind and the water temperature your machine recorded now read on a shot's own ledger instead of unread, because they were on a part of the file Carta wasn't opening; a shot naming a coffee you typed in yourself now asks whether it's the same one instead of quietly writing a second copy of it onto the shelf; and every row in Your recent shots carries its own curve again, bare, the way a shot is meant to be recognised. Your Visualizer account has a door of its own now — on the record and in the journal — so signing out or turning the watch off no longer needs an account you haven't set yet. A cup's page drops the last of the photograph frame: its reading leads, in the ember, with what you said about it answering back across the rule and the shot that earned it drawn underneath."},
   {v:'7.29.0',d:"Photos, retired — the ground instead. A cup's photo was the fastest way to a full local ledger, and one keeper's coffee found it: storage nearly spent, a save refused. Photos are gone now — the separate store, the upload slots, all of it — and a stale one already on this device is reclaimed the moment this loads. Wherever a photo used to stand — a cup in the Journal, its own page, a coffee's card — the ground the coffee stands on stands there instead: real terrain over a placed farm, the country's own washed shape where only that much is named, and an honest empty line where the bag says nothing at all."},

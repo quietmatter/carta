@@ -211,7 +211,11 @@ Carta 7 is built exactly the way classic was, smaller:
   `plateScrub` — **both** arms, espresso and pour-over. `index.html` came
   back to **5,945 / 5,000 (400 KB of 500)** having *gained* the whole
   second method: without the split it would have landed near 6,400.
-  `carta-plate.js` is 428 lines / 24 KB.
+  `carta-plate.js` is 428 lines / 24 KB. **v7.31.1** — the method fix,
+  `shotPreinfusion` and the machine read — took them to **6,006 / 5,000 (404
+  KB of 500)** and **489 lines / 28 KB**: a bugfix release, and the plate half
+  of it landed in the file the split created rather than back in `index.html`,
+  which is the split doing its job.
 
   **This amends the two-file law, and the amendment is the file count, not
   the build.** "Two files, no build" was never really about two: it was
@@ -608,6 +612,38 @@ and re-arms the check, guarded three ways: the gap itself, `_vizWaiting`
 (a cup already waiting is never replaced), and `vizWatch` as before. It is
 still one call per open and still **never a poll** — the gap is what holds
 that, and nothing fires while the app is in the foreground.
+
+**What the file states, and what the curve states, amended at v7.31.1.**
+Three readings changed, all in the same direction: *stop waiting for a field
+the file may not carry, and read what it already said.*
+
+- **The method was being read off the wrong thing.** The rule was "an
+  `espresso_pressure` array exists, so a machine wrote this". It does not
+  follow: Visualizer normalizes every upload into one DE1-shaped schema, so a
+  brew logged from a scale arrives carrying that key with a series flat at
+  zero. Reported from a live ledger — a 3:20 Kalita brew filed as an espresso
+  with its water null. The reading is now the **peak**: under
+  `PRESSURE_MIN_BAR` (2 bar) no pressure was applied and it is not an
+  espresso, whatever keys the file happens to carry. Two bar clears a lever's
+  gentlest pull several times over. A flat-zero pressure series is also
+  dropped rather than inked along the axis. This is still read off the file
+  rather than inferred from a brewer's name — it is read from what the numbers
+  say instead of from which keys exist.
+- **Pre-infusion is read off the pressure line** (`shotPreinfusion`, pure)
+  where the file states no `preinfusion` scalar, and both halves are stated:
+  how long it ran and what it held. The plateau is the first sample the
+  pressure fails to beat for a sustained window, below 60% of peak; the
+  reading then settles on that plateau's own crest. A profile that ramps
+  straight to nine bar has no plateau and states **nothing** — `null`, not
+  zero, because "no pre-infusion" and "the file forgot to say" are different
+  facts and only one of them is one. Verified against the design board's own
+  profile, which states 4.2 s at 2.9 bar; the curve alone says the same.
+- **The machine is a field Visualizer states** and Carta was not reading.
+  Hunted across the plausible names (`firstStr`), the way every series already
+  is. The espresso ledger states it beside the profile it was pulled on; a
+  filter brew takes it as its **brewer**, since some writers put "Kalita Wave
+  185" there for want of another field. `profile_title` is the profile, not
+  the machine, and is its own row.
 
 **The shots list reads the whole file, amended at v7.30.0.**
 `fetchVisualizerShots(n)` had asked for `?essentials=true` per shot, which

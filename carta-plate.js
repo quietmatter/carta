@@ -59,6 +59,9 @@
  * exactly what tells the two methods apart — so pressure stopped being
  * required here at Phase 26's second method. What is required is elapsed
  * seconds and at least one series to draw against them. */
+// below this, no pressure was applied and the brew is not an espresso however
+// many pressure keys the file happens to carry (v7.31.1)
+const PRESSURE_MIN_BAR=2;
 function shotCurve(d){
   if(!d||typeof d!=='object')return null;
   const sources=[d,(d.data&&typeof d.data==='object')?d.data:{}];
@@ -96,11 +99,28 @@ function shotCurve(d){
   // platePaths' own line() maps over the series itself, so a shorter one
   // just draws a shorter line rather than reading past its own end
   const r=a=>a?a.slice(0,n).map(v=>Math.round(v*100)/100):null;
-  // a machine states pressure; a scale does not. That absence IS the method —
-  // it is stated by the file rather than inferred from it, which is the only
-  // reason it is safe to read.
-  const method=p?'espresso':'pourover';
-  const c={t:r(t),p:r(p),f:r(arr(['espresso_flow','flow','espresso_flow_weight'])),w:r(cup),method};
+  /* the method, and the thing that was wrong about it until v7.31.1.
+   *
+   * The rule was "a pressure array exists, so a machine wrote this". It does
+   * not follow. Visualizer normalizes every upload into one DE1-shaped
+   * schema, so a brew logged from a scale — or pulled on a machine running a
+   * pour-over profile — arrives carrying an `espresso_pressure` series that
+   * is flat at or near zero. The key being present says nothing; what says
+   * something is whether pressure was ever actually APPLIED, and the series
+   * states that outright.
+   *
+   * So the reading is the peak. Two bar is not a threshold anyone's espresso
+   * sits under — a lever at its gentlest is still several times that — and
+   * nothing that never reached it was an espresso by any definition. This is
+   * still read off the file rather than inferred from a brewer's name; it is
+   * just read from what the numbers say instead of from which keys exist. */
+  const peak=p?p.reduce((a,b)=>b>a?b:a,p[0]):0;
+  const pressed=!!p&&peak>=PRESSURE_MIN_BAR;
+  const method=pressed?'espresso':'pourover';
+  // a pressure series that never rose is not a line worth drawing over a
+  // staircase — it is a flat zero along the axis, and it is dropped rather
+  // than inked as if it said something
+  const c={t:r(t),p:pressed?r(p):null,f:r(arr(['espresso_flow','flow','espresso_flow_weight'])),w:r(cup),method};
   // a pour-over with only one weight series has that series as its water in:
   // a scale under the brewer weighs what you poured. The cup is then unread
   // rather than guessed at from it.
@@ -109,6 +129,46 @@ function shotCurve(d){
     else{c.wIn=c.w;c.w=null}
   }
   return c;
+}
+/* pre-infusion, read off the curve rather than waited for as a scalar
+ * (v7.31.1). Visualizer states a `preinfusion` field on some files and not on
+ * others, and where it is absent the shot's own pressure line has said it all
+ * along: a shot with pre-infusion fills at a low, held pressure, levels off,
+ * and only then ramps to its peak. That levelling-off is the end of it.
+ *
+ * So the reading is the first plateau below the peak — the first sample the
+ * pressure fails to beat for a sustained window. For a profile that ramps
+ * straight to nine bar there is no such plateau and nothing is stated: `null`,
+ * not zero, because a shot with no pre-infusion and a shot whose file forgot
+ * to mention it are different things and only one of them is a fact.
+ *
+ * Both halves come back, because both are argued: how long it ran, and what it
+ * held while it did. */
+const PI_HOLD_S=0.5, PI_EPS_BAR=0.15, PI_CEIL=0.6;
+function shotPreinfusion(c){
+  const p=c&&c.p,t=c&&c.t;
+  if(!p||!t||p.length<4)return null;
+  const peak=p.reduce((a,b)=>b>a?b:a,p[0]);
+  if(peak<PRESSURE_MIN_BAR)return null;
+  const ceil=peak*PI_CEIL;
+  for(let i=1;i<p.length-1;i++){
+    if(t[i]<0.5||p[i]>ceil||p[i]<0.3)continue;
+    if(p[i]<p[i-1])continue;                     // still climbing to the plateau, not on it
+    // the plateau is where the pressure stops beating itself for a while —
+    // a real hold lasts about a second, so noise never reads as one
+    let held=true;
+    for(let j=i+1;j<p.length&&t[j]-t[i]<=PI_HOLD_S;j++){
+      if(p[j]>p[i]+PI_EPS_BAR){held=false;break}
+    }
+    if(!held||t[i]+PI_HOLD_S>t[t.length-1])continue;
+    // settle on the crest of the plateau rather than the first sample that
+    // merely isn't beaten: the epsilon that keeps noise from reading as a hold
+    // would otherwise stop the reading a beat early, on the way up
+    let k=i;
+    for(let j=i+1;j<p.length&&t[j]-t[i]<=PI_HOLD_S;j++)if(p[j]>p[k])k=j;
+    return {sec:+t[k].toFixed(1),bar:Math.round(p[k]*10)/10};
+  }
+  return null;
 }
 /* the pours a staircase is made of, read off the water going in: a rise is a
  * pour, a flat run is the wait after it. `then` on the last pour is the
@@ -411,6 +471,7 @@ function plateScrub(e){
  * such. One direction only: nothing above ever reaches back into the app. */
 window.shotCurve=shotCurve;
 window.shotPours=shotPours;
+window.shotPreinfusion=shotPreinfusion;
 window.shotFigures=shotFigures;
 window.shotMethod=shotMethod;
 window.platePaths=platePaths;
