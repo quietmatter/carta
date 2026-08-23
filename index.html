@@ -642,7 +642,7 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 
 </style>
 <!-- the sibling scripts carry the version in their URL, and it must be bumped
-     with APP_VERSION (v7.31.4). index.html is the navigation document and is
+     with APP_VERSION (v7.31.5). index.html is the navigation document and is
      revalidated; a plain `<script src>` beside it is an ordinary subresource
      and is served from cache — so a keeper could run a NEW index.html against
      an OLD carta-plate.js, which is exactly what happened at v7.31.1: the
@@ -650,8 +650,8 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.31.4"></script>
-<script src="carta-plate.js?v=7.31.4"></script>
+<script src="carta-map.js?v=7.31.5"></script>
+<script src="carta-plate.js?v=7.31.5"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1501,8 +1501,12 @@ function shotStartedAt(d){
 function shotTempGoal(d){
   if(!d||typeof d!=='object')return null;
   const sources=[d,(d.data&&typeof d.data==='object')?d.data:{}];
+  // the last three are the column names Visualizer's own CSV export uses,
+  // confirmed against a real export. The goal still leads: it is what the
+  // machine was told to hold, which is what a keeper set and can repeat.
   const KEYS=['espresso_temperature_goal','temperature_goal','espresso_water_dispensed_temperature',
-    'espresso_temperature_basket','temperature_basket','basket_temperature','temperature'];
+    'espresso_temperature_basket','temperature_basket','basket_temperature','temperature',
+    'water_temperature_basket','water_temperature_in','water_temperature_boiler'];
   const ok=v=>isFinite(v)&&v>=50&&v<=110;   // a brew temperature, not a sensor's zero or a Fahrenheit reading
   for(let si=0;si<sources.length;si++)for(let ki=0;ki<KEYS.length;ki++){
     const v=sources[si][KEYS[ki]];
@@ -6149,8 +6153,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.31.4';
+const APP_VERSION='7.31.5';
 const CHANGELOG=[
+  {v:'7.31.5',d:"The plate, against a real brew. A keeper sent one of their own pour-overs straight out of Visualizer, and reading it back turned three guesses into facts. The names Visualizer actually uses for what landed on the scale, for how fast the water went in, and for the basket's own temperature are all read now, alongside the ones Carta was already looking for. The gram marks up the side of a plate are round again: a scale that reads 251.3 g at its crest was printing 50, 151 and 251 up the edge, which is a scale's own noise dressed as a measurement — the figures underneath still state exactly what was weighed. And the first pour's label stays on the plate. A brew whose timer starts before the water does has a very narrow first band, and the word centred over it was hanging off the left edge: a real brew came out reading LOOM 44."},
   {v:'7.31.4',d:"The date a brew was poured, not the date it arrived. A brew filed to Visualizer after the fact — which is most filter brews, since a scale syncs when it can — was being dated by the moment it reached your account rather than the moment you poured it. Carta only ever had the second of those, because it read the date off the list of your brews rather than out of the brew itself. It reads the brew now, and falls back to the old reading only where the file says nothing. A cup written from it is dated by the pour too, so it lands in the journal where it belongs rather than at today; when you wrote it down is kept separately, as it always was. A shot's own screen names the day as well as the hour, since an hour on its own is only ever enough for something poured today. And the mark that says a cup is waiting keeps breathing when you have reduced motion turned on — slower and gentler there, but not stilled: it travels nowhere, and it was the only thing on the Atlas saying something was waiting."},
   {v:'7.31.3',d:"The curve on the front page. A brew waiting on the Atlas was drawing an empty plate — the figures under it right, the line above it missing — while the same brew in the Journal drew perfectly. Carta reads a waiting brew twice: once cheaply, to know it is there, and once in full for its curve. The cheap read carries no curve at all, so it had nothing to say about whether the brew was a shot or a pour-over, and said espresso anyway; when the real curve arrived a moment later, nothing went back to correct that. So a pour-over was drawn as a shot, and a shot's drawing has a pressure line where a pour-over has none. It now leaves the question open until there is something to answer it with, and everything the curve alone knows — the method, the pours, the pre-infusion — is read again when the curve lands rather than only filled in where a blank was left. The mark that says a cup is waiting breathes a little more gently too, the way the design board draws it."},
   {v:'7.31.2',d:"Your brews, back — and the door reads a bag properly at last. The last version quietly broke the Visualizer list: a page could load its newest self alongside an older cached copy of one of its own script files, and every shot then failed to read and was reported as an empty account. It was the wrong thing to say and the wrong thing to happen. The scripts now carry the version in their address so the two can never disagree, Carta says plainly if they ever do, and a brew that genuinely can't be read is counted and named rather than silently dropped. Separately: pasting a bag into the door works the way pasting a bag should. It reads the lines — a bag is printed on more than one, and Carta was only ever looking at the first — so the roaster and the coffee land where they belong, and a line that names a field (\"Country: Colombia\", \"Process: washed\", \"Altitude: 1,900 m\") fills that field instead of ending up inside the coffee's name. A comma no longer splits a roaster off the front of a coffee that never had one."},
