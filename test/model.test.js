@@ -682,7 +682,7 @@ assert.equal(shot.time, null, 'an unparseable duration is null, never NaN or a g
 assert.equal(shot.roastDate, '', 'a roast_date with no leading YYYY-MM-DD is left blank, never guessed');
 ok('parseVisualizerShot refuses to guess a field the shot left blank or unparseable');
 
-assert.deepEqual(M.parseVisualizerShot(), { method: 'espresso', pours: [], dose: null, water: null,
+assert.deepEqual(M.parseVisualizerShot(), { method: '', pours: [], dose: null, water: null,
   time: null, grind: null, roaster: '', coffeeName: '', roastDate: '', roastLevel: '',
   grinderModel: '', timeExact: null, tempC: null, preinfusionSec: null, preinfusionBar: null,
   machine: '', brewer: '', profile: '', curve: null, label: 'Untitled shot' });
@@ -1082,5 +1082,22 @@ assert.deepEqual(M.doorParse('Sey\nGedeb\nAltitude: 1,900 - 2,100 m\nVariety: He
   { altitude: '1,900 - 2,100 m', variety: 'Heirloom', producer: 'Tesfaye' },
   'altitude keeps its own dashes and commas — a labelled value is taken whole');
 ok('doorParse carries roast level and every origin field the bag actually stated');
+
+// ---- v7.31.3: the watch reads a shot twice — once cheaply (no curve at all)
+// and once in full — and the method must come from the second, not be guessed
+// at by the first. It used to come back 'espresso' from a parse with nothing
+// to read it off, and 'espresso' is neither null nor empty, so the fill-in
+// that follows refused to correct it: the Atlas drew a pour-over through the
+// espresso arm, with no pressure series to draw. The Journal was unaffected,
+// because its list fetches the whole file — which is the split as reported.
+const essentialsOnly = { duration: 200, bean_weight: '14.9', bean_brand: 'Sey', bean_type: 'Ethiopia Gedeb washed' };
+const cheap = M.parseVisualizerShot(essentialsOnly);
+assert.equal(cheap.curve, null, 'the cheap call carries no curve — this is the whole shape of the problem');
+assert.equal(cheap.method, '', "a parse with no curve in front of it does not know the method, and says so rather than guessing espresso");
+assert.equal(M.shotMethod(cheap), 'espresso',
+  'the default still reads espresso at the point of use — it just stopped being written down as a fact');
+assert.equal(M.shotMethod({ ...cheap, curve: M.shotCurve(flatPressure) }), 'pourover',
+  'and the moment a curve is in hand, the curve is what answers');
+ok('parseVisualizerShot leaves the method blank where no curve states it, so a later full read can correct it');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);

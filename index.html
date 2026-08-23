@@ -485,7 +485,10 @@ button.led:active{background:var(--paper-2)}
    A spinner says only that something is happening. This says what: each stage
    is a fact the ask actually reached, the rule fills to how far along it is,
    and the ember tip breathes so a long call still reads as alive. */
-@keyframes ca-breathe{0%,100%{opacity:1}50%{opacity:.25}}
+/* the breath the design board draws: down to 35%, not 25%. At 7px the deeper
+   trough reads as a flicker rather than something alive — which is the whole
+   job of this mark, since it is the one thing on the Atlas that expires. */
+@keyframes ca-breathe{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes ca-written{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 /* a screen that runs to the bottom of the room it is in, so what it ends with
    sits on the fold rather than wherever the text happens to stop */
@@ -629,7 +632,7 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 
 </style>
 <!-- the sibling scripts carry the version in their URL, and it must be bumped
-     with APP_VERSION (v7.31.2). index.html is the navigation document and is
+     with APP_VERSION (v7.31.3). index.html is the navigation document and is
      revalidated; a plain `<script src>` beside it is an ordinary subresource
      and is served from cache — so a keeper could run a NEW index.html against
      an OLD carta-plate.js, which is exactly what happened at v7.31.1: the
@@ -637,8 +640,8 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.31.2"></script>
-<script src="carta-plate.js?v=7.31.2"></script>
+<script src="carta-map.js?v=7.31.3"></script>
+<script src="carta-plate.js?v=7.31.3"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1380,7 +1383,11 @@ function parseVisualizerShot(d){
   const str=v=>(v||'').trim();
   const time=Number(d.duration);
   const roaster=str(d.bean_brand),coffeeName=str(d.bean_type);
-  const curve=shotCurve(d),method=(curve&&curve.method)||'espresso';
+  const curve=shotCurve(d);
+  // '' where there is no curve to say: unknown, not espresso. `shotMethod`
+  // still reads espresso at the point of use, so nothing downstream changes —
+  // but a blank is fillable, and a wrong default was not.
+  const method=curve?curve.method:'';
   // read across the file seam defensively: a plate that isn't there yet costs
   // this one figure, not the whole shot (v7.31.2)
   const pre=(method==='espresso'&&typeof shotPreinfusion==='function')?shotPreinfusion(curve):null;
@@ -3570,15 +3577,38 @@ function fetchShotFull(id){
  * page showed. The full read fills in only what the cheap one left null —
  * never overwriting a figure already stated, which is what keeps a shot
  * corrected at the door from being quietly reverted by a later fetch. */
-const SHOT_FILLED=['dose','water','time','timeExact','grind','tempC','preinfusionSec',
-  'preinfusionBar','machine','brewer','profile','method',
+/* what the FILE states — filled in only where the cheap call left a blank, so
+ * a figure already stated (or corrected at the door) is never reverted by a
+ * fetch that lands after it. */
+const SHOT_FILLED=['dose','water','time','timeExact','grind','tempC',
+  'machine','brewer','profile',
   'roaster','coffeeName','roastDate','roastLevel','grinderModel'];
+/* what the CURVE states — re-derived outright when the curve arrives, never
+ * merely filled (v7.31.3).
+ *
+ * This is the distinction the watch's own two-call shape needs and did not
+ * have. `?essentials=true` carries no curve at all, so the method that parse
+ * came back with was a *default*, not a reading — and because 'espresso' is
+ * neither null nor empty, the fill-if-empty rule above then refused to
+ * correct it when the real curve landed a moment later. The hero drew a
+ * pour-over through the espresso arm: no pressure series to draw, so
+ * `d="null"`, an empty plate, a peak of `—` and a three-minute brew stated as
+ * 200s. The Journal was fine throughout, because the shots list fetches the
+ * whole file and its parse saw the curve first time — which is exactly the
+ * split the keeper reported. */
+const SHOT_DERIVED=['method','pours','preinfusionSec','preinfusionBar'];
 function ensureShotCurve(shot){
   if(!shot||shot.id==null||shot.curve)return Promise.resolve(shot);
   return fetchShotFull(shot.id).then(full=>{
     if(full){
-      if(full.curve)shot.curve=full.curve;
       SHOT_FILLED.forEach(k=>{if((shot[k]==null||shot[k]==='')&&full[k]!=null&&full[k]!=='')shot[k]=full[k]});
+      if(full.curve){
+        shot.curve=full.curve;
+        SHOT_DERIVED.forEach(k=>{shot[k]=full[k]});
+        // a filter brew is argued in the water it took, which only the curve
+        // knows; the cheap call's `drink_weight` is what landed in the cup
+        if(full.method==='pourover'&&full.water!=null)shot.water=full.water;
+      }
       if(shot.label==='Untitled shot'&&full.label!=='Untitled shot')shot.label=full.label;
     }
     if(pageView&&pageView.kind==='shot'&&String(pageView.id)===String(shot.id))render();
@@ -6046,8 +6076,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.31.2';
+const APP_VERSION='7.31.3';
 const CHANGELOG=[
+  {v:'7.31.3',d:"The curve on the front page. A brew waiting on the Atlas was drawing an empty plate — the figures under it right, the line above it missing — while the same brew in the Journal drew perfectly. Carta reads a waiting brew twice: once cheaply, to know it is there, and once in full for its curve. The cheap read carries no curve at all, so it had nothing to say about whether the brew was a shot or a pour-over, and said espresso anyway; when the real curve arrived a moment later, nothing went back to correct that. So a pour-over was drawn as a shot, and a shot's drawing has a pressure line where a pour-over has none. It now leaves the question open until there is something to answer it with, and everything the curve alone knows — the method, the pours, the pre-infusion — is read again when the curve lands rather than only filled in where a blank was left. The mark that says a cup is waiting breathes a little more gently too, the way the design board draws it."},
   {v:'7.31.2',d:"Your brews, back — and the door reads a bag properly at last. The last version quietly broke the Visualizer list: a page could load its newest self alongside an older cached copy of one of its own script files, and every shot then failed to read and was reported as an empty account. It was the wrong thing to say and the wrong thing to happen. The scripts now carry the version in their address so the two can never disagree, Carta says plainly if they ever do, and a brew that genuinely can't be read is counted and named rather than silently dropped. Separately: pasting a bag into the door works the way pasting a bag should. It reads the lines — a bag is printed on more than one, and Carta was only ever looking at the first — so the roaster and the coffee land where they belong, and a line that names a field (\"Country: Colombia\", \"Process: washed\", \"Altitude: 1,900 m\") fills that field instead of ending up inside the coffee's name. A comma no longer splits a roaster off the front of a coffee that never had one."},
   {v:'7.31.1',d:"The staircase, actually recognised. A pour-over read off a scale was being filed as an espresso — the plate drew an arc, the figures argued peak bar, and the water came out blank. Visualizer files every brew in the same shape whatever made it, so a filter brew arrives carrying a pressure line that never rises, and Carta was reading the presence of that line as proof a machine had been involved. It reads what the line says now: no pressure applied, no espresso, however the file is shaped. The water a filter brew took comes back with it. A shot's pre-infusion no longer depends on Visualizer having filled that field in either — the pressure curve has always shown it, holding low while the basket fills and levelling off before the ramp, so Carta reads it there and states how long it ran and what it held. Where a profile ramps straight to full pressure there was no pre-infusion, and it says nothing rather than nothing-shaped-like-zero. The machine a brew was made on is read too, and named: the espresso ledger states it beside the profile it was pulled on, and a filter brew takes it as its brewer. And a brew already written as a cup can no longer be written a second time — the door now says so and opens the cup that exists."},
   {v:'7.31.0',d:"A pour-over is a staircase. An espresso is one arc under pressure — peak, decline, done inside half a minute — and until now that was the only shape Carta could draw, so a filter brew read off a scale had nowhere to go. It has its own drawing now. Water goes in as a staircase, the cup fills behind it, and the gap between the two is the bed holding on; each pour is a band with what it added written over it, and the wait after it is drawn by being left empty. There is no pressure line, because there is no pressure. The figures change with the shape: a shot is argued about by its peak, a pour-over by its drawdown — how long the bed took to let go once you stopped pouring — with the bloom and the ratio beside it, and the pours listed as they were actually made. Drag across the curve and the readout names what was happening at that second: blooming, pouring pour 3, drawing down, in the cup. Your recent brews holds both methods in one list, because they land in one journal, with a scope if you want only one of them — and no icon or badge saying which is which, because at the size the little curve is drawn an arc and a staircase are already unmistakable. Agitation reads unread, and always will: the hand is half the recipe for a filter brew and no instrument records it. The line we used to print — that a pour-over leaves no shot file — was true of a machine and wrong about a scale, and it is retired. Typing a brew is untouched, and is now what it should always have been: the way in for a brew nothing was watching."},

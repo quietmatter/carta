@@ -7,6 +7,47 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.31.3: the curve on the front page
+
+- **Reported as a split, and the split was the diagnosis.** "The hero screen
+  is having trouble pulling the curve data. It seems like it's there in
+  journal but not in the hero." Those two surfaces read a shot by different
+  routes, and that is the whole bug.
+- **The watch reads a shot twice** — `?essentials=true` to know it is there,
+  then `/download` in full for the curve. The first read has *no curve in
+  front of it*, and the method is read off the curve. It defaulted to
+  `'espresso'` and wrote that down; `'espresso'` is neither null nor empty, so
+  `ensureShotCurve`'s fill-if-empty rule then declined to correct it when the
+  real curve landed a moment later. A pour-over went through the espresso arm,
+  which draws a pressure line a pour-over does not have: `d="null"`, an empty
+  plate, peak `—`, and 3:20 stated as `200s`. The Journal never saw it,
+  because its list fetches the whole file and parses the curve first time.
+- **Two rules out of it**, both in `ARCHITECTURE.md` §7: a parse with no curve
+  now leaves the method **blank** rather than guessing (the default moves to
+  `shotMethod()`, where it is a reading rather than a record); and
+  `ensureShotCurve` now separates `SHOT_FILLED` — what the *file* states, and
+  is only ever filled into a blank — from `SHOT_DERIVED` — what the *curve*
+  states, and is re-derived outright when the curve arrives.
+- **The lesson under it is not about shots.** A two-call read has to say which
+  fields the cheap call is entitled to have an opinion about. Getting that
+  wrong is silent and surfaces three functions away from its cause. Second
+  time in two days a *default standing in for a reading* has cost a visible
+  bug — the first was `espresso_pressure` existing being taken for pressure
+  having been applied.
+- **The pulsing mark, checked rather than assumed.** Asked to bring it back, I
+  measured it: present, 7×7, `#a63f2b`, square corners, `ca-breathe 1.6s`,
+  opacity cycling 1 → 0.29. It was never gone — what was gone was the hero
+  being worth looking at. One real difference from the board did turn up and
+  is fixed: the trough was 25% where the board draws 35%. At 7px the deeper
+  dip reads as a flicker rather than as something alive, which is the whole
+  job of the one mark on the Atlas that expires. It stays still under
+  `prefers-reduced-motion`, as everything does.
+- **Tests: 118** (+1, guarding the blank method and that `shotMethod` still
+  answers espresso at the point of use). The bug itself lives in the gap
+  between two fetches, so it is held by a scripted hero harness that serves a
+  curveless essentials payload and then the full file — the shape the pure
+  harness cannot express.
+
 ## 2026-08-23 — v7.31.2: the brews come back, and the door reads a bag
 
 - **A regression report, and it was mine.** "The last PR 125 broke the
