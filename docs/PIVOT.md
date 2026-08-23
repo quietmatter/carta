@@ -317,10 +317,16 @@ one-owner backup only.
 
 ## 12. Open decisions (each with a lean)
 
-1. **Photos.** Deliberately retired in the current app; the case reopens
-   for a fun, shareable Carta. *Lean: yes* — one optional photo per cup,
-   presentation governed by restraint. The deepest break with current law;
-   deserves a deliberate yes.
+1. **Photos.** Deliberately retired in the current app; the case reopened
+   for a fun, shareable Carta and shipped at Phase 4 — one optional photo
+   per cup, presentation governed by restraint. **Reopened a second time at
+   Phase 27**: the photo store was the fastest way to a full local ledger,
+   and one keeper's coffee found the edge of it. Photos are retired again,
+   this time for good — wherever one stood, the coffee's own ground (the
+   map vocabulary `ARCHITECTURE.md`'s map layer already carries, turned on
+   one coffee at a time) draws instead. A
+   decision can be reopened twice; each reopening is a logbook entry, not a
+   mood (see `docs/LOGBOOK.md`, 2026-08-23).
 2. **The score.** *Lean: keep the 1–9* — it's brand, it's honest, and the
    scout's bar is computed from it; offer a three-state fast path that maps
    onto it.

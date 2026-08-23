@@ -184,6 +184,14 @@ Carta 7 is built exactly the way classic was, smaller:
   amendment — the same rule Phase 18 wrote still stands — and it is a
   larger open debt than any phase has carried since Phase 19 closed the
   first one, named here rather than minimized.
+  **The three Phase 26 flow-curve patches (v7.28.1–.3) and Phase 27
+  (photos retired) were not individually tallied here** — a gap in this
+  section's own upkeep, not a claim the debt closed. Phase 27's own edit
+  was net negative (the removed photo machinery outweighed the new ground-
+  drawing helpers), so it did not widen the debt; `index.html` stands at
+  **5,837 lines / 387.0 KB** as of v7.29.0 — still comfortably inside the
+  500 KB byte ceiling, still over the still-unmoved 5,000-line one. The
+  next phase that touches this section should true up the tally properly.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -241,14 +249,19 @@ turn; Phase 12 is `7.13.0`, Phase 13 is `7.14.0`.
 - **Prefs live inside the ledger** (`D.prefs`) — no second key to sync or
   forget. Device-frills (tuck postures, ground toggle) may keep their own
   keys as classic did; they are furniture, not record.
-- **Photos** are the one storage-budget risk: stored as compressed JPEG
-  data-URIs, longest edge ~1,000 px, target ≤ 150 KB each, in a separate
-  key **`carta7.photos.v1`** (`{cupId: dataUri}`) so the ledger itself
-  stays light enough to export, diff, and back up as text. The export can
-  include or omit them (two buttons, sizes stated).
+- **Photos are retired** (Phase 27 — PIVOT.md decision #1, reopened). They
+  were the one storage-budget risk from the start — compressed JPEG
+  data-URIs in a separate key, `carta7.photos.v1` — and one keeper's coffee
+  found the edge of it: storage nearly spent, a save refused. The key, the
+  compression path (`compressPhoto`, still used by menu-photo OCR — that
+  capture is never kept, so it never grew), the upload slots and `cup.photo`
+  are all gone. `load()` clears a stale `carta7.photos.v1` and any lingering
+  `cup.photo` the first time this version runs, reclaiming the space without
+  a keeper having to do anything. Wherever a photo stood, the coffee's own
+  ground now draws instead — see `coffeeGroundHTML`/`coffeeGroundPin` in §4.
 - **`carta7.shots.v1`** (Phase 26) — `{shotId: {t,p,f,w}}`, the pressure/
   flow/weight-vs-elapsed curves a plate is drawn from. Kept out of the
-  ledger for the same reason photos are: a shot's series are ~3 KB of
+  ledger for the same reason photos used to be: a shot's series are ~3 KB of
   numbers, and the ledger needs to stay light enough to read as text.
   Written only once, when a brew is minted from a pulled shot, and thinned
   to at most 400 samples (`thinCurve`) on the way in. A cup or brew that
@@ -259,9 +272,14 @@ turn; Phase 12 is `7.13.0`, Phase 13 is `7.14.0`.
   it never writes them.
 - **Act Two, Phase 8 (durability):** the storage laws above don't change —
   still one key, still one device, still no sync. What Phase 8 adds sits
-  entirely in front of them: a quota guard that warns before a photo save
-  fails instead of after, and a factual "last exported" read stated on the
-  Shelf. Neither is a new key, and neither is sync.
+  entirely in front of them: a quota guard that warns before a write fails
+  instead of after (`STORAGE_SOFT_LIMIT`, read on `vRecord` and once a save
+  actually crosses it), and a factual "last exported" read stated on the
+  Shelf. Neither is a new key, and neither is sync. Phase 27 retired the one
+  thing the guard was originally written for — a photo save silently
+  failing — but the guard itself stands: the ledger and the shot-curve key
+  can still fill a device on their own, and the same soft limit still warns
+  before either does.
 
 ## 4. The data model (seven objects, as shipped)
 
@@ -276,7 +294,7 @@ D = {
   cups:    [{ id, createdAt, at, kind:'bar'|'home',
               placeRef?, coffeeRef?, brewRef?,        // home cups carry brewRef
               score,                                   // 1–9
-              line, descriptors?[], photo?:true,       // photo body in carta7.photos.v1
+              line, descriptors?[],                    // photo?:true retired at Phase 27
               vizShotId? }],                           // Phase 26 — the shot this cup
                                                          // was read from (home cups only);
                                                          // curve body in carta7.shots.v1
@@ -454,7 +472,7 @@ map layer        <carta-belt> · <carta-plot> · <carta-streets>, three light-DO
                  (the §7 tile row) + names="on" (a pin whose name is the point).
                  One SVG unit is one CSS pixel — the belt is drawn at the size
                  it is read at, which is what makes it legible on a phone.
-store            load/save, carta7.v1, live(), put-away, photos key
+store            load/save, carta7.v1, live(), put-away, shots key
 domain           uid, dates, °C, rest window, ROAST_LEVELS, fold, matchNodes
                  — inside the /* ==== pure ==== */ markers (§9)
 taste            tasteModel(), briefPlainText(), the pages — pure, then

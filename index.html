@@ -122,10 +122,6 @@ h2:first-child{margin-top:2px}
 .rowlink .m{font-size:var(--s11);letter-spacing:.02em}
 .rowlink .go{flex:none;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11)}
 .rowlink .row-main{display:flex;align-items:center;gap:10px;min-width:0}
-/* one photo, optional forever, presentation governed by restraint (PIVOT.md
-   decision #1) — a small square, never a hero, never blown up */
-.thumb{width:36px;height:36px;object-fit:cover;border:1px solid var(--line);flex:none;border-radius:var(--radius)}
-.thumb.big{width:100%;height:auto;max-height:260px;margin:0 0 12px}
 .btnrow{display:flex;gap:8px;align-items:stretch}
 .btnrow .btn,.btnrow .btn+.btn{margin-top:0;flex:1}
 
@@ -313,7 +309,6 @@ nav.tabs[hidden]{display:none}
 .lrow .mapthumb{flex:none;width:60px;height:44px;border:1px solid var(--line);background:var(--surface-page);display:block;overflow:hidden}
 .cshape{display:block;width:100%;height:100%}
 .cshape path{fill:var(--ink);fill-opacity:.14;stroke:var(--ink);stroke-opacity:.5;stroke-width:1.4;vector-effect:non-scaling-stroke}
-.lrow .ph{flex:none;width:44px;height:44px;object-fit:cover;border:1px solid var(--line)}
 /* a country the record has tasted — a name and its weight, tappable */
 .cchip{display:inline-flex;align-items:baseline;gap:7px;background:none;border:1px solid var(--line-strong);
   color:var(--ink);font-family:var(--serif);font-size:var(--s15);padding:8px 12px;min-height:38px;cursor:pointer;border-radius:var(--radius)}
@@ -331,12 +326,11 @@ nav.tabs[hidden]{display:none}
 .citysheet .list{overflow-y:auto;padding:0 20px 18px}
 .noscroll{scrollbar-width:none}
 .noscroll::-webkit-scrollbar{display:none}
-/* the cup's hero — the one photo, at last given the room it was always worth */
+/* the cup's hero — the ground the coffee stands on, given the room a photo
+   used to have (Phase 27) */
 .hero{position:relative;height:300px;background:var(--surface-sunk);overflow:hidden}
-.hero img{width:100%;height:100%;object-fit:cover;display:block}
 .hero .slot{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  font-family:var(--serif);font-style:italic;font-size:var(--s15);color:var(--ink-3);cursor:pointer}
-.hero .slot input{display:none}
+  text-align:center;padding:0 40px;font-family:var(--serif);font-style:italic;font-size:var(--s15);color:var(--ink-3)}
 /* a sheet of paper that starts under the map and slides over its last inch */
 .lift{position:relative;background:var(--surface-card);border-top:1px solid var(--line-strong);margin-top:-18px}
 /* the score, when the score is the subject — the one ember on the screen */
@@ -576,21 +570,14 @@ const KEY='carta7.v1';
 const blank={version:1,cups:[],coffees:[],places:[],roasters:[],setups:[],brews:[],menus:[],asks:[],prefs:{}};
 const clone=o=>JSON.parse(JSON.stringify(o));
 let D=load();
-function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};d.menus=d.menus||[];d.asks=d.asks||[];return d}catch(e){return clone(blank)}}
+// photos retired (PIVOT.md decision #1, reopened) — the separate store is
+// gone, and a lingering cup.photo would otherwise claim an image that no
+// longer exists. One-time, harmless once both are already clear.
+function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};d.menus=d.menus||[];d.asks=d.asks||[];
+  (d.cups||[]).forEach(c=>{if(c.photo)delete c.photo});
+  try{localStorage.removeItem('carta7.photos.v1')}catch(e){}
+  return d}catch(e){return clone(blank)}}
 function save(){_tasteDirty=true;try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
-
-/* photos — one per cup, optional, kept OUT of the ledger (ARCHITECTURE.md §2:3)
- * so the ledger itself stays light enough to export and diff as text. Cached
- * in memory after first read; every write flushes straight back to disk. */
-const PHOTOS_KEY='carta7.photos.v1';
-let _photosCache=null;
-function loadPhotos(){if(_photosCache)return _photosCache;
-  try{_photosCache=JSON.parse(localStorage.getItem(PHOTOS_KEY)||'{}')}catch(e){_photosCache={}}
-  return _photosCache;}
-function savePhotos(){try{localStorage.setItem(PHOTOS_KEY,JSON.stringify(_photosCache||{}))}catch(e){toast('Could not save the photo — storage full?')}}
-function setCupPhoto(cupId,dataUri){loadPhotos();_photosCache[cupId]=dataUri;savePhotos()}
-function getCupPhoto(cupId){return loadPhotos()[cupId]}
-function deleteCupPhoto(cupId){loadPhotos();delete _photosCache[cupId];savePhotos()}
 
 /* the shot curves — same reasoning as the photos, one key over (Phase 26). A
  * cup carries only its `vizShotId`; the three series it was drawn from live
@@ -876,7 +863,6 @@ h2{font-family:-apple-system,'Segoe UI',sans-serif;font-size:11px;letter-spacing
 .kv .k{color:#776b60;font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
 .kv .v.score{color:#a63f2b;font-weight:600}
 .foot{margin-top:30px;font-style:italic;color:#776b60;font-size:13px;border-top:1px solid rgba(36,29,24,.13);padding-top:12px}
-img.card-photo{width:100%;max-height:320px;object-fit:cover;margin:4px 0 20px;border:1px solid rgba(36,29,24,.13)}
 .plot-box{border:1px solid rgba(36,29,24,.13);background:#f8f5ee;margin:4px 0 20px;overflow:hidden}
 .plot-box svg{display:block;width:100%}
 .plot-box .land{fill:#f2eee6;fill-opacity:.6;stroke:#ddd5c7;stroke-width:1}
@@ -1824,27 +1810,6 @@ function descRow(init){descState=new Set(init||[]);return `<div class="desc" id=
 function descPick(d){if(descState.has(d))descState.delete(d);else descState.add(d);
   document.getElementById('desc').querySelectorAll('button').forEach(b=>b.classList.toggle('on',descState.has(b.textContent)));}
 
-/* ============ the cup's photo — one, optional forever (PIVOT.md #1) ============
- * Compressed client-side and held in cupPhotoPending until the cup itself
- * gets an id at save; the photo body never touches the ledger (§2). Shared
- * by both cup-logging flows — café and home — one field, one id, since only
- * one is ever open at a time. */
-let cupPhotoPending=null;
-function photoFieldHTML(){
-  return `<label class="f"><span class="l">A photo <span class="opt">optional</span></span>
-    <input type="file" accept="image/*" id="cup_photo" onchange="photoPicked(event)"></label>
-    <div id="photopreview"></div>`;
-}
-function photoPicked(e){
-  const f=e.target.files&&e.target.files[0];if(!f)return;
-  compressPhoto(f).then(dataUri=>{
-    cupPhotoPending=dataUri;
-    const el=document.getElementById('photopreview');
-    const tight=storageUsedBytes()+dataUri.length*2>STORAGE_SOFT_LIMIT;
-    if(el)el.innerHTML=`<img class="thumb big" src="${dataUri}" alt="">`+(tight?lowStorageNoteHTML():'');
-  }).catch(()=>toast('Could not read that photo'));
-}
-
 /* ============ timer ============ */
 let tInt=null,tStart=null,tElapsed=0;
 function timerHTML(){return `<div class="timer">
@@ -2097,7 +2062,6 @@ let cafeCupState=null;
 // preset carries {placeRef,place,city} when the café is already known — a
 // menu item's "log a cup" hands this off, skipping the place step entirely
 function openCafeCup(coffeeId,preset){
-  cupPhotoPending=null;
   cafeCupState={coffeeId,place:(preset&&preset.place)||'',placeRef:(preset&&preset.placeRef)||null,
     city:(preset&&preset.city)||'',step:(preset&&preset.placeRef)?'score':'place'};
   paintCafeCup();
@@ -2130,7 +2094,6 @@ function paintCafeCup(){
     <label class="f"><span class="l">The cup</span>${hedonicRow()}</label>
     <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow()}</label>
     <label class="f"><span class="l">One honest line <span class="opt">optional</span></span><input type="text" id="cc_notes" placeholder="what you found"></label>
-    ${photoFieldHTML()}
     <button class="btn btn-primary" onclick="saveCafeCup()">Keep the cup</button>`);
   }
 }
@@ -2154,7 +2117,6 @@ function saveCafeCup(){
   if(!placeRef){const p={id:uid(),createdAt:new Date().toISOString(),name:s.place,city:s.city||'',aka:[]};D.places.push(p);placeRef=p.id;}
   const cup={id:uid(),createdAt:new Date().toISOString(),at:new Date().toISOString(),kind:'bar',
     placeRef,coffeeRef:s.coffeeId,score:hedState,line:val('cc_notes'),descriptors:[...descState]};
-  if(cupPhotoPending){cup.photo=true;setCupPhoto(cup.id,cupPhotoPending);cupPhotoPending=null}
   D.cups.push(cup);
   cafeCupState=null;hedState=null;descState=new Set();
   const city=(placeById(placeRef)||{}).city;
@@ -2221,7 +2183,6 @@ function saveBrewFlow(coffeeId,editId){
   openImpression(brew);
 }
 function openImpression(brew){
-  cupPhotoPending=null;
   const coffee=coffeeById(brew.coffeeRef),setup=setupById(brew.setupId);
   openSheet(`<h3>What was in the cup?</h3>
   <div class="card">
@@ -2232,7 +2193,6 @@ function openImpression(brew){
   <label class="f"><span class="l">The cup</span>${hedonicRow()}</label>
   <label class="f"><span class="l">What you found <span class="opt">optional</span></span>${descRow()}</label>
   <label class="f"><span class="l">One honest line <span class="opt">optional</span></span><input type="text" id="ic_notes" placeholder="what you found"></label>
-  ${photoFieldHTML()}
   <button class="btn btn-primary" onclick="saveHomeCup('${brew.id}')">Keep the cup</button>
   <button class="btn btn-quiet" onclick="saveHomeCup('${brew.id}',true)">Skip — the brew still counts</button>`);
 }
@@ -2241,8 +2201,6 @@ function saveHomeCup(brewId,skip){
   const brew=brewById(brewId);
   const cup={id:uid(),createdAt:new Date().toISOString(),at:new Date().toISOString(),kind:'home',
     coffeeRef:brew.coffeeRef,brewRef:brew.id,score:skip?null:hedState,line:skip?'':val('ic_notes'),descriptors:skip?[]:[...descState]};
-  if(!skip&&cupPhotoPending){cup.photo=true;setCupPhoto(cup.id,cupPhotoPending)}
-  cupPhotoPending=null;
   D.cups.push(cup);
   hedState=null;descState=new Set();
   save();closeSheet();go('journal');toast(skip?'The brew is on the record.':'Kept.');
@@ -2595,17 +2553,16 @@ function passportSVG(interactive){
 /* a cup, in a list. The title leads at 18.5px, the meta sits on secondary ink
  * rather than the faintest, and the score is set at 27px tabular — it is the
  * answer the row exists to give, and it used to be the smallest thing on it.
- * The photo takes the kind-mark's place when there is one; a cup without one
- * says plainly whether it was drunk out or at home. */
+ * The ground the coffee stands on takes the kind-mark's place where the
+ * record can place it (Phase 27); a cup without one says plainly whether it
+ * was drunk out or at home. */
 function cupRowHTML(cup){
   const coffee=coffeeById(cup.coffeeRef);
   const place=cup.kind==='bar'?placeById(cup.placeRef):null;
   const title=cup.kind==='bar'?(place?place.name:'A café'):coffeeLabel(coffee);
   const brew=cup.brewRef?brewById(cup.brewRef):null;
   const meta=[cup.kind==='bar'?coffeeLabel(coffee):brewLine(brew),fmtWhen(cup.at)].filter(Boolean).join(' · ');
-  const lead=cup.photo
-    ?`<img class="ph" src="${getCupPhoto(cup.id)||''}" alt="">`
-    :`<span class="kind">${cup.kind==='bar'?'out':'home'}</span>`;
+  const lead=cupLeadHTML(cup,coffee);
   return `<button class="lrow" onclick="openCupDetail('${cup.id}')">
     ${lead}
     <span class="mid"><span class="t">${esc(title)}</span><span class="m">${esc(meta)}</span></span>
@@ -2685,8 +2642,9 @@ function continuationHTML(){
 }
 
 /* ============ a cup — a screen now, not a sheet ============
- * The photo was always allowed to be here; it was never allowed to be seen.
- * It leads, at 300px, and the score reads at 44px in the ember — this is the
+ * The ground the coffee stands on leads, at 300px, drawn as detailed as the
+ * record can defend (Phase 27 — photos retired, PIVOT.md decision #1
+ * reopened); the score reads at 44px in the ember below it — this is the
  * one screen where the score IS the subject, so it gets the ember and the door
  * steps back to plain ink.
  */
@@ -2698,7 +2656,6 @@ function vCup(id,view){
   const place=cup.kind==='bar'?placeById(cup.placeRef):null;
   const brew=cup.brewRef?brewById(cup.brewRef):null;
   const setup=brew?setupById(brew.setupId):null;
-  const photo=cup.photo?getCupPhoto(cup.id):null;
   const backLabel=view&&view.back?'← '+esc((placeById(view.back.id)||{name:'The café'}).name):'← Back';
   // the provenance block, in the order a cup is actually read back: what it
   // was, where it came from, how it was made, whose hands roasted it, and the
@@ -2723,15 +2680,9 @@ function vCup(id,view){
   ].filter(r=>!(r[0]==='Café'&&cup.kind!=='bar'));
   return `<div>
     <div class="hero">
-      ${photo?`<img src="${photo}" alt="">`
-        :`<label class="slot">
-            <span style="font-family:var(--sans);font-size:var(--s11);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)">The cup</span>
-            <span>Add the photo you took</span>
-            <input type="file" accept="image/*" onchange="cupHeroPicked(event,'${cup.id}')">
-          </label>`}
-      ${photo?'<div class="fade top" style="height:92px;background:linear-gradient(to bottom,rgba(23,19,16,.5),rgba(23,19,16,0))"></div>':''}
+      ${coffeeGroundHTML(coffee)}
+      <div class="fade top" style="height:88px;z-index:3"></div>
       <button class="omini overlay" style="left:18px;top:18px" onclick="cupBack()">${backLabel}</button>
-      ${photo?`<label class="omini overlay" style="right:18px;top:18px;cursor:pointer">Replace<input type="file" accept="image/*" style="display:none" onchange="cupHeroPicked(event,'${cup.id}')"></label>`:''}
     </div>
     <div class="lift pad" style="margin-top:-16px;padding-top:20px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
@@ -2790,17 +2741,6 @@ function cupBack(){
 // putting a cup away from its own screen leaves nothing to stand on — the
 // journal is where it lands, with the undo still one tap away in the toast
 function putAwayCup(id){pageView=null;tab='journal';putAway('cups',id)}
-// the hero's own photo, added after the fact: the cup is already on the record,
-// so this writes straight through to the photo store, never the ledger (§2:3)
-function cupHeroPicked(e,cupId){
-  const f=e.target.files&&e.target.files[0];if(!f)return;
-  compressPhoto(f).then(dataUri=>{
-    const cup=cupById(cupId);if(!cup)return;
-    setCupPhoto(cupId,dataUri);cup.photo=true;save();render();
-    if(storageUsedBytes()>STORAGE_SOFT_LIMIT)toast('Storage is getting full — back up your record.');
-  }).catch(()=>toast('Could not read that photo'));
-}
-
 /* ============ a café — its own streets, its menu, and your cups there ============ */
 function vCafe(id){
   const p=placeById(id);
@@ -2892,7 +2832,7 @@ function shelfRowHTML(c){
 // its own screen, `openCupDetail` → `vCup` → `openCafeScreen`), a home cup
 // its Setup and technique. No average, no rank — the taste model's own
 // "a figure travels with its reasons" turned toward one coffee.
-function coffeeCupRowHTML(cup){
+function coffeeCupRowHTML(cup,coffee){
   const place=cup.kind==='bar'?placeById(cup.placeRef):null;
   const brew=cup.brewRef?brewById(cup.brewRef):null;
   const setup=brew?setupById(brew.setupId):null;
@@ -2900,9 +2840,7 @@ function coffeeCupRowHTML(cup){
     :(setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):'Home brew');
   const meta=(cup.kind==='bar'?[place&&(place.neighborhood||place.city),fmtWhen(cup.at)]:[brew&&brew.technique,fmtWhen(cup.at)])
     .filter(Boolean).join(' · ');
-  const lead=cup.photo
-    ?`<img class="ph" src="${getCupPhoto(cup.id)||''}" alt="">`
-    :`<span class="kind">${cup.kind==='bar'?'out':'home'}</span>`;
+  const lead=cupLeadHTML(cup,coffee);
   return `<button class="lrow" onclick="closeSheet();openCupDetail('${cup.id}')">
     ${lead}
     <span class="mid"><span class="t">${esc(title)}</span><span class="m">${esc(meta)}</span></span>
@@ -2920,7 +2858,7 @@ function openCoffeeDetail(id){
   </div>
   ${c.home?'':'<div class="muted small" style="margin:-4px 2px 12px">Tasted, not yet on the shelf.</div>'}
   <div class="eyebrow" style="margin:20px 2px 10px">${cups.length?`Cups so far · ${cups.length}`:'No cups yet'}</div>
-  ${cups.map(coffeeCupRowHTML).join('')}
+  ${cups.map(cup=>coffeeCupRowHTML(cup,c)).join('')}
   <button class="btn btn-primary" onclick="closeSheet();openBrewFlow('${id}')">Brew it</button>
   <button class="btn btn-quiet" onclick="closeSheet();openCafeCup('${id}')">Had it at a café</button>
   ${growerOf(c)&&c.origin.country?`<button class="btn btn-quiet" onclick="closeSheet();openProducerPage(${jsq(c.origin.country)},${jsq(growerOf(c))},${jsq(regionOf(c))})">The farm →</button>`:''}
@@ -3001,7 +2939,6 @@ function vRecord(){
   const first=cups.slice().sort((a,b)=>String(a.at).localeCompare(String(b.at)))[0];
   const shelf=coffees.filter(c=>c.home).length;
   const cities=knownCities().length;
-  const photos=cups.filter(c=>c.photo).length;
   const lead=setups.map(s=>({s,a:setupAvg(s.id)})).filter(x=>x.a!=null).sort((x,y)=>y.a-x.a)[0];
   return `<div>
     <header class="shdr" style="display:block">
@@ -3015,7 +2952,7 @@ function vRecord(){
         ['Coffees',coffees.length?`${coffees.length}${shelf?` · ${shelf} on the shelf`:''}`:'none yet'],
         ['Cafés',places.length?`${places.length}${cities?` · in ${words(cities)} cit${cities===1?'y':'ies'}`:''}`:'none yet'],
         ['Setups',setups.length?String(setups.length):'none yet'],
-        ['On this device',`${fmtBytes(storageUsedBytes())}${photos?', photos included':''}`],
+        ['On this device',fmtBytes(storageUsedBytes())],
       ])}
 
       <div class="shead"><span class="l">Keeping it</span><span class="r">${esc(exportedLine().toLowerCase().replace(/\.$/,''))}</span></div>
@@ -3532,7 +3469,7 @@ function shotCorrect(id){shotIsTheCup(id,true)}
 let _thLine='';
 function openTasteHome(brewId){
   if(!brewById(brewId))return;
-  hedState=null;descState=new Set();_thLine='';cupPhotoPending=null;
+  hedState=null;descState=new Set();_thLine='';
   closeSheet();openScreen('tastehome',brewId);
 }
 function vTasteHome(brewId){
@@ -3999,8 +3936,8 @@ function maybeAutoExport(){
 }
 // a rough, conservative measure of what this origin has already spent in
 // localStorage — most browsers cap it near 5MB; warn well before a write
-// actually fails, not only after (savePhotos()'s own catch stays the last
-// line of defense, not the first)
+// actually fails, not only after (save()'s own catch stays the last line of
+// defense, not the first)
 const STORAGE_SOFT_LIMIT=4.5*1024*1024;
 function storageUsedBytes(){
   let used=0;
@@ -4878,9 +4815,7 @@ function coffeeCardHTML(coffeeId){
   const c=coffeeById(coffeeId);if(!c)return null;
   const cups=D.cups.filter(x=>!x.archived&&x.coffeeRef===coffeeId&&x.score!=null);
   const avg=cups.length?cups.reduce((s,x)=>s+x.score,0)/cups.length:null;
-  const best=cups.slice().sort((a,b)=>(b.score-a.score)||byNew(a,b))[0];
-  const photo=best&&best.photo?getCupPhoto(best.id):null;
-  const body=`${photo?`<img class="card-photo" src="${photo}" alt="">`:''}
+  const body=`${coffeeCardMapHTML(c)}
 ${c.roaster?`<div class="kv"><span class="k">Roaster</span><span>${esc(c.roaster)}</span></div>`:''}
 ${originLine(c)?`<div class="kv"><span class="k">Origin</span><span>${esc(originLine(c))}</span></div>`:''}
 ${avg!=null?`<div class="kv"><span class="k">Score</span><span class="v score">${avg.toFixed(1)} / 9 · ${cups.length} cup${cups.length===1?'':'s'}</span></div>`:''}
@@ -5249,6 +5184,61 @@ const regionOf=c=>String(originOf(c).region||'').trim();
  * which is the same fold the grower list on this page already groups by. */
 const farmPin=c=>originPin(originOf(c));
 const regionPin=list=>meanPin((list||[]).map(farmPin));
+/* ---- the ground a coffee stands on, wherever a photo used to (Phase 27 —
+ * photos retired, PIVOT.md decision #1 reopened: a full local ledger was one
+ * lost phone from zero, and a photo per cup was the fastest way there).
+ * Its own placed farm first, then the mean of its region's (or country's)
+ * other placed farms, then nothing — the same fallback the walk down a
+ * country already reads through, held to one coffee. */
+function coffeeGroundPin(coffee){
+  if(!coffee)return null;
+  const own=farmPin(coffee);
+  if(own)return own;
+  const country=originOf(coffee).country;
+  if(!country)return null;
+  const region=regionOf(coffee);
+  const siblings=countryCoffees(country).filter(c=>region?fold(regionOf(c))===fold(region):true);
+  return regionPin(siblings);
+}
+// a list row's lead: the same soft silhouette a city row already carries
+// (plotThumbHTML — too much map for a 44×60px row was Phase 17's own lesson;
+// a shape is not), or the kind mark where the record can't place a coffee at all
+function cupLeadHTML(cup,coffee){
+  const at=coffee&&coffeeGroundPin(coffee);
+  return at?plotThumbHTML([at]):`<span class="kind">${cup.kind==='bar'?'out':'home'}</span>`;
+}
+// the cup screen's hero, drawn as detailed as the record can defend: real
+// terrain over a placed farm or region, the country's own washed shape where
+// only that much is named, an honest empty state where the bag says nothing
+function coffeeGroundHTML(coffee){
+  const at=coffee&&coffeeGroundPin(coffee);
+  if(at){
+    const label=growerOf(coffee)||regionOf(coffee)||originOf(coffee).country||coffeeLabel(coffee);
+    return streetsHTML([{id:coffee.id,name:label,lat:at.lat,lon:at.lon,score:1}],
+      {terrain:true,names:true,zoom:farmPin(coffee)?12:8,dot:7,boxStyle:'height:300px',attribLift:2,
+       plotWrap:'position:absolute;inset:0;padding:54px 40px',
+       noteStyle:'position:absolute;left:0;right:0;bottom:0;z-index:3'});
+  }
+  const country=coffee&&originOf(coffee).country;
+  if(country)return `<div class="mapbox passport" style="height:300px">
+    <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" labels="off" topo="on" tasted="${esc(country)}" focus="${esc(country)}"></carta-belt>
+  </div>`;
+  return `<div class="slot"><span>No origin named yet — the ground fills in once the bag says where.</span></div>`;
+}
+// the same ground, drawn static for a card that can't carry a custom element
+// once it's standalone (the reason passportSVG() exists at all) — the soft
+// shape, not the live streets, framed the way the passport's own box is
+function coffeeCardMapHTML(coffee){
+  const at=coffee&&coffeeGroundPin(coffee);
+  if(!at)return '';
+  const shape=cityShapePath([at]);
+  if(!shape)return '';
+  return `<div class="plot-box" style="padding:20px 20px 16px">
+    <svg viewBox="${shape.viewBox}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:140px;display:block">
+      <path d="${shape.path}" style="fill:#241d18;fill-opacity:.14;stroke:#241d18;stroke-opacity:.5;stroke-width:1.4;vector-effect:non-scaling-stroke"></path>
+    </svg>
+  </div>`;
+}
 function farmCoffees(country,farm){return countryCoffees(country).filter(c=>fold(growerOf(c))===fold(farm))}
 // a region stands where its placed farms stand — and is drawn only where some do
 function regionMarks(country){
@@ -5783,8 +5773,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.28.3';
+const APP_VERSION='7.29.0';
 const CHANGELOG=[
+  {v:'7.29.0',d:"Photos, retired — the ground instead. A cup's photo was the fastest way to a full local ledger, and one keeper's coffee found it: storage nearly spent, a save refused. Photos are gone now — the separate store, the upload slots, all of it — and a stale one already on this device is reclaimed the moment this loads. Wherever a photo used to stand — a cup in the Journal, its own page, a coffee's card — the ground the coffee stands on stands there instead: real terrain over a placed farm, the country's own washed shape where only that much is named, and an honest empty line where the bag says nothing at all."},
   {v:'7.28.3',d:"Flow, on machines with no flow sensor of their own. Pressure and what landed in the cup were drawing right; the ml/s line and readout stayed blank on any shot whose machine has no dedicated flow meter — which is most of them. Visualizer computes flow off the scale itself for exactly that case, under a different name, and Carta wasn't reading it. It does now, and a flow reading that runs a beat shorter than the rest of the plate draws its own true length rather than being thrown out for the mismatch."},
   {v:'7.28.2',d:"The curve, actually there — for real this time. The last fix made Carta ask for the right file; it turned out to still be reading the wrong place inside it. Visualizer states a shot's elapsed seconds at the top of that file and pressure, flow and weight underneath a different heading, and Carta was only ever looking in one place at a time. It now reads both, so a shot's plate draws its true shape at last."},
   {v:'7.28.1',d:"The curve, actually there. A shot's plate was drawing empty for everyone — the call Carta made for a shot's numbers never carried its curve at all, so pressure, flow and weight had nowhere to come from no matter how plainly Visualizer itself showed them. Opening a shot, or picking one at the door, now makes the one extra call that actually has the curve on it; the cheap list and hero-check calls stay exactly as light as they were."},

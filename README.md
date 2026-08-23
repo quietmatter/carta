@@ -144,10 +144,13 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   reaches them, live and pannable; where it can't, the drawn plot simply
   stands, says so once in one quiet line, and offers Retry — never a dialog,
   never a dead end.
-- **A photo on a cup.** One, optional, forever — a small square beside the
-  cup in the Journal, and on the cup's own page the size you took it for.
-  Add it when you log the cup or any time after. Compressed on the device to
-  a reasonable size; nothing leaves it.
+- **The ground a coffee stands on.** Photos are retired — they were the
+  fastest way to fill a phone's local storage, and eventually did. Wherever
+  a photo used to stand, Carta now draws the coffee's own ground instead: a
+  soft shape beside the cup in the Journal, real terrain on the cup's own
+  page where a farm or region is placed, the country's own washed shape
+  where only that much is named. Nothing to add, nothing to compress —
+  it's already on the record, or it says plainly that it isn't yet.
 - **The menu.** One screen at the counter, opened from a café's page: what
   they're pouring, and the box to add to it. Type each line, or hold a photo
   up as reference while you do. **Read it for me** can read that same photo

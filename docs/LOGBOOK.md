@@ -7,6 +7,52 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — Phase 27 (v7.29.0): photos retired, the ground instead
+
+- **Shipped — v7.29.0.** Reported directly: a coffee couldn't save, storage
+  might be full. The photo store (`carta7.photos.v1`) was the cause — it was
+  always the one storage-budget risk (`ARCHITECTURE.md` §3 named it as such
+  from the start) and this keeper's device had simply reached it.
+- **Reopened decision, not a bugfix.** Photos were `PIVOT.md` §12's decision
+  #1 — "the deepest break with current law," shipped deliberately at Phase
+  4. Put to the founder directly (storage-full, get rid of photos
+  completely), the call was to retire them a second time, for good, rather
+  than raise the quota guard or trim compression further. `PIVOT.md` §12 and
+  `ARCHITECTURE.md` §3/§4 both amended to record it.
+- **What came out:** the separate photo store and its whole read/write path
+  (`loadPhotos`/`savePhotos`/`setCupPhoto`/`getCupPhoto`/`deleteCupPhoto`),
+  the upload slots on both cup-logging flows and the cup's own hero, the
+  `cupHeroPicked` after-the-fact add, and `cup.photo` from the data model.
+  `compressPhoto` stays — the menu-capture OCR reference photo still uses
+  it, and that capture was never kept, so it never grew the ledger.
+  `load()` now clears a stale `carta7.photos.v1` and any lingering
+  `cup.photo` the first time this version runs, reclaiming the space
+  without the keeper doing anything.
+- **What went in instead, everywhere a photo used to stand:** the coffee's
+  own ground, drawn as detailed as the record can defend
+  (`coffeeGroundPin`/`coffeeGroundHTML`/`coffeeCardMapHTML`, reusing the map
+  vocabulary the walk-down-a-country chapters already had — `farmPin`,
+  `regionPin`, `streetsHTML`, `<carta-belt>`). A placed farm draws real
+  terrain; failing that, the mean of the region's other placed farms;
+  failing that, the country's own washed shape; failing that, an honest
+  line that the bag names no origin yet. The Journal and a coffee's cup list
+  carry the same ground as a soft silhouette (`plotThumbHTML`, reused
+  outright rather than a live map — Phase 17 already learned that lesson
+  for a café row). The shareable coffee card, which can't carry a custom
+  element once it's standalone, gets the same shape drawn static.
+- **Verified:** `node test/model.test.js` (96/96, untouched — none of this
+  touches the pure block), a syntax check on the extracted script, and a
+  headless run seeding coffees at farm/region/country/no-origin detail —
+  every tier degrades the way it's meant to, no console errors, and a
+  simulated stale `carta7.photos.v1` (~540 KB) is gone after one reload with
+  no page error. The live `<carta-plot>`/`<carta-streets>` floor renders
+  blank in this particular headless harness even on unmodified code
+  (checked against the untouched producer page's own "its ground" panel) —
+  a harness quirk, not a regression, and `<carta-belt>`'s country-level
+  fallback renders correctly in the same harness.
+
+---
+
 ## 2026-08-23 — Phase 26 patch (v7.28.3): flow, off the scale
 
 - **Shipped — v7.28.3.** Same keeper, same shot, one more round: after
