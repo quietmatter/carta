@@ -171,7 +171,15 @@ server/               Classic's sync server — dormant
   `load()`/`save()`, `live(coll)` filters put-away records, `putAway`/`restore`
   with undo. Photos live in a **separate key** `carta7.photos.v1`
   (`{cupId: dataUri}`) so the ledger stays light enough to export as text;
-  `compressPhoto` shrinks on the device.
+  `compressPhoto` shrinks on the device. Two more keys sit outside the ledger
+  for the same reason, and the difference between them matters:
+  `carta7.shots.v1` holds the **curve** a written cup redraws (400 samples),
+  and `carta7.shotsread.v1` (v7.33.0) holds the whole **shot** for any brew
+  actually opened, so its plate is reviewable later rather than only on the
+  way to writing the cup. The second is a **cache, not a record** — 20
+  entries at 150 samples, never exported, dropped on *Not mine*, cleared by
+  signing out of Visualizer. `docs/ARCHITECTURE.md` §3 has the measurements
+  behind both caps.
 - **domain** — `uid`, `esc`/`jsq`, dates and `fmtWhen`, `restState` (the rest
   window), °C/°F, `fmtTime`/`parseTime`, `DESCRIPTORS`, `fold`/`lev`/
   `matchNodes`/`joinAlias` (the gentle join), `ROAST_LEVELS`/`parseRoastLevel`,
