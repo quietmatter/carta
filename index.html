@@ -654,8 +654,8 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.31.6"></script>
-<script src="carta-plate.js?v=7.31.6"></script>
+<script src="carta-map.js?v=7.32.0"></script>
+<script src="carta-plate.js?v=7.32.0"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1557,6 +1557,30 @@ function matchSetupByGrinder(setups,grinderModel){
   const m=matchNodes((setups||[]).map(s=>({id:s.id,name:s.grinder||''})),grinderModel);
   return m.exact?m.exact.id:null;
 }
+// a filter brew's brewer is whichever of the two fields the file actually
+// filled in: some writers put "Kalita Wave 185" under `machine`, because that
+// is the only field they have for it
+const brewerOf=shot=>(shot&&(shot.brewer||shot.machine))||'';
+// what a keeper's own Visualizer shots say about the Setups behind them: a
+// grinder paired with whatever brewer or machine rode beside it, newest
+// first (the list already reads that way), deduped, and never repeating a
+// Setup already on the record — the same exact-match rule matchSetupByGrinder
+// keeps for the silent join, so a picker and a pulled shot never disagree
+// about what counts as "already have one". A grinder-only or brewer-only
+// shot still candidates; only a shot naming neither is worth nothing here.
+function setupCandidatesFromShots(shots,setups){
+  const seen=new Set(),out=[];
+  (shots||[]).forEach(s=>{
+    const grinder=(s&&s.grinderModel)||'',brewer=brewerOf(s);
+    if(!grinder&&!brewer)return;
+    if(grinder&&matchSetupByGrinder(setups||[],grinder))return;
+    const key=fold(grinder)+'|'+fold(brewer);
+    if(seen.has(key))return;
+    seen.add(key);
+    out.push({grinder,brewer,name:[grinder,brewer].filter(Boolean).join(' · ')});
+  });
+  return out;
+}
 /* ---- the city's own shape (Phase 17, corrected) — not streets, not pins, not a live
  * map: a soft silhouette of where the record actually reaches in this city,
  * drawn purely from the same lat/lon already on the ledger. No tile, no key,
@@ -1856,9 +1880,17 @@ function openSetupScreen(id){openScreen('setup',id)}
 // first, none goes to the form — a list of one is a page that says nothing.
 function openSetupsDoor(){
   const list=live('setups');
-  if(!list.length){openSetupForm();return}
+  if(!list.length){openSetupCreate();return}
   if(list.length===1){openSetupScreen(list[0].id);return}
   openSetupsScreen();
+}
+// the one decision behind every "add a Setup" button: pulled from Visualizer
+// when there's an account to pull from, typed when there isn't. Never the
+// only way in — openSetupImport's own "Type it in instead" reaches the same
+// blank form this falls back to, and an unreachable Visualizer costs nothing.
+function openSetupCreate(){
+  if(visualizerAuthHeader()){openSetupImport();return}
+  openSetupForm();
 }
 // a cup is a screen now, not a sheet — it carries a photo at the size a photo
 // deserves, and the café it was drunk in, on its own streets. It closes back to
@@ -2291,12 +2323,17 @@ function doorPullJoin(yes){
 }
 // a Setup a pulled shot never names outright: matched silently against the
 // keeper's own grinder names, or left as whichever Setup is already current —
-// the same fallback vBrew itself uses for a coffee with no brew of its own yet
-function resolveOrMintSetupForShot(grinderModel){
-  const setups=live('setups');
+// the same fallback vBrew itself uses for a coffee with no brew of its own yet.
+// A silent mint carries the brewer or machine beside the grinder too, the same
+// pairing the deliberate "A Setup from Visualizer" picker offers — a shot that
+// arrives unasked-for shouldn't know less about its own gear than one picked.
+function resolveOrMintSetupForShot(shot){
+  const setups=live('setups'),grinderModel=shot&&shot.grinderModel;
   if(!setups.length){
-    if(!grinderModel)return null;
-    const st={id:uid(),createdAt:new Date().toISOString(),name:grinderModel,grinder:grinderModel};
+    const brewer=brewerOf(shot);
+    if(!grinderModel&&!brewer)return null;
+    const st={id:uid(),createdAt:new Date().toISOString(),
+      name:[grinderModel,brewer].filter(Boolean).join(' · '),grinder:grinderModel||'',brewer};
     D.setups.push(st);return st.id;
   }
   const exact=matchSetupByGrinder(setups,grinderModel);if(exact)return exact;
@@ -2305,7 +2342,7 @@ function resolveOrMintSetupForShot(grinderModel){
 }
 function doorPullFinish(){
   const s=doorState,shot=s._pullShot;
-  const setupId=resolveOrMintSetupForShot(shot.grinderModel);
+  const setupId=resolveOrMintSetupForShot(shot);
   if(!setupId){doorState=null;toast('Refused: a brew requires a Setup');return}
   const roasterRef=mintRoasterIfNeeded(shot.roaster,s._pullRoasterRef);
   let coffeeId=s._pullCoffeeId;
@@ -2414,10 +2451,15 @@ function knownCities(){
 }
 
 /* ============ setups + the dial-in loop (home path) ============ */
-function openSetupForm(id){
-  const s=id?setupById(id):{};
+// prefill (grinder/brewer/name) arrives only from openSetupImport's picker,
+// and only ever seeds a *new* Setup — editing an existing one always reads
+// off the record itself, never off whatever shot happened to be tapped last
+function openSetupForm(id,prefill){
+  const s=id?setupById(id):(prefill||{});
   openSheet(`<h3>${id?'Edit Setup':'New Setup'}</h3>
-  <div class="sub">The assembly, not the appliance. Change a burr, a basket, the water — that's a new Setup.</div>
+  <div class="sub">${prefill&&!id
+    ?'Pulled off a shot on your Visualizer account. The rest — basket, papers, water, the grind scale — nothing in a shot file states it, so it stays yours to add.'
+    :'The assembly, not the appliance. Change a burr, a basket, the water — that\'s a new Setup.'}</div>
   <label class="f"><span class="l">Name</span><input type="text" id="s_name" value="${esc(s.name||'')}" placeholder="Home espresso · 49mm"></label>
   <div class="grid2">
     <label class="f"><span class="l">Grinder</span><input type="text" id="s_grinder" value="${esc(s.grinder||'')}" placeholder="EG-1, SSP MP"></label>
@@ -3388,7 +3430,7 @@ function vSetups(){
           <span class="m">${esc([s.grinder,`${words(n)} brew${n===1?'':'s'}`].filter(Boolean).join(' · '))}</span></span>
           <span class="sc${a==null?' none':''}">${a==null?'—':trimNum(a)}</span></button>`;
       }).join('')}
-      <button class="btn btn-quiet" style="margin-top:18px" onclick="openSetupForm()">＋ A new Setup</button>
+      <button class="btn btn-quiet" style="margin-top:18px" onclick="openSetupCreate()">＋ A new Setup</button>
       ${D.setups.filter(s=>s.archived).length?`<details class="more" style="margin-top:12px"><summary>Retired (${D.setups.filter(s=>s.archived).length})</summary>
         ${D.setups.filter(s=>s.archived).map(s=>`<button class="rowlink" onclick="openSetupScreen('${s.id}')"><span><span class="t">${esc(s.name||'Unnamed Setup')}</span></span><span class="go">→</span></button>`).join('')}
       </details>`:''}
@@ -3598,6 +3640,41 @@ function vizShotPicked(id){
   applyVisualizerShot(shot);
   const box=document.getElementById('viz_picker');
   if(box)box.innerHTML='<div class="muted small" style="margin-top:8px">Filled from Visualizer — temperature isn\'t part of a shot\'s record, so set that by hand.</div>';
+}
+/* ============ a Setup from Visualizer (Phase 26 amendment, v7.32.0) ============
+ * The primary door onto a new Setup, wherever one is added from — the record's
+ * own "＋ A new Setup" and the empty Setups door both lead here first when
+ * there's an account to read. Same fetch as the picker above (fetchVisualizerShots,
+ * capped at 8), so this opens no network surface the app didn't already have —
+ * it reads what a handful of recent shots already say about the gear behind
+ * them instead of asking the keeper to type it. Unreachable, or nothing found,
+ * and "Type it in instead" reaches the exact blank form this always could. */
+let _setupCandidates=[];
+async function openSetupImport(){
+  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  openSheet(`<h3>A Setup from Visualizer</h3>
+  <div class="sub">Read off your own shots — the grinder, and whatever machine or brewer rode beside it. Nothing else a Setup carries is in a shot file, so the rest stays yours to add.</div>
+  <div id="setup_import"><div class="muted small" style="margin-top:8px">Reading your shots…</div></div>
+  <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="openSetupForm()">Type it in instead</button></div>`);
+  await loadSetupCandidates();
+}
+async function loadSetupCandidates(){
+  const box=document.getElementById('setup_import');if(!box)return;
+  try{
+    const rows=await fetchVisualizerShots(8);
+    _setupCandidates=setupCandidatesFromShots(rows,live('setups'));
+    box.innerHTML=_setupCandidates.length
+      ?_setupCandidates.map((c,i)=>`<button class="lrow" onclick="setupCandidatePicked(${i})">
+          <span class="mid"><span class="t">${esc(c.name)}</span>
+          <span class="m">seen on your Visualizer account</span></span></button>`).join('')
+      :'<div class="muted small" style="margin-top:8px">Nothing new on your last shots — every grinder there already has a Setup, or none of them said one.</div>';
+  }catch(e){
+    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>`;
+  }
+}
+function setupCandidatePicked(i){
+  const c=_setupCandidates[i];if(!c)return;
+  openSetupForm(null,c);
 }
 
 /* ============ the shot comes to you (ROADMAP.md Phase 26) ============
@@ -3832,10 +3909,6 @@ const whenLine=iso=>{
 // "V60 02 · Cafec Abaca" is the ledger's reading, where the paper is half the
 // recipe. A hero and a list row want the brewer on its own.
 const brewerShort=b=>String(b||'').split('·')[0].trim();
-// a filter brew's brewer is whichever of the two fields the file actually
-// filled in: some writers put "Kalita Wave 185" under `machine`, because that
-// is the only field they have for it
-const brewerOf=shot=>(shot&&(shot.brewer||shot.machine))||'';
 // stated or nothing: a shot file that named no temperature gets `unread`, not
 // a figure read off a curve that was never a scalar (SPEC §4, ARCHITECTURE §4)
 const fmtTempStated=c=>c==null?'':(tempUnit()==='F'?`${Math.round(c2f(c)*10)/10} °F`:`${c} °C`);
@@ -6203,8 +6276,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.31.6';
+const APP_VERSION='7.32.0';
 const CHANGELOG=[
+  {v:'7.32.0',d:"A Setup, from Visualizer. Adding a Setup meant a blank form — name it, name the grinder, and everything else by hand — even though the account already on the device knows what was on a shot the whole time. “＋ A new Setup” now opens onto your own recent shots first wherever there's a Visualizer account to read: a grinder paired with whatever machine or brewer rode beside it, one tap to seed the form with both, deduped, and never repeating a Setup already on the record. Nothing else a Setup carries — basket, papers, water, the grind scale — is in a shot file, and it says so, so that part stays exactly as typed as it always was. “Type it in instead” is one tap away at every turn, on a page with nothing to read as easily as one with plenty, and an unreachable Visualizer costs nothing: the blank form was always there and still is. A shot pulled quietly at the door mints its Setup a little more honestly too — the machine or brewer beside the grinder, not just the grinder alone."},
   {v:'7.31.6',d:"When the cup happened, and who gets to say. Checked against a real account at last: Visualizer keeps exactly one time for a brew, and for anything a scale files after the fact that time is when the record was made, not when you poured. There is no second date in there to go and find. So it becomes what agitation already is — a fact no instrument in the room recorded, left to you to state. Tap the date on a cup's own page and set it; the brew it was read from moves with it, so a re-brew starts from the same morning. When you wrote it down is kept separately and never changes. And the journal now reads in the order the cups actually happened rather than the order they were typed, which for every cup logged as it was drunk is the same order it always was."},
   {v:'7.31.5',d:"The plate, against a real brew. A keeper sent one of their own pour-overs straight out of Visualizer, and reading it back turned three guesses into facts. The names Visualizer actually uses for what landed on the scale, for how fast the water went in, and for the basket's own temperature are all read now, alongside the ones Carta was already looking for. The gram marks up the side of a plate are round again: a scale that reads 251.3 g at its crest was printing 50, 151 and 251 up the edge, which is a scale's own noise dressed as a measurement — the figures underneath still state exactly what was weighed. And the first pour's label stays on the plate. A brew whose timer starts before the water does has a very narrow first band, and the word centred over it was hanging off the left edge: a real brew came out reading LOOM 44."},
   {v:'7.31.4',d:"The date a brew was poured, not the date it arrived. A brew filed to Visualizer after the fact — which is most filter brews, since a scale syncs when it can — was being dated by the moment it reached your account rather than the moment you poured it. Carta only ever had the second of those, because it read the date off the list of your brews rather than out of the brew itself. It reads the brew now, and falls back to the old reading only where the file says nothing. A cup written from it is dated by the pour too, so it lands in the journal where it belongs rather than at today; when you wrote it down is kept separately, as it always was. A shot's own screen names the day as well as the hour, since an hour on its own is only ever enough for something poured today. And the mark that says a cup is waiting keeps breathing when you have reduced motion turned on — slower and gentler there, but not stilled: it travels nowhere, and it was the only thing on the Atlas saying something was waiting."},

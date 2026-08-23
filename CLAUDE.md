@@ -237,11 +237,18 @@ server/               Classic's sync server — dormant
   minted from the shot, only the taste still typed. The Setup gets a
   narrower version of the same match, silent-only, no ask
   (`matchSetupByGrinder`, `resolveOrMintSetupForShot` — see
-  `ARCHITECTURE.md` §4).
+  `ARCHITECTURE.md` §4). Amended v7.32.0: the silent mint now carries the
+  brewer or machine beside the grinder too, not the grinder alone.
 - **the cup paths** — `openCafeCup`/`saveCafeCup` (the bar path) and
   `openSetupForm`/`openBrewFlow`/`saveBrewFlow`/`openImpression`/`saveHomeCup`
   (the home path, through the dials and the timer). A brew always needs a
-  Setup.
+  Setup. **Adding one leads with Visualizer now (v7.32.0):** `openSetupCreate`
+  is the one decision behind every "＋ A new Setup" button — `openSetupImport`
+  when there's an account to read (reusing the same `fetchVisualizerShots`
+  the pickers already call, `setupCandidatesFromShots` deduping the
+  grinder/brewer pairs it finds against what's already on the record), the
+  unchanged blank `openSetupForm` when there isn't or the keeper asks for it
+  by name ("Type it in instead", always one tap away).
 - **the coffee form** (`openCoffeeForm`) — autosaves once named (Phase 21):
   the coffee mints itself into `D.coffees` the moment a roaster or name is
   typed, the same move the menu capture already makes for its own coffee,
@@ -434,7 +441,7 @@ evaluates them against fixture ledgers — no DOM, no `localStorage`. **If you t
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
 `parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel`,
 `originPin`, `meanPin`, `namesBack`, `cfSearchPrompt`, `parseCfSearch`,
-`parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder`,
+`parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder`, `brewerOf`, `setupCandidatesFromShots`,
 `shotCurve`, `shotPours`, `shotFigures`, `shotMethod`, `platePaths`,
 `shotAt`, `shotPhase`, `shotPreinfusion` (the last eight live in
 `carta-plate.js`), `doorParse` or
