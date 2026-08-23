@@ -1309,7 +1309,11 @@ function parseVisualizerShot(d){
  * curve across two containers rather than one: the elapsed-seconds series
  * sits at the top of the response (`timeframe`), the value series (pressure,
  * flow, weight) sit nested under `data` — so every key is hunted for in both
- * containers, never assumed to share one. */
+ * containers, never assumed to share one. A machine with no flow sensor
+ * states no `espresso_flow` at all; `espresso_flow_weight` (confirmed by
+ * integrating it against the shot's own final weight, v7.28.3) is Visualizer
+ * computing flow off the scale instead, and is read as a fallback rather than
+ * left blank when it's the only flow reading the file actually carries. */
 function shotCurve(d){
   if(!d||typeof d!=='object')return null;
   const sources=[d,(d.data&&typeof d.data==='object')?d.data:{}];
@@ -1331,11 +1335,14 @@ function shotCurve(d){
   if(t[t.length-1]>600)t=t.map(v=>v/1000);
   const n=Math.min(t.length,p.length);
   if(n<2)return null;
-  // a series of a different length can't be lined up against this clock
-  // without inventing samples, so it is dropped whole rather than stretched
-  const fit=a=>(a&&a.length>=n)?a:null;
+  // flow or weight can legitimately run a little short of the clock (a
+  // weight-derived flow reading stopping a beat before the last samples,
+  // say) — r() already trims anything longer than the clock and passes a
+  // shorter series through untouched, so nothing here needs to reject one;
+  // platePaths' own line() maps over the series itself, so a shorter one
+  // just draws a shorter line rather than reading past its own end
   const r=a=>a?a.slice(0,n).map(v=>Math.round(v*100)/100):null;
-  return {t:r(t),p:r(p),f:r(fit(arr(['espresso_flow','flow']))),w:r(fit(arr(['espresso_weight','weight'])))};
+  return {t:r(t),p:r(p),f:r(arr(['espresso_flow','flow','espresso_flow_weight'])),w:r(arr(['espresso_weight','weight']))};
 }
 /* the three figures a shot is argued about: how hard it pushed and when, what
  * came out against what went in, and how long it took. Read off the curve
@@ -5776,8 +5783,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.28.2';
+const APP_VERSION='7.28.3';
 const CHANGELOG=[
+  {v:'7.28.3',d:"Flow, on machines with no flow sensor of their own. Pressure and what landed in the cup were drawing right; the ml/s line and readout stayed blank on any shot whose machine has no dedicated flow meter — which is most of them. Visualizer computes flow off the scale itself for exactly that case, under a different name, and Carta wasn't reading it. It does now, and a flow reading that runs a beat shorter than the rest of the plate draws its own true length rather than being thrown out for the mismatch."},
   {v:'7.28.2',d:"The curve, actually there — for real this time. The last fix made Carta ask for the right file; it turned out to still be reading the wrong place inside it. Visualizer states a shot's elapsed seconds at the top of that file and pressure, flow and weight underneath a different heading, and Carta was only ever looking in one place at a time. It now reads both, so a shot's plate draws its true shape at last."},
   {v:'7.28.1',d:"The curve, actually there. A shot's plate was drawing empty for everyone — the call Carta made for a shot's numbers never carried its curve at all, so pressure, flow and weight had nowhere to come from no matter how plainly Visualizer itself showed them. Opening a shot, or picking one at the door, now makes the one extra call that actually has the curve on it; the cheap list and hero-check calls stay exactly as light as they were."},
   {v:'7.28.0',d:"The shot comes to you — a cup measured at home now arrives from Visualizer with its own curve, and asks only for the taste. Turn the watch on and Carta looks once, on opening, for the shot you just pulled: it waits on the Atlas as a stated fact with the cup attached to it, and the question the Atlas usually asks steps down one slab until that cup is written. A shot opens as a plate rather than a row of dials — pressure drawn as the shot's own signature, flow beside it, what landed in the cup underneath, with peak, ratio and time stated big and everything Visualizer didn't say reading unread rather than guessed. Drag across the curve and the readout follows your finger. The taste is a screen of its own now, the 1–9 taking the whole page with the curve stepped back to a hairline, and the cup keeps that curve afterwards, so a score always has the shot that earned it underneath. Your recent shots are one tap from the Journal whether or not the watch is on, each row carrying its own small curve — you recognise a shot by its shape before you read the label. Typing a brew is untouched and one door back, in the Journal, where a pour-over that leaves no shot file is logged deliberately. Nothing polls, nothing sweeps, and unreachable it all costs you nothing."},

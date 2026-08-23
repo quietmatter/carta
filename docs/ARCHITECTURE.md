@@ -615,9 +615,29 @@ since Phase 26 shipped and never actually verified against a live payload
 — every fixture written for it, including the one added for v7.28.1, was a
 flat shape that happened not to exercise the split. Fixed by hunting every
 key across both containers; verified against the reporting keeper's own
-shot (1,081 real samples, pressure and weight both reading correctly, no
-flow sensor on that particular shot). `docs/LOGBOOK.md`'s v7.28.2 entry has
-the full account, including how the live payload was actually obtained.
+shot (1,081 real samples, pressure and weight both reading correctly).
+What read at the time as "no flow sensor on that particular shot" was
+itself wrong — see the v7.28.3 correction directly below. `docs/LOGBOOK.md`'s
+v7.28.2 entry has the full account, including how the live payload was
+actually obtained.
+
+**Correction, v7.28.3: there was flow data; it was reading it wrong that
+made it look absent.** The same keeper reported flow ("the ml/s") still
+missing after v7.28.2. Their shot's `data.espresso_flow` genuinely is
+`null` — no direct flow-sensor reading — but `data.espresso_flow_weight`
+carries real numbers, 24 samples shorter than the rest of the curve.
+Integrating it against elapsed time reproduces the shot's own final cup
+weight almost exactly (52.1 g computed against 52.2 g logged), confirming
+it is Visualizer computing flow off the scale for a machine with no
+dedicated flow meter — which is most of them. Two bugs compounded: `shotCurve`
+never tried the `espresso_flow_weight` key at all, and its own length
+guard would have rejected it anyway for running shorter than the clock,
+on the assumption that a length mismatch meant garbage data rather than a
+reading that simply stops a beat early. Fixed by adding the fallback key
+and dropping the length rejection — `platePaths`' own `line()` already
+maps over whichever series it's given, so a shorter one draws a shorter
+line rather than needing to be padded or thrown away. `docs/LOGBOOK.md`'s
+v7.28.3 entry has the full account.
 
 Two notes on what the table no longer says:
 
