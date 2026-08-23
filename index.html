@@ -2000,8 +2000,14 @@ async function doorPull(){
   catch(e){s._pullError=(e&&e.message)||'Could not reach Visualizer.';}
   if(doorState===s)paintDoor();
 }
-function doorPullPicked(id){
+async function doorPullPicked(id){
   const s=doorState,shot=(s._pullShots||[]).find(x=>x.id===id);if(!shot)return;
+  // the curve has to be in hand before a brew is minted from this shot
+  // (doorPullFinish is the only place a curve is ever persisted, via
+  // setShotCurve) — the door's own picker never opens the shot screen that
+  // would otherwise trigger the fetch, so it's awaited here instead
+  await ensureShotCurve(shot);
+  if(doorState!==s)return; // the keeper backed out while the fetch was in flight
   s._pullShot=shot;
   if(shot.roaster){
     const m=matchNode('roasters',shot.roaster);
@@ -3346,7 +3352,28 @@ function waitingShot(){
   return _vizWaiting;
 }
 const shotWhen=s=>s&&s.clock?new Date(s.clock*1000).toISOString():null;
-function openShotScreen(id){openScreen('shot',String(id))}
+/* the second, full fetch the Shots list already promises ("only the one you
+ * pick is read in full") — `?essentials=true` never carries the curve arrays
+ * (ROADMAP.md, confirmed by diffing against the live API), so every shot
+ * read through the cheap list/watch calls has a null `.curve` until this
+ * runs once against the one shot actually opened or picked. The fetch itself
+ * is cached per id, not per shot object, so the door's own picker (which
+ * never touches `_vizCache`) and the Atlas/Shots-list path (which does)
+ * never fetch the same shot twice. */
+let _vizFullFetches={};
+function fetchShotFull(id){
+  const key=String(id);
+  return _vizFullFetches[key]||(_vizFullFetches[key]=callVisualizer(`/${key}/download`).then(shotCurve).catch(()=>null));
+}
+function ensureShotCurve(shot){
+  if(!shot||shot.id==null||shot.curve)return Promise.resolve(shot);
+  return fetchShotFull(shot.id).then(c=>{
+    if(c)shot.curve=c;
+    if(pageView&&pageView.kind==='shot'&&String(pageView.id)===String(shot.id))render();
+    return shot;
+  });
+}
+function openShotScreen(id,extra){openScreen('shot',String(id),extra);ensureShotCurve(vizShotById(id))}
 // station 08, reachable whether or not the watch is on. The list is fetched
 // once a sitting; the row you pick is the only one read in full.
 let _shots={busy:false,rows:null,error:null};
@@ -3611,7 +3638,7 @@ function shotRowHTML(shot){
     fg.peak==null?null:fig1(fg.peak)+' bar'].filter(Boolean).join(' · ');
   const curve=shot.curve?plateSVG(shot,PLATE_THUMB,{cls:'thumb'+(cup?' quiet':''),style:'width:44px;height:22px;flex:none'})
     :'<span style="flex:none;width:44px"></span>';
-  return `<button class="lrow" onclick="openScreen('shot',${jsq(String(shot.id))},{back:'shots'})">
+  return `<button class="lrow" onclick="openShotScreen(${jsq(String(shot.id))},{back:'shots'})">
     ${curve}
     <span class="mid"><span class="t"${cup?' style="color:var(--ink-2)"':''}>${esc(shot.label)}</span><span class="m">${esc(meta)}</span></span>
     ${cup?`<span class="sc${cup.score==null?' none':''}">${cup.score==null?'—':cup.score}</span>`
@@ -5740,8 +5767,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.28.0';
+const APP_VERSION='7.28.1';
 const CHANGELOG=[
+  {v:'7.28.1',d:"The curve, actually there. A shot's plate was drawing empty for everyone — the call Carta made for a shot's numbers never carried its curve at all, so pressure, flow and weight had nowhere to come from no matter how plainly Visualizer itself showed them. Opening a shot, or picking one at the door, now makes the one extra call that actually has the curve on it; the cheap list and hero-check calls stay exactly as light as they were."},
   {v:'7.28.0',d:"The shot comes to you — a cup measured at home now arrives from Visualizer with its own curve, and asks only for the taste. Turn the watch on and Carta looks once, on opening, for the shot you just pulled: it waits on the Atlas as a stated fact with the cup attached to it, and the question the Atlas usually asks steps down one slab until that cup is written. A shot opens as a plate rather than a row of dials — pressure drawn as the shot's own signature, flow beside it, what landed in the cup underneath, with peak, ratio and time stated big and everything Visualizer didn't say reading unread rather than guessed. Drag across the curve and the readout follows your finger. The taste is a screen of its own now, the 1–9 taking the whole page with the curve stepped back to a hairline, and the cup keeps that curve afterwards, so a score always has the shot that earned it underneath. Your recent shots are one tap from the Journal whether or not the watch is on, each row carrying its own small curve — you recognise a shot by its shape before you read the label. Typing a brew is untouched and one door back, in the Journal, where a pour-over that leaves no shot file is logged deliberately. Nothing polls, nothing sweeps, and unreachable it all costs you nothing."},
   {v:'7.27.0',d:"The pull, at the door. Pulling a shot from Visualizer used to mean opening a coffee's own dial-in screen first, so the coffee itself still had to be added by hand. The door now offers a third way in beside pasting and typing: pull it from Visualizer, and the coffee and the brew both arrive already right, read straight off the shot — the roaster and the coffee matched gently against what's already on the shelf, asked about once if Carta isn't sure, never merged without saying so. It lands on \"What was in the cup?\" with nothing typed but the taste itself. The dial-in screen's own button is still there, for a Setup or a hand pourover with nothing to sync."},
   {v:'7.26.0',d:"Pull from Visualizer. Dose, yield, time, grind — a Decent machine or a Bluetooth scale often records these the moment a shot or a pour finishes, and until now Carta had no way to know that and asked you to type them all in again. Dialing in a brew now offers a button beside the usual fields: pick a recent shot from your Visualizer account, and the numbers land in the dials already turned to it, still yours to correct. Nothing runs until you tap it, nothing is fetched beyond the one shot you pick, and typing it in by hand works exactly as it always has for everyone else."},

@@ -1279,6 +1279,21 @@ reload with the network cut) and the regressions (Phase 25's door, Phase
 passing, including new `shotCurve`/`shotFigures`/`platePaths`/`shotAt`
 coverage.
 
+**Patch, v7.28.1 — the plate was drawing nothing, for everyone.** Every
+call this phase made for a shot's own data used `?essentials=true`, and
+that flag was already known, from Phase 24's own research above, to omit
+the curve arrays entirely — the field-name mapping had been checked
+against a live shot, but the `essentials`-vs-full response shape never was
+for this phase's own new fields. `shot.curve` was `null` on every path, so
+the plate always fell back to its own "came without its curve" state, no
+matter what Visualizer itself showed. Fixed by adding the one fetch this
+phase's own copy already promised ("only the one you pick is read in
+full," `vShots`' own note) but never actually made: opening a shot, or
+picking one at the door, now triggers a second, real `/download` for that
+one shot, cached per id so it is never fetched twice in a sitting; the
+cheap list and watch calls are untouched. `docs/ARCHITECTURE.md` §7 has
+the corrected network-posture row and the full account.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner
