@@ -377,6 +377,10 @@ D = {
               palette?, archived? }],
   setups:  [{ ...classic's shape, unchanged }],
   brews:   [{ ...classic's shape minus roastRef/lotRef; keeps coffeeRef,
+              at?,                                    // v7.31.4 — when the brew was poured,
+                                                         // off the file rather than the list row's
+                                                         // upload timestamp. The cup written from
+                                                         // it takes this as its own `at`.
               vizShotId?,                             // Phase 26 — same shot ref as the
                                                          // cup's, so a re-brew can start from it
               method?,                                // v7.31.0 — 'espresso' | 'pourover',
@@ -612,6 +616,26 @@ and re-arms the check, guarded three ways: the gap itself, `_vizWaiting`
 (a cup already waiting is never replaced), and `vizWatch` as before. It is
 still one call per open and still **never a poll** — the gap is what holds
 that, and nothing fires while the app is in the foreground.
+
+**A brew is dated by its pour, not by its upload (v7.31.4).** The only
+timestamp Carta had was `clock` off the *list* row, which is the record's own.
+For anything filed after the fact — which is most filter brews, since a scale
+syncs when it can — that is when it reached Visualizer. A brew poured on
+Tuesday read as today's, on the hero, on the shot screen, and on the cup
+written from it. `shotStartedAt(d)` now hunts the payload for the pour's own
+start (`start_time` first, `clock` and the rest after), and `shotWhen` prefers
+it, falling back to the list row where the file says nothing — so this is
+never worse than what it replaced. `tsToMs` is the gate: epoch seconds and
+milliseconds are told apart by magnitude, strings by `Date.parse`, and
+anything outside 2000 → now+2 days is refused, which is what stops a duration
+(`200`), an elapsed second (`27.4`) or a dose (`18.2`) being read as a date.
+
+**`at` and `createdAt` are different facts and now behave like it.** `at` is
+when the cup happened; `createdAt` is when it was written down. They were the
+same value on every path because every cup used to be logged as it was drunk.
+Reading a brew off an instrument breaks that — you can pull Tuesday's brew on
+Friday — so a cup written from a shot takes the brew's own `at`, and the
+Journal (which orders by `at`) puts it where it belongs.
 
 **A shot is read twice, and only the second read knows the method (v7.31.3).**
 The watch's own shape (`?essentials=true`, then `/download` in full) means the

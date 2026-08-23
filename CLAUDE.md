@@ -424,7 +424,7 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 118 cases
+node test/model.test.js        # zero deps, plain Node, 121 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
