@@ -1308,10 +1308,28 @@ shipped. Every fixture written for `shotCurve`, including the new one
 added for v7.28.1, used a flat shape that happened not to exercise the
 split, so the pure harness stayed green through both bugs. Fixed by
 hunting every key across both containers; verified directly against the
-keeper's own shot (1,081 real samples, pressure and weight both correct,
-no flow sensor on that particular one) rather than against another
-invented stub. `docs/ARCHITECTURE.md` §7 and `docs/LOGBOOK.md`'s v7.28.2
-entry have the full account.
+keeper's own shot (1,081 real samples, pressure and weight both correct)
+rather than against another invented stub. What read at the time as "no
+flow sensor on that particular one" was itself wrong — see v7.28.3 below.
+`docs/ARCHITECTURE.md` §7 and `docs/LOGBOOK.md`'s v7.28.2 entry have the
+full account.
+
+**Patch, v7.28.3 — the flow was there too; reading it wrong made it look
+absent.** The same keeper reported flow ("the ml/s") still missing after
+v7.28.2. Their shot's `espresso_flow` genuinely is `null` — no direct
+sensor — but a second field, `espresso_flow_weight`, carries real numbers
+24 samples shorter than the rest of the curve; integrating it against
+elapsed time reproduces the shot's own logged final weight almost exactly,
+confirming Visualizer computes flow off the scale when a machine has no
+flow meter of its own, which is most of them. Two compounding bugs:
+`shotCurve` never tried that key, and its own length guard would have
+rejected the array anyway for running short of the clock, on the
+assumption a mismatch meant garbage rather than a reading that simply
+stops a beat early. Fixed by adding the fallback key and dropping the
+length rejection — the plate's own line-drawing already maps over
+whatever series it's given, so a shorter one draws a shorter line, not a
+crash or a stretch. 96/96 pure tests passing. `docs/ARCHITECTURE.md` §7
+and `docs/LOGBOOK.md`'s v7.28.3 entry have the full account.
 
 ## The horizon (unscheduled, revisited)
 

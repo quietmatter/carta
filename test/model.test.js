@@ -710,6 +710,23 @@ assert.equal(splitCurve.w[4], 36);
 assert.equal(splitCurve.f, null, 'a null value series (no flow sensor on this shot) reads null, not a crash');
 ok('shotCurve reads the elapsed series and the value series from different containers when the file splits them, exactly as Visualizer itself does');
 
+// a machine with no flow sensor: Visualizer computes flow off the scale
+// instead (confirmed by integrating a live shot's own espresso_flow_weight
+// against its final cup weight, v7.28.3) — read as a fallback, not left
+// blank, and its own natural way of running a few samples short of the
+// clock must draw a shorter line rather than being dropped whole
+const noSensorPayload = {
+  timeframe: ['0.0', '1.0', '2.0', '3.0', '4.0', '5.0'],
+  data: { espresso_pressure: ['0.0', '4.0', '9.0', '8.5', '6.0', '5.0'], espresso_flow: null,
+    espresso_flow_weight: ['0.0', '0.5', '1.8', '2.0'] },
+};
+const noSensorCurve = M.shotCurve(noSensorPayload);
+assert.ok(noSensorCurve.f, 'espresso_flow_weight is read as flow when the sensor-based key is null');
+assert.equal(noSensorCurve.f.length, 4, 'a flow series that runs shorter than the clock is kept at its own length, not dropped for the mismatch');
+assert.equal(noSensorCurve.f[2], 1.8);
+assert.equal(noSensorCurve.p.length, 6, 'pressure, which does cover the full clock, is untouched by flow running short');
+ok('shotCurve falls back to espresso_flow_weight for flow, and keeps a shorter-than-the-clock series rather than rejecting it');
+
 const withCurve = { curve, dose: 18, water: null, timeExact: null, time: null };
 let at = M.shotAt(withCurve, 2);
 assert.equal(at.bar, 9, 'shotAt reads the exact sample at a scrub position on the curve');

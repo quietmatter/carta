@@ -7,6 +7,44 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — Phase 26 patch (v7.28.3): flow, off the scale
+
+- **Shipped — v7.28.3.** Same keeper, same shot, one more round: after
+  v7.28.2 fixed pressure and weight, flow — the "ml/s" line and the scrub
+  readout — was still blank. Reported directly, plainly: "the ml/s is also
+  not reading from the visualizer."
+- **The shot's own `espresso_flow` really is `null`** — this particular
+  machine has no dedicated flow sensor, which turns out to be true of most
+  of them. But the same live response already fetched for the v7.28.2 fix
+  carried a second field nobody had looked at: `espresso_flow_weight`, 1,057
+  samples where the rest of the curve has 1,081. Integrating it against
+  elapsed time by hand reproduces the shot's own final weight almost
+  exactly — 52.1 g computed against 52.2 g logged — which is about as
+  direct a confirmation as this kind of reverse-engineering gets: Visualizer
+  computes flow off the scale itself when there's no flow meter, under a
+  name Carta never thought to try.
+- **Two bugs, compounding.** `shotCurve` never had `espresso_flow_weight` in
+  its list of flow keys at all. And even with the key added, its own length
+  guard (`a.length>=n`) would have thrown the series out anyway — written
+  for a payload shape where a length mismatch meant garbage data, not a
+  reading that simply stops a beat before the rest of the clock does. Fixed
+  both: `espresso_flow_weight` is now a fallback flow key, tried after the
+  sensor-based one; and the length guard is gone, since `platePaths`' own
+  `line()` already maps over whatever series it's handed — a shorter one
+  just draws a shorter line, which is the honest shape of what the file
+  actually states, not a crash or an invented stretch.
+- **Verified against the same real shot, not another stub.** Direct
+  integration by hand first (confirming the field means what it looks like
+  it means before trusting it in the app), then a sandbox run of the
+  updated `shotCurve` against the actual captured API response (flow now
+  present, 1,057 samples, peak 5.47 ml/s), then headless Chromium with that
+  same response stubbed into the fetch: the flow path draws, the scrub
+  readout states a real "ml/s" figure instead of "—", 0 page errors. A new
+  pure case locks in both the fallback key and the shorter-series behavior.
+  96/96 pure tests passing.
+
+---
+
 ## 2026-08-23 — Phase 26 patch (v7.28.2): the curve, actually there — for real
 
 - **Shipped — v7.28.2.** v7.28.1 fixed which call Carta made for a shot's
