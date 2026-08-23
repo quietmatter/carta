@@ -627,12 +627,22 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 @media (prefers-reduced-motion:reduce){
   .plate .pr.draw,.plate .wi.draw{animation:none!important;stroke-dasharray:none!important}
   .plate .fl.ink,.plate .wt.ink{animation:none!important;opacity:1!important}
-  .waiting .mk{animation:none!important}
+  /* the waiting mark keeps breathing, and this is deliberate (v7.31.4).
+     `prefers-reduced-motion` is about MOTION — transforms, parallax, things
+     that travel across the screen and can make a person ill. A 7px square
+     changing opacity in place travels nowhere; a cross-fade is what platforms
+     substitute FOR motion under this setting, not what they remove. Stilling
+     it took away the only signal the Atlas has that something is waiting and
+     will expire, which is a real loss for the keeper most likely to have this
+     setting on. It breathes slower and shallower here — the accommodation,
+     not the removal. Everything that actually moves above stays stilled. */
+  .waiting .mk{animation:ca-breathe-still 3.2s ease-in-out infinite!important}
 }
+@keyframes ca-breathe-still{0%,100%{opacity:1}50%{opacity:.55}}
 
 </style>
 <!-- the sibling scripts carry the version in their URL, and it must be bumped
-     with APP_VERSION (v7.31.3). index.html is the navigation document and is
+     with APP_VERSION (v7.31.4). index.html is the navigation document and is
      revalidated; a plain `<script src>` beside it is an ordinary subresource
      and is served from cache — so a keeper could run a NEW index.html against
      an OLD carta-plate.js, which is exactly what happened at v7.31.1: the
@@ -640,8 +650,8 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.31.3"></script>
-<script src="carta-plate.js?v=7.31.3"></script>
+<script src="carta-map.js?v=7.31.4"></script>
+<script src="carta-plate.js?v=7.31.4"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1429,6 +1439,9 @@ function parseVisualizerShot(d){
      * one, the same way every other field here is: what writes a shot file
      * varies, and a key that isn't there simply reads `unread`. */
     machine:firstStr(d,['machine','espresso_machine','machine_name','device','machine_model']),
+    // when it was actually poured, off the file rather than off the list row's
+    // upload timestamp (v7.31.4)
+    at:shotStartedAt(d),
     // the brewer, and the paper in it: it matters for a filter brew the way a
     // basket does for a shot. Stated or nothing, like everything else here.
     brewer:firstStr(d,['brewer','brewing_device','drink_type']),
@@ -1436,6 +1449,50 @@ function parseVisualizerShot(d){
     profile:str(d.profile_title),
     curve,
     label:[roaster,coffeeName].filter(Boolean).join(' — ')||'Untitled shot'};
+}
+/* when the brew actually happened, as the file itself states it.
+ *
+ * Until v7.31.4 the only date Carta had was `clock` off the *list* row, and
+ * that is the record's own timestamp — for anything uploaded after the fact
+ * (a scale-synced filter brew, a batch import) it is when it reached
+ * Visualizer, not when it was poured. A keeper pulling a brew from Tuesday
+ * saw it dated today, on the shot screen and on the cup written from it.
+ *
+ * So the payload is asked first, and asked for the brew's own start before
+ * anything that looks like a record timestamp. A key that is not there is
+ * skipped; if none of them says anything the list's `clock` still stands, so
+ * this is strictly better than what it replaces and never worse.
+ *
+ * Both shapes are read — an epoch (seconds or milliseconds) and a date string
+ * — and anything outside a plausible window is refused, which is what keeps a
+ * duration or an elapsed-seconds scalar from being mistaken for a date. */
+const SHOT_TIME_KEYS=['start_time','shot_start','started_at','brew_time','date','clock','timestamp'];
+function tsToMs(v){
+  if(v==null||v===''||Array.isArray(v)||typeof v==='object')return null;
+  let ms=null;
+  if(typeof v==='number'||/^\d+(\.\d+)?$/.test(String(v).trim())){
+    const n=Number(v);
+    if(!isFinite(n)||n<=0)return null;
+    // seconds or milliseconds, told apart by magnitude rather than guessed
+    ms=n>1e11?n:n*1000;
+  }else{
+    const t=Date.parse(String(v));
+    if(isNaN(t))return null;
+    ms=t;
+  }
+  // a coffee was not brewed in 1998, nor will it be brewed the week after
+  // next: outside that, this was never a date
+  if(ms<946684800000||ms>Date.now()+1728e5)return null;
+  return ms;
+}
+function shotStartedAt(d){
+  if(!d||typeof d!=='object')return null;
+  const sources=[d,(d.data&&typeof d.data==='object')?d.data:{}];
+  for(let si=0;si<sources.length;si++)for(let ki=0;ki<SHOT_TIME_KEYS.length;ki++){
+    const ms=tsToMs(sources[si][SHOT_TIME_KEYS[ki]]);
+    if(ms)return new Date(ms).toISOString();
+  }
+  return null;
 }
 /* the water, as the machine was told to hold it. Scalar where the file states
  * one, otherwise the goal series' own steady value — read across the shot's
@@ -2248,6 +2305,9 @@ function doorPullFinish(){
   // the method and the pours ride with the brew (SPEC-phase26-pourover.md §6):
   // the curve itself keeps out of the ledger, but which drawing it gets and
   // what it was actually made of are the brew's own record
+  // when the brew actually happened, kept on the brew so the cup written from
+  // it — possibly days later — is dated by the pour rather than by the typing
+  if(shot.at)brew.at=shot.at;
   if(shot.method==='pourover'){
     brew.method='pourover';
     if(shot.pours&&shot.pours.length)brew.pours=shot.pours;
@@ -3555,7 +3615,9 @@ function waitingShot(){
   if(cupOfShot(_vizWaiting.id)||vizDismissed().some(x=>String(x)===String(_vizWaiting.id))){_vizWaiting=null;return null}
   return _vizWaiting;
 }
-const shotWhen=s=>s&&s.clock?new Date(s.clock*1000).toISOString():null;
+// what the file said first; the list row's `clock` — which is an upload
+// timestamp for anything filed after the fact — only where it said nothing
+const shotWhen=s=>!s?null:(s.at||(s.clock?new Date(s.clock*1000).toISOString():null));
 /* the second, full fetch the Shots list already promises ("only the one you
  * pick is read in full") — `?essentials=true` never carries the curve arrays
  * (ROADMAP.md, confirmed by diffing against the live API), so every shot
@@ -3581,7 +3643,7 @@ function fetchShotFull(id){
  * a figure already stated (or corrected at the door) is never reverted by a
  * fetch that lands after it. */
 const SHOT_FILLED=['dose','water','time','timeExact','grind','tempC',
-  'machine','brewer','profile',
+  'machine','brewer','profile','at',
   'roaster','coffeeName','roastDate','roastLevel','grinderModel'];
 /* what the CURVE states — re-derived outright when the curve arrives, never
  * merely filled (v7.31.3).
@@ -3672,7 +3734,7 @@ function vShot(id,view){
     <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
       <button class="omini bare" style="flex:none" onclick="${view&&view.back==='shots'?'openShotsScreen()':'closePage()'}" aria-label="Back">←</button>
       <div style="flex:1;min-width:0">
-        <div class="eyebrow" style="margin-bottom:4px">${esc(['From Visualizer',when?fmtClock(when):''].filter(Boolean).join(' · '))}</div>
+        <div class="eyebrow" style="margin-bottom:4px">${esc(['From Visualizer',whenLine(when)].filter(Boolean).join(' · '))}</div>
         <div class="display" style="font-size:1.375rem;margin:0">${esc(shot.coffeeName||shot.label)}, <em>as it poured</em></div>
       </div>
     </header>
@@ -3706,6 +3768,13 @@ function poursHTML(pours){
     <div style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3);line-height:1.45;margin-top:7px">The gaps are the bed letting go. The last one is the drawdown, and it is the figure this brew will be argued about.</div>`;
 }
 const fmtClock=iso=>iso?new Date(iso).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}):'';
+// the hour on its own is enough for something poured today and misleading for
+// anything older — a brew pulled from Tuesday should say Tuesday
+const whenLine=iso=>{
+  if(!iso)return '';
+  const w=fmtWhen(iso),c=fmtClock(iso);
+  return w==='today'?c:`${w} · ${c}`;
+};
 // "V60 02 · Cafec Abaca" is the ledger's reading, where the paper is half the
 // recipe. A hero and a list row want the brewer on its own.
 const brewerShort=b=>String(b||'').split('·')[0].trim();
@@ -3814,6 +3883,7 @@ function shotOfBrew(brew){
   if(!brew||brew.vizShotId==null)return null;
   const cached=vizShotById(brew.vizShotId);
   return {id:brew.vizShotId,curve:getShotCurve(brew.vizShotId)||(cached&&cached.curve)||null,
+    at:brew.at||(cached&&cached.at)||null,
     method:brew.method||(cached&&cached.method)||'espresso',
     pours:brew.pours||(cached&&cached.pours)||[],
     dose:brew.doseG,water:brew.waterG,time:brew.timeSec,grind:brew.grind,tempC:brew.tempC,
@@ -3823,7 +3893,10 @@ function shotOfBrew(brew){
 function saveTasteHome(brewId,skip){
   if(!skip&&hedState==null){toast("A cup needs its reading — the 1–9 first. Or skip; that's honest too.");return}
   const brew=brewById(brewId);if(!brew)return;
-  const cup={id:uid(),createdAt:new Date().toISOString(),at:new Date().toISOString(),kind:'home',
+  // `createdAt` is when this was written down; `at` is when the cup happened.
+  // For a brew read off an instrument those are different the moment you pull
+  // one from yesterday, and the Journal is ordered by the second of them.
+  const cup={id:uid(),createdAt:new Date().toISOString(),at:brew.at||new Date().toISOString(),kind:'home',
     coffeeRef:brew.coffeeRef,brewRef:brew.id,score:skip?null:hedState,
     line:skip?'':val('th_line'),descriptors:skip?[]:[...descState]};
   if(brew.vizShotId!=null)cup.vizShotId=brew.vizShotId;
@@ -6076,8 +6149,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.31.3';
+const APP_VERSION='7.31.4';
 const CHANGELOG=[
+  {v:'7.31.4',d:"The date a brew was poured, not the date it arrived. A brew filed to Visualizer after the fact — which is most filter brews, since a scale syncs when it can — was being dated by the moment it reached your account rather than the moment you poured it. Carta only ever had the second of those, because it read the date off the list of your brews rather than out of the brew itself. It reads the brew now, and falls back to the old reading only where the file says nothing. A cup written from it is dated by the pour too, so it lands in the journal where it belongs rather than at today; when you wrote it down is kept separately, as it always was. A shot's own screen names the day as well as the hour, since an hour on its own is only ever enough for something poured today. And the mark that says a cup is waiting keeps breathing when you have reduced motion turned on — slower and gentler there, but not stilled: it travels nowhere, and it was the only thing on the Atlas saying something was waiting."},
   {v:'7.31.3',d:"The curve on the front page. A brew waiting on the Atlas was drawing an empty plate — the figures under it right, the line above it missing — while the same brew in the Journal drew perfectly. Carta reads a waiting brew twice: once cheaply, to know it is there, and once in full for its curve. The cheap read carries no curve at all, so it had nothing to say about whether the brew was a shot or a pour-over, and said espresso anyway; when the real curve arrived a moment later, nothing went back to correct that. So a pour-over was drawn as a shot, and a shot's drawing has a pressure line where a pour-over has none. It now leaves the question open until there is something to answer it with, and everything the curve alone knows — the method, the pours, the pre-infusion — is read again when the curve lands rather than only filled in where a blank was left. The mark that says a cup is waiting breathes a little more gently too, the way the design board draws it."},
   {v:'7.31.2',d:"Your brews, back — and the door reads a bag properly at last. The last version quietly broke the Visualizer list: a page could load its newest self alongside an older cached copy of one of its own script files, and every shot then failed to read and was reported as an empty account. It was the wrong thing to say and the wrong thing to happen. The scripts now carry the version in their address so the two can never disagree, Carta says plainly if they ever do, and a brew that genuinely can't be read is counted and named rather than silently dropped. Separately: pasting a bag into the door works the way pasting a bag should. It reads the lines — a bag is printed on more than one, and Carta was only ever looking at the first — so the roaster and the coffee land where they belong, and a line that names a field (\"Country: Colombia\", \"Process: washed\", \"Altitude: 1,900 m\") fills that field instead of ending up inside the coffee's name. A comma no longer splits a roaster off the front of a coffee that never had one."},
   {v:'7.31.1',d:"The staircase, actually recognised. A pour-over read off a scale was being filed as an espresso — the plate drew an arc, the figures argued peak bar, and the water came out blank. Visualizer files every brew in the same shape whatever made it, so a filter brew arrives carrying a pressure line that never rises, and Carta was reading the presence of that line as proof a machine had been involved. It reads what the line says now: no pressure applied, no espresso, however the file is shaped. The water a filter brew took comes back with it. A shot's pre-infusion no longer depends on Visualizer having filled that field in either — the pressure curve has always shown it, holding low while the basket fills and levelling off before the ramp, so Carta reads it there and states how long it ran and what it held. Where a profile ramps straight to full pressure there was no pre-infusion, and it says nothing rather than nothing-shaped-like-zero. The machine a brew was made on is read too, and named: the espresso ledger states it beside the profile it was pulled on, and a filter brew takes it as its brewer. And a brew already written as a cup can no longer be written a second time — the door now says so and opens the cup that exists."},

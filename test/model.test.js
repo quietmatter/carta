@@ -41,7 +41,7 @@ vm.runInContext(pureSrc + `
   ROAST_LEVELS, parseRoastLevel, doorParse, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
   parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder,
   shotCurve, shotFigures, platePaths, shotAt, shotTempGoal,
-  shotPours, shotMethod, shotPhase, mmss, shotPreinfusion };
+  shotPours, shotMethod, shotPhase, mmss, shotPreinfusion, shotStartedAt, tsToMs };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -685,7 +685,7 @@ ok('parseVisualizerShot refuses to guess a field the shot left blank or unparsea
 assert.deepEqual(M.parseVisualizerShot(), { method: '', pours: [], dose: null, water: null,
   time: null, grind: null, roaster: '', coffeeName: '', roastDate: '', roastLevel: '',
   grinderModel: '', timeExact: null, tempC: null, preinfusionSec: null, preinfusionBar: null,
-  machine: '', brewer: '', profile: '', curve: null, label: 'Untitled shot' });
+  machine: '', at: null, brewer: '', profile: '', curve: null, label: 'Untitled shot' });
 ok('parseVisualizerShot never throws on a missing payload');
 
 // ---- the plate (ROADMAP.md Phase 26): platePaths/shotFigures/shotCurve/shotAt ----
@@ -1099,5 +1099,44 @@ assert.equal(M.shotMethod(cheap), 'espresso',
 assert.equal(M.shotMethod({ ...cheap, curve: M.shotCurve(flatPressure) }), 'pourover',
   'and the moment a curve is in hand, the curve is what answers');
 ok('parseVisualizerShot leaves the method blank where no curve states it, so a later full read can correct it');
+
+// ---- v7.31.4: the date. Until now the only timestamp Carta had was `clock`
+// off the LIST row, which is the record's own — for anything filed after the
+// fact (a scale-synced filter brew) that is when it reached Visualizer, not
+// when it was poured. Reported: a brew showing its upload date.
+const DAY = 864e5;
+const threeDaysAgo = new Date(Date.now() - 3 * DAY).toISOString();
+assert.equal(M.shotStartedAt({ start_time: threeDaysAgo }), threeDaysAgo,
+  "the file's own start is preferred over anything that looks like a record timestamp");
+assert.equal(M.shotStartedAt({ start_time: threeDaysAgo, clock: Math.floor(Date.now() / 1000) }), threeDaysAgo,
+  'and it wins even when an upload-shaped clock sits right beside it');
+assert.equal(M.shotStartedAt({ clock: Math.floor((Date.now() - DAY) / 1000) }).slice(0, 10),
+  new Date(Date.now() - DAY).toISOString().slice(0, 10),
+  'where the file states nothing better, clock still stands — this is never worse than what it replaces');
+assert.equal(M.shotStartedAt({ data: { start_time: threeDaysAgo } }), threeDaysAgo,
+  'hunted in both containers, the way every series already is');
+assert.equal(M.shotStartedAt({}), null, 'a file that dates itself nowhere says nothing rather than today');
+assert.equal(M.shotStartedAt(null), null);
+ok('shotStartedAt reads when a brew was poured, not when its record was made');
+
+// what keeps a duration, an elapsed second or a dose from being read as a date
+assert.equal(M.tsToMs(27.4), null, "a shot's own length is not a date");
+assert.equal(M.tsToMs(200), null, 'nor is three minutes twenty');
+assert.equal(M.tsToMs(18.2), null, 'nor is a dose');
+assert.equal(M.tsToMs([1, 2, 3]), null, 'nor is a series');
+assert.equal(M.tsToMs('not a date'), null);
+assert.equal(M.tsToMs(0), null);
+assert.equal(M.tsToMs(Math.floor(Date.now() / 1000) + 90 * DAY / 1000), null,
+  'nor is something three months from now — a coffee is not brewed the week after next');
+const secs = Math.floor((Date.now() - DAY) / 1000);
+assert.equal(M.tsToMs(secs), secs * 1000, 'epoch seconds');
+assert.equal(M.tsToMs(secs * 1000), secs * 1000, 'and epoch milliseconds, told apart by magnitude');
+assert.equal(M.tsToMs(String(secs)), secs * 1000, 'a numeric string reads as the number it is');
+ok('tsToMs refuses everything that is not plausibly a date, which is what stops a duration passing for one');
+
+const dated = M.parseVisualizerShot({ duration: 200, start_time: threeDaysAgo });
+assert.equal(dated.at, threeDaysAgo, 'the shot carries when it was poured');
+assert.equal(M.parseVisualizerShot({ duration: 200 }).at, null);
+ok('parseVisualizerShot carries the pour\'s own date, or none at all');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);

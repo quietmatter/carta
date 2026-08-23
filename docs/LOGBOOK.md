@@ -7,6 +7,48 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.31.4: the date a brew was poured
+
+- **Reported precisely, which made it quick:** "It's pulling the date that I
+  uploaded it not the date it was created." Exactly right. The only timestamp
+  Carta had was `clock` off the *list* row — the record's own — and for
+  anything filed after the fact (most filter brews, since a scale syncs when
+  it can) that is arrival, not pouring. Carta never once looked inside the
+  brew for its own start.
+- **`shotStartedAt` reads the payload**, preferring the pour's start over
+  anything record-shaped, and `shotWhen` falls back to the list row where the
+  file says nothing — so it is strictly better than what it replaced and never
+  worse. I could not verify Visualizer's exact field name without the keeper's
+  account, so it hunts the plausible ones the way every series already does;
+  said plainly rather than presented as certain.
+- **`tsToMs` is the gate**, and it is the part worth keeping: a shot file is
+  full of bare numbers, and `200`, `27.4` and `18.2` are a duration, an
+  elapsed second and a dose. Epoch seconds and milliseconds are told apart by
+  magnitude; anything outside 2000 → now+2 days is refused. Without that a
+  date hunt is a way to read a dose as a Tuesday.
+- **`at` and `createdAt` stopped being the same fact.** Every cup used to be
+  logged as it was drunk, so both were `now` and nothing noticed. Reading a
+  brew off an instrument breaks that — you can pull Tuesday's brew on Friday —
+  so a cup written from a shot takes the brew's own `at`, and the Journal,
+  which orders by `at`, puts it where it belongs. `createdAt` still says when
+  it was typed.
+- **The shot screen names the day**, not just the hour. An hour on its own is
+  only ever enough for something poured today, which is precisely the
+  assumption this whole entry is about.
+- **The waiting mark breathes under reduced motion now, and that is a
+  deliberate reversal.** Reported twice as static; measured, and the cause was
+  the keeper's own `prefers-reduced-motion`. Carta had been stilling it along
+  with everything else. That was wrong: the preference is about **motion** —
+  transforms, parallax, things that travel — and a 7px square changing opacity
+  in place travels nowhere. A cross-fade is what platforms substitute *for*
+  motion under that setting, not what they remove. Stilling it deleted the
+  only signal the Atlas has that something is waiting and will expire, for
+  exactly the keeper most likely to have the setting on. It now breathes
+  slower and shallower there (3.2s to 55%, against 1.6s to 35%) — the
+  accommodation rather than the removal. Everything that actually moves stays
+  stilled.
+- **Tests: 121** (+3), the date hunt and its refusals.
+
 ## 2026-08-23 — v7.31.3: the curve on the front page
 
 - **Reported as a split, and the split was the diagnosis.** "The hero screen
