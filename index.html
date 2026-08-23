@@ -81,11 +81,13 @@ html,body{height:100%}
 html{background:var(--surface-page)}
 body{
   background:var(--surface-card);color:var(--ink);font-family:var(--serif);font-size:16px;line-height:1.5;
-  max-width:480px;margin:0 auto;border:1px solid var(--line-2);height:100vh;height:100dvh;
+  max-width:480px;margin:0 auto;height:100vh;height:100dvh;
   display:flex;flex-direction:column;overflow:hidden;position:relative;
 }
-/* the leaf, ruled twice — the sheet's own edge, and the margin it's written inside */
-body::before{content:"";position:absolute;inset:5px;z-index:35;border:1px solid var(--border-hairline);pointer-events:none}
+/* Phase 26: the leaf was ruled twice — the sheet's own edge and the margin it
+   was written inside. Both are gone. Every screen in the design board is drawn
+   full bleed to the device edge, and a rule that only ever fenced the content
+   in was reading as a frame around the app rather than paper under it. */
 .num{font-family:var(--sans);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 
 /* the app's own header is gone (ROADMAP.md Phase 12): the wordmark now sits on
@@ -137,9 +139,28 @@ strong{font-family:var(--serif);font-weight:600;font-style:normal}
   border-radius:var(--chipr);background:var(--paper);border:1px solid var(--line);color:var(--ink-3);font-variant-numeric:tabular-nums}
 .chip.on{border-color:var(--line-strong);color:var(--ink)}
 
-.btn{display:block;width:100%;text-align:center;min-height:44px;padding:11px 16px;border-radius:var(--radius);
-  font-family:var(--sans);font-size:var(--s13);font-weight:400;letter-spacing:.02em;transition:background .2s ease,color .2s ease,border-color .2s ease}
-.btn.mini{min-height:32px;padding:5px 10px;font-size:var(--s11)}
+.btn{display:block;width:100%;text-align:center;min-height:44px;padding:13px 16px;border-radius:var(--radius);
+  font-family:var(--sans);font-size:var(--s13);font-weight:500;letter-spacing:.08em;text-transform:uppercase;
+  transition:background .2s ease,color .2s ease,border-color .2s ease}
+.btn.mini{min-height:32px;padding:5px 10px;font-size:var(--s11);letter-spacing:.06em}
+/* the box that states a permission (Phase 26, station 02): a real 20px mark in
+   ink rather than the browser's own control, and the row it stands in is drawn
+   on card paper so the choice reads as a thing sitting on the sheet. The
+   native input keeps the checked state and the keyboard; only its drawing is
+   ours, so :checked is what the mark is painted from. */
+.chk{position:relative;display:flex;align-items:flex-start;gap:13px;cursor:pointer;border:1px solid var(--line);
+  background:var(--surface-card);padding:14px 15px}
+.chk input{position:absolute;opacity:0;width:20px;height:20px;margin:0}
+.chk .bx{flex:none;width:20px;height:20px;border:1px solid var(--line-strong);background:none;
+  display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;margin-top:2px;
+  color:transparent;font-family:var(--sans)}
+.chk input:checked+.bx{background:var(--ink);border-color:var(--ink);color:var(--text-on-fill)}
+.chk input:focus-visible+.bx{outline:2px solid var(--accent);outline-offset:2px}
+.chk.bare{border:0;background:none;padding:0;align-items:center;gap:9px;margin-top:14px}
+.chk.bare .bx{margin-top:0}
+.chk .t{min-width:0}
+.chk .t b{display:block;font-family:var(--serif);font-size:16px;font-weight:400;line-height:1.35;color:var(--ink)}
+.chk .t span{display:block;font-family:var(--sans);font-size:12px;color:var(--ink-3);line-height:1.5;margin-top:4px}
 .btn-primary{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent)}
 .btn-primary:active{filter:brightness(.88)}
 .btn-quiet{background:none;border:1px solid var(--line-strong);color:var(--ink)}
@@ -205,10 +226,12 @@ nav.tabs button{flex:1;appearance:none;-webkit-appearance:none;background:none;p
   letter-spacing:var(--track-label);text-transform:uppercase;font-weight:500;min-height:56px;
   border:none;border-top:2px solid transparent;margin-top:-1px}
 nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
-/* the door is the one ember in the bar — a persistent block, not a fourth room */
-nav.tabs button.door{flex:none;width:118px;background:var(--accent);color:var(--accent-ink);
-  border:0;margin-top:0;display:flex;align-items:center;justify-content:center;gap:6px;letter-spacing:.1em}
-nav.tabs button.door:active{filter:brightness(.9)}
+/* the door stands beside the rooms rather than being one — reachable from all
+   three, marked by nothing. It was an ember slab from Phase 12 until Phase 26:
+   the design board draws all four in one rhythm, and the ember is reserved for
+   the live action and the score (SUBBRAND.md), which a permanent door is not. */
+nav.tabs button.door{flex:1;width:auto}
+nav.tabs button.door:active{color:var(--ink)}
 nav.tabs[hidden]{display:none}
 
 /* ===== the settle — plays on a screen change, stilled under reduced motion ===== */
@@ -326,16 +349,33 @@ nav.tabs[hidden]{display:none}
 .citysheet .list{overflow-y:auto;padding:0 20px 18px}
 .noscroll{scrollbar-width:none}
 .noscroll::-webkit-scrollbar{display:none}
-/* the cup's hero — the ground the coffee stands on, given the room a photo
-   used to have (Phase 27) */
+/* Phase 27's ground — the map that replaced the cup's photograph — with no
+   surface standing on it at the moment: the Phase 26 design board draws the
+   cup page with no hero of any kind, so `coffeeGroundHTML` is unmounted rather
+   than deleted. Putting it back is one line in vCup; the founder's call. */
 .hero{position:relative;height:300px;background:var(--surface-sunk);overflow:hidden}
 .hero .slot{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
   text-align:center;padding:0 40px;font-family:var(--serif);font-style:italic;font-size:var(--s15);color:var(--ink-3)}
+/* the cup's own reading (Phase 26, station 07): the score answers the page
+   from the left, and what was said about it answers back across the same rule.
+   The photograph the page used to open on is gone (Phase 27 retired it whole),
+   and the board puts nothing in its place — a cup is its score, its line and
+   the shot underneath. */
+.reading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  border-bottom:1px solid var(--line-strong);padding:18px 0 16px}
+.reading .s{flex:none}
+.reading .s .l{font-family:var(--sans);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:6px}
+.reading .a{flex:1;min-width:0;text-align:right}
+.reading .ln{font-family:var(--serif);font-style:italic;font-size:16px;line-height:1.45;color:var(--ink)}
+.reading .ln.faint{color:var(--ink-3)}
+.reading .ds{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-top:10px}
+
 /* a sheet of paper that starts under the map and slides over its last inch */
 .lift{position:relative;background:var(--surface-card);border-top:1px solid var(--line-strong);margin-top:-18px}
 /* the score, when the score is the subject — the one ember on the screen */
 .bigscore{font-family:var(--sans);font-weight:600;font-variant-numeric:tabular-nums;line-height:1;color:var(--accent)}
 .ofnine{font-family:var(--sans);font-size:var(--s11);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
+.dchip.sm{font-size:11px;padding:2px 8px}
 .dchip{font-family:var(--sans);font-size:12px;letter-spacing:.02em;padding:5px 10px;border:1px solid var(--line);
   color:var(--ink-2);background:var(--surface-page);border-radius:var(--chipr)}
 
@@ -418,7 +458,13 @@ nav.tabs[hidden]{display:none}
    whatever has been tasted, so one country can fill the whole plate — a field
    and a line of type have to stand on paper whatever is drawn behind them */
 .fade.bottom.deep{background:linear-gradient(to top,var(--surface-card) 0%,
-  color-mix(in srgb,var(--surface-card) 96%,transparent) 44%,
+  color-mix(in srgb,var(--surface-card) 96%,transparent) 66%,
+  color-mix(in srgb,var(--surface-card) 0%,transparent) 100%)}
+/* the shot's own fade carries a taller stack than the ask's — the eyebrow, the
+   name, the curve, three figures and the button — so it holds full paper
+   further up rather than letting the ground read through the top of it */
+.fade.bottom.deep.shot{background:linear-gradient(to top,var(--surface-card) 0%,
+  color-mix(in srgb,var(--surface-card) 97%,transparent) 74%,
   color-mix(in srgb,var(--surface-card) 0%,transparent) 100%)}
 /* the field standing on the passport. It sits inside that fade, which is
    pointer-events:none by design — a fade is read through, never tapped — so the
@@ -486,7 +532,7 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 .plate .wt{fill:var(--ink);fill-opacity:.08;stroke:none}
 .plate .lb{font-family:var(--sans);font-size:8px;letter-spacing:.1em;fill:var(--text-disabled)}
 .plate.hair .pr{stroke-width:1.5}
-.plate.thumb .pr{stroke-width:1.2}
+.plate.tiny .pr{stroke-width:1.2}
 .plate.quiet .pr{stroke-opacity:.55}
 /* the pressure path draws itself once, on arrival — never on a scrub, a
    repaint or a mark (the callers hold that; see _plateDrawn) */
@@ -646,6 +692,7 @@ function brewRecipe(b){return `${b.grind??'—'} grind · ${b.doseG??'—'}g →
 function fmtWhen(iso){if(!iso)return '';const d=new Date(iso);const days=Math.floor((Date.now()-d)/864e5);
   if(days<1)return 'today';if(days===1)return 'yesterday';if(days<7)return days+'d ago';
   return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+const fmtWhenLong=iso=>{const w=fmtWhen(iso);return w?w.charAt(0).toUpperCase()+w.slice(1):''};
 // how long ago, at the grain the thing being read actually turns over. A shot
 // waiting on the passport is the one record in Carta that expires, so it is
 // the one that counts in minutes; past a day it falls back to fmtWhen.
@@ -1279,11 +1326,34 @@ function parseVisualizerShot(d){
     // seconds since Phase 24. The plate states the figure at the precision the
     // file gave it, which is a tenth, so the exact reading is kept beside it.
     timeExact:isNaN(time)?null:time,
-    // stated or nothing: neither of these is derived off the curves, and both
-    // read `unread` on the plate's ledger wherever the file stayed silent
-    tempC:num(d.temperature),preinfusionSec:num(d.preinfusion),
+    // stated or nothing: both read `unread` on the plate's ledger wherever the
+    // file stayed silent. The water is what the basket was told to hold —
+    // Visualizer's own "basket temp goal" — read by shotTempGoal below.
+    tempC:shotTempGoal(d),preinfusionSec:num(d.preinfusion),
     curve:shotCurve(d),
     label:[roaster,coffeeName].filter(Boolean).join(' — ')||'Untitled shot'};
+}
+/* the water, as the machine was told to hold it. Scalar where the file states
+ * one, otherwise the goal series' own steady value — read across the shot's
+ * body rather than its tails, since a goal series opens and closes at zero on
+ * some writers. A goal that genuinely moves through the shot is left null. */
+function shotTempGoal(d){
+  if(!d||typeof d!=='object')return null;
+  const sources=[d,(d.data&&typeof d.data==='object')?d.data:{}];
+  const KEYS=['espresso_temperature_goal','temperature_goal','espresso_water_dispensed_temperature',
+    'espresso_temperature_basket','temperature_basket','basket_temperature','temperature'];
+  const ok=v=>isFinite(v)&&v>=50&&v<=110;   // a brew temperature, not a sensor's zero or a Fahrenheit reading
+  for(let si=0;si<sources.length;si++)for(let ki=0;ki<KEYS.length;ki++){
+    const v=sources[si][KEYS[ki]];
+    if(v==null||v==='')continue;
+    if(!Array.isArray(v)){const n=Number(v);if(ok(n))return Math.round(n*10)/10;continue}
+    const body=v.map(Number).filter(ok);
+    if(body.length<3)continue;
+    const lo=body.reduce((a,b)=>b<a?b:a,body[0]),hi=body.reduce((a,b)=>b>a?b:a,body[0]);
+    if(hi-lo>2)continue;                     // a ramping goal states no single figure
+    return Math.round(((lo+hi)/2)*10)/10;
+  }
+  return null;
 }
 /* the curve the shot file actually carries (Phase 26) — pressure and flow and
  * what landed in the cup, against elapsed seconds. Which key each series is
@@ -1877,13 +1947,18 @@ function paintDoor(){
   }
   if(s.step==='pullJoin'){
     const roaster=s._joinKind==='roaster',m=roaster?s._pullRoasterMatch:s._pullCoffeeMatch;
-    openSheet(`<h3>Same ${roaster?'roaster':'coffee'}?</h3>
-    <div class="sub">You've logged <strong>${esc(m.name)}</strong>${roaster?'':' from this roaster'} before. Is this it?</div>
+    // station 05, against the board: the question names what the shot said and
+    // what the shelf already holds, and the shelf's own entry stands under it
+    // with the record it can defend — how many cups, how long ago, whose it is.
+    const said=esc(roaster?(s._pullShot.roaster||''):(s._pullShot.coffeeName||''));
+    openSheet(`<h3>Is this the same ${roaster?'roaster':'coffee'}?</h3>
+    <div class="sub">The shot says <strong style="font-style:normal;font-weight:600;color:var(--ink)">${said}</strong>. Your ${roaster?'record':'shelf'} already has ${roaster?'':'one from '}<strong style="font-style:normal;font-weight:600;color:var(--ink)">${esc(roaster?m.name:(m.roaster||'a roaster you have logged'))}</strong>.</div>
+    ${roaster?'':joinCoffeeCardHTML(m)}
     <div class="btnrow">
       <button class="btn btn-quiet" onclick="doorPullJoin(false)">No, different</button>
       <button class="btn btn-primary" onclick="doorPullJoin(true)">Yes, same</button>
     </div>
-    <div class="note">${roaster?'Carta asks once and never merges two names on its own. Say no and both stand, apart.':'Say no and Carta adds this as its own coffee, apart from the one you already have.'}</div>`);
+    <div class="note">Carta asks once and never merges two names on its own. Say no and both stand, apart.</div>`);
     return;
   }
   if(s.step==='confirm'){
@@ -1998,16 +2073,48 @@ async function doorPullPicked(id){
   s._pullRoasterRef=null;
   doorPullResolveCoffee();
 }
+/* the coffee a shot names, against the shelf. The scope was the resolved
+ * roaster's own coffees and nothing else, which meant two common shots were
+ * never matched at all and minted a second copy of a coffee already on the
+ * shelf: one whose file names no roaster (Visualizer's `bean_brand` is very
+ * often blank, so there was no roaster to scope by), and one whose shelf
+ * coffee was typed by hand and never had its roaster resolved to a node — a
+ * coffee form closed before the roaster field blurred leaves `roasterRef`
+ * null, and a null ref matches nothing. So the roaster's own shelf is still
+ * looked at first, and where it says nothing the whole shelf is asked the
+ * same question. It is still the gentle join: an offer, with the shelf
+ * coffee's own roaster named in it, and never a merge. */
 function doorPullResolveCoffee(){
   const s=doorState,shot=s._pullShot;
-  const roasterCoffees=s._pullRoasterRef?live('coffees').filter(c=>c.roasterRef===s._pullRoasterRef):[];
-  if(shot.coffeeName&&roasterCoffees.length){
-    const m=matchNodes(roasterCoffees,shot.coffeeName);
-    if(m.exact){s._pullCoffeeId=m.exact.id;doorPullFinish();return}
-    if(m.near){s._pullCoffeeMatch=m.near;s._joinKind='coffee';s.step='pullJoin';paintDoor();return}
+  if(shot.coffeeName){
+    const shelf=live('coffees');
+    const scoped=s._pullRoasterRef?shelf.filter(c=>c.roasterRef===s._pullRoasterRef):[];
+    const inScope=pickCoffeeMatch(scoped,shot.coffeeName);
+    const m=inScope||pickCoffeeMatch(shelf,shot.coffeeName);
+    // an exact name under the roaster the shot already named is the one case
+    // that is not a question — the same coffee, said the same way, by the same
+    // roaster. A name matched off the wider shelf is always asked about,
+    // however exactly it reads: two roasters can both sell a Kirinyaga AB.
+    if(m&&m.exact&&inScope){s._pullCoffeeId=m.exact.id;doorPullFinish();return}
+    const near=m&&(m.exact||m.near);
+    if(near){s._pullCoffeeMatch=near;s._joinKind='coffee';s.step='pullJoin';paintDoor();return}
   }
   s._pullCoffeeId=null;
   doorPullFinish();
+}
+const pickCoffeeMatch=(list,name)=>{if(!list.length)return null;const m=matchNodes(list,name);return (m.exact||m.near)?m:null};
+function joinCoffeeCardHTML(c){
+  const cups=live('cups').filter(x=>x.coffeeRef===c.id).sort(byNew);
+  const last=cups[0]&&(cups[0].at||cups[0].createdAt);
+  const under=[c.roaster,(c.origin&&c.origin.process)||'',
+    c.createdAt?'on the shelf since '+new Date(c.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short'}):''].filter(Boolean).join(' · ');
+  return `<div style="border:1px solid var(--line);background:var(--surface-card);padding:14px 15px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+      <div style="font-family:var(--serif);font-size:17px;min-width:0">${esc(c.name||'Untitled')}</div>
+      ${cups.length?`<div class="num" style="font-size:11px;color:var(--ink-3);flex:none">${cups.length} cup${cups.length===1?'':'s'}${last?' · last '+esc(fmtAgo(last)):''}</div>`:''}
+    </div>
+    ${under?`<div style="font-family:var(--sans);font-size:12.5px;color:var(--ink-3);margin-top:5px">${esc(under)}</div>`:''}
+  </div>`;
 }
 function doorPullJoin(yes){
   const s=doorState;
@@ -2607,8 +2714,10 @@ function vJournal(){
  * bag-paste door. */
 function measuredAtHomeHTML(){
   const watching=getPref('vizWatch',false)===true&&!!visualizerEmail();
+  const state=watching?'watching Visualizer':(visualizerEmail()?'a shot, or typed':'typed, until a machine is known');
   return `<div class="shead" style="margin-top:0"><span class="l">Measured at home</span>
-    <span class="r">${watching?'watching Visualizer':(visualizerEmail()?'a shot, or typed':'typed, until a machine is known')}</span></div>
+    ${visualizerEmail()?`<button class="r qlink" style="text-transform:none;letter-spacing:.06em" onclick="openVisualizerKey()">${esc(state)}</button>`
+      :`<span class="r">${esc(state)}</span>`}</div>
     <div class="btnrow" style="margin-top:14px">
       <button class="btn btn-quiet" onclick="openShotsScreen()">Pull a shot</button>
       <button class="btn btn-quiet" style="border-color:var(--line);color:var(--ink-2)" onclick="openHomeDoor()">Type a brew</button>
@@ -2648,7 +2757,7 @@ function continuationHTML(){
  * one screen where the score IS the subject, so it gets the ember and the door
  * steps back to plain ink.
  */
-function vCup(id,view){
+function vCup(id){
   const cup=cupById(id);
   if(!cup)return `<div class="pad" style="padding-top:26px"><div class="empty">That cup isn't on the record.</div>
     <button class="btn btn-quiet" onclick="go('journal')">Back to the journal</button></div>`;
@@ -2656,7 +2765,6 @@ function vCup(id,view){
   const place=cup.kind==='bar'?placeById(cup.placeRef):null;
   const brew=cup.brewRef?brewById(cup.brewRef):null;
   const setup=brew?setupById(brew.setupId):null;
-  const backLabel=view&&view.back?'← '+esc((placeById(view.back.id)||{name:'The café'}).name):'← Back';
   // the provenance block, in the order a cup is actually read back: what it
   // was, where it came from, how it was made, whose hands roasted it, and the
   // room it was drunk in. A line the record is silent on says so.
@@ -2678,26 +2786,31 @@ function vCup(id,view){
       :['Setup',setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):''],
     ['Café',place?place.name:''],
   ].filter(r=>!(r[0]==='Café'&&cup.kind!=='bar'));
+  // station 07, against the board: no photograph, and the score is the page's
+  // own answer rather than a figure in its corner. The reading leads at 58px
+  // in the ember with what it is stated beside it; the line and what it tasted
+  // of answer back across the same rule.
+  const said=(cup.descriptors||[]).length||cup.line;
   return `<div>
-    <div class="hero">
-      ${coffeeGroundHTML(coffee)}
-      <div class="fade top" style="height:88px;z-index:3"></div>
-      <button class="omini overlay" style="left:18px;top:18px" onclick="cupBack()">${backLabel}</button>
-    </div>
-    <div class="lift pad" style="margin-top:-16px;padding-top:20px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
-        <div style="min-width:0">
-          <div class="eyebrow" style="margin-bottom:6px">${cup.kind==='bar'?'A cup, out':'A cup, at home'}</div>
-          <div class="display" style="margin:0">${esc(cup.kind==='bar'?(place?place.name:'A café'):coffeeLabel(coffee))}</div>
-          <div class="m" style="margin-top:6px">${esc([fmtDateLong(cup.at),place&&place.neighborhood?place.neighborhood:''].filter(Boolean).join(' · '))}</div>
+    <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
+      <button class="omini bare" style="flex:none" onclick="cupBack()" aria-label="Back">←</button>
+      <div style="flex:1;min-width:0">
+        <div class="eyebrow" style="margin-bottom:4px">${esc([fmtWhenLong(cup.at),fmtClock(cup.at),cup.kind==='bar'?'at the bar':'at home'].filter(Boolean).join(' · '))}</div>
+        <div class="display" style="font-size:1.375rem;margin:0">${esc(cup.kind==='bar'?(place?place.name:'A café'):((coffee&&coffee.name)||coffeeLabel(coffee)||'A cup'))}</div>
+      </div>
+    </header>
+    <div class="pad" style="padding-top:0">
+      <div class="reading">
+        <div class="s">
+          <div class="bigscore" style="font-size:58px;line-height:.9;letter-spacing:-.04em">${cup.score==null?'—':cup.score}</div>
+          <div class="l">${cup.score==null?'Unscored':'Your reading'}</div>
         </div>
-        <div style="flex:none;text-align:right">
-          <div class="bigscore" style="font-size:44px">${cup.score==null?'—':cup.score}</div>
-          <div class="ofnine">of nine</div>
+        <div class="a">
+          ${cup.line?`<div class="ln">${esc(cup.line)}</div>`:''}
+          ${(cup.descriptors||[]).length?`<div class="ds">${cup.descriptors.map(d=>`<span class="dchip sm">${esc(d)}</span>`).join('')}</div>`:''}
+          ${said?'':`<div class="ln faint">${cup.kind==='bar'&&place&&place.neighborhood?esc(place.neighborhood):'Nothing said about it.'}</div>`}
         </div>
       </div>
-      ${cup.line?`<div style="border-top:1px solid var(--line);margin-top:20px;padding-top:16px;font-family:var(--serif);font-style:italic;font-size:19px;line-height:1.5;color:var(--ink);max-width:34ch">${esc(cup.line)}</div>`:''}
-      ${(cup.descriptors||[]).length?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:16px">${cup.descriptors.map(d=>`<span class="dchip">${esc(d)}</span>`).join('')}</div>`:''}
       ${cupPlateHTML(cup,brew)}
       <div style="margin-top:26px">${ledgerHTML(ledger)}</div>
       ${brew&&brew.vizShotId!=null?`<div style="text-align:center;margin-top:20px"><button class="qlink" onclick="openBrewFlow('${coffee?coffee.id:''}')">Brew it again from these numbers →</button></div>`:''}
@@ -2958,8 +3071,9 @@ function vRecord(){
       <div class="shead"><span class="l">Keeping it</span><span class="r">${esc(exportedLine().toLowerCase().replace(/\.$/,''))}</span></div>
       <div class="lede" style="margin-top:12px">One device, no account, no sync. Nothing else has a copy of this — a backup is a file you hold, not a promise someone made you.</div>
       <button class="btn" style="min-height:48px;background:var(--fill-strong);color:var(--text-on-fill);border:1px solid var(--fill-strong)" onclick="exportLedgerJSON()">Back up my record</button>
-      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;margin-top:14px">
+      <label class="chk bare">
         <input type="checkbox" ${getPref('autoExport',false)?'checked':''} onchange="setPref('autoExport',this.checked)">
+        <span class="bx" aria-hidden="true">&#10003;</span>
         <span class="muted" style="margin:0">Quietly back up every two weeks</span>
       </label>
       ${storageUsedBytes()>STORAGE_SOFT_LIMIT?lowStorageNoteHTML():''}
@@ -2990,6 +3104,10 @@ function vRecord(){
       <button class="lrow" style="min-height:58px" onclick="openSetupsDoor()">
         <span class="mid"><span class="t" style="font-size:17px">Your Setups</span>
         <span class="m">${esc(setups.length?`${words(setups.length)}${lead?` · ${lead.s.name||'one'} leads at ${trimNum(lead.a)}`:''}`:'none named yet')}</span></span>
+        <span class="go">→</span></button>
+      <button class="lrow" style="min-height:58px" onclick="openVisualizerKey()">
+        <span class="mid"><span class="t" style="font-size:17px">Visualizer</span>
+        <span class="m">${esc(visualizerEmail()?`${visualizerEmail()} · ${getPref('vizWatch',false)===true?'watching for a new shot':'read when you ask for it'}`:'no account on this device')}</span></span>
         <span class="go">→</span></button>
 
       <div class="box" style="margin-top:28px">
@@ -3186,19 +3304,16 @@ function openVisualizerKey(){
   <div class="sub">Kept on this device only, sent to nobody but visualizer.coffee, and only when a shot is read. This is your real account login, not a separate key; Visualizer's own docs recommend against that for an app like Carta, and the tradeoff is yours to take.</div>
   <label class="f"><span class="l">Email</span><input type="text" id="viz_email" value="${esc(visualizerEmail())}" placeholder="you@example.com"></label>
   <label class="f"><span class="l">Password</span><input type="password" id="viz_password" value="${esc(visualizerPassword())}"></label>
-  <label style="display:flex;align-items:flex-start;gap:13px;cursor:pointer;border:1px solid var(--line);background:var(--surface-page);padding:14px 15px">
-    <input type="checkbox" id="viz_watch" style="flex:none;width:auto;margin-top:4px" ${getPref('vizWatch',false)===true?'checked':''}>
-    <span style="min-width:0">
-      <span style="display:block;font-family:var(--serif);font-size:16px;line-height:1.35">Look for a new shot when Carta opens</span>
-      <span style="display:block;font-family:var(--sans);font-size:12px;color:var(--ink-3);line-height:1.5;margin-top:4px">One call for your latest shot, on opening. Off, and the Atlas waits for you to ask for it.</span>
-    </span>
+  <label class="chk">
+    <input type="checkbox" id="viz_watch" ${getPref('vizWatch',false)===true?'checked':''}>
+    <span class="bx" aria-hidden="true">&#10003;</span>
+    <span class="t"><b>Look for a new shot when Carta opens</b>
+      <span>One call for your latest shot, on opening. Off, and the Atlas waits for you to ask for it.</span></span>
   </label>
   <div class="note">Unreachable, Visualizer costs you nothing: the door still opens on typing, and the shot can be pulled later — a shot file keeps.</div>
-  <div class="btnrow" style="margin-top:14px">
-    ${visualizerEmail()?`<button class="btn btn-quiet" onclick="clearVisualizerKey()">Remove</button>`:''}
-    <button class="btn btn-primary" onclick="saveVisualizerKey()">Save</button>
-  </div>
-  <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
+  <button class="btn btn-primary" style="margin-top:14px" onclick="saveVisualizerKey()">Save</button>
+  ${visualizerEmail()?`<button class="btn btn-quiet" onclick="clearVisualizerKey()">Sign out of Visualizer</button>`:''}
+  <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="closeSheet()">Not now</button></div>`);
 }
 function saveVisualizerKey(){
   const w=document.getElementById('viz_watch');
@@ -3206,7 +3321,11 @@ function saveVisualizerKey(){
   setPref('vizWatch',!!(w&&w.checked));
   closeSheet();render();toast('Saved — on this device only.');
 }
-function clearVisualizerKey(){setPref('visualizerEmail','');setPref('visualizerPassword','');openVisualizerKey();}
+function clearVisualizerKey(){
+  setPref('visualizerEmail','');setPref('visualizerPassword','');setPref('vizWatch',false);
+  _vizWaiting=null;_shots={busy:false,rows:null,error:null};
+  closeSheet();render();toast('Signed out. The account is off this device.');
+}
 const VISUALIZER_BASE='https://visualizer.coffee/api/shots';
 async function callVisualizer(path){
   const auth=visualizerAuthHeader();if(!auth)throw new Error('Set your Visualizer account first.');
@@ -3220,7 +3339,7 @@ function applyVisualizerShot(shot){['dose','water','time','grind'].forEach(k=>{i
 async function fetchVisualizerShots(n){
   const list=(await callVisualizer(`?page=1&items=${n}`)).data||[];
   return (await Promise.all(list.map(async s=>{
-    try{return {...parseVisualizerShot(await callVisualizer(`/${s.id}/download?essentials=true`)),clock:s.clock,id:s.id}}
+    try{return {...parseVisualizerShot(await callVisualizer(`/${s.id}/download`)),clock:s.clock,id:s.id}}
     catch(e){return null}
   }))).filter(Boolean);
 }
@@ -3260,8 +3379,10 @@ function vizShotPicked(id){
  * is one tap from the Journal, and the shot screen is reachable from it. */
 // a shot is not a record: it is read, written into a cup, and let go of. The
 // cache is this session's, keyed by the shot's own Visualizer id.
-let _vizCache={},_vizWaiting=null,_vizChecked=false;
+let _vizCache={},_vizWaiting=null,_vizChecked=false,_vizCheckedAt=0;
 function cacheShot(s){if(s&&s.id!=null)_vizCache[String(s.id)]=s;return s}
+// the curve is what ensureShotCurve is guarding on, so a shot that arrived
+// with one never asks for it twice — nothing more is needed to hold that.
 function vizShotById(id){return _vizCache[String(id)]||null}
 const vizDismissed=()=>getPref('vizDismissed',[])||[];
 // the cup a shot was already written into — the one thing that keeps a shot
@@ -3274,7 +3395,7 @@ function cupOfShot(id){return id==null?null:live('cups').find(c=>c.vizShotId!=nu
  * against a render() ever firing it again. Unreachable, the Atlas paints its
  * ordinary hero and says nothing at all. */
 async function vizCheckOnOpen(){
-  if(_vizChecked)return;_vizChecked=true;
+  if(_vizChecked)return;_vizChecked=true;_vizCheckedAt=Date.now();
   if(getPref('vizWatch',false)!==true||!visualizerAuthHeader())return;
   try{
     const head=((await callVisualizer('?page=1&items=1')).data||[])[0];
@@ -3284,9 +3405,23 @@ async function vizCheckOnOpen(){
     const shot=cacheShot(Object.assign(parseVisualizerShot(await callVisualizer(`/${head.id}/download?essentials=true`)),
       {clock:head.clock,id:head.id}));
     _vizWaiting=shot;
-    if(!pageView&&tab==='atlas')render();
+    // the hero is the Atlas's, so a shot that lands while a screen is open or
+    // another room is showing simply waits there: render() only needs to run
+    // where the branch it feeds is actually on the screen.
+    const paint=()=>{if(!pageView&&tab==='atlas'&&waitingShot())render()};
+    paint();
+    ensureShotCurve(shot).then(paint);
   }catch(e){/* degrades to nothing, by design — the hero simply doesn't change */}
 }
+const VIZ_RESUME_GAP=90e3;
+function vizCheckOnResume(){
+  if(document.visibilityState!=='visible')return;
+  if(Date.now()-_vizCheckedAt<VIZ_RESUME_GAP)return;
+  if(_vizWaiting)return;              // a cup is already waiting; asking again would only replace it
+  _vizChecked=false;vizCheckOnOpen();
+}
+document.addEventListener('visibilitychange',vizCheckOnResume);
+window.addEventListener('pageshow',vizCheckOnResume);
 // when a cup is poured for someone else, or the machine was run to flush it.
 // Honest and permanent: the id is kept so the hero never offers it again.
 function dismissShot(id){
@@ -3316,12 +3451,26 @@ const shotWhen=s=>s&&s.clock?new Date(s.clock*1000).toISOString():null;
 let _vizFullFetches={};
 function fetchShotFull(id){
   const key=String(id);
-  return _vizFullFetches[key]||(_vizFullFetches[key]=callVisualizer(`/${key}/download`).then(shotCurve).catch(()=>null));
+  return _vizFullFetches[key]||(_vizFullFetches[key]=callVisualizer(`/${key}/download`)
+    .then(parseVisualizerShot).catch(()=>null));
 }
+/* the full file is fetched for its curve, but it is also the only call that
+ * carries the shot's own settings: `?essentials=true` states neither the
+ * grinder setting nor the temperature goal, so a plate's ledger read `unread`
+ * for the grind and the water on every shot no matter what Visualizer's own
+ * page showed. The full read fills in only what the cheap one left null —
+ * never overwriting a figure already stated, which is what keeps a shot
+ * corrected at the door from being quietly reverted by a later fetch. */
+const SHOT_FILLED=['dose','water','time','timeExact','grind','tempC','preinfusionSec',
+  'roaster','coffeeName','roastDate','roastLevel','grinderModel'];
 function ensureShotCurve(shot){
   if(!shot||shot.id==null||shot.curve)return Promise.resolve(shot);
-  return fetchShotFull(shot.id).then(c=>{
-    if(c)shot.curve=c;
+  return fetchShotFull(shot.id).then(full=>{
+    if(full){
+      if(full.curve)shot.curve=full.curve;
+      SHOT_FILLED.forEach(k=>{if((shot[k]==null||shot[k]==='')&&full[k]!=null&&full[k]!=='')shot[k]=full[k]});
+      if(shot.label==='Untitled shot'&&full.label!=='Untitled shot')shot.label=full.label;
+    }
     if(pageView&&pageView.kind==='shot'&&String(pageView.id)===String(shot.id))render();
     return shot;
   });
@@ -3589,7 +3738,7 @@ function shotRowHTML(shot){
   const meta=[when?fmtAgo(when):'',shot.label==='Untitled shot'?'no coffee named':'',
     fg.ratio==null?null:'1:'+fig1(fg.ratio),fg.total==null?null:fig1(fg.total)+'s',
     fg.peak==null?null:fig1(fg.peak)+' bar'].filter(Boolean).join(' · ');
-  const curve=shot.curve?plateSVG(shot,PLATE_THUMB,{cls:'thumb'+(cup?' quiet':''),style:'width:44px;height:22px;flex:none'})
+  const curve=shot.curve?plateSVG(shot,PLATE_THUMB,{cls:'tiny'+(cup?' quiet':''),style:'width:44px;height:22px;flex:none'})
     :'<span style="flex:none;width:44px"></span>';
   return `<button class="lrow" onclick="openShotScreen(${jsq(String(shot.id))},{back:'shots'})">
     ${curve}
@@ -5129,7 +5278,7 @@ function homeShotHeroHTML(shot){
   const fg=shotFigures(shot),when=shotWhen(shot);
   const sub=[shot.roaster,shot.roastLevel?shot.roastLevel.toLowerCase():'',
     shot.grinderModel?'on the '+shot.grinderModel:''].filter(Boolean).join(' · ');
-  return `<div class="fade bottom deep" style="height:396px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 20px">
+  return `<div class="fade bottom deep shot" style="height:470px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 20px">
     <div class="waiting"><span class="mk"></span><span class="l">${esc(when?'Poured '+fmtAgo(when):'A shot, waiting')}</span></div>
     <div class="display big" style="margin:0 0 3px">${esc(shot.coffeeName||shot.label)}</div>
     ${sub?`<div style="font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-3);margin-bottom:12px">${esc(sub)}</div>`:''}
@@ -5773,8 +5922,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.29.0';
+const APP_VERSION='7.30.0';
 const CHANGELOG=[
+  {v:'7.30.0',d:"Off the frame, and onto the paper. Carta drew itself inside two ruled borders — an edge around the whole app and a margin just inside it — and every screen now runs to the edge of the glass instead, the way the design board always had them. Every button in the app speaks one size: the larger, lettered shape the board draws, on a permission box that is now a real mark in ink rather than the browser's own control. Four things the shot flow only half did: a shot pulled while Carta was already open in the background is looked for again when you come back to it, not only when the app is loaded cold; the grind and the water temperature your machine recorded now read on a shot's own ledger instead of unread, because they were on a part of the file Carta wasn't opening; a shot naming a coffee you typed in yourself now asks whether it's the same one instead of quietly writing a second copy of it onto the shelf; and every row in Your recent shots carries its own curve again, bare, the way a shot is meant to be recognised. Your Visualizer account has a door of its own now — on the record and in the journal — so signing out or turning the watch off no longer needs an account you haven't set yet. A cup's page drops the last of the photograph frame: its reading leads, in the ember, with what you said about it answering back across the rule and the shot that earned it drawn underneath."},
   {v:'7.29.0',d:"Photos, retired — the ground instead. A cup's photo was the fastest way to a full local ledger, and one keeper's coffee found it: storage nearly spent, a save refused. Photos are gone now — the separate store, the upload slots, all of it — and a stale one already on this device is reclaimed the moment this loads. Wherever a photo used to stand — a cup in the Journal, its own page, a coffee's card — the ground the coffee stands on stands there instead: real terrain over a placed farm, the country's own washed shape where only that much is named, and an honest empty line where the bag says nothing at all."},
   {v:'7.28.3',d:"Flow, on machines with no flow sensor of their own. Pressure and what landed in the cup were drawing right; the ml/s line and readout stayed blank on any shot whose machine has no dedicated flow meter — which is most of them. Visualizer computes flow off the scale itself for exactly that case, under a different name, and Carta wasn't reading it. It does now, and a flow reading that runs a beat shorter than the rest of the plate draws its own true length rather than being thrown out for the mismatch."},
   {v:'7.28.2',d:"The curve, actually there — for real this time. The last fix made Carta ask for the right file; it turned out to still be reading the wrong place inside it. Visualizer states a shot's elapsed seconds at the top of that file and pressure, flow and weight underneath a different heading, and Carta was only ever looking in one place at a time. It now reads both, so a shot's plate draws its true shape at last."},

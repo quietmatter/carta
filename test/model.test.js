@@ -32,7 +32,7 @@ vm.runInContext(pureSrc + `
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
   parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder,
-  shotCurve, shotFigures, platePaths, shotAt };
+  shotCurve, shotFigures, platePaths, shotAt, shotTempGoal };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -813,5 +813,32 @@ assert.equal(M.namesBack({ name: '' }, 'Konga'), false, 'a hit with no name conf
 assert.equal(M.namesBack(null, 'Konga'), false, 'never throws on a missing hit');
 assert.equal(M.namesBack({ name: 'Konga' }, ''), false);
 ok('namesBack refuses a lookup that answered with the region instead of the farm — Carta never pins a hallucination');
+
+// ---- shotTempGoal (Phase 26 patch): the water, as the machine was told to
+// hold it. Visualizer's own page states a "basket temp goal"; the file states
+// it as a series beside pressure rather than as a scalar, which is why the
+// plate's ledger read `unread` for the water on every shot ever opened. A goal
+// is a stated setting, so reading it is not the inference the honesty gate
+// forbids — but a goal that genuinely moves through the shot states no single
+// figure, and that case still reads `unread`.
+assert.equal(M.shotTempGoal({ espresso_temperature_goal: 92.5 }), 92.5, 'a scalar goal is taken as stated');
+assert.equal(M.shotTempGoal({ data: { espresso_temperature_goal: [0, 92.5, 92.5, 92.4, 92.6, 0] } }), 92.5,
+  "a flat goal series under `data` — the shape Visualizer's own file uses — states one figure");
+assert.equal(M.shotTempGoal({ espresso_temperature_basket: [93.1, 93.0, 93.2, 93.1] }), 93.1,
+  'the measured basket, where the goal itself was never written');
+assert.equal(M.shotTempGoal({ data: { espresso_temperature_goal: [80, 84, 88, 92, 94] } }), null,
+  'a goal that ramps through the shot names no single temperature — unread, not an average');
+assert.equal(M.shotTempGoal({ espresso_temperature_goal: [92.5, 92.5] }), null,
+  'two samples is not a series to read a setting off');
+assert.equal(M.shotTempGoal({ espresso_temperature_goal: 0 }), null, "a sensor's zero is not a brew temperature");
+assert.equal(M.shotTempGoal({ espresso_temperature_goal: 198 }), null, 'a Fahrenheit reading is refused rather than stored as °C');
+assert.equal(M.shotTempGoal({}), null);
+assert.equal(M.shotTempGoal(null), null, 'never throws on a payload that isn\'t one');
+ok('shotTempGoal reads the basket temp goal Visualizer states, and refuses every reading that would be a guess');
+
+assert.equal(M.parseVisualizerShot({ duration: 20, data: { espresso_temperature_goal: [92, 92, 92, 92] } }).tempC, 92,
+  'the shot carries the goal through as its own tempC');
+assert.equal(M.parseVisualizerShot({ duration: 20 }).tempC, null, 'a file silent on temperature still reads unread');
+ok('parseVisualizerShot carries the stated water temperature onto the shot, or leaves it unread');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);

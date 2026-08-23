@@ -184,6 +184,18 @@ Carta 7 is built exactly the way classic was, smaller:
   amendment — the same rule Phase 18 wrote still stands — and it is a
   larger open debt than any phase has carried since Phase 19 closed the
   first one, named here rather than minimized.
+
+  **The v7.30.0 QC pass against the Phase 26 design board took it to
+  5,983 / 5,000 (400 KB of 500).** It is a patch, not a phase, and it did
+  not go looking for room: the ~180 lines are the `.chk` control, the
+  `.reading` block on the cup page, the widened coffee match with its
+  join card, the resume check, and `shotTempGoal`. **The debt is now the
+  single largest the project has carried**, and the plate is still the
+  named candidate to move (`platePaths`, `shotFigures`, `shotCurve`,
+  `shotAt`, plus `plateSVG`/`figsHTML` — pure geometry, no `D`, no DOM,
+  ~135 lines). Nothing in this patch made that move harder; it is still
+  one phase's work against `carta-map.js`, and it is still the founder's
+  call when to spend it.
   **The three Phase 26 flow-curve patches (v7.28.1–.3) and Phase 27
   (photos retired) were not individually tallied here** — a gap in this
   section's own upkeep, not a claim the debt closed. Phase 27's own edit
@@ -464,6 +476,11 @@ with the function names; this is the shape:
 tokens/style     the QM-inherited layer + Carta overrides (ported)
                  + "the rooms" — the redesign's own furniture (.shdr,
                    .shead, .lrow, the three-room bar and the door)
+                 + v7.30.0's control standard, taken off the Phase 26
+                   design board and applied app-wide: .btn is 13px/500
+                   uppercase on .08em tracking at 13px of padding (the
+                   shape .timer .ctl already used), .chk is the drawn
+                   permission box, and .reading is the cup's own score row
 map layer        <carta-belt> · <carta-plot> · <carta-streets>, three light-DOM
                  custom elements above the app's own script, with d3-array +
                  d3-geo vendored beside them (§1). Leaflet injected at runtime.
@@ -507,6 +524,22 @@ own passport off it and onto `<carta-belt>`; `passportSVG()` stays, because a
 the app's script. Two drawings of one frame is deliberate: the interactive
 one and the one that travels.
 
+**Three drawings came off at v7.30.0, all against the same design board.**
+The app had ruled itself twice — `body`'s own `1px` edge and a
+`body::before` inset at 5px, "the leaf, ruled twice" from Phase 12 — and
+neither appears on any of the board's nine stations, which are drawn full
+bleed to the device edge. Both are gone; a rule that only ever fenced the
+content in was reading as a frame around the app rather than paper under it.
+The third is the **ember on the bar's door**: `＋ A cup` had been an
+118px-wide `--accent` slab since Phase 12, and the board draws all four
+items of the bar in one rhythm with the room you are standing in marked by a
+rule and nothing else. `SUBBRAND.md` reserves the ember for the live action
+and the score, and a door that is always there is neither — so it is now an
+equal-flex quiet tab like the rooms beside it. **This is the one change in
+the pass that was not a stated gap**: it follows from "use this mockup as
+the truth" rather than from a named defect, and is recorded here so it can
+be argued with rather than discovered.
+
 ## 7. Network posture (the whole of it)
 
 | Touch | When | Degrades to |
@@ -517,8 +550,36 @@ one and the one that travels.
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 | **Search for more** (BYO-key, same `api.anthropic.com` row, Anthropic's server-side web-search tool) | the keeper taps "Search for more" on one coffee (Phase 22) | the field stays blank, typed in by hand |
 | **Pull from Visualizer** (BYO Basic Auth, `visualizer.coffee/api/shots`) | the keeper taps "Pull from Visualizer" on one brew (Phase 24), or "Pull it from Visualizer" at the door (Phase 25) | the dials, or the door's paste/type step, stay exactly as manual as they always were |
-| **Visualizer, on opening** (Phase 26) | one `GET /api/shots?page=1&items=1`, then one `/download?essentials=true` for that shot — once per app open, and only if `prefs.vizWatch === true` and an account is already set | the Atlas paints its ordinary hero and says nothing |
+| **Visualizer, on opening** (Phase 26; amended v7.30.0) | one `GET /api/shots?page=1&items=1`, then one `/download?essentials=true` for that shot, then — since v7.30.0 — one `/download` for it in full, because the hero states figures that only the curve carries. Once per app **open**, and only if `prefs.vizWatch === true` and an account is already set | the Atlas paints its ordinary hero and says nothing |
 | **Visualizer, a shot read in full** (Phase 26 patch, v7.28.1) | one more `/download` (no `essentials`) for the one shot actually opened — station 04's own screen, or the one row picked at the door — and cached per shot id so the same shot is never fetched twice in a sitting | the shot's own figures still stand; the plate states "This shot came without its curve" |
+
+**What "once per app open" means, amended at v7.30.0.** It had meant *once
+per script run*, which is a different thing on the surface Carta actually
+lives on: an installed PWA is resumed from the background far more often
+than it is loaded cold, so a shot pulled between two visits was never looked
+for at all — `_vizChecked` had been true since the first paint of the
+install. A resume after `VIZ_RESUME_GAP` (90 s) away now counts as an open
+and re-arms the check, guarded three ways: the gap itself, `_vizWaiting`
+(a cup already waiting is never replaced), and `vizWatch` as before. It is
+still one call per open and still **never a poll** — the gap is what holds
+that, and nothing fires while the app is in the foreground.
+
+**The shots list reads the whole file, amended at v7.30.0.**
+`fetchVisualizerShots(n)` had asked for `?essentials=true` per shot, which
+is the same summary the v7.28.1 patch already found carries no curve — so
+every row in station 08 drew nothing, and the screen's own argument ("a shot
+is recognisable by its shape before its label is read") was unmet. It asks
+for the full file instead. **The call count is unchanged** — one per listed
+shot either way — and the payload trade buys back a later fetch, since a
+shot opened from that list, or picked at the door, arrives with its curve
+already in hand and `ensureShotCurve` short-circuits. The same amendment is
+what puts the grind and the water on a shot's ledger at all: neither
+`grinder_setting` nor the temperature goal is in the `essentials` summary,
+so both read `unread` on every shot until v7.30.0 regardless of what
+Visualizer's own page showed. `ensureShotCurve` now fills any field the
+cheap call left null from the full one, and **never overwrites a stated
+figure** — which is what keeps a shot corrected at the door from being
+quietly reverted by a fetch that lands after it.
 
 **The Visualizer row's auth is the keeper's real account login, not a
 scoped key — named plainly rather than softened, and worth recording why.**

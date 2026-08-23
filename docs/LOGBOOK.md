@@ -7,6 +7,82 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.30.0: the design board, QC'd
+
+- **A gap pass, not a phase.** The founder walked the Phase 26 design board
+  (`Coffee at home — the shot comes to you.dc.html`, nine stations) against
+  what PRs #118–#121 actually shipped and named eight gaps, station by
+  station. This is the pass that closes them. **The board is the truth** was
+  the standing instruction, and where the board and the file disagreed the
+  board won.
+- **Four were real defects, and three of the four were invisible from the
+  code alone** — each needed the live shape of Visualizer's own file, or the
+  live shape of an installed PWA, to see:
+  - **The watch never re-fired (station 03).** "Once per app open" had been
+    implemented as *once per script run*. An installed PWA resumes from the
+    background far more often than it loads cold, so a shot pulled between
+    two visits was never looked for — `_vizChecked` had been true since the
+    install's first paint. A resume after 90 s away now counts as an open.
+    Still one call per open, still never a poll; the gap is what holds that.
+  - **Grind and water read `unread` on every shot ever opened (station
+    04).** Both are absent from `?essentials=true`, and `fetchShotFull` —
+    added by the v7.28.1 patch — was throwing away everything but the curve
+    (`.then(shotCurve)`). It parses the whole file now and fills only what
+    the cheap call left null, never overwriting a stated figure. The water
+    also needed `shotTempGoal`: what Visualizer's page calls "basket temp
+    goal" is a *series*, not the scalar `d.temperature` the parser was
+    reading, and there is no such key. A flat goal is a stated setting, so
+    taking it is not the inference the honesty gate forbids — a goal that
+    ramps still reads `unread`.
+  - **The gentle join never fired for a hand-typed coffee (station 05).**
+    `doorPullResolveCoffee` scoped its search to the resolved roaster's own
+    coffees, so two ordinary cases minted a duplicate silently: a shot whose
+    file names no roaster (`bean_brand` is very often blank), and a shelf
+    coffee typed by hand whose `roasterRef` was never resolved. It falls
+    back to the whole shelf now — **and asks every time it matches outside
+    the roaster's own scope, however exact the name**, because two roasters
+    can both sell a Kirinyaga AB. The offer-never-merge law is what that
+    second half is protecting.
+  - **Station 08's rows drew no curve.** Same `essentials` discovery again:
+    the list already spent one call per shot, so it asks for the whole file
+    instead. Call count unchanged; it also buys back the later per-shot
+    fetch. The *bounding box* the founder saw was a plain CSS collision —
+    `class="plate thumb"` was inheriting `.thumb`'s photo-thumbnail border.
+- **The design-system half.** `.btn` now speaks the board's one size
+  (13px/500 uppercase, .08em, 13px padding — the shape `.timer .ctl` already
+  used); `.chk` is a drawn permission box rather than the browser's control,
+  on the pale card inset the board specifies; the cup page takes the board's
+  header and its `.reading` score row. Both of the app's ruled borders came
+  off — `body`'s edge and the `body::before` inset, "the leaf, ruled twice"
+  from Phase 12 — since no station on the board is drawn inside a frame.
+- **Two calls worth arguing with, both recorded rather than slipped in:**
+  - **The ember came off the bar's door.** `＋ A cup` had been an accent slab
+    since Phase 12; the board draws all four bar items in one rhythm.
+    `SUBBRAND.md` reserves the ember for the live action and the score, and
+    a permanent door is neither. This was **not** one of the eight stated
+    gaps — it follows from "the board is the truth," which is a weaker
+    warrant, so it is named in `ARCHITECTURE.md` §6 to be argued with.
+  - **Phase 27's ground lost the cup page.** #122 merged mid-pass and put
+    `coffeeGroundHTML` where the photo had been; the board's station 07 has
+    no hero of any kind. The board won, but `coffeeGroundHTML` and
+    `.hero`/`.slot` are left **unmounted rather than deleted** — putting the
+    ground back is one line in `vCup`. It still draws on the coffee card and
+    the list rows, which the board says nothing about and this pass did not
+    touch.
+- **Line band: 5,983 / 5,000 (400 KB of 500).** ~180 lines added to a debt
+  that was already 800 over, making it the largest the project has carried.
+  Named, not minimized (`ARCHITECTURE.md` §1). The plate is still the
+  candidate to move into `carta-map.js` (~135 lines, pure geometry) and
+  nothing here made that harder.
+- **Tests: 98 passing**, +2 for `shotTempGoal` and its round trip through
+  `parseVisualizerShot`. Verified in headless Chromium against a stubbed
+  Visualizer, in paper and dusk, across stations 01–09; the resume gate and
+  the duplicate-coffee case both have their own scripted checks.
+- **For the founder's desk, not built:** the `.sub` on station 02 is longer
+  than the board's, because the extra sentence is the disclosure that this
+  is a real account password rather than a scoped key. Trimming it to match
+  the board would cost a network-posture statement, so it was left.
+
 ## 2026-08-23 — Phase 27 (v7.29.0): photos retired, the ground instead
 
 - **Shipped — v7.29.0.** Reported directly: a coffee couldn't save, storage
