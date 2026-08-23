@@ -524,21 +524,23 @@ own passport off it and onto `<carta-belt>`; `passportSVG()` stays, because a
 the app's script. Two drawings of one frame is deliberate: the interactive
 one and the one that travels.
 
-**Three drawings came off at v7.30.0, all against the same design board.**
-The app had ruled itself twice — `body`'s own `1px` edge and a
-`body::before` inset at 5px, "the leaf, ruled twice" from Phase 12 — and
-neither appears on any of the board's nine stations, which are drawn full
-bleed to the device edge. Both are gone; a rule that only ever fenced the
-content in was reading as a frame around the app rather than paper under it.
-The third is the **ember on the bar's door**: `＋ A cup` had been an
-118px-wide `--accent` slab since Phase 12, and the board draws all four
-items of the bar in one rhythm with the room you are standing in marked by a
-rule and nothing else. `SUBBRAND.md` reserves the ember for the live action
-and the score, and a door that is always there is neither — so it is now an
-equal-flex quiet tab like the rooms beside it. **This is the one change in
-the pass that was not a stated gap**: it follows from "use this mockup as
-the truth" rather than from a named defect, and is recorded here so it can
-be argued with rather than discovered.
+**Two drawings came off at v7.30.0, and a third was put back.** The app had
+ruled itself twice — `body`'s own `1px` edge and a `body::before` inset at
+5px, "the leaf, ruled twice" from Phase 12 — and neither appears on any of
+the board's nine stations, which are drawn full bleed to the device edge.
+Both are gone; a rule that only ever fenced the content in was reading as a
+frame around the app rather than paper under it.
+
+The third was the **ember on the bar's door**, and it stands. `＋ A cup` has
+been an 118px-wide `--accent` slab since Phase 12; the board draws all four
+items of the bar in one rhythm, so the QC pass took the ember off on the
+strength of "the board is the truth" — the one change in that pass that was
+not a stated gap. **Put to the founder, the call was to put it back.** The
+board is the truth about the screens it draws; the bar is chrome the board
+inherits rather than argues, and `SUBBRAND.md`'s reservation of the accent
+for "the live action" reads to include the app's one standing invitation to
+log a cup. Recorded here because the reasoning cuts both ways and the next
+pass over the board will meet the same disagreement.
 
 ## 7. Network posture (the whole of it)
 

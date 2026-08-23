@@ -56,12 +56,18 @@ Lotmark's desk. Old entries are never rewritten.*
   off — `body`'s edge and the `body::before` inset, "the leaf, ruled twice"
   from Phase 12 — since no station on the board is drawn inside a frame.
 - **Two calls worth arguing with, both recorded rather than slipped in:**
-  - **The ember came off the bar's door.** `＋ A cup` had been an accent slab
-    since Phase 12; the board draws all four bar items in one rhythm.
-    `SUBBRAND.md` reserves the ember for the live action and the score, and
-    a permanent door is neither. This was **not** one of the eight stated
-    gaps — it follows from "the board is the truth," which is a weaker
-    warrant, so it is named in `ARCHITECTURE.md` §6 to be argued with.
+  - **The ember came off the bar's door — and went straight back on.** `＋ A
+    cup` had been an accent slab since Phase 12; the board draws all four bar
+    items in one rhythm, so the pass took the ember off. This was **not** one
+    of the eight stated gaps — it followed from "the board is the truth,"
+    which is a weaker warrant, so it was named in `ARCHITECTURE.md` §6 to be
+    argued with rather than discovered. It was, immediately: **the founder's
+    call was to restore it.** The board is the truth about the screens it
+    draws; the bar is chrome it inherits rather than argues, and the app's
+    one standing invitation to log a cup counts as the live action
+    `SUBBRAND.md` reserves the accent for. Reverted whole, comment amended to
+    carry the decision. Worth logging as the pass's own lesson: "the board is
+    the truth" does not extend past what the board actually draws.
   - **Phase 27's ground lost the cup page.** #122 merged mid-pass and put
     `coffeeGroundHTML` where the photo had been; the board's station 07 has
     no hero of any kind. The board won, but `coffeeGroundHTML` and

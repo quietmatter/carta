@@ -226,12 +226,13 @@ nav.tabs button{flex:1;appearance:none;-webkit-appearance:none;background:none;p
   letter-spacing:var(--track-label);text-transform:uppercase;font-weight:500;min-height:56px;
   border:none;border-top:2px solid transparent;margin-top:-1px}
 nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
-/* the door stands beside the rooms rather than being one — reachable from all
-   three, marked by nothing. It was an ember slab from Phase 12 until Phase 26:
-   the design board draws all four in one rhythm, and the ember is reserved for
-   the live action and the score (SUBBRAND.md), which a permanent door is not. */
-nav.tabs button.door{flex:1;width:auto}
-nav.tabs button.door:active{color:var(--ink)}
+/* the door is the one ember in the bar — a persistent block, not a fourth room.
+   Put to the founder at the v7.30.0 QC pass (the design board draws all four
+   items in one rhythm) and kept: the door is the app's one standing invitation
+   to log a cup, and that is live enough to hold the accent. */
+nav.tabs button.door{flex:none;width:118px;background:var(--accent);color:var(--accent-ink);
+  border:0;margin-top:0;display:flex;align-items:center;justify-content:center;gap:6px;letter-spacing:.1em}
+nav.tabs button.door:active{filter:brightness(.9)}
 nav.tabs[hidden]{display:none}
 
 /* ===== the settle — plays on a screen change, stilled under reduced motion ===== */
