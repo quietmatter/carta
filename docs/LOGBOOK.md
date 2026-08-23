@@ -7,6 +7,47 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.32.0: a Setup, from Visualizer
+
+- **The keeper's direction, taken straight:** the primary way to add a Setup
+  should now be through Visualizer integration, not a blank form. "＋ A new
+  Setup" — both from the record's own door and from the Setups list itself —
+  now opens onto the keeper's own recent shots first, wherever there's a
+  Visualizer account already set. Read the grinder off a shot, pair it with
+  whatever machine or brewer rode beside it, and one tap seeds the New Setup
+  form with both instead of asking the keeper to type what the account
+  already knew.
+- **No new network surface.** The picker calls the exact same
+  `fetchVisualizerShots(8)` the dial-in picker and the door pull already use.
+  Adding a Setup from Visualizer costs nothing beyond what pulling a shot
+  already cost.
+- **Deduped, and honest about what it can't say.** `setupCandidatesFromShots`
+  (pure, tested) folds a grinder-and-brewer pair before comparing, and never
+  offers a Setup already exact-matched on the record — the same rule the
+  silent door-pull join already keeps, so the deliberate picker and an
+  unprompted pull can't disagree about what "already have one" means. And a
+  shot file has never once stated a basket, papers, a water recipe or a grind
+  scale — a picked candidate seeds only what a shot actually can, and the
+  form says so, rather than leaving the keeper to wonder why the rest is
+  still blank.
+- **The typed door never closed.** "Type it in instead" sits at the bottom of
+  the picker on every render — empty candidates, a fetch that failed, an
+  account never set — and an unreachable Visualizer degrades to exactly the
+  blank form that was always there. Verified: no account → straight to the
+  blank form; account with no shots, or every grinder already on the record
+  → the same fallback with a stated reason; a network failure → the error
+  shown, the fallback still one tap away.
+- **The quieter path came along for the same reason.** `resolveOrMintSetupForShot`
+  — the silent mint behind a shot pulled at the door — used to mint with the
+  grinder alone, dropping a stated machine or brewer on the floor. It now
+  takes the whole shot and mints with both, so a Setup born from an unasked
+  pull isn't a worse record than one a keeper deliberately picked.
+- **Tests: 123**, two new pure cases (`brewerOf`, `setupCandidatesFromShots`),
+  everything prior still green. Verified end to end in headless Chromium,
+  paper and dusk, Visualizer stubbed — the full regression suite re-run
+  clean since the change touches the shared door-pull mint every one of
+  those scripts exercises.
+
 ## 2026-08-23 — v7.31.6: the date, settled — and a cup you can correct
 
 - **The keeper handed over their own account** to settle the question v7.31.5

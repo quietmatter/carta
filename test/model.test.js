@@ -39,7 +39,7 @@ vm.runInContext(pureSrc + `
   askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel, doorParse, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
-  parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder,
+  parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder, brewerOf, setupCandidatesFromShots,
   shotCurve, shotFigures, platePaths, shotAt, shotTempGoal,
   shotPours, shotMethod, shotPhase, mmss, shotPreinfusion, shotStartedAt, tsToMs };
 `, sandbox);
@@ -782,6 +782,30 @@ assert.equal(M.matchSetupByGrinder(setups, 'Niche Zeroo'), null, 'a near-but-not
 assert.equal(M.matchSetupByGrinder(setups, ''), null);
 assert.equal(M.matchSetupByGrinder([], 'Niche Zero'), null);
 ok("matchSetupByGrinder joins a Setup only on an exact name match, and never invents a join for less");
+
+// ---- brewerOf (Phase 26 v7.31.1): whichever of the two fields a shot actually filled in ----
+assert.equal(M.brewerOf({ brewer: 'Kalita Wave 185', machine: '' }), 'Kalita Wave 185');
+assert.equal(M.brewerOf({ brewer: '', machine: 'Slayer' }), 'Slayer', 'a writer with no dedicated brewer field, read off machine instead');
+assert.equal(M.brewerOf({ brewer: '', machine: '' }), '');
+assert.equal(M.brewerOf(null), '');
+ok("brewerOf reads whichever of brewer or machine a shot's own file actually stated");
+
+// ---- setupCandidatesFromShots (Phase 26 amendment, v7.32.0): what a keeper's own shots say a Setup could be ----
+const knownSetups = [{ id: 's1', grinder: 'Niche Zero' }];
+const shots = [
+  { grinderModel: 'Niche Zero', brewer: '', machine: '' },                    // already on the record — excluded
+  { grinderModel: 'EG-1', brewer: '', machine: 'Slayer' },                    // brewer read off machine
+  { grinderModel: 'eg-1', brewer: '', machine: 'slayer' },                    // same pair, fold-only difference — deduped
+  { grinderModel: '', brewer: 'Kalita Wave 185', machine: '' },               // brewer-only, no grinder at all
+  { grinderModel: '', brewer: '', machine: '' },                              // nothing stated — not a candidate
+];
+const candidates = M.setupCandidatesFromShots(shots, knownSetups);
+assert.equal(candidates.length, 2, 'the Setup already on the record and the empty shot are both left out');
+assert.deepEqual(candidates[0], { grinder: 'EG-1', brewer: 'Slayer', name: 'EG-1 · Slayer' });
+assert.deepEqual(candidates[1], { grinder: '', brewer: 'Kalita Wave 185', name: 'Kalita Wave 185' });
+assert.equal(M.setupCandidatesFromShots([], knownSetups).length, 0);
+assert.equal(M.setupCandidatesFromShots(shots, []).length, 3, 'with no Setup on the record yet, the Niche Zero shot candidates too');
+ok("setupCandidatesFromShots reads a grinder-and-brewer pair off recent shots, deduped and never repeating a Setup already on the record");
 
 // ---- parseRoastLevel (ROADMAP.md Phase 9): the door/menu-capture parsing ----
 assert.equal(M.parseRoastLevel("Sey's — Ethiopia Gedeb, light roast"), 'Light');

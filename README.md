@@ -182,7 +182,11 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   papers, water and grind scale, and **the last brews on it** with their
   dials and what each one scored. A grind number is only true inside one
   Setup, so that history never leaves its own page, and the next brew starts
-  from the last one there.
+  from the last one there. **＋ A new Setup** opens onto your own recent
+  Visualizer shots first, wherever there's an account already set — the
+  grinder and whatever machine or brewer rode beside it, one tap to seed the
+  form with both. Typing it in by hand is always one tap further, on that
+  same screen, whether or not there's anything to read.
 - **Pulled from Visualizer, not typed.** A synced espresso machine or scale
   already knows the dose, yield, time and grind — the dial-in screen offers
   a button to pull a recent shot straight in, still yours to correct, and

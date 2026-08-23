@@ -446,6 +446,27 @@ bodies. **Origin story fields never join** — Huila spelled three ways is
 three strings on three cards, and only the atlas's *display* folds them
 (`foldNames`-style, presentation only), stating what it folded.
 
+**A Setup, from Visualizer (Phase 26 amendment, v7.32.0).** Adding a Setup
+had one door, a blank form, whatever account was on the device. Now "＋ A
+new Setup" opens `openSetupImport()` first wherever `visualizerAuthHeader()`
+is set — the same `fetchVisualizerShots(8)` the dial-in and door pickers
+already call, so this opens no network surface the app didn't already have.
+`setupCandidatesFromShots(shots, setups)` (pure) reads each shot's grinder
+paired with `brewerOf(shot)` (whichever of `brewer`/`machine` the file
+actually filled in), dedupes by that pair folded, and excludes anything
+`matchSetupByGrinder` already exact-matches on the record — the same rule
+the silent join keeps, so a deliberate picker and an unprompted pull never
+disagree about what counts as "already have one". Tapping a candidate seeds
+`openSetupForm`'s Name/Grinder/Brewer fields; nothing else a Setup carries —
+basket, papers, water, the grind scale — is in a shot file, and the form
+says so rather than leaving the keeper to guess why the rest stayed blank.
+"Type it in instead" reaches the unchanged blank form at every turn, and an
+unreachable Visualizer degrades to exactly that — the fallback this always
+was. `resolveOrMintSetupForShot`'s own silent mint (the door pull, Phase
+25) was widened the same amendment: it used to mint with the grinder alone,
+dropping a stated machine or brewer on the floor; it now takes the whole
+shot and carries both, the same pairing the deliberate picker offers.
+
 **Phase 25 reuses the matching, not the mechanism, twice more.** A coffee
 pulled from Visualizer at the door is matched against that roaster's own
 coffees (`matchNodes`, scoped to `coffees` filtered by `roasterRef`) with
@@ -602,7 +623,7 @@ pass over the board will meet the same disagreement.
 | Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 18) | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 | **Search for more** (BYO-key, same `api.anthropic.com` row, Anthropic's server-side web-search tool) | the keeper taps "Search for more" on one coffee (Phase 22) | the field stays blank, typed in by hand |
-| **Pull from Visualizer** (BYO Basic Auth, `visualizer.coffee/api/shots`) | the keeper taps "Pull from Visualizer" on one brew (Phase 24), or "Pull it from Visualizer" at the door (Phase 25) | the dials, or the door's paste/type step, stay exactly as manual as they always were |
+| **Pull from Visualizer** (BYO Basic Auth, `visualizer.coffee/api/shots`) | the keeper taps "Pull from Visualizer" on one brew (Phase 24), "Pull it from Visualizer" at the door (Phase 25), or opens "＋ A new Setup" with an account already set (Phase 26 amendment, v7.32.0 — the same `fetchVisualizerShots(8)` call, no new surface) | the dials, the door's paste/type step, or the blank Setup form stay exactly as manual as they always were |
 | **Visualizer, on opening** (Phase 26; amended v7.30.0) | one `GET /api/shots?page=1&items=1`, then one `/download?essentials=true` for that shot, then — since v7.30.0 — one `/download` for it in full, because the hero states figures that only the curve carries. Once per app **open**, and only if `prefs.vizWatch === true` and an account is already set | the Atlas paints its ordinary hero and says nothing |
 | **Visualizer, a shot read in full** (Phase 26 patch, v7.28.1) | one more `/download` (no `essentials`) for the one shot actually opened — station 04's own screen, or the one row picked at the door — and cached per shot id so the same shot is never fetched twice in a sitting | the shot's own figures still stand; the plate states "This shot came without its curve" |
 
