@@ -7,6 +7,49 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — Phase 26 patch (v7.28.1): the curve, actually there
+
+- **Shipped — v7.28.1.** Phase 26's plate was drawing empty for every
+  keeper, from the first day it shipped. Every call the phase made for a
+  shot's own data — the watch's own check on opening, the Shots list, the
+  door's own picker — asked Visualizer for `?essentials=true`, and that
+  flag was already known, and written down, from Phase 24's own research:
+  it returns metadata **without the curve arrays**. Nothing in the shipped
+  code ever made the other call, the one that actually carries pressure,
+  flow and weight, so `shot.curve` was `null` on every single path and the
+  plate always fell back to "This shot came without its curve" — no matter
+  how plainly Visualizer's own app showed the same shot's curve.
+- **Caught by a keeper, not by review.** Reported directly: "it's not
+  showing up even though it's shown in Visualizer." Traced through the
+  same chain the report named — the fetch, the parse, the cache, the draw —
+  and confirmed against `ROADMAP.md`'s own Phase 24 research rather than
+  guessed: the finding was already on the record, just never connected to
+  the plate feature that shipped two phases later.
+- **The fix keeps the shape Phase 26 already promised.** The Shots list's
+  own copy already said "only the one you pick is read in full" — that
+  promise just had no code behind it. `ensureShotCurve` is the code now:
+  the cheap `essentials=true` calls stay exactly as light as they were
+  (the list, the once-per-open watch check), and the one shot actually
+  opened — station 04's own screen, or the row picked at the door — gets a
+  second, real `/download` before its plate draws or its curve is ever
+  persisted via `setShotCurve`. Cached per shot id, so the same shot is
+  never fetched twice in one sitting, and the door's own picker (which
+  never opens the shot screen) gets the same guarantee by awaiting the
+  fetch at `doorPullPicked`, the one choke point both entry paths already
+  shared.
+- **What stays intentionally blank:** the Shots list's own row thumbnails,
+  and the Atlas hero's hairline before the shot screen is opened once —
+  both still read off the cheap essentials-only fetch, by the same design
+  Phase 26 shipped with. Fetching all eight rows in full to populate every
+  thumbnail would be the sweep the network posture already rules out;
+  "only the one you pick is read in full" was always meant to describe
+  that tradeoff, not a bug in it.
+- No new pure functions — `ensureShotCurve`, `fetchShotFull` and the
+  now-async `doorPullPicked` all reach the network or `pageView`, so none
+  of them sit inside the test markers. 94/94 pure tests unaffected.
+
+---
+
 ## 2026-08-23 — Phase 26: the shot comes to you
 
 - **Shipped — v7.28.0.** Coffee measured at home, rebuilt around the shot

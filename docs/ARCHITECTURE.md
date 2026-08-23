@@ -500,6 +500,7 @@ one and the one that travels.
 | **Search for more** (BYO-key, same `api.anthropic.com` row, Anthropic's server-side web-search tool) | the keeper taps "Search for more" on one coffee (Phase 22) | the field stays blank, typed in by hand |
 | **Pull from Visualizer** (BYO Basic Auth, `visualizer.coffee/api/shots`) | the keeper taps "Pull from Visualizer" on one brew (Phase 24), or "Pull it from Visualizer" at the door (Phase 25) | the dials, or the door's paste/type step, stay exactly as manual as they always were |
 | **Visualizer, on opening** (Phase 26) | one `GET /api/shots?page=1&items=1`, then one `/download?essentials=true` for that shot — once per app open, and only if `prefs.vizWatch === true` and an account is already set | the Atlas paints its ordinary hero and says nothing |
+| **Visualizer, a shot read in full** (Phase 26 patch, v7.28.1) | one more `/download` (no `essentials`) for the one shot actually opened — station 04's own screen, or the one row picked at the door — and cached per shot id so the same shot is never fetched twice in a sitting | the shot's own figures still stand; the plate states "This shot came without its curve" |
 
 **The Visualizer row's auth is the keeper's real account login, not a
 scoped key — named plainly rather than softened, and worth recording why.**
@@ -587,6 +588,20 @@ the shot screen's own settings row — and only once, guarded by
 it. Watch off, or the call unreachable, and the Atlas draws the ordinary
 Phase 20 hero and states nothing about it; a shot already logged, or
 already dismissed via `prefs.vizDismissed`, is never re-offered.
+
+**Correction, v7.28.1: the plate shipped drawing nothing, for everyone.**
+Every call Phase 26 made for a shot's own data — the watch's own check, the
+Shots list, the door's picker — used `?essentials=true`, and that flag was
+already known, from Phase 24's own research (§8), to omit the curve arrays
+entirely. Nothing in the shipped code ever fetched the one response that
+actually carries them, so `shot.curve` was `null` on every path and the
+plate degraded to its own "came without its curve" state regardless of what
+Visualizer itself showed. The fix is the row directly above this note: the
+cheap calls stay cheap, and the one shot actually opened, or picked at the
+door, gets a second, real fetch before its plate draws or its curve is
+persisted — the `essentials=true` request-response shape was never
+diffed against a real payload before this phase shipped, only the field
+names inside it. `docs/LOGBOOK.md`'s v7.28.1 entry has the full account.
 
 Two notes on what the table no longer says:
 
