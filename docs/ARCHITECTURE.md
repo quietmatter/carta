@@ -312,6 +312,30 @@ turn; Phase 12 is `7.13.0`, Phase 13 is `7.14.0`.
   carries only its `vizShotId` and finds no matching entry here simply
   draws no plate — the score, the recipe and the rest of the record stand
   on their own regardless.
+- **`carta7.shotsread.v1`** (v7.33.0) — `{shotId: {…shot, curve, readAt}}`,
+  the whole shot for a brew the keeper has actually opened, written or not.
+  Distinct from `carta7.shots.v1` above and the distinction is the point:
+  that one holds a *curve* a written cup redraws as a picture; this one
+  holds the *shot* — its figures, its ledger, its pours — so the plate can
+  be read again in full. Before this, `vShot` read only `_vizCache`, an
+  in-memory object emptied by every reload, so the one screen that states
+  what a brew actually did was reachable only on the way to writing its
+  cup; writing the cup closed the argument behind it. `vizShotById` now
+  falls back here and re-warms the session cache, which is why no call site
+  downstream had to learn about it.
+
+  **Bounded twice, by measurement.** Thirty entries at the record's own 400
+  samples measured 459 KB — the wrong order of magnitude for something no
+  cup depends on, and the photo store's own mistake a second time. It keeps
+  **20 entries thinned to 150 samples** (~110 KB worst case): a plate is
+  drawn ~350 px wide and scrubbed with a fingertip, so 150 is finer than
+  either the screen or the hand resolves. Oldest `readAt` falls off first.
+  **This is a cache, not a record** — never exported, never counted in the
+  ledger's own figures, dropped on `dismissShot` and cleared entirely by
+  `clearVisualizerKey`, because "the account is off this device" has to be
+  true of what was read off it and not only of the password. A cup already
+  written keeps its own curve in `carta7.shots.v1` regardless, so nothing a
+  cup depends on is ever what gets dropped.
 - Classic's keys are never touched. Import reads them (or an export file);
   it never writes them.
 - **Act Two, Phase 8 (durability):** the storage laws above don't change —

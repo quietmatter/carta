@@ -7,6 +7,50 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.33.0: the brew, reviewable
+
+- **The keeper's own reading of the board, and it was right:** station 11 (the
+  brew as a plate) and station 13 (the cup, written) had a one-way door between
+  them. The plate was reachable only *en route* to writing the cup — tap
+  through, score it, and the argument underneath the score closed behind you.
+  The cup kept a hairline picture of the curve, but the reading of it (the
+  scrub, the pours and their waits, the whole ledger of what the machine
+  actually stated) was one-time.
+- **The inversion:** writing the cup is what makes the plate *worth* keeping,
+  not what spends it. The plate on a cup's own page is a door now — tap it and
+  the brew reopens in full, as often as wanted.
+- **A written shot stops pretending it is an invitation.** `vShot` used to
+  offer three pre-write actions (write it · correct it before it is written ·
+  not mine) whatever the record already held. All three are spent once a cup
+  exists, so it names the cup it became and its reading instead. The duplicate
+  guard in `shotIsTheCup` is still there underneath and still tested — the UI
+  simply no longer walks the keeper up to a door it would refuse.
+- **The real gap was that a shot lived only in memory.** `vShot` read
+  `_vizCache`, emptied by every reload, so "reviewable later" was impossible
+  no matter which button pointed at it. New store, `carta7.shotsread.v1`:
+  the whole shot for a brew actually opened, written or not. `vizShotById`
+  falls back to it and re-warms the session cache, which is why nothing
+  downstream had to learn about it. A brew now reads after it falls off the
+  account's recent eight, and reads with the network off.
+- **Bounded by measuring, not by guessing** — the one part of this worth
+  arguing about, given `docs/LOGBOOK.md`'s own entry on why photos were
+  retired. Thirty entries at the record's 400 samples measured **459 KB**,
+  which is the photo mistake again. It keeps **20 at 150 samples (~110 KB)**:
+  a plate is ~350 px wide and scrubbed with a fingertip, so 150 is finer than
+  the screen or the hand can resolve. Thinned *for reading*; the copy a
+  written cup depends on (`carta7.shots.v1`, 400 samples) is untouched and is
+  never what gets dropped.
+- **It is a cache and says so.** Never exported, never counted in the ledger's
+  figures, dropped on *Not mine*, and cleared whole by signing out of
+  Visualizer — "the account is off this device" has to be true of what was
+  read off it, not only of the password.
+- **Tests: 123**, unchanged — every change here is DOM-coupled or a storage
+  policy, so it is verified in the browser instead: the full loop (open the
+  plate → write the cup → reopen the plate from the cup → back to the cup),
+  offline after a reload, the cap at 45 reads, dismissal, and the full prior
+  regression suite. `dupe.js` was updated rather than merely re-run, since the
+  behaviour it asserted is the behaviour this deliberately changed.
+
 ## 2026-08-23 — v7.32.0: a Setup, from Visualizer
 
 - **The keeper's direction, taken straight:** the primary way to add a Setup

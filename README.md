@@ -203,7 +203,13 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   never stated reading `unread` rather than guessed. A written cup keeps its
   plate at a glance, and every recent shot is one tap away on its own list
   off the Journal, each carrying its own small curve — a brew is
-  recognisable by its shape before its label is read.
+  recognisable by its shape before its label is read. **The plate stays
+  reviewable**: tap the one on a cup's page and the brew reopens in full,
+  scrub and pours and ledger, as often as you want it — a brew already
+  written names the cup it became rather than offering to be written twice.
+  A brew you have opened is kept on this device, so it still reads after it
+  drops off your account's recent eight and still reads with the network off;
+  signing out of Visualizer takes those with it.
   Come back to Carta having pulled a shot while it sat in the background
   and it looks again, the same single call; your account has a door of its
   own on the record and in the Journal, to sign out of or to turn the watch
