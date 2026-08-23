@@ -7,6 +7,49 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — Phase 26: the shot comes to you
+
+- **Shipped — v7.28.0.** Coffee measured at home, rebuilt around the shot
+  file. Turn the watch on (opt-in, off by default) and Carta looks once per
+  app open for the shot the keeper just pulled — no poll, no sweep. Found
+  and unlogged, it takes the Atlas's own hero: the question the Atlas
+  usually asks steps down one slab into the lift, and the shot waits as a
+  stated fact with the cup already attached to it. Write the cup or say
+  *Not mine* and both reverse. A shot draws as a **plate** now instead of a
+  row of dials — pressure, flow, what landed in the cup, scrubbable by
+  drag — at three sizes: full-bleed on the shot's own screen, a hairline
+  once a cup is written, a 44px thumb on the new Shots list off the
+  Journal. The gentle join is Phase 25's, reused verbatim — station 05
+  appears only when it's owed.
+- **The honesty gate widens with the surface.** Visualizer states no
+  confirmed scalar for water temperature or preinfusion; both read
+  `unread` on the plate rather than being derived off the pressure curve,
+  which would be an interpretation Carta isn't willing to make.
+- **A curve keeps out of the ledger.** ~3 KB of pressure/flow/weight
+  samples per cup would stop a backup being a thing you can read as text —
+  the same ruling `ARCHITECTURE.md` already made for photos. Curves live in
+  their own key, `carta7.shots.v1`, thinned to ≤400 samples; the ledger
+  itself moves exactly two fields and two prefs.
+- **The line band, disclosed rather than crossed quietly — the largest
+  overage yet.** `index.html` lands at 5,800 lines / 383.4 KB, 800 over the
+  5,000-line ceiling Phase 19 closed the debt on (bytes comfortable). The
+  plate's own pure geometry (~135 lines, no coupling to `D` or the DOM) was
+  the named candidate to move into `carta-map.js` at this gate, the way the
+  map layer itself moved at Phase 19 — it stayed inline instead, by the
+  founder's call, because this phase's build had no `carta-map.js` to
+  append to and no way to verify the seam without one. Named as debt, not
+  amended; the candidate stands for whichever phase next touches that
+  file. See `ARCHITECTURE.md` §1.
+- Verified end to end in headless Chromium, paper and dusk, Visualizer
+  stubbed, all nine stations with no page errors — plus the branches
+  (*Not mine* surviving a re-open, Undo handing back what was typed, watch
+  off making zero calls, a curveless shot, the curve surviving a reload
+  with the network cut) and the regressions (Phase 25's door, Phase 24's
+  dial-in picker, a typed brew's impression sheet). 94/94 pure tests,
+  including new `shotCurve`/`shotFigures`/`platePaths`/`shotAt` coverage.
+
+---
+
 ## 2026-08-22 — Phase 25: the pull, at the door
 
 - **Shipped — v7.27.0.** `＋ A cup` gains a third way in beside pasting and

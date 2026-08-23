@@ -176,6 +176,22 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   dials and what each one scored. A grind number is only true inside one
   Setup, so that history never leaves its own page, and the next brew starts
   from the last one there.
+- **Pulled from Visualizer, not typed.** A synced espresso machine or scale
+  already knows the dose, yield, time and grind — the dial-in screen offers
+  a button to pull a recent shot straight in, still yours to correct, and
+  the door (**＋ A cup**) offers a third way in beside pasting and typing:
+  pick a shot and it lands on "What was in the cup?" with the roaster, the
+  coffee and the brew all read straight off it, gently joined against your
+  shelf and asked about once only where Carta isn't sure.
+- **The shot comes to you.** Turn the watch on (one setting, off by
+  default) and Carta checks once per app open for the shot you just pulled
+  — no polling, no sweep. Unlogged, it stands on the Atlas itself, the ask
+  stepping aside for it until the cup is written or waved off. A shot draws
+  as a **plate**: pressure and flow against elapsed seconds, what actually
+  landed in the cup underneath, scrubbable by drag, with whatever the file
+  never stated reading `unread` rather than guessed. A written cup keeps its
+  plate at a glance, and every recent shot is one tap away on its own list
+  off the Journal, each carrying its own small curve.
 
 - **The migration.** From your record, **Import from classic** reads classic's
   own JSON export (Desk → Export → the working copy) straight into Carta 7's

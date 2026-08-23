@@ -165,6 +165,25 @@ Carta 7 is built exactly the way classic was, smaller:
   give it its own split the way Phase 19 did for Phase 18 and 20's debt, or
   whether the band itself is due another look — not a call made silently
   here.
+
+  **Phase 26 crossed further still, and the founder's call was to land it
+  inline rather than open a third file for it.** The plate — `platePaths`,
+  `shotFigures`, `shotCurve`, `shotAt` (pure geometry over a shot's curve
+  arrays, no `D`, no DOM) plus their string-templating callers `plateSVG`/
+  `figsHTML` — was the named candidate to move into `carta-map.js`, the way
+  the map layer itself moved at Phase 19. It did not move: the design
+  handoff this phase built from carried only `index.html`, so there was no
+  `carta-map.js` to append to and no way to verify the seam without one.
+  Put to the founder directly rather than assumed, the call was to land
+  inline, record the overage, and leave the ~135-line candidate named for
+  whichever phase next touches `carta-map.js` to actually move it.
+  `index.html` now stands at **5,800 lines / 383.4 KB** — 800 over the
+  line ceiling, up from Phase 25's 141; bytes remain comfortable at 383.4
+  of 500 KB, the ceiling that has never moved and the one that actually
+  guards the drop-it-on-a-static-host promise. This is not a seventh
+  amendment — the same rule Phase 18 wrote still stands — and it is a
+  larger open debt than any phase has carried since Phase 19 closed the
+  first one, named here rather than minimized.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -227,6 +246,15 @@ turn; Phase 12 is `7.13.0`, Phase 13 is `7.14.0`.
   key **`carta7.photos.v1`** (`{cupId: dataUri}`) so the ledger itself
   stays light enough to export, diff, and back up as text. The export can
   include or omit them (two buttons, sizes stated).
+- **`carta7.shots.v1`** (Phase 26) — `{shotId: {t,p,f,w}}`, the pressure/
+  flow/weight-vs-elapsed curves a plate is drawn from. Kept out of the
+  ledger for the same reason photos are: a shot's series are ~3 KB of
+  numbers, and the ledger needs to stay light enough to read as text.
+  Written only once, when a brew is minted from a pulled shot, and thinned
+  to at most 400 samples (`thinCurve`) on the way in. A cup or brew that
+  carries only its `vizShotId` and finds no matching entry here simply
+  draws no plate — the score, the recipe and the rest of the record stand
+  on their own regardless.
 - Classic's keys are never touched. Import reads them (or an export file);
   it never writes them.
 - **Act Two, Phase 8 (durability):** the storage laws above don't change —
@@ -248,7 +276,10 @@ D = {
   cups:    [{ id, createdAt, at, kind:'bar'|'home',
               placeRef?, coffeeRef?, brewRef?,        // home cups carry brewRef
               score,                                   // 1–9
-              line, descriptors?[], photo?:true }],    // photo body in carta7.photos.v1
+              line, descriptors?[], photo?:true,       // photo body in carta7.photos.v1
+              vizShotId? }],                           // Phase 26 — the shot this cup
+                                                         // was read from (home cups only);
+                                                         // curve body in carta7.shots.v1
   coffees: [{ id, createdAt, roaster,                  // display string
               roasterRef?, name,
               origin:{ country?, region?, farm?, producer?, variety?,
@@ -283,7 +314,9 @@ D = {
   roasters:[{ id, createdAt, name, aka?[], city?, story?, site?,
               palette?, archived? }],
   setups:  [{ ...classic's shape, unchanged }],
-  brews:   [{ ...classic's shape minus roastRef/lotRef; keeps coffeeRef }],
+  brews:   [{ ...classic's shape minus roastRef/lotRef; keeps coffeeRef,
+              vizShotId? }],                          // Phase 26 — same shot ref as the
+                                                         // cup's, so a re-brew can start from it
   menus:   [{ id, createdAt, placeRef, at,
               items:[{ text,                           // the line as printed
                        roaster?, name?, roastLevel?,   // parsed, editable
@@ -299,7 +332,12 @@ D = {
               plan:{ move, routes:[{ if, order:[] }],  // what it would actually do
                      wildcard:{ ...same shape } } }],  // outside the ranking
   prefs:   { tempUnit, askKey, askModel,               // the key lives here and nowhere else
-             exportedAt, autoExport, ... }
+             exportedAt, autoExport,
+             vizWatch?, vizDismissed?[], ... }         // Phase 26 — vizWatch: false by
+                                                         // default, set only in the shot's own
+                                                         // settings row; vizDismissed: last 20
+                                                         // shot ids the keeper said were not
+                                                         // theirs, so *Not mine* survives a re-open
 }
 ```
 
@@ -344,6 +382,25 @@ onto the coffee record itself. A Setup gets a narrower version still:
 Setup's own `grinder` field, with no near-match ask at all — a shot never
 says which Setup pulled it, so a wrong silent guess would be worse than
 simply falling back to whichever Setup is already current.
+
+**Phase 26 reuses the Phase 25 chain verbatim, once a shot is offered
+unprompted rather than pulled at the door.** `vizCheckOnOpen()` fetches at
+most one shot on boot, and only when it finds one with no matching cup and
+no matching `vizDismissed` entry does the gentle join fire at all — same
+`matchNode`/`matchNodes`/`matchSetupByGrinder`, same exact-joins/
+near-asks/else-new shape, no new matching logic written for the hero
+surface. **The honesty gate widens, not the matching:** Visualizer's
+essentials payload has no confirmed scalar for water temperature or
+preinfusion time, so `parseVisualizerShot` reads both as stated-or-nothing
+(`tempC`, `preinfusionSec`) rather than deriving either off the pressure
+curve — the time pressure first crosses 4 bar is an interpretation, not a
+reading, and the plate states `unread` there rather than guess. A shot's
+`timeExact` (a tenth of a second, what the plate itself states) is kept
+beside the existing whole-second `time` that fills a dial and a brew's
+`timeSec`; a written cup's foot rule reads off the ledger's own
+`timeSec`, so a cup can correctly read "27 s" under a plate that read
+"27.4s" moments before — the cup states what the record holds, never a
+figure sharper than what was actually written down.
 
 ## 5. The taste model and the brief
 
@@ -442,6 +499,7 @@ one and the one that travels.
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 | **Search for more** (BYO-key, same `api.anthropic.com` row, Anthropic's server-side web-search tool) | the keeper taps "Search for more" on one coffee (Phase 22) | the field stays blank, typed in by hand |
 | **Pull from Visualizer** (BYO Basic Auth, `visualizer.coffee/api/shots`) | the keeper taps "Pull from Visualizer" on one brew (Phase 24), or "Pull it from Visualizer" at the door (Phase 25) | the dials, or the door's paste/type step, stay exactly as manual as they always were |
+| **Visualizer, on opening** (Phase 26) | one `GET /api/shots?page=1&items=1`, then one `/download?essentials=true` for that shot — once per app open, and only if `prefs.vizWatch === true` and an account is already set | the Atlas paints its ordinary hero and says nothing |
 
 **The Visualizer row's auth is the keeper's real account login, not a
 scoped key — named plainly rather than softened, and worth recording why.**
@@ -520,6 +578,16 @@ argument, only `cfSearchMore`'s own call passes it, and the prompt itself
 repeats the same honesty gate in its own words — no source, no value,
 never a guess.
 
+**Phase 26 adds the one row that fires with no tap at all, and guards it
+the hardest for exactly that reason.** Every other row in this table waits
+on the keeper; `vizCheckOnOpen()` runs on boot, after the first `render()`,
+but only when `prefs.vizWatch === true` — off by default, set nowhere but
+the shot screen's own settings row — and only once, guarded by
+`_vizChecked` so a later `render()` in the same session can never re-fire
+it. Watch off, or the call unreachable, and the Atlas draws the ordinary
+Phase 20 hero and states nothing about it; a shot already logged, or
+already dismissed via `prefs.vizDismissed`, is never re-offered.
+
 Two notes on what the table no longer says:
 
 - **The brand read (Microlink) was never built.** Carta 7 makes no call on
@@ -575,7 +643,9 @@ invisible (a bad brief just looks like a mediocre brief). So:
   ranking, scope exclusions, brief size bounds, join/undo round-trips, and
   from Phase 18 the ground helpers: `originPin`, `meanPin`, and `namesBack`,
   the gate that keeps a lookup's region-shaped answer from being pinned as a
-  farm). **69 cases.**
+  farm; from Phase 26 the plate's own geometry: `shotCurve`, `shotFigures`,
+  `platePaths`, and `shotAt`, all pure over a shot's arrays with no `D` and
+  no DOM). **94 cases.**
 - Everything painted stays verified by loading the page, as ever.
 
 ## 10. What is deliberately not built
@@ -606,3 +676,10 @@ obvious place to hang a coordinate, and giving them one would mean matching
 region names to nodes — the gentle join, applied to an origin story field,
 which §4 says never happens. A region stands on the mean of its own placed
 farms and stands nowhere when it has none.
+
+**What Phase 26 declined:** a scalar temperature field — there is still no
+confirmed reading for one, only a curve, and the dial stays exactly as
+manual as it has always been; the drift a shot shows against your last cup
+on the same coffee, or against every 8 you've ever scored; and any card,
+share or export of a plate. All parked, not absorbed — the plate states
+what one shot argued, nothing comparative yet.

@@ -31,7 +31,8 @@ vm.runInContext(pureSrc + `
   askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
-  parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder };
+  parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder,
+  shotCurve, shotFigures, platePaths, shotAt };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -670,8 +671,55 @@ assert.equal(shot.roastDate, '', 'a roast_date with no leading YYYY-MM-DD is lef
 ok('parseVisualizerShot refuses to guess a field the shot left blank or unparseable');
 
 assert.deepEqual(M.parseVisualizerShot(), { dose: null, water: null, time: null, grind: null,
-  roaster: '', coffeeName: '', roastDate: '', roastLevel: '', grinderModel: '', label: 'Untitled shot' });
+  roaster: '', coffeeName: '', roastDate: '', roastLevel: '', grinderModel: '', timeExact: null,
+  tempC: null, preinfusionSec: null, curve: null, label: 'Untitled shot' });
 ok('parseVisualizerShot never throws on a missing payload');
+
+// ---- the plate (ROADMAP.md Phase 26): platePaths/shotFigures/shotCurve/shotAt ----
+const curvedPayload = {
+  espresso_elapsed: [0, 1, 2, 3, 4], espresso_pressure: [0, 4, 9, 8.5, 6],
+  espresso_flow: [0, 0.5, 1.8, 2, 1.9], espresso_weight: [0, 0, 5, 20, 36],
+};
+const curve = M.shotCurve(curvedPayload);
+assert.ok(curve && curve.t.length === 5 && curve.p.length === 5, 'a shot with real series reads a curve of matching-length arrays');
+assert.equal(curve.p[2], 9);
+assert.equal(curve.f[2], 1.8);
+assert.equal(curve.w[4], 36);
+ok('shotCurve reads pressure, flow and weight against elapsed seconds when the file carries them');
+
+assert.equal(M.shotCurve({}), null, 'a shot with no series at all reads no curve, not an empty one');
+ok('shotCurve refuses to fabricate a curve out of a payload that carries none');
+
+const msCurve = M.shotCurve({ espresso_elapsed: [0, 700, 1400], espresso_pressure: [0, 9, 6] });
+assert.ok(msCurve.t[1] < 1, 'elapsed stated in milliseconds (a "shot" over 600s) is converted to seconds, never trusted raw');
+ok('shotCurve normalizes millisecond-elapsed series down to seconds');
+
+const withCurve = { curve, dose: 18, water: null, timeExact: null, time: null };
+let at = M.shotAt(withCurve, 2);
+assert.equal(at.bar, 9, 'shotAt reads the exact sample at a scrub position on the curve');
+ok('shotAt reads the curve sample nearest a given elapsed second');
+
+assert.equal(M.shotAt({ curve: null }, 2), null, 'shotAt on a curveless shot refuses to fabricate a reading');
+ok('shotAt never throws or fakes a reading on a null curve');
+
+const figs = M.shotFigures(withCurve);
+assert.equal(figs.peak, 9, 'the peak figure is read off the curve itself, not a stated scalar');
+assert.equal(figs.yield, 36, 'yield falls back to the curve\'s last weight sample when the shot states no water figure');
+assert.equal(figs.dose, 18);
+assert.ok(Math.abs(figs.ratio - 36 / 18) < 1e-9);
+ok('shotFigures derives peak/yield/ratio off the curve where the shot itself states no scalar');
+
+assert.deepEqual(M.shotFigures({ curve: null, dose: null, water: null, timeExact: null, time: null }),
+  { peak: null, peakAt: null, total: null, dose: null, yield: null, ratio: null });
+ok('shotFigures reads every figure null rather than guessed when neither the shot nor a curve states it');
+
+const paths = M.platePaths(withCurve, { w: 200, h: 100, base: 90, top: 10 });
+assert.ok(paths && typeof paths.pressure === 'string' && paths.pressure.length > 0);
+ok('platePaths draws a real path string for a curve, at whatever box it is given');
+
+assert.equal(M.platePaths({ curve: null }, { w: 200, h: 100, base: 90, top: 10 }), null,
+  'a curveless shot draws no plate at all, rather than an empty one');
+ok('platePaths refuses to draw anything for a shot with no curve');
 
 // ---- normalizeRoastLevel (ROADMAP.md Phase 25): Visualizer's own field needs no "roast" adjacency ----
 assert.equal(M.normalizeRoastLevel('Medium'), 'Medium');
