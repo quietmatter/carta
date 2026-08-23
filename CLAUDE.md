@@ -339,7 +339,14 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 ### Invariants to preserve
 
 - **Three files, no build.** Vanilla JS, inline everything, nothing fetched at
-  load beyond `carta-map.js` and `carta-plate.js` themselves. The count was
+  load beyond `carta-map.js` and `carta-plate.js` themselves. **Their `<script
+  src>` tags carry `?v=<APP_VERSION>` and that must be bumped with it** — a
+  sibling script is an ordinary cached subresource while `index.html` is the
+  revalidated navigation document, so without it a keeper can run a new
+  `index.html` against an old sibling. That is not hypothetical: it shipped at
+  v7.31.1 and read to the keeper as "your Visualizer account is empty".
+  `PLATE_VERSION` is checked at boot and says so out loud if the tag is ever
+  forgotten. The count was
   two from Phase 19 and became three at v7.31.0, when the plate's second arm
   forced the gate `SPEC-phase26-pourover.md` §8 had set. **The law was never
   really about the number** — it is *no bundler, no npm, nothing between the
@@ -417,7 +424,7 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 112 cases
+node test/model.test.js        # zero deps, plain Node, 117 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
@@ -430,7 +437,7 @@ evaluates them against fixture ledgers — no DOM, no `localStorage`. **If you t
 `parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder`,
 `shotCurve`, `shotPours`, `shotFigures`, `shotMethod`, `platePaths`,
 `shotAt`, `shotPhase`, `shotPreinfusion` (the last eight live in
-`carta-plate.js`) or
+`carta-plate.js`), `doorParse` or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**
