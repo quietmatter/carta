@@ -147,10 +147,14 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
 - **The ground a coffee stands on.** Photos are retired — they were the
   fastest way to fill a phone's local storage, and eventually did. Wherever
   a photo used to stand, Carta now draws the coffee's own ground instead: a
-  soft shape beside the cup in the Journal, real terrain on the cup's own
-  page where a farm or region is placed, the country's own washed shape
-  where only that much is named. Nothing to add, nothing to compress —
-  it's already on the record, or it says plainly that it isn't yet.
+  soft shape beside the cup in the Journal, real terrain on a coffee's card
+  where a farm or region is placed, the country's own washed shape where
+  only that much is named. Nothing to add, nothing to compress — it's
+  already on the record, or it says plainly that it isn't yet.
+- **A cup's own page.** No picture, and nothing standing in for one: your
+  reading leads in the ember with what you said about it answering back
+  across the rule, the shot that earned it drawn underneath, and the
+  provenance on the ledger below that.
 - **The menu.** One screen at the counter, opened from a café's page: what
   they're pouring, and the box to add to it. Type each line, or hold a photo
   up as reference while you do. **Read it for me** can read that same photo
@@ -194,7 +198,12 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   landed in the cup underneath, scrubbable by drag, with whatever the file
   never stated reading `unread` rather than guessed. A written cup keeps its
   plate at a glance, and every recent shot is one tap away on its own list
-  off the Journal, each carrying its own small curve.
+  off the Journal, each carrying its own small curve — a shot is
+  recognisable by its shape before its label is read.
+  Come back to Carta having pulled a shot while it sat in the background
+  and it looks again, the same single call; your account has a door of its
+  own on the record and in the Journal, to sign out of or to turn the watch
+  off.
 
 - **The migration.** From your record, **Import from classic** reads classic's
   own JSON export (Desk → Export → the working copy) straight into Carta 7's
