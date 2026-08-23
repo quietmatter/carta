@@ -474,6 +474,85 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
   .think .rule .fill,.think .rule .tip{transition:none!important}
 }
 
+/* ===== the plate — a shot's own signature (ROADMAP.md Phase 26) =====
+   One drawing at three sizes. Pressure is the shot's shape, so it is the solid
+   line; flow is the argument beside it, dashed; what is in the cup is a fill
+   under both. Everything here is a stated fact, which is why none of it is
+   ever the ember — the one exception is the scrub crosshair, which is the
+   live action and nothing else (SUBBRAND.md). */
+@keyframes ca-drawn{from{stroke-dashoffset:var(--dash,1300)}to{stroke-dashoffset:0}}
+@keyframes ca-inked{from{opacity:0}to{opacity:1}}
+.plate{display:block;width:100%;height:auto}
+.plate path,.plate line{vector-effect:non-scaling-stroke}
+.plate .grid{fill:none;stroke:var(--ink);stroke-opacity:.08;stroke-dasharray:2 4}
+.plate .axis{fill:none;stroke:var(--ink);stroke-opacity:.2}
+.plate .tick{fill:none;stroke:var(--ink);stroke-opacity:.22}
+.plate .pr{fill:none;stroke:var(--ink);stroke-width:1.7;stroke-linejoin:round}
+.plate .fl{fill:none;stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3}
+.plate .wt{fill:var(--ink);fill-opacity:.08;stroke:none}
+.plate .lb{font-family:var(--sans);font-size:8px;letter-spacing:.1em;fill:var(--text-disabled)}
+.plate.hair .pr{stroke-width:1.5}
+.plate.thumb .pr{stroke-width:1.2}
+.plate.quiet .pr{stroke-opacity:.55}
+/* the pressure path draws itself once, on arrival — never on a scrub, a
+   repaint or a mark (the callers hold that; see _plateDrawn) */
+.plate .pr.draw{stroke-dasharray:var(--dash,1300);animation:ca-drawn 1.45s var(--mo-ease) both}
+.plate .fl.ink{animation:ca-inked 1s .35s ease-out both}
+.plate .wt.ink{animation:ca-inked 1.1s .5s ease-out both}
+/* the plate you can put a finger on: the readout follows, and states the four
+   figures at that instant rather than interpolating a fifth */
+.platebox{position:relative;background:var(--surface-sunk);border-bottom:1px solid var(--line);
+  touch-action:none;cursor:col-resize;user-select:none;-webkit-user-select:none}
+.platebox .cross{position:absolute;top:0;bottom:10px;width:1px;background:var(--accent);pointer-events:none}
+.platebox .read{position:absolute;top:8px;right:10px;border:1px solid var(--line);background:var(--surface-card);
+  padding:7px 9px;pointer-events:none;min-width:96px}
+.platebox .read .r{display:flex;justify-content:space-between;gap:10px;font-family:var(--sans);
+  font-size:11px;font-variant-numeric:tabular-nums;color:var(--ink-3)}
+.platebox .read .r+.r{margin-top:3px}
+.platebox .read .r b{font-weight:400;color:var(--ink)}
+/* the three figures a shot is actually argued about, at dial scale */
+.figs{display:flex;border-bottom:1px solid var(--line);padding:16px 0 14px}
+.figs>div{flex:1;min-width:0}
+.figs>div+div{border-left:1px solid var(--line);padding-left:14px}
+.figs .v{font-family:var(--sans);font-size:32px;font-weight:500;font-variant-numeric:tabular-nums;
+  line-height:1;letter-spacing:-.03em;color:var(--ink)}
+.figs .v .u{font-size:12px;color:var(--ink-3);margin-left:3px}
+.figs .l{font-family:var(--sans);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:6px}
+.figs.small{border-bottom:0;border-top:1px solid var(--line);padding:11px 0 0}
+.figs.small .v{font-size:26px;letter-spacing:-.02em}
+.figs.small .l{margin-top:5px}
+/* a cup that has not been written yet, waiting on the passport. A stated fact
+   with the cup attached to it — never a badge, a dot or a count on the bar. */
+.waiting{display:flex;align-items:center;gap:8px;margin-bottom:8px;pointer-events:auto}
+.waiting .mk{flex:none;width:7px;height:7px;background:var(--accent);display:block;animation:ca-breathe 1.6s ease-in-out infinite}
+.waiting .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+/* the taste, when the 1–9 is the whole page: the score answers in the ember at
+   the size the question was asked in */
+.tastebig{text-align:center;padding:26px 0 10px}
+.tastebig .n{font-family:var(--sans);font-weight:600;font-variant-numeric:tabular-nums;line-height:.85;
+  font-size:104px;letter-spacing:-.05em;color:var(--text-disabled)}
+.tastebig .n.set{color:var(--accent)}
+.tastebig .say{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-3);
+  margin:14px auto 0;max-width:32ch;line-height:1.5}
+.nine{display:flex;gap:5px;margin-top:4px}
+.nine button{flex:1;min-width:0;aspect-ratio:1/1.5;border:1px solid var(--line-strong);border-radius:var(--radius);
+  background:none;color:var(--ink-2);font-family:var(--sans);font-size:20px;font-weight:400;font-variant-numeric:tabular-nums;cursor:pointer}
+.nine button.on{background:var(--ink);color:var(--text-on-fill);border-color:var(--ink);font-weight:500}
+.nineax{display:flex;justify-content:space-between;margin-top:8px;font-family:var(--sans);
+  font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+/* the quiet way on, under the one that isn't quiet: a sentence, underlined,
+   at the size a footnote is read at. Not `.omini`, which is a chip in a
+   corner and shouts in small caps — this is a line of prose you can tap. */
+.qlink{background:none;border:0;padding:2px 0;cursor:pointer;font-family:var(--sans);font-size:11px;
+  color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;letter-spacing:.01em}
+.qlink:active{color:var(--ink)}
+.qlink.faint{color:var(--ink-3)}
+@media (prefers-reduced-motion:reduce){
+  .plate .pr.draw{animation:none!important;stroke-dasharray:none!important}
+  .plate .fl.ink,.plate .wt.ink{animation:none!important;opacity:1!important}
+  .waiting .mk{animation:none!important}
+}
+
 </style>
 <script src="carta-map.js"></script>
 </head>
@@ -512,6 +591,28 @@ function savePhotos(){try{localStorage.setItem(PHOTOS_KEY,JSON.stringify(_photos
 function setCupPhoto(cupId,dataUri){loadPhotos();_photosCache[cupId]=dataUri;savePhotos()}
 function getCupPhoto(cupId){return loadPhotos()[cupId]}
 function deleteCupPhoto(cupId){loadPhotos();delete _photosCache[cupId];savePhotos()}
+
+/* the shot curves — same reasoning as the photos, one key over (Phase 26). A
+ * cup carries only its `vizShotId`; the three series it was drawn from live
+ * out here, so the ledger stays a thing you can read as text and a backup
+ * stays a backup rather than a few hundred kilobytes of pressure samples.
+ * A curve that isn't here simply doesn't draw — the cup, its score and its
+ * recipe are all on the ledger and stand on their own. */
+const CURVES_KEY='carta7.shots.v1';
+let _curvesCache=null;
+function loadCurves(){if(_curvesCache)return _curvesCache;
+  try{_curvesCache=JSON.parse(localStorage.getItem(CURVES_KEY)||'{}')}catch(e){_curvesCache={}}
+  return _curvesCache;}
+function saveCurves(){try{localStorage.setItem(CURVES_KEY,JSON.stringify(_curvesCache||{}))}catch(e){/* a curve is never worth a toast: the cup itself is already written */}}
+function setShotCurve(id,curve){if(id==null||!curve)return;loadCurves();_curvesCache[String(id)]=thinCurve(curve);saveCurves()}
+function getShotCurve(id){return id==null?null:(loadCurves()[String(id)]||null)}
+// a Decent samples ten times a second; past a few hundred points the drawing
+// gains nothing a phone can see and the key gains kilobytes it can't spare
+function thinCurve(c,cap){
+  cap=cap||400;const n=c.t.length;if(n<=cap)return c;
+  const step=Math.ceil(n/cap),take=a=>a?a.filter((_,i)=>i%step===0||i===n-1):null;
+  return {t:take(c.t),p:take(c.p),f:take(c.f),w:take(c.w)};
+}
 // resize+recompress in the browser — canvas only, no library. Steps down the
 // quality a few times if a big photo still won't fit under the target.
 function compressPhoto(file,maxEdge,targetBytes){
@@ -558,6 +659,19 @@ function brewRecipe(b){return `${b.grind??'—'} grind · ${b.doseG??'—'}g →
 function fmtWhen(iso){if(!iso)return '';const d=new Date(iso);const days=Math.floor((Date.now()-d)/864e5);
   if(days<1)return 'today';if(days===1)return 'yesterday';if(days<7)return days+'d ago';
   return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+// how long ago, at the grain the thing being read actually turns over. A shot
+// waiting on the passport is the one record in Carta that expires, so it is
+// the one that counts in minutes; past a day it falls back to fmtWhen.
+function fmtAgo(iso){
+  if(!iso)return '';
+  const m=Math.round((Date.now()-new Date(iso))/6e4);
+  if(!isFinite(m)||m<0)return fmtWhen(iso);
+  if(m<1)return 'a moment ago';
+  if(m<60)return `${m} minute${m===1?'':'s'} ago`;
+  const h=Math.round(m/60);
+  if(h<24)return `${h} hour${h===1?'':'s'} ago`;
+  return fmtWhen(iso);
+}
 // a date at month precision — the grain a record actually knows a first
 // sighting to. A day would be precision the ledger never earned.
 function fmtMonth(iso){if(!iso)return '';
@@ -1175,7 +1289,103 @@ function parseVisualizerShot(d){
     grind:num(d.grinder_setting),roaster,coffeeName,
     roastDate:normalizeRoastDate(d.roast_date),roastLevel:normalizeRoastLevel(d.roast_level),
     grinderModel:str(d.grinder_model),
+    // `time` stays rounded — it fills a dial and a brew's timeSec, both whole
+    // seconds since Phase 24. The plate states the figure at the precision the
+    // file gave it, which is a tenth, so the exact reading is kept beside it.
+    timeExact:isNaN(time)?null:time,
+    // stated or nothing: neither of these is derived off the curves, and both
+    // read `unread` on the plate's ledger wherever the file stayed silent
+    tempC:num(d.temperature),preinfusionSec:num(d.preinfusion),
+    curve:shotCurve(d),
     label:[roaster,coffeeName].filter(Boolean).join(' — ')||'Untitled shot'};
+}
+/* the curve the shot file actually carries (Phase 26) — pressure and flow and
+ * what landed in the cup, against elapsed seconds. Which key each series is
+ * under depends on what wrote the file, so each is read by the first key that
+ * is genuinely an array of numbers, and a series that isn't there comes back
+ * null rather than being interpolated out of the ones that are. No curve at
+ * all is a state, not a failure: the shot still states its scalars. */
+function shotCurve(d){
+  const src=(d&&typeof d==='object')?((d.data&&typeof d.data==='object')?d.data:d):{};
+  const arr=keys=>{
+    for(let i=0;i<keys.length;i++){
+      const v=src[keys[i]];
+      if(Array.isArray(v)&&v.length>1){const o=v.map(Number);if(o.every(n=>isFinite(n)))return o}
+    }
+    return null;
+  };
+  let t=arr(['espresso_elapsed','elapsed','timeframe','time']);
+  const p=arr(['espresso_pressure','pressure']);
+  if(!t||!p)return null;
+  // some writers state elapsed in milliseconds; a shot that ran ten minutes is
+  // not a shot, so the only reading left is that these are ms
+  if(t[t.length-1]>600)t=t.map(v=>v/1000);
+  const n=Math.min(t.length,p.length);
+  if(n<2)return null;
+  // a series of a different length can't be lined up against this clock
+  // without inventing samples, so it is dropped whole rather than stretched
+  const fit=a=>(a&&a.length>=n)?a:null;
+  const r=a=>a?a.slice(0,n).map(v=>Math.round(v*100)/100):null;
+  return {t:r(t),p:r(p),f:r(fit(arr(['espresso_flow','flow']))),w:r(fit(arr(['espresso_weight','weight'])))};
+}
+/* the three figures a shot is argued about: how hard it pushed and when, what
+ * came out against what went in, and how long it took. Read off the curve
+ * where there is one and off the shot's own scalars where there isn't —
+ * never mixed within a figure, and null wherever neither states it. */
+function shotFigures(shot){
+  const c=shot&&shot.curve;
+  let peak=null,peakAt=null;
+  if(c){
+    let i=0;
+    for(let k=1;k<c.p.length;k++)if(c.p[k]>c.p[i])i=k;
+    peak=c.p[i];peakAt=c.t[i];
+  }
+  const dose=shot&&shot.dose!=null?shot.dose:null;
+  const yld=(shot&&shot.water!=null)?shot.water:(c&&c.w?c.w[c.w.length-1]:null);
+  let total=shot&&shot.timeExact!=null?shot.timeExact:(shot&&shot.time!=null?shot.time:null);
+  if(total==null&&c)total=c.t[c.t.length-1];
+  return {peak,peakAt,total,dose,yield:yld,ratio:(dose&&yld)?yld/dose:null};
+}
+/* the plate's own geometry — pure, so it can be checked without a screen.
+ * `box` states the frame (`w`,`h`) and where the baseline and the ceiling of
+ * the plot sit inside it; pressure and flow each read against their own full
+ * scale, and what is in the cup against its own maximum with a little air
+ * over it, since the three are different quantities and a shared axis would
+ * be a claim none of them makes. */
+function platePaths(shot,box){
+  const c=shot&&shot.curve;
+  if(!c)return null;
+  const w=box.w,base=box.base,top=box.top;
+  const tMax=Math.max(0.1,c.t[c.t.length-1]);
+  const barMax=Math.max(box.barMax||12,Math.ceil(Math.max.apply(null,c.p)));
+  const flowMax=Math.max(box.flowMax||7.5,c.f?Math.max.apply(null,c.f):0);
+  const wMax=c.w?Math.max(0.1,Math.max.apply(null,c.w))*1.18:1;
+  const X=t=>+(t/tMax*w).toFixed(1);
+  const Y=(v,max)=>+(base-Math.max(0,Math.min(v,max))/max*(base-top)).toFixed(1);
+  const line=(vals,max)=>vals?vals.map((v,i)=>(i?'L':'M')+X(c.t[i])+' '+Y(v,max)).join(''):null;
+  const weight=line(c.w,wMax);
+  const ticks=[];
+  for(let s=5;s<tMax;s+=5)ticks.push({x:X(s),s});
+  return {
+    pressure:line(c.p,barMax),flow:line(c.f,flowMax),weight,
+    weightArea:weight?`${weight}L${w} ${base}L0 ${base}Z`:null,
+    grid:[3,6,9].filter(b=>b<barMax).map(b=>({bar:b,y:Y(b,barMax)})),
+    ticks,base,top,w,h:box.h,tMax,barMax,flowMax,wMax,
+    // the dasharray the draw-on animation runs against: over the path's real
+    // length by design, so the reveal never stalls short of the end
+    dash:Math.round(w*3.34)
+  };
+}
+// what the shot stated at one instant — the sample at or before that second,
+// never a value between two of them (a scrub reads the curve, it doesn't
+// smooth it). Null wherever that series isn't on the file at all.
+function shotAt(shot,t){
+  const c=shot&&shot.curve;
+  if(!c)return null;
+  let i=0;
+  while(i<c.t.length-1&&c.t[i+1]<=t)i++;
+  const pick=a=>a?a[Math.min(i,a.length-1)]:null;
+  return {t:c.t[Math.min(i,c.t.length-1)],bar:pick(c.p),flow:pick(c.f),grams:pick(c.w)};
 }
 // Visualizer's roast_level field is already known to BE a roast level, unlike a
 // pasted bag's free text — so no "roast" adjacency, just the word (cf. parseRoastLevel).
@@ -1358,14 +1568,18 @@ const TABS=[{id:'atlas',label:'Atlas'},{id:'journal',label:'Journal'},{id:'shelf
 // which room a screen belongs to, so the bar keeps saying where you are
 const ROOM_OF={atlas:'atlas',country:'atlas',region:'atlas',producer:'atlas',city:'atlas',cafe:'atlas',
   taste:'atlas',brief:'atlas',ask:'atlas',asking:'atlas',askresult:'atlas',menu:'atlas',
-  journal:'journal',cup:'journal',shelf:'shelf',record:'shelf',setups:'shelf',setup:'shelf',brew:'shelf'};
+  journal:'journal',cup:'journal',shot:'journal',shots:'journal',tastehome:'journal',
+  shelf:'shelf',record:'shelf',setups:'shelf',setup:'shelf',brew:'shelf'};
 // the screens that stand on their own — no bar under them, one way back. Taste,
 // the brief and the ask are one argument read in three sittings: you walk in at
 // the top and out at the bottom, so the bar would only offer a way to lose your
 // place. What Carta found is a destination, not a step, and keeps the bar.
 // The wait is barer still: while the ask is out there is exactly one thing to
 // do with the screen, and it is on it — cancel.
-const BARELESS=new Set(['cup','taste','brief','ask','asking','brew']);
+// Phase 26 adds three of the same kind: a shot is read once in a sitting, the
+// taste is the only question left on the screen it is asked on, and the list
+// of shots is a walk down to one of them and back.
+const BARELESS=new Set(['cup','taste','brief','ask','asking','brew','shot','shots','tastehome']);
 let tab='atlas';
 let pageView=null;
 function go(t){stopTimer(true);tab=t;pageView=null;render();maybeAutoExport()}
@@ -1415,7 +1629,8 @@ function closePage(){pageView=null;render()}
 const SCREENS={atlas:vAtlas,journal:vJournal,shelf:vShelf,country:vCountryChapter,
   region:vRegionChapter,producer:vProducerPage,city:vCityChapter,cafe:vCafe,cup:vCup,
   taste:vTaste,brief:vBrief,ask:vAsk,asking:vAsking,askresult:vAskResult,menu:vMenu,
-  record:vRecord,setups:vSetups,setup:vSetup,brew:vBrew};
+  record:vRecord,setups:vSetups,setup:vSetup,brew:vBrew,
+  shot:vShot,shots:vShots,tastehome:vTasteHome};
 let _lastScreenKey=null;
 function render(){
   const view=pageView||{kind:tab,id:null};
@@ -1642,6 +1857,10 @@ function useTimer(){const s=tElapsed+(tStart?(Date.now()-tStart)/1000:0);
  * spelling joins silently, a near one asks once, everything else is new. */
 let doorState=null;
 function openDoor(preset){doorState={step:'text',text:'',roaster:'',name:'',roastLevel:'',o:{},kind:null,preset:preset||null};paintDoor();}
+// the typed door, reached from the Journal (Phase 26): the same door, the same
+// fields, minus the one question it already knows the answer to — a brew you
+// type is a brew you made, so "where's this cup?" isn't asked
+function openHomeDoor(){openDoor();doorState.homeOnly=true;paintDoor();}
 // the door, opened from a café you're already standing in: where the cup is
 // isn't a question worth asking twice, so that step simply isn't there
 function openDoorAt(placeId){
@@ -1692,6 +1911,8 @@ function paintDoor(){
     // complaint — logging a cup took too many steps)
     const where=s.preset
       ?`<button class="btn btn-primary" onclick="doorNext2('bar')">At ${esc(s.preset.place)} — continue</button>`
+      :s.homeOnly
+      ?`<button class="btn btn-primary" onclick="doorNext2('home')">At home — continue</button>`
       :`<div class="eyebrow" style="margin:18px 0 10px">Where's this cup?</div>
         <div class="btnrow">
           <button class="btn btn-quiet" style="min-height:52px" onclick="doorNext2('bar')">At a café</button>
@@ -1835,10 +2056,18 @@ function doorPullFinish(){
     D.coffees.push(c);coffeeId=c.id;
   }
   const brew={id:uid(),createdAt:new Date().toISOString(),coffeeRef:coffeeId,setupId,technique:'',
-    grind:shot.grind,doseG:shot.dose,waterG:shot.water,tempC:null,timeSec:shot.time};
+    grind:shot.grind,doseG:shot.dose,waterG:shot.water,tempC:shot.tempC==null?null:shot.tempC,timeSec:shot.time};
+  // the shot this brew was read from, so a re-brew can start from it and the
+  // cup can draw its own curve back (Phase 26). The curve itself keeps out of
+  // the ledger — see CURVES_KEY.
+  if(shot.id!=null){brew.vizShotId=String(shot.id);if(shot.curve)setShotCurve(shot.id,shot.curve)}
   D.brews.push(brew);save();
-  doorState=null;
-  openImpression(brew);
+  const correct=doorState&&doorState._correct;
+  doorState=null;closeSheet();
+  // correcting drops into the forms that already edit these two records,
+  // prefilled — the coffee's sheet standing over the brew's own screen
+  if(correct){openBrewFlow(coffeeId,brew.id);openCoffeeForm(coffeeId);return}
+  openTasteHome(brew.id);
 }
 
 /* ============ café cup (the bar path) ============ */
@@ -1960,7 +2189,11 @@ function saveBrewFlow(coffeeId,editId){
   const fields={coffeeRef:coffeeId,setupId,technique:val('b_technique'),grind:dialState.grind.v,
     doseG:dialState.dose.v,waterG:dialState.water.v,tempC:dialTempC(),timeSec:dialState.time.v};
   const ex=editId?brewById(editId):null;
-  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});save();stopTimer(true);closeSheet();go('journal');toast('Brew updated');return}
+  if(ex){Object.assign(ex,fields,{updatedAt:new Date().toISOString()});save();stopTimer(true);closeSheet();
+    // a pulled shot corrected before it was ever written still owes its taste,
+    // so it lands where the road was going rather than back in the journal
+    if(ex.vizShotId!=null&&!cupOfShot(ex.vizShotId)){openTasteHome(ex.id);return}
+    go('journal');toast('Brew updated');return}
   const brew={id:uid(),createdAt:new Date().toISOString(),...fields};
   D.brews.push(brew);save();stopTimer(true);
   openImpression(brew);
@@ -2380,12 +2613,28 @@ function vJournal(){
     <button class="omini bare" onclick="openTaste()">Taste →</button>
   </header>
   <div class="pad" style="padding-top:6px">
+    ${measuredAtHomeHTML()}
     ${continuationHTML()}
-    <div class="shead" style="margin-top:0"><span class="l">Every cup, newest first</span></div>
+    <div class="shead"><span class="l">Every cup, newest first</span></div>
     ${cups.length?cups.map(cupRowHTML).join(''):'<div class="empty">Tap ＋ A cup to start the record.</div>'}
     ${cups.length?'<div class="note">Nothing is deleted. Put a cup away and it leaves the list, not the record.</div>':''}
     ${archivedFold('cups',cupRowHTML,'Put away')}
   </div></div>`;
+}
+/* station 09 (Phase 26): the two doors onto a cup measured at home, and the
+ * one line saying why the second exists. The typed door keeps everything it
+ * had — a Setup, the dials, the timer — and simply stops being the default.
+ * ＋ A cup on the bar is untouched: it remains the café path and the
+ * bag-paste door. */
+function measuredAtHomeHTML(){
+  const watching=getPref('vizWatch',false)===true&&!!visualizerEmail();
+  return `<div class="shead" style="margin-top:0"><span class="l">Measured at home</span>
+    <span class="r">${watching?'watching Visualizer':(visualizerEmail()?'a shot, or typed':'typed, until a machine is known')}</span></div>
+    <div class="btnrow" style="margin-top:14px">
+      <button class="btn btn-quiet" onclick="openShotsScreen()">Pull a shot</button>
+      <button class="btn btn-quiet" style="border-color:var(--line);color:var(--ink-2)" onclick="openHomeDoor()">Type a brew</button>
+    </div>
+    <div style="font-family:var(--serif);font-style:italic;font-size:var(--s13);color:var(--ink-3);line-height:1.5;margin:11px 0 4px">A pour-over leaves no shot file. Typing it is the same path it always was: a Setup, the dials, the timer.</div>`;
 }
 // the continuation (design-system pattern, hero-loop): the last cup brewed at
 // home, carried forward. Nothing invented — every figure on it is already on
@@ -2476,7 +2725,9 @@ function vCup(id,view){
       </div>
       ${cup.line?`<div style="border-top:1px solid var(--line);margin-top:20px;padding-top:16px;font-family:var(--serif);font-style:italic;font-size:19px;line-height:1.5;color:var(--ink);max-width:34ch">${esc(cup.line)}</div>`:''}
       ${(cup.descriptors||[]).length?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:16px">${cup.descriptors.map(d=>`<span class="dchip">${esc(d)}</span>`).join('')}</div>`:''}
+      ${cupPlateHTML(cup,brew)}
       <div style="margin-top:26px">${ledgerHTML(ledger)}</div>
+      ${brew&&brew.vizShotId!=null?`<div style="text-align:center;margin-top:20px"><button class="qlink" onclick="openBrewFlow('${coffee?coffee.id:''}')">Brew it again from these numbers →</button></div>`:''}
       ${place&&placed([place]).length?`<button style="width:100%;margin-top:18px;color:var(--ink);background:none;border:1px solid var(--line);padding:0;cursor:pointer;display:block" onclick="openCafeScreen('${place.id}')">
         ${streetsHTML([place],{boxStyle:'height:132px',zoom:15,still:true,attribLift:4,scoreOf:()=>1})}
         <span style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid var(--line)">
@@ -2490,6 +2741,24 @@ function vCup(id,view){
         :`<button class="btn btn-quiet" style="margin-top:8px;min-height:50px" onclick="putAwayCup('${cup.id}')">Put away this cup</button>`}
       <div class="note" style="margin-top:22px">Nothing is deleted. Put a cup away and it leaves the list, not the record.</div>
     </div></div>`;
+}
+/* the plate, kept with the cup (Phase 26) — so a score always has the shot
+ * that earned it underneath, at reading size and with the three figures as a
+ * foot rule. A cup whose curve isn't on this device simply doesn't draw one;
+ * its score, its line and its recipe are all on the ledger and stand alone. */
+function cupPlateHTML(cup,brew){
+  if(cup.kind!=='home'||!brew||brew.vizShotId==null)return '';
+  const shot=shotOfBrew(brew);
+  if(!shot||!shot.curve)return '';
+  const fg=shotFigures(shot);
+  const foot=[fg.peak==null?null:fig1(fg.peak)+' bar peak',
+    fg.ratio==null?null:`1:${fig1(fg.ratio)} · ${fig1(fg.dose)} → ${fig1(fg.yield)} g`,
+    fg.total==null?null:fig1(fg.total)+' s'].filter(Boolean);
+  return `<div style="margin:20px -20px 0;background:var(--surface-sunk);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    ${plateSVG(shot,PLATE_FULL,{grid:true,flow:false,weight:true,style:'height:auto'})}
+    ${foot.length?`<div style="display:flex;justify-content:space-between;gap:10px;padding:0 20px 10px;font-family:var(--sans);font-size:10px;letter-spacing:.06em;color:var(--ink-3);font-variant-numeric:tabular-nums">
+      ${foot.map(f=>`<span>${esc(f)}</span>`).join('')}</div>`:''}
+  </div>`;
 }
 function cupBack(){
   const b=pageView&&pageView.back;
@@ -2951,17 +3220,33 @@ const visualizerAuthHeader=()=>{
   const e=visualizerEmail(),p=visualizerPassword();
   return e&&p?'Basic '+btoa(`${e}:${p}`):null;
 };
+// station 02 (Phase 26): the same two fields, plus the one permission this
+// phase adds — said in full, and what it costs, before either field is typed
 function openVisualizerKey(){
   openSheet(`<h3>Your Visualizer account</h3>
-  <div class="sub">Your Visualizer email and password, kept on this device only — sent to nobody but visualizer.coffee, and only when you pull a shot. This is your real account login, not a separate key; Visualizer's own docs recommend against this for an app like Carta, and the tradeoff is yours to take.</div>
+  <div class="sub">Kept on this device only, sent to nobody but visualizer.coffee, and only when a shot is read. This is your real account login, not a separate key; Visualizer's own docs recommend against that for an app like Carta, and the tradeoff is yours to take.</div>
   <label class="f"><span class="l">Email</span><input type="text" id="viz_email" value="${esc(visualizerEmail())}" placeholder="you@example.com"></label>
   <label class="f"><span class="l">Password</span><input type="password" id="viz_password" value="${esc(visualizerPassword())}"></label>
-  <div class="btnrow">
+  <label style="display:flex;align-items:flex-start;gap:13px;cursor:pointer;border:1px solid var(--line);background:var(--surface-page);padding:14px 15px">
+    <input type="checkbox" id="viz_watch" style="flex:none;width:auto;margin-top:4px" ${getPref('vizWatch',false)===true?'checked':''}>
+    <span style="min-width:0">
+      <span style="display:block;font-family:var(--serif);font-size:16px;line-height:1.35">Look for a new shot when Carta opens</span>
+      <span style="display:block;font-family:var(--sans);font-size:12px;color:var(--ink-3);line-height:1.5;margin-top:4px">One call for your latest shot, on opening. Off, and the Atlas waits for you to ask for it.</span>
+    </span>
+  </label>
+  <div class="note">Unreachable, Visualizer costs you nothing: the door still opens on typing, and the shot can be pulled later — a shot file keeps.</div>
+  <div class="btnrow" style="margin-top:14px">
     ${visualizerEmail()?`<button class="btn btn-quiet" onclick="clearVisualizerKey()">Remove</button>`:''}
     <button class="btn btn-primary" onclick="saveVisualizerKey()">Save</button>
-  </div>`);
+  </div>
+  <button class="btn btn-quiet" onclick="closeSheet()">Not now</button>`);
 }
-function saveVisualizerKey(){setPref('visualizerEmail',val('viz_email'));setPref('visualizerPassword',val('viz_password'));closeSheet();toast('Saved — on this device only.');}
+function saveVisualizerKey(){
+  const w=document.getElementById('viz_watch');
+  setPref('visualizerEmail',val('viz_email'));setPref('visualizerPassword',val('viz_password'));
+  setPref('vizWatch',!!(w&&w.checked));
+  closeSheet();render();toast('Saved — on this device only.');
+}
 function clearVisualizerKey(){setPref('visualizerEmail','');setPref('visualizerPassword','');openVisualizerKey();}
 const VISUALIZER_BASE='https://visualizer.coffee/api/shots';
 async function callVisualizer(path){
@@ -3005,6 +3290,332 @@ function vizShotPicked(id){
   applyVisualizerShot(shot);
   const box=document.getElementById('viz_picker');
   if(box)box.innerHTML='<div class="muted small" style="margin-top:8px">Filled from Visualizer — temperature isn\'t part of a shot\'s record, so set that by hand.</div>';
+}
+
+/* ============ the shot comes to you (ROADMAP.md Phase 26) ============
+ * Phases 24–25 made a shot pullable — a quiet second button three taps down
+ * the door. This makes it the road: the Atlas offers the cup before it is
+ * asked for, the shot is read as a plate rather than a row of dials, and
+ * typing a brew steps off the main path to the Journal without losing a
+ * field. Everything downstream still works with the watch off — station 08
+ * is one tap from the Journal, and the shot screen is reachable from it. */
+// a shot is not a record: it is read, written into a cup, and let go of. The
+// cache is this session's, keyed by the shot's own Visualizer id.
+let _vizCache={},_vizWaiting=null,_vizChecked=false;
+function cacheShot(s){if(s&&s.id!=null)_vizCache[String(s.id)]=s;return s}
+function vizShotById(id){return _vizCache[String(id)]||null}
+const vizDismissed=()=>getPref('vizDismissed',[])||[];
+// the cup a shot was already written into — the one thing that keeps a shot
+// from ever coming back to the hero, and what puts a score on its row
+function cupOfShot(id){return id==null?null:live('cups').find(c=>c.vizShotId!=null&&String(c.vizShotId)===String(id))||null}
+/* the one new outbound touch this phase adds (ARCHITECTURE.md §7): one list
+ * call for the latest shot on opening, then one download for that shot, and
+ * only if the keeper turned the watch on in station 02. One call per app
+ * open — never a poll, never a sweep — and `_vizChecked` is what holds that
+ * against a render() ever firing it again. Unreachable, the Atlas paints its
+ * ordinary hero and says nothing at all. */
+async function vizCheckOnOpen(){
+  if(_vizChecked)return;_vizChecked=true;
+  if(getPref('vizWatch',false)!==true||!visualizerAuthHeader())return;
+  try{
+    const head=((await callVisualizer('?page=1&items=1')).data||[])[0];
+    if(!head||head.id==null)return;
+    if(vizDismissed().some(x=>String(x)===String(head.id)))return;
+    if(cupOfShot(head.id))return;
+    const shot=cacheShot(Object.assign(parseVisualizerShot(await callVisualizer(`/${head.id}/download?essentials=true`)),
+      {clock:head.clock,id:head.id}));
+    _vizWaiting=shot;
+    if(!pageView&&tab==='atlas')render();
+  }catch(e){/* degrades to nothing, by design — the hero simply doesn't change */}
+}
+// when a cup is poured for someone else, or the machine was run to flush it.
+// Honest and permanent: the id is kept so the hero never offers it again.
+function dismissShot(id){
+  const list=vizDismissed().filter(x=>String(x)!==String(id));
+  list.push(String(id));
+  setPref('vizDismissed',list.slice(-20));
+  if(_vizWaiting&&String(_vizWaiting.id)===String(id))_vizWaiting=null;
+  if(pageView&&pageView.kind==='shot')pageView=null;
+  render();toast('Left off. Carta won\'t offer that shot again.');
+}
+// the shot the hero is standing on, or nothing — read by vAtlas on every
+// paint, and cleared the moment its cup is written
+function waitingShot(){
+  if(!_vizWaiting)return null;
+  if(cupOfShot(_vizWaiting.id)||vizDismissed().some(x=>String(x)===String(_vizWaiting.id))){_vizWaiting=null;return null}
+  return _vizWaiting;
+}
+const shotWhen=s=>s&&s.clock?new Date(s.clock*1000).toISOString():null;
+function openShotScreen(id){openScreen('shot',String(id))}
+// station 08, reachable whether or not the watch is on. The list is fetched
+// once a sitting; the row you pick is the only one read in full.
+let _shots={busy:false,rows:null,error:null};
+function openShotsScreen(){
+  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  openScreen('shots');loadShots();
+}
+async function loadShots(force){
+  if(_shots.busy||(_shots.rows&&!force))return;
+  _shots.busy=true;_shots.error=null;render();
+  try{_shots.rows=(await fetchVisualizerShots(8)).map(cacheShot)}
+  catch(e){_shots.error=(e&&e.message)||'Could not reach Visualizer.'}
+  _shots.busy=false;
+  if(pageView&&pageView.kind==='shots')render();
+}
+
+/* ---- the plate, drawn. One drawing at three sizes: full-bleed where the shot
+ * is the subject, a hairline where it is context, a thumb on a row — a shot is
+ * recognisable by its shape before its label is read, which is the whole
+ * argument for drawing it 44px wide. */
+const PLATE_FULL={w:390,h:176,base:166,top:18},
+      PLATE_HAIR={w:350,h:34,base:31,top:5},
+      PLATE_THUMB={w:44,h:22,base:20,top:3};
+// the draw-on plays on arrival only — once per shot per size, so a scrub, a
+// repaint or a mark never replays it
+let _plateDrawn={};
+function plateDraws(k){if(_plateDrawn[k])return false;_plateDrawn[k]=true;return true}
+function plateSVG(shot,box,opts){
+  const g=platePaths(shot,box);
+  if(!g)return '';
+  opts=opts||{};
+  const draw=opts.draw&&plateDraws(shot.id+':'+box.w)?' draw':'';
+  return `<svg class="plate${opts.cls?' '+opts.cls:''}" viewBox="0 0 ${box.w} ${box.h}"${opts.style?` style="${opts.style}"`:''} aria-hidden="true">
+    ${opts.grid?g.grid.map(l=>`<path class="grid" d="M0 ${l.y}L${box.w} ${l.y}"></path>`).join(''):''}
+    ${opts.grid&&g.ticks.length?`<path class="tick" d="${g.ticks.map(t=>`M${t.x} ${g.base}L${t.x} ${g.base-6}`).join('')}"></path>`:''}
+    ${opts.axis===false?'':`<path class="axis" d="M0 ${g.base}L${box.w} ${g.base}"></path>`}
+    ${opts.weight&&g.weightArea?`<path class="wt${draw?' ink':''}" d="${g.weightArea}"></path>`:''}
+    ${opts.flow&&g.flow?`<path class="fl${draw?' ink':''}" d="${g.flow}"></path>`:''}
+    <path class="pr${draw}" style="--dash:${g.dash}" d="${g.pressure}"></path>
+    ${opts.labels?g.grid.map(l=>`<text class="lb" x="4" y="${(l.y-3).toFixed(1)}">${l.bar===9?'9 BAR':l.bar}</text>`).join('')
+      +g.ticks.map(t=>`<text class="lb" x="${Math.max(0,t.x-5).toFixed(1)}" y="${box.h}">${t.s}s</text>`).join(''):''}
+  </svg>`;
+}
+const fig1=v=>v==null?'—':(Math.round(v*10)/10).toFixed(1);
+// the three stated figures, at dial scale. Where a figure's own parts aren't
+// stated the label falls back to naming the figure rather than inventing them.
+function figsHTML(fg,small){
+  return `<div class="figs${small?' small':''}">
+    <div><div class="v">${fg.peak==null?'—':fig1(fg.peak)+'<span class="u">bar</span>'}</div>
+      <div class="l">${fg.peakAt==null||small?'Peak':esc('Peak, at '+fig1(fg.peakAt)+'s')}</div></div>
+    <div><div class="v">${fg.ratio==null?'—':'1:'+fig1(fg.ratio)}</div>
+      <div class="l">${fg.dose==null||fg.yield==null?'Ratio':esc(fig1(fg.dose)+' → '+fig1(fg.yield)+' g')}</div></div>
+    <div><div class="v">${fg.total==null?'—':fig1(fg.total)+'<span class="u">s</span>'}</div>
+      <div class="l">${small?'Time':'Total'}</div></div>
+  </div>`;
+}
+// the scrub: drag anywhere on the plate and the readout states what the shot
+// stated at that instant. Painted straight into the box — a re-render here
+// would replay the draw-on and lose the crosshair's own place.
+function plateBoxHTML(shot,g){
+  const f=g.tMax?Math.min(1,Math.max(0,(shotFigures(shot).peakAt||0)/g.tMax)):0;
+  return `<div class="platebox" data-shot="${esc(String(shot.id))}"
+      onpointerdown="plateScrub(event)" onpointermove="plateScrub(event)">
+    ${plateSVG(shot,PLATE_FULL,{draw:true,grid:true,flow:true,weight:true,labels:true})}
+    <div class="cross" style="left:${(f*100).toFixed(2)}%"></div>
+    <div class="read">${scrubReadHTML(shotAt(shot,f*g.tMax))}</div>
+  </div>`;
+}
+function scrubReadHTML(at){
+  if(!at)return '';
+  const r=(k,v)=>`<span class="r"><span>${k}</span><b>${v}</b></span>`;
+  return r('at',at.t.toFixed(1)+'s')+r('bar',at.bar==null?'—':at.bar.toFixed(1))
+    +r('ml/s',at.flow==null?'—':at.flow.toFixed(2))+r('in cup',at.grams==null?'—':at.grams.toFixed(1)+' g');
+}
+function plateScrub(e){
+  const box=e.currentTarget,shot=vizShotById(box.getAttribute('data-shot'));
+  if(!shot||!shot.curve)return;
+  const r=box.getBoundingClientRect();if(!r.width)return;
+  const f=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
+  const tMax=shot.curve.t[shot.curve.t.length-1];
+  const cross=box.querySelector('.cross'),read=box.querySelector('.read');
+  if(cross)cross.style.left=(f*100).toFixed(2)+'%';
+  if(read)read.innerHTML=scrubReadHTML(shotAt(shot,f*tMax));
+}
+
+/* ---- station 04: the shot, as a plate. BARELESS — one shot is read in a
+ * sitting, and the bar would only offer a way to lose it. */
+function vShot(id,view){
+  const shot=vizShotById(id);
+  if(!shot)return `<div class="pad" style="padding-top:26px"><div class="empty">That shot isn't in hand any more.</div>
+    <button class="btn btn-quiet" onclick="openShotsScreen()">Your recent shots</button>
+    <button class="btn btn-quiet" onclick="closePage()">Back</button></div>`;
+  const g=platePaths(shot,PLATE_FULL),fg=shotFigures(shot),when=shotWhen(shot);
+  const setup=setupById(matchSetupByGrinder(live('setups'),shot.grinderModel));
+  return `<div>
+    <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
+      <button class="omini bare" style="flex:none" onclick="${view&&view.back==='shots'?'openShotsScreen()':'closePage()'}" aria-label="Back">←</button>
+      <div style="flex:1;min-width:0">
+        <div class="eyebrow" style="margin-bottom:4px">${esc(['From Visualizer',when?fmtClock(when):''].filter(Boolean).join(' · '))}</div>
+        <div class="display" style="font-size:1.375rem;margin:0">${esc(shot.coffeeName||shot.label)}, <em>as it poured</em></div>
+      </div>
+    </header>
+    ${g?plateBoxHTML(shot,g):`<div class="note" style="margin:0;padding:16px 20px;border-top:0;border-bottom:1px solid var(--line)">This shot came without its curve. Its own figures still stand.</div>`}
+    <div class="pad" style="padding-top:0">
+      ${figsHTML(fg)}
+      <div style="margin-top:16px">${ledgerHTML([
+        ['Coffee',shot.label==='Untitled shot'?'':shot.label],
+        ['Setup',setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):(shot.grinderModel||'')],
+        ['Grind',shot.grind==null?'':String(shot.grind)],
+        ['Water',fmtTempStated(shot.tempC)],
+        ['Preinfusion',shot.preinfusionSec==null?'':fig1(shot.preinfusionSec)+' s'],
+        ['Roast date',shot.roastDate?fmtDateLong(shot.roastDate+'T00:00'):''],
+      ])}</div>
+      <button class="btn btn-primary" style="min-height:52px;margin-top:18px" onclick="shotIsTheCup(${jsq(String(shot.id))})">This is the cup →</button>
+      <div style="text-align:center;margin-top:15px"><button class="qlink" onclick="shotCorrect(${jsq(String(shot.id))})">Correct something before it is written</button></div>
+      <div style="text-align:center;margin-top:10px"><button class="qlink faint" onclick="dismissShot(${jsq(String(shot.id))})">Not mine</button></div>
+      <div class="note">Read off your account, not stored anywhere else. A field Visualizer didn't state reads <em>unread</em> rather than a guess.</div>
+    </div></div>`;
+}
+const fmtClock=iso=>iso?new Date(iso).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}):'';
+// stated or nothing: a shot file that named no temperature gets `unread`, not
+// a figure read off a curve that was never a scalar (SPEC §4, ARCHITECTURE §4)
+const fmtTempStated=c=>c==null?'':(tempUnit()==='F'?`${Math.round(c2f(c)*10)/10} °F`:`${c} °C`);
+// the same gentle join the door already runs, entered from the shot's own
+// screen: an exact match asks nothing and station 05 never appears
+function shotIsTheCup(id,correct){
+  const shot=vizShotById(id);if(!shot)return;
+  doorState={step:'pullJoin',_pullShots:[shot],_correct:!!correct};
+  doorPullPicked(shot.id);
+}
+// the same road, stopping one door short: the coffee and the brew are minted
+// exactly as they would have been, then handed to the forms that already edit
+// them rather than to the taste
+function shotCorrect(id){shotIsTheCup(id,true)}
+
+/* ---- station 06: the taste, and nothing else. The plate steps back to a
+ * hairline — still there, no longer the subject — and the 1–9 takes the page,
+ * with the score answering in the ember. Replaces openImpression's sheet on
+ * this path only; the typed path keeps the sheet it always had. */
+let _thLine='';
+function openTasteHome(brewId){
+  if(!brewById(brewId))return;
+  hedState=null;descState=new Set();_thLine='';cupPhotoPending=null;
+  closeSheet();openScreen('tastehome',brewId);
+}
+function vTasteHome(brewId){
+  const brew=brewById(brewId);
+  if(!brew)return `<div class="pad" style="padding-top:26px"><div class="empty">That brew isn't on the record.</div>
+    <button class="btn btn-quiet" onclick="go('journal')">Back to the journal</button></div>`;
+  const coffee=coffeeById(brew.coffeeRef),shot=shotOfBrew(brew);
+  // the figures come off the shot where there is one and off the brew's own
+  // dials where there isn't — the same three either way
+  const fg=shotFigures(shot||{time:brew.timeSec,dose:brew.doseG,water:brew.waterG});
+  const hair=shot&&shot.curve?plateSVG(shot,PLATE_HAIR,{cls:'hair quiet',axis:false,style:'flex:1;min-width:0'}):'';
+  const stated=[fg.peak==null?null:fig1(fg.peak)+' bar',fg.ratio==null?null:'1:'+fig1(fg.ratio),
+    fg.total==null?null:fig1(fg.total)+'s'].filter(Boolean).join(' · ');
+  return `<div>
+    <header class="shdr" style="display:block;padding-bottom:12px">
+      <div style="display:flex;align-items:flex-end;gap:14px">
+        <button class="omini bare" style="flex:none" onclick="go('journal')" aria-label="Back">←</button>
+        <div style="flex:1;min-width:0">
+          <div class="eyebrow" style="margin-bottom:4px">${esc(coffeeLabel(coffee))}</div>
+          <div class="display" style="font-size:1.375rem;margin:0">Was it <em>good?</em></div>
+        </div>
+      </div>
+      ${hair||stated?`<div style="display:flex;align-items:center;gap:12px;margin-top:14px">${hair}
+        ${stated?`<span style="flex:none;white-space:nowrap;font-family:var(--sans);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums">${esc(stated)}</span>`:''}</div>`:''}
+    </header>
+    <div class="pad" style="padding-top:0">
+      <div class="tastebig">
+        <div class="n${hedState==null?'':' set'}" id="th_score">${hedState==null?'—':hedState}</div>
+        <div class="say" id="th_say">${esc(tasteHomeNote(hedState))}</div>
+      </div>
+      <div class="nine" id="th_nine">${[1,2,3,4,5,6,7,8,9].map(n=>
+        `<button class="${hedState===n?'on':''}" onclick="tasteHomePick(${n})">${n}</button>`).join('')}</div>
+      <div class="nineax"><span>Poured away</span><span>Cross town for</span></div>
+      <div class="shead"><span class="l">What it tasted of</span><span class="r">optional</span></div>
+      ${descRow([...descState])}
+      <label class="f" style="margin-top:20px"><span class="l">The line</span>
+        <input type="text" id="th_line" value="${esc(_thLine)}" oninput="_thLine=this.value" placeholder="One sentence you'd want to read again…"></label>
+      <button class="btn btn-primary" style="min-height:52px;margin-top:8px" onclick="saveTasteHome('${brew.id}')">Write the cup</button>
+      <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="saveTasteHome('${brew.id}',true)">Skip — the brew still counts</button></div>
+    </div></div>`;
+}
+// what a reading means, said once and without a compliment in it. Eight is
+// where a roaster starts earning an anchor, which is the only claim made here.
+function tasteHomeNote(n){
+  if(n==null)return 'Nine is a coffee you would cross town for. One is a cup you poured away.';
+  return n>=8?'Kept. This one goes into your taste as evidence.':'Recorded as it was.';
+}
+// painted in place: a re-render would replay the plate's draw-on and eat the
+// line already typed beside it
+function tasteHomePick(n){
+  hedState=n;
+  const box=document.getElementById('th_nine');
+  if(box)box.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',i===n-1));
+  const num=document.getElementById('th_score');
+  if(num){num.textContent=String(n);num.classList.add('set')}
+  const say=document.getElementById('th_say');
+  if(say)say.textContent=tasteHomeNote(n);
+}
+// the shot behind a brew, rebuilt from the ledger and the curve store — so a
+// cup written weeks ago still draws its own plate with nothing fetched
+function shotOfBrew(brew){
+  if(!brew||brew.vizShotId==null)return null;
+  const cached=vizShotById(brew.vizShotId);
+  return {id:brew.vizShotId,curve:getShotCurve(brew.vizShotId)||(cached&&cached.curve)||null,
+    dose:brew.doseG,water:brew.waterG,time:brew.timeSec,grind:brew.grind,tempC:brew.tempC,
+    label:cached?cached.label:'',clock:cached?cached.clock:null};
+}
+function saveTasteHome(brewId,skip){
+  if(!skip&&hedState==null){toast("A cup needs its reading — the 1–9 first. Or skip; that's honest too.");return}
+  const brew=brewById(brewId);if(!brew)return;
+  const cup={id:uid(),createdAt:new Date().toISOString(),at:new Date().toISOString(),kind:'home',
+    coffeeRef:brew.coffeeRef,brewRef:brew.id,score:skip?null:hedState,
+    line:skip?'':val('th_line'),descriptors:skip?[]:[...descState]};
+  if(brew.vizShotId!=null)cup.vizShotId=brew.vizShotId;
+  D.cups.push(cup);
+  hedState=null;descState=new Set();_thLine='';
+  // the ask comes back up the moment the cup is written — the hero is exactly
+  // the screen Phase 20 shipped again, with nothing left over to expire
+  if(_vizWaiting&&brew.vizShotId!=null&&String(_vizWaiting.id)===String(brew.vizShotId))_vizWaiting=null;
+  save();openScreen('cup',cup.id);
+  toast(skip?'The brew is on the record.':'Written to the record.',()=>unwriteCup(cup.id,brewId),'Undo');
+}
+// a real undo of the write: the cup is put away the way everything else is,
+// and what was typed comes back to the screen it was typed on
+function unwriteCup(cupId,brewId){
+  const cup=cupById(cupId);if(!cup)return;
+  hedState=cup.score==null?null:cup.score;descState=new Set(cup.descriptors||[]);_thLine=cup.line||'';
+  if(!putAwayCore(D,'cups',cupId,new Date().toISOString()))return;
+  save();openScreen('tastehome',brewId);
+}
+
+/* ---- station 08: the other shots. Reached from the hero, or from the Journal
+ * when the watch is off. Each row carries its own curve. */
+function vShots(){
+  const rows=_shots.rows;
+  return `<div>
+    <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
+      <button class="omini bare" style="flex:none" onclick="go('journal')" aria-label="Back">←</button>
+      <div style="flex:1;min-width:0">
+        <div class="eyebrow" style="margin-bottom:4px">Visualizer</div>
+        <div class="display" style="font-size:1.375rem;margin:0">Your recent <em>shots</em></div>
+      </div>
+    </header>
+    <div class="pad" style="padding-top:0">
+      <div class="lede" style="margin-top:16px">The coffee and the brew arrive already right. Only the taste is still yours to type.</div>
+      ${_shots.busy?'<div class="empty">Reading your shots…</div>'
+        :_shots.error?`<div class="empty">${esc(_shots.error)}</div><button class="btn btn-quiet" onclick="loadShots(true)">Try again</button>`
+        :!rows?''
+        :!rows.length?'<div class="empty">No shots on your Visualizer account yet.</div>'
+        :rows.map(shotRowHTML).join('')}
+      ${rows&&rows.length?'<div class="note">Eight shots listed, and only the one you pick is read in full. A shot you have already written keeps its score here.</div>':''}
+      <button class="btn btn-quiet" style="margin-top:18px" onclick="openHomeDoor()">Type a brew instead</button>
+    </div></div>`;
+}
+function shotRowHTML(shot){
+  const cup=cupOfShot(shot.id),fg=shotFigures(shot),when=shotWhen(shot);
+  const meta=[when?fmtAgo(when):'',shot.label==='Untitled shot'?'no coffee named':'',
+    fg.ratio==null?null:'1:'+fig1(fg.ratio),fg.total==null?null:fig1(fg.total)+'s',
+    fg.peak==null?null:fig1(fg.peak)+' bar'].filter(Boolean).join(' · ');
+  const curve=shot.curve?plateSVG(shot,PLATE_THUMB,{cls:'thumb'+(cup?' quiet':''),style:'width:44px;height:22px;flex:none'})
+    :'<span style="flex:none;width:44px"></span>';
+  return `<button class="lrow" onclick="openScreen('shot',${jsq(String(shot.id))},{back:'shots'})">
+    ${curve}
+    <span class="mid"><span class="t"${cup?' style="color:var(--ink-2)"':''}>${esc(shot.label)}</span><span class="m">${esc(meta)}</span></span>
+    ${cup?`<span class="sc${cup.score==null?' none':''}">${cup.score==null?'—':cup.score}</span>`
+      :'<span class="chip on" style="flex:none;text-transform:uppercase;letter-spacing:.06em;border-color:var(--line-strong);color:var(--ink)">New</span>'}</button>`;
 }
 /* ============ your taste — the hunt, folded into the Atlas ============
  * Scout was a room whose output was geography, so it stopped being a room: it
@@ -4486,34 +5097,42 @@ function vAtlas(){
   const cities=knownCities();
   const counts=countryCupCounts();
   const asks=D.asks.slice().sort(byNew);
+  // the hero yields (SPEC §2): an unlogged cup outranks the next question, and
+  // it is also the only thing on this screen that expires. The ask steps down
+  // one slab into the lift and comes straight back up once the cup is written.
+  const shot=waitingShot();
+  const askFieldHTML=`<div class="askfield">
+          <input type="text" id="home_ask" value="${esc(askDraft.dest)}" placeholder="A city, a route, a friend's taste…"
+            aria-label="Where to next" oninput="askDraft.dest=this.value" onkeydown="if(event.key==='Enter')askFromHome()">
+          <button onclick="askFromHome()">Ask →</button>
+        </div>`;
   return `<div>
-    <div class="mapbox passport" style="position:sticky;top:0;height:min(452px,50vh);z-index:1">
+    <div class="mapbox passport" style="position:sticky;top:0;height:${shot?'min(600px,66vh)':'min(452px,50vh)'};z-index:1">
       <carta-belt style="position:absolute;inset:0" fit="cover" frame="tasted" lift="on" tasted="${esc(countries.map(c=>c.label).join(','))}"></carta-belt>
       <div class="fade top" style="height:104px"></div>
       <div class="overlay" style="left:20px;right:20px;top:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
         <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
         <button class="omini bare" onclick="openTaste()">Your taste →</button>
       </div>
-      <div class="fade bottom deep" style="height:210px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 22px">
+      ${shot?homeShotHeroHTML(shot):`<div class="fade bottom deep" style="height:210px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 22px">
         <div class="eyebrow" style="margin-bottom:7px;color:var(--accent)">Ask Carta</div>
         <div class="display big" style="margin:0 0 14px">Where to <em>next?</em></div>
-        <div class="askfield">
-          <input type="text" id="home_ask" value="${esc(askDraft.dest)}" placeholder="A city, a route, a friend's taste…"
-            aria-label="Where to next" oninput="askDraft.dest=this.value" onkeydown="if(event.key==='Enter')askFromHome()">
-          <button onclick="askFromHome()">Ask →</button>
-        </div>
+        ${askFieldHTML}
         <div class="asktrust">Sent with your brief, on your own key — every café checked against a real address before it is drawn.</div>
-      </div>
+      </div>`}
     </div>
     <div class="lift" style="z-index:2;margin-top:-18px;padding-bottom:26px">
       <div style="display:flex;justify-content:center;padding:9px 0 3px"><span style="width:38px;height:3px;background:var(--paper-3);display:block"></span></div>
       <div class="pad" style="padding-bottom:0">
+        ${shot?`<div class="shead" style="margin-top:8px"><span class="l">Ask Carta</span><span class="r">on your own key</span></div>
+          <div style="margin-top:14px">${askFieldHTML}</div>`:''}
         ${countries.length||cities.length?'':`<div class="lede" style="margin-top:14px">Log a coffee with its country, or a café cup with its city, and the passport starts filling in.</div>`}
-        ${asks.length?`<div class="shead" style="margin-top:8px"><span class="l">What Carta found</span>
+        ${asks.length?`<div class="shead"${shot?'':' style="margin-top:8px"'}><span class="l">What Carta found</span>
           <span class="r">${words(asks.length)} ask${asks.length===1?'':'s'} · tap to reopen</span></div>
           ${asks.map(askRowHTML).join('')}`:''}
-        ${cities.length?`<div class="shead"${asks.length?'':' style="margin-top:8px"'}><span class="l">Your cities</span><span class="r">${cities.length} on the record</span></div>
+        ${cities.length?`<div class="shead"${asks.length||shot?'':' style="margin-top:8px"'}><span class="l">Your cities</span><span class="r">${cities.length} on the record</span></div>
           ${cities.map(cityRowHTML).join('')}`:''}
+        ${atHomeSlabHTML(asks.length||cities.length||shot)}
         ${countries.length?`<div class="shead"><span class="l">Tasted so far</span><span class="r">tap the map, or a name</span></div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
             ${countries.map(c=>`<button class="cchip" onclick="openCountryChapter(${jsq(c.label)})">${esc(c.label)}<span class="n">${counts[landKey(c.label)]||0}</span></button>`).join('')}
@@ -4522,6 +5141,41 @@ function vAtlas(){
       </div>
     </div>
   </div>`;
+}
+/* the cup waiting on the passport (Phase 26). A stated fact with the cup
+ * attached to it — "Poured 11 minutes ago" — and never a badge, a dot or a
+ * count on the bar: the tripwire in ROADMAP.md holds. The fade is
+ * pointer-events:none by design, so everything tappable inside it hands its
+ * own taps back the way .askfield already does. */
+function homeShotHeroHTML(shot){
+  const fg=shotFigures(shot),when=shotWhen(shot);
+  const sub=[shot.roaster,shot.roastLevel?shot.roastLevel.toLowerCase():'',
+    shot.grinderModel?'on the '+shot.grinderModel:''].filter(Boolean).join(' · ');
+  return `<div class="fade bottom deep" style="height:396px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 20px">
+    <div class="waiting"><span class="mk"></span><span class="l">${esc(when?'Poured '+fmtAgo(when):'A shot, waiting')}</span></div>
+    <div class="display big" style="margin:0 0 3px">${esc(shot.coffeeName||shot.label)}</div>
+    ${sub?`<div style="font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-3);margin-bottom:12px">${esc(sub)}</div>`:''}
+    ${shot.curve?plateSVG(shot,PLATE_HAIR,{cls:'hair',draw:true}):''}
+    ${figsHTML(fg,true)}
+    <button class="btn btn-primary" style="margin-top:16px;pointer-events:auto" onclick="openShotScreen(${jsq(String(shot.id))})">Log this cup →</button>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:11px;pointer-events:auto">
+      <span class="asttrust" style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">Read off your account, not stored anywhere else.</span>
+      <button class="qlink" style="flex:none" onclick="openShotsScreen()">Other shots</button>
+    </div>
+  </div>`;
+}
+/* the invitation, one slab of paper below the fold — shown only while the
+ * machine isn't known yet, and never as a nudge: it states what the machine
+ * already keeps and what reading it would cost. The typed door stands beside
+ * it, since a pour-over leaves no shot file. */
+function atHomeSlabHTML(anythingAbove){
+  if(visualizerEmail())return '';
+  const home=live('cups').filter(c=>c.kind==='home').length;
+  return `<div class="shead"${anythingAbove?'':' style="margin-top:8px"'}><span class="l">At home</span>
+    <span class="r">${home?`${words(home)} cup${home===1?'':'s'} measured`:'nothing measured yet'}</span></div>
+    <div class="lede" style="margin-top:14px">Your machine keeps every shot it pulls. Carta can read them, and then a cup at home costs you one tap and a number.</div>
+    <button class="btn btn-quiet" onclick="openVisualizerKey()">Connect Visualizer</button>
+    <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="openHomeDoor()">Or type a brew yourself</button></div>`;
 }
 // the field on the passport hands off to the composer rather than firing the
 // call: what kind of ask it is, and how far you'd go, are the difference
@@ -5086,8 +5740,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.27.0';
+const APP_VERSION='7.28.0';
 const CHANGELOG=[
+  {v:'7.28.0',d:"The shot comes to you — a cup measured at home now arrives from Visualizer with its own curve, and asks only for the taste. Turn the watch on and Carta looks once, on opening, for the shot you just pulled: it waits on the Atlas as a stated fact with the cup attached to it, and the question the Atlas usually asks steps down one slab until that cup is written. A shot opens as a plate rather than a row of dials — pressure drawn as the shot's own signature, flow beside it, what landed in the cup underneath, with peak, ratio and time stated big and everything Visualizer didn't say reading unread rather than guessed. Drag across the curve and the readout follows your finger. The taste is a screen of its own now, the 1–9 taking the whole page with the curve stepped back to a hairline, and the cup keeps that curve afterwards, so a score always has the shot that earned it underneath. Your recent shots are one tap from the Journal whether or not the watch is on, each row carrying its own small curve — you recognise a shot by its shape before you read the label. Typing a brew is untouched and one door back, in the Journal, where a pour-over that leaves no shot file is logged deliberately. Nothing polls, nothing sweeps, and unreachable it all costs you nothing."},
   {v:'7.27.0',d:"The pull, at the door. Pulling a shot from Visualizer used to mean opening a coffee's own dial-in screen first, so the coffee itself still had to be added by hand. The door now offers a third way in beside pasting and typing: pull it from Visualizer, and the coffee and the brew both arrive already right, read straight off the shot — the roaster and the coffee matched gently against what's already on the shelf, asked about once if Carta isn't sure, never merged without saying so. It lands on \"What was in the cup?\" with nothing typed but the taste itself. The dial-in screen's own button is still there, for a Setup or a hand pourover with nothing to sync."},
   {v:'7.26.0',d:"Pull from Visualizer. Dose, yield, time, grind — a Decent machine or a Bluetooth scale often records these the moment a shot or a pour finishes, and until now Carta had no way to know that and asked you to type them all in again. Dialing in a brew now offers a button beside the usual fields: pick a recent shot from your Visualizer account, and the numbers land in the dials already turned to it, still yours to correct. Nothing runs until you tap it, nothing is fetched beyond the one shot you pick, and typing it in by hand works exactly as it always has for everyone else."},
   {v:'7.25.0',d:"A coffee's own cups, not just their count. A coffee's page used to state \"Cups so far: 4\" and stop there — every cup behind that number stayed invisible, whether it was the bag you brewed at home or the same coffee you first had at the café it came from. It lists them now, newest first: each home brew with its Setup and technique, each café cup with the place you had it, every one with its own reading beside it — one tap into any of them, and a café cup carries you on to that café itself."},
@@ -5128,6 +5783,10 @@ const CHANGELOG=[
 /* ============ boot ============ */
 applyTheme();
 render();
+// the watch, if it was turned on (SPEC §3): one call for the latest shot,
+// after the first paint and never before it — the Atlas has already drawn
+// itself by the time this either lands or quietly doesn't
+vizCheckOnOpen();
 // the app-shortcut's own door (ROADMAP.md Phase 10, manifest.json's
 // shortcuts array) — a long-press on the home screen straight to the
 // door, skipping the Journal. Cleared from the address bar once read, so

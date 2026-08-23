@@ -79,11 +79,11 @@ Neither finding changes a joy or a law. Both change what ships next.
 
 ## The phases (Act Two)
 
-*Phases 8–25 are all shipped, Phase 19 landed after Phase 20 rather than
+*Phases 8–26 are all shipped, Phase 19 landed after Phase 20 rather than
 before it (Phase 19's own entry below has the account of why). Carta 7
-stands at **v7.27.0, `index.html` 5,141 lines + `carta-map.js` 535 lines,
-85/85 pure tests** — 141 lines over the 5,000-line band, disclosed in
-Phase 25's own entry and in `docs/ARCHITECTURE.md` §1. Full prose for each
+stands at **v7.28.0, `index.html` 5,800 lines + `carta-map.js` 535 lines,
+94/94 pure tests** — 800 lines over the 5,000-line band, disclosed in
+Phase 26's own entry and in `docs/ARCHITECTURE.md` §1. Full prose for each
 is in `LOGBOOK.md`, cited here, not repeated.*
 
 ### Phase 8 — durability, without a server
@@ -1178,6 +1178,106 @@ grinder name; a shot with no matching Setup and no grinder name refuses
 with the same message manual entry already uses. 85/85 pure tests passing,
 including new `parseVisualizerShot` coverage for the roaster/coffee/roast
 fields and dedicated `normalizeRoastLevel`/`matchSetupByGrinder` cases.
+
+### Phase 26 — the shot comes to you (shipped — v7.28.0)
+
+**The joy it serves:** #1 (the cup, caught), taken further than Phase 25's
+door. Where the pull asked the keeper to go looking for the shot they just
+pulled, this phase has Carta go looking instead — the cup the keeper is
+about to forget to log stands on the Atlas before they ask for it.
+
+**What ships.** Turned on once, opt-in, in the shot screen's own settings
+row (`prefs.vizWatch`, off by default), Carta checks once per app open —
+after the first paint, never before it, guarded by `_vizChecked` against a
+later `render()` re-firing it — for the most recent shot on the keeper's
+Visualizer account. Unlogged, it takes the Atlas's own hero: the ask that
+usually stands there steps down one slab into the lift, and the shot waits
+as a stated fact with the cup already attached to it — "Poured 11 minutes
+ago," never a badge, a dot or a count. Write the cup or say *Not mine* and
+both reverse: the hero returns to its ordinary Phase 20 shape and the ask
+climbs back to the top. A shot draws as a **plate** rather than a row of
+dials — pressure in body ink, flow dashed beside it, what actually landed
+in the cup as an 8% fill underneath, peak/ratio/time stated big and
+whatever the file never said reading `unread` rather than guessed. Drag
+across it and the readout follows the scrub, at three sizes: full-bleed and
+scrubbable on the shot's own screen, a hairline on the cup once it's
+written, a 44px thumb on every row in the new Journal-adjacent **Shots**
+list. Typing a brew by hand is untouched, one door back in the Journal, for
+a pour-over that leaves no shot file at all — nothing about the manual path
+moved.
+
+**The gentle join is Phase 25's, reused, not rebuilt.** An unprompted shot
+runs through exactly the same `matchNode`/`matchNodes`/`matchSetupByGrinder`
+chain the door already uses: an exact roaster or coffee spelling joins
+silently, a near one asks once, anything else is minted new; a Setup
+matches only on an exact grinder-name fold or falls back to whichever is
+current. No new matching logic was written for the hero surface — station
+05 (the join) appears only when it's actually owed.
+
+**The tripwires, read at the gate:**
+
+- **No gamification / no feed** — held. The hero states a fact with a cup
+  attached to it and expires the moment that cup is written; nothing on the
+  bar changes, and nothing counts or scores. Verified by test.
+- **Third-turn relapse (no proofs)** — held. The join offers, never merges;
+  *Not mine* leaves both records untouched and survives a re-open via
+  `prefs.vizDismissed`.
+- **Tooling creep** — held. No vendored library added; the count stays at
+  two.
+- **The one-file law** — **fired, and disclosed rather than amended.**
+  `index.html` lands at **5,800 lines / 383.4 KB**, up from Phase 25's
+  5,141 — 800 lines over the 5,000-line ceiling Phase 19 closed the debt
+  on, bytes comfortable at 383.4 of 500 KB. The plate's own pure geometry
+  (`platePaths`/`shotFigures`/`shotCurve`/`shotAt`, ~135 lines with their
+  string-templating callers) was the named candidate to move into
+  `carta-map.js` at this gate, the way the map layer itself moved at
+  Phase 19; it stayed inline instead, by the founder's own call, because
+  this phase's build had no `carta-map.js` to append to and no way to
+  verify the seam without one. See `docs/ARCHITECTURE.md` §1 for the full
+  account and the standing candidate for whichever phase next touches that
+  file.
+- **Offline-first** — held. Watch off makes zero calls; unreachable, the
+  Atlas paints its ordinary hero and says nothing. A curve that never made
+  it to the device simply doesn't draw — the cup, its score and its recipe
+  stand alone regardless.
+
+**Adopted decision to record: the curve keeps out of the ledger.** A shot's
+three series are ~3 KB of numbers; putting them in `carta7.v1` would stop a
+backup being a thing you can read as text, the same ruling `ARCHITECTURE.md`
+§3 already made once for photos. They live instead in a separate key,
+`carta7.shots.v1`, written only when a brew is minted from a shot and
+thinned to at most 400 samples. The ledger itself still moves exactly two
+fields (`cups.vizShotId`, `brews.vizShotId`) and two prefs
+(`prefs.vizWatch`, `prefs.vizDismissed`) — nothing else.
+
+**Adopted decision to record: `unread` reaches further than a first read
+suggests.** Visualizer's essentials payload has no confirmed scalar for
+water temperature or preinfusion time. Deriving "preinfusion" from where
+the pressure curve first crosses 4 bar would be an interpretation, not a
+reading — so both stay `unread` on the plate's ledger wherever the file is
+silent, which is most of the time, and light up on their own the day a shot
+file actually states either.
+
+**Parked, not built:** a scalar temperature field (there is still no
+confirmed reading, only a curve); the drift a shot shows against the
+keeper's last cup on the same coffee, or against every 8 they've scored;
+any card, share or export of a plate.
+
+**Done when — met:** watch on, a shot with no matching cup takes the
+Atlas's hero and the ask steps down; writing the cup or dismissing it both
+reverse the hero, in either order; the plate scrubs to the dragged
+position and states `unread` for whatever the file didn't say; a written
+cup keeps its plate at a hairline and its foot rule reads off the ledger,
+not the plate's own tenth-of-a-second reading; the Shots list carries every
+recent shot with its own thumb curve, *New* marked against one already
+scored; watch off makes no call at all. Verified end to end in headless
+Chromium, paper and dusk, Visualizer stubbed, plus the branches (*Not
+mine* surviving a re-open, Undo handing back what was typed, a curveless
+shot reading its stated figures and drawing nothing, the curve surviving a
+reload with the network cut) and the regressions (Phase 25's door, Phase
+24's dial-in picker, a typed brew's impression sheet). 94/94 pure tests
+passing, including new `shotCurve`/`shotFigures`/`platePaths`/`shotAt`
+coverage.
 
 ## The horizon (unscheduled, revisited)
 
