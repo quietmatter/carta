@@ -198,12 +198,27 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   landed in the cup underneath, scrubbable by drag, with whatever the file
   never stated reading `unread` rather than guessed. A written cup keeps its
   plate at a glance, and every recent shot is one tap away on its own list
-  off the Journal, each carrying its own small curve — a shot is
+  off the Journal, each carrying its own small curve — a brew is
   recognisable by its shape before its label is read.
   Come back to Carta having pulled a shot while it sat in the background
   and it looks again, the same single call; your account has a door of its
   own on the record and in the Journal, to sign out of or to turn the watch
   off.
+- **A pour-over is a staircase.** A filter brew read off a scale gets its own
+  drawing rather than being forced into an espresso's. Water goes in as a
+  staircase, the cup fills behind it, and the gap between the two is the bed
+  holding on; each pour is a band with what it added written over it, and the
+  wait after it is drawn by being left empty. No pressure line, because there
+  is no pressure. The figures change with the shape: a shot is argued about by
+  its peak bar, a pour-over by its **drawdown** — how long the bed took to let
+  go once you stopped pouring — with the bloom and the ratio beside it and the
+  pours listed as they were made. Drag across it and the readout names what was
+  happening at that second: blooming, pouring pour 3, drawing down, in the cup.
+  Both methods land in one list, because they land in one journal, with a scope
+  if you want only one — and no icon or badge saying which is which, because at
+  the size the little curve is drawn an arc and a staircase already are.
+  **Agitation reads `unread`, and always will**: the hand is half the recipe
+  for a filter brew and no instrument records it.
 
 - **The migration.** From your record, **Import from classic** reads classic's
   own JSON export (Desk → Export → the working copy) straight into Carta 7's

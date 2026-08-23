@@ -7,6 +7,70 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.31.0: a pour-over is a staircase
+
+- **Phase 26's second method, from the design board's turn `2a`** (stations
+  10–14, `SPEC-phase26-pourover.md`). Same account, same call, same road —
+  a different drawing and different figures underneath it.
+- **The gate was called before the arm was written, as the spec demanded.**
+  §8: *"Two plate arms rather than one deepens the estimate. The plate
+  renderer moving out stops being the honest candidate and becomes the
+  decision: make it at the phase gate, before the second arm is written."*
+  Put to the founder with three options priced — a new file, an append to
+  `carta-map.js`, or landing inline again — **the call was the new file.**
+  A plate is not a map, and a file whose own name stops being true is the
+  exact failure `ARCHITECTURE.md` exists to prevent.
+- **So the app is three files now, and that is a stack-law amendment.**
+  `carta-plate.js` holds both arms — `shotCurve`, `shotPours`,
+  `shotFigures`, `shotMethod`, `platePaths`, `shotAt`, `shotPhase`, `mmss`
+  (pure) plus `plateSVG`/`figsHTML`/`plateBoxHTML`/`scrubReadHTML`/
+  `plateScrub`. `index.html` came back to **5,945 / 5,000** *having gained
+  the whole second method*; without the split it would have landed near
+  6,400. **The line debt is not closed** — 945 over, and the split paid for
+  the new work rather than the old. "Two files, no build" was never really
+  about two: it is *no bundler, no npm, nothing between the source and the
+  host*, and a third `<script src>` costs none of that. A fourth still needs
+  the same argument written down.
+- **What the second arm actually is.** The method is read off the file, never
+  off a brewer's name: a machine writes pressure and a scale does not, so the
+  *absence* states it. From the water-in series `shotPours` reads the pours
+  back — a rise is a pour, a flat run is the wait after it, and the last
+  wait is the drawdown because nothing was added after it. Everything on the
+  screen follows from refusing to flatten that into one curve: the bands are
+  the pours, the gaps are the bed letting go, the grid is grams off the water
+  actually added rather than an invented scale, the ticks are minutes, and
+  there is no flow line because for a pulsed pour it is a square wave that
+  only restates the bands.
+- **Two things the board got exactly right and the code now reproduces
+  exactly:** the bloom is the *whole bloom phase* (first drop to second
+  pour), not the pour that starts it — so it is null on a brew poured in one
+  go rather than mislabelling its only wait; and every gap after the bloom
+  reads *drawing down*, not only the last. The first draft invented a
+  "waiting" phase for the gaps between pours; the board was right and it was
+  removed. The bed is always draining.
+- **`agitation: unread`** is the honesty gate landing harder than it ever has.
+  The hand is half the recipe for a filter brew and no instrument records it.
+- **Retired: "A pour-over leaves no shot file."** True of a machine's file,
+  false of a scale's. Typed entry keeps everything and stays one door back in
+  the Journal — it is the fallback for an *unconnected* brew now, not for a
+  method.
+- **Tests: 107** (+9), including both cases §8 named as the ones that would
+  fail invisibly — a brew poured in one go, and a file that ends
+  mid-drawdown. The harness now slices two pure blocks, plate first, because
+  `parseVisualizerShot` reads across that seam.
+- **One real bug caught only by walking the flow to a written cup:**
+  `thinCurve` rebuilt the stored curve field by field and silently dropped
+  `wIn` and `method`, so a pour-over's plate drew on the shot screen and then
+  vanished from the cup it was written into. Fixed; it is exactly the class
+  of thing the browser pass exists for and the unit tests could not see.
+- **Parked, not absorbed** (the spec's own §9, kept): **pour along** — the
+  record read back as a recipe, counting you into each pour. It is the
+  obvious next joy and it is a whole feature: a timer, a screen that stays
+  awake, and a decision about what happens when you fall behind. A
+  compliment. Also parked: bloom ratio as a stated figure (wants the taste
+  model to have an opinion first) and kettle temperature as a curve (no file
+  states it; inventing one is the exact thing `unread` exists to prevent).
+
 ## 2026-08-23 — v7.30.0: the design board, QC'd
 
 - **A gap pass, not a phase.** The founder walked the Phase 26 design board

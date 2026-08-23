@@ -11,7 +11,8 @@ part of the record.*
 
 Carta 7 is built exactly the way classic was, smaller:
 
-- **Two files, not one, since Phase 19.** `index.html`, all CSS and JS
+- **Three files, not one — two since Phase 19, three since v7.31.0.**
+  `index.html`, all CSS and JS
   inline, self-contained, was the whole app through Phase 20. Target
   **3–5,000 lines / ≤ 500 KB** for it — a file one person can read whole.
   (Classic reached 12,480 lines; the size was the third turn's cost, not the
@@ -20,11 +21,13 @@ Carta 7 is built exactly the way classic was, smaller:
   and overages is kept below as the record of how it got there). **Phase 19
   paid that debt down**, moving the map layer out into its own file,
   `carta-map.js`, loaded from `index.html`'s own `<head>` with a plain
-  `<script src>` — no bundler, no build, still two files you drop on a static
-  host. `index.html` now stands at **4,854 lines / 321.5 KB**, comfortably
-  inside the band with real room again; `carta-map.js` holds the map layer
-  proper at **535 lines / 108.4 KB**. Combined, the app is the same size it
-  was — the debt was paid by moving lines, not cutting them.
+  `<script src>` — no bundler, no build, still files you drop on a static
+  host. `index.html` stood at **4,854 lines / 321.5 KB** after that split,
+  comfortably inside the band with real room again; `carta-map.js` holds the
+  map layer proper at **535 lines / 108.4 KB**. Combined, the app was the
+  same size it was — the debt was paid by moving lines, not cutting them.
+  **`carta-plate.js` is the third**, added at v7.31.0 for the same reason and
+  by the same mechanism; the argument for it is at the foot of this section.
 
   *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
   Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
@@ -189,13 +192,36 @@ Carta 7 is built exactly the way classic was, smaller:
   5,983 / 5,000 (400 KB of 500).** It is a patch, not a phase, and it did
   not go looking for room: the ~180 lines are the `.chk` control, the
   `.reading` block on the cup page, the widened coffee match with its
-  join card, the resume check, and `shotTempGoal`. **The debt is now the
-  single largest the project has carried**, and the plate is still the
-  named candidate to move (`platePaths`, `shotFigures`, `shotCurve`,
-  `shotAt`, plus `plateSVG`/`figsHTML` — pure geometry, no `D`, no DOM,
-  ~135 lines). Nothing in this patch made that move harder; it is still
-  one phase's work against `carta-map.js`, and it is still the founder's
-  call when to spend it.
+  join card, the resume check, and `shotTempGoal`. **The debt was then the
+  single largest the project had carried**, and the plate was still the
+  named candidate to move.
+
+  **v7.31.0 made that move, and it is the third file.** Phase 26's second
+  method (`SPEC-phase26-pourover.md` §8) forced the gate: *"Two plate arms
+  rather than one deepens the estimate. The plate renderer moving out stops
+  being the honest candidate and becomes the decision: make it at the phase
+  gate, before the second arm is written."* Put to the founder with the
+  three options priced, the call was **a new file rather than an append to
+  `carta-map.js`** — a plate is not a map, and a file whose own name stops
+  being true is the exact failure this document exists to prevent.
+
+  So `carta-plate.js` now holds `shotCurve`, `shotPours`, `shotFigures`,
+  `shotMethod`, `platePaths`, `shotAt`, `shotPhase` and `mmss` (all pure)
+  plus `plateSVG`, `figsHTML`, `plateBoxHTML`, `scrubReadHTML` and
+  `plateScrub` — **both** arms, espresso and pour-over. `index.html` came
+  back to **5,945 / 5,000 (400 KB of 500)** having *gained* the whole
+  second method: without the split it would have landed near 6,400.
+  `carta-plate.js` is 428 lines / 24 KB.
+
+  **This amends the two-file law, and the amendment is the file count, not
+  the build.** "Two files, no build" was never really about two: it was
+  about *no bundler, no npm, no step between the source and the host*, and
+  a third `<script src>` in the head costs none of that. What it does cost
+  is one more thing to remember to upload, which is a real cost and is why
+  this is written down rather than assumed. The band still governs
+  `index.html` alone; the byte ceiling has still never moved. **The line
+  debt stands at 945 over and is not closed** — the split paid for the
+  second method rather than paying down what Phase 26 already owed.
   **The three Phase 26 flow-curve patches (v7.28.1–.3) and Phase 27
   (photos retired) were not individually tallied here** — a gap in this
   section's own upkeep, not a claim the debt closed. Phase 27's own edit
@@ -236,6 +262,8 @@ Carta 7 is built exactly the way classic was, smaller:
 
 ```
 index.html            Carta 7 — the app
+carta-map.js          the map layer, split out at Phase 19 (§1)
+carta-plate.js        the plate — both arms, split out at v7.31.0 (§1)
 CLAUDE.md             the working guide to this file (Carta 7)
 test/model.test.js    the pure-block harness (§9)
 classic/index.html    Carta 6.18.x, frozen whole (it is self-contained;
@@ -345,8 +373,17 @@ D = {
               palette?, archived? }],
   setups:  [{ ...classic's shape, unchanged }],
   brews:   [{ ...classic's shape minus roastRef/lotRef; keeps coffeeRef,
-              vizShotId? }],                          // Phase 26 — same shot ref as the
+              vizShotId?,                             // Phase 26 — same shot ref as the
                                                          // cup's, so a re-brew can start from it
+              method?,                                // v7.31.0 — 'espresso' | 'pourover',
+                                                         // read off the file (a scale writes no
+                                                         // pressure), stored once, never guessed
+                                                         // from a brewer's name. Absent = espresso,
+                                                         // which every brew before it was.
+              pours?[{ at, ms, added, then }],        // v7.31.0 — what the staircase was made of;
+                                                         // the last `then` is the drawdown
+              brewer? }],                             // v7.31.0 — the brewer and its paper, which
+                                                         // is half the recipe for a filter brew
   menus:   [{ id, createdAt, placeRef, at,
               items:[{ text,                           // the line as printed
                        roaster?, name?, roastLevel?,   // parsed, editable
@@ -481,6 +518,12 @@ tokens/style     the QM-inherited layer + Carta overrides (ported)
                    uppercase on .08em tracking at 13px of padding (the
                    shape .timer .ctl already used), .chk is the drawn
                    permission box, and .reading is the cup's own score row
+plate layer      carta-plate.js (v7.31.0) — the brew's own curve, both arms.
+                 Espresso: one arc under pressure, flow beside it, the cup
+                 underneath, argued by peak bar. Pour-over: a staircase of
+                 water added in pulses, the cup lagging, the pours as bands
+                 and the waits drawn by being left empty, argued by drawdown.
+                 Pure geometry + string-templating renderers; no D, no DOM.
 map layer        <carta-belt> · <carta-plot> · <carta-streets>, three light-DOM
                  custom elements above the app's own script, with d3-array +
                  d3-geo vendored beside them (§1). Leaflet injected at runtime.
@@ -770,13 +813,24 @@ invisible (a bad brief just looks like a mediocre brief). So:
 
 - Pure functions (`domain`, `taste`) live between `/* ==== pure ==== */`
   markers in the file. **`test/model.test.js`** — zero-dep, plain Node,
-  the `server/test.js` pattern — slices that region out of `index.html`,
-  evaluates it, and asserts on fixture ledgers (the bar's floor, anchor
+  the `server/test.js` pattern — slices those regions out and evaluates
+  them against fixture ledgers. **Since v7.31.0 there are two such
+  regions**, one in `carta-plate.js` and one in `index.html`, and they are
+  evaluated in load order — the plate first, exactly as the browser loads
+  it — because `parseVisualizerShot` reads `shotCurve`/`shotPours` across
+  that seam the same way the app reads the map layer's globals. A marker
+  missing from *either* file fails loudly and names the file. It asserts on
+  fixture ledgers (the bar's floor, anchor
   ranking, scope exclusions, brief size bounds, join/undo round-trips, and
   from Phase 18 the ground helpers: `originPin`, `meanPin`, and `namesBack`,
   the gate that keeps a lookup's region-shaped answer from being pinned as a
   farm; from Phase 26 the plate's own geometry: `shotCurve`, `shotFigures`,
-  `platePaths`, and `shotAt`, all pure over a shot's arrays with no `D` and
+  `platePaths`, and `shotAt` — and from v7.31.0 their pour-over arms plus
+  `shotPours`, `shotMethod` and `shotPhase`, including the two
+  `SPEC-phase26-pourover.md` §8 names as the cases that would fail
+  invisibly (a brew poured in one go, which has no bloom to state, and a
+  file that ends mid-drawdown, which states the drawdown it recorded rather
+  than one extrapolated for it) — all pure over a brew's arrays with no `D` and
   no DOM). **94 cases.**
 - Everything painted stays verified by loading the page, as ever.
 
