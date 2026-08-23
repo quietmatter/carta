@@ -1304,17 +1304,26 @@ function parseVisualizerShot(d){
  * under depends on what wrote the file, so each is read by the first key that
  * is genuinely an array of numbers, and a series that isn't there comes back
  * null rather than being interpolated out of the ones that are. No curve at
- * all is a state, not a failure: the shot still states its scalars. */
+ * all is a state, not a failure: the shot still states its scalars.
+ * Visualizer's own file (confirmed against a live shot, v7.28.2) splits the
+ * curve across two containers rather than one: the elapsed-seconds series
+ * sits at the top of the response (`timeframe`), the value series (pressure,
+ * flow, weight) sit nested under `data` — so every key is hunted for in both
+ * containers, never assumed to share one. */
 function shotCurve(d){
-  const src=(d&&typeof d==='object')?((d.data&&typeof d.data==='object')?d.data:d):{};
+  if(!d||typeof d!=='object')return null;
+  const sources=[d,(d.data&&typeof d.data==='object')?d.data:{}];
   const arr=keys=>{
-    for(let i=0;i<keys.length;i++){
-      const v=src[keys[i]];
-      if(Array.isArray(v)&&v.length>1){const o=v.map(Number);if(o.every(n=>isFinite(n)))return o}
+    for(let s=0;s<sources.length;s++){
+      const src=sources[s];
+      for(let i=0;i<keys.length;i++){
+        const v=src[keys[i]];
+        if(Array.isArray(v)&&v.length>1){const o=v.map(Number);if(o.every(n=>isFinite(n)))return o}
+      }
     }
     return null;
   };
-  let t=arr(['espresso_elapsed','elapsed','timeframe','time']);
+  let t=arr(['timeframe','espresso_elapsed','elapsed','time']);
   const p=arr(['espresso_pressure','pressure']);
   if(!t||!p)return null;
   // some writers state elapsed in milliseconds; a shot that ran ten minutes is
@@ -5767,8 +5776,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.28.1';
+const APP_VERSION='7.28.2';
 const CHANGELOG=[
+  {v:'7.28.2',d:"The curve, actually there — for real this time. The last fix made Carta ask for the right file; it turned out to still be reading the wrong place inside it. Visualizer states a shot's elapsed seconds at the top of that file and pressure, flow and weight underneath a different heading, and Carta was only ever looking in one place at a time. It now reads both, so a shot's plate draws its true shape at last."},
   {v:'7.28.1',d:"The curve, actually there. A shot's plate was drawing empty for everyone — the call Carta made for a shot's numbers never carried its curve at all, so pressure, flow and weight had nowhere to come from no matter how plainly Visualizer itself showed them. Opening a shot, or picking one at the door, now makes the one extra call that actually has the curve on it; the cheap list and hero-check calls stay exactly as light as they were."},
   {v:'7.28.0',d:"The shot comes to you — a cup measured at home now arrives from Visualizer with its own curve, and asks only for the taste. Turn the watch on and Carta looks once, on opening, for the shot you just pulled: it waits on the Atlas as a stated fact with the cup attached to it, and the question the Atlas usually asks steps down one slab until that cup is written. A shot opens as a plate rather than a row of dials — pressure drawn as the shot's own signature, flow beside it, what landed in the cup underneath, with peak, ratio and time stated big and everything Visualizer didn't say reading unread rather than guessed. Drag across the curve and the readout follows your finger. The taste is a screen of its own now, the 1–9 taking the whole page with the curve stepped back to a hairline, and the cup keeps that curve afterwards, so a score always has the shot that earned it underneath. Your recent shots are one tap from the Journal whether or not the watch is on, each row carrying its own small curve — you recognise a shot by its shape before you read the label. Typing a brew is untouched and one door back, in the Journal, where a pour-over that leaves no shot file is logged deliberately. Nothing polls, nothing sweeps, and unreachable it all costs you nothing."},
   {v:'7.27.0',d:"The pull, at the door. Pulling a shot from Visualizer used to mean opening a coffee's own dial-in screen first, so the coffee itself still had to be added by hand. The door now offers a third way in beside pasting and typing: pull it from Visualizer, and the coffee and the brew both arrive already right, read straight off the shot — the roaster and the coffee matched gently against what's already on the shelf, asked about once if Carta isn't sure, never merged without saying so. It lands on \"What was in the cup?\" with nothing typed but the taste itself. The dial-in screen's own button is still there, for a Setup or a hand pourover with nothing to sync."},

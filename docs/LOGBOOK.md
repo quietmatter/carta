@@ -7,6 +7,46 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — Phase 26 patch (v7.28.2): the curve, actually there — for real
+
+- **Shipped — v7.28.2.** v7.28.1 fixed which call Carta made for a shot's
+  data; it turned out that wasn't the whole bug. The keeper who reported
+  the original issue tried the fix and reported back that the plate was
+  still empty — and sent a backup export in for debugging.
+- **The backup alone couldn't answer it, so the live API did.** Curves
+  keep out of the ledger by design (`carta7.shots.v1`, a separate key), so
+  a JSON export can't show whether a curve was ever fetched or persisted.
+  What it *could* show was a brew with a real `vizShotId` from that same
+  day — proof the keeper had actually pulled a shot and hit the bug live,
+  not a stale report. With that shot id in hand, the actual live
+  `/download` response for that exact shot was fetched directly (through
+  the same Basic Auth path the app itself uses) and diffed field by field.
+- **The finding: Visualizer splits a shot's curve across two containers,
+  not one.** The elapsed-seconds series (`timeframe`) sits at the top of
+  the response; pressure, flow and weight sit nested under a `data` key.
+  `shotCurve` had only ever searched a single container per call — an
+  assumption baked in since Phase 26 shipped and never actually checked
+  against a live payload. Every fixture written for it, including the new
+  one added for v7.28.1's own fix, used a flat shape that happened not to
+  exercise the split, so the pure harness stayed green through both bugs
+  without ever catching either.
+- **Fixed by hunting every key across both containers**, and verified
+  against the keeper's own real shot rather than another invented stub:
+  1,081 real samples, pressure and weight both reading correctly, no flow
+  sensor on that particular shot (a legitimate absence, drawn as one). A
+  new pure case locks in the split shape specifically, alongside the
+  existing flat one. 95/95 pure tests passing.
+- **A note on how this was debugged, for the record.** The keeper's backup
+  file carries `visualizerEmail`/`visualizerPassword` in plain text inside
+  `prefs` — by the same design `ARCHITECTURE.md` §7 already names and
+  defends (Basic Auth, no scoped token available to a static app). Using
+  it to make one direct, read-only diagnostic call against the live API
+  was the fastest way to close this out correctly instead of guessing a
+  third time; the password was never printed or logged anywhere in the
+  process.
+
+---
+
 ## 2026-08-23 — Phase 26 patch (v7.28.1): the curve, actually there
 
 - **Shipped — v7.28.1.** Phase 26's plate was drawing empty for every

@@ -694,6 +694,22 @@ const msCurve = M.shotCurve({ espresso_elapsed: [0, 700, 1400], espresso_pressur
 assert.ok(msCurve.t[1] < 1, 'elapsed stated in milliseconds (a "shot" over 600s) is converted to seconds, never trusted raw');
 ok('shotCurve normalizes millisecond-elapsed series down to seconds');
 
+// the real shape (confirmed against a live shot, v7.28.2): elapsed sits at
+// the top of the response, the value series live nested under `data` — a
+// split no fixture until now actually exercised, and the split a flat
+// payload's own shape can't catch even by accident
+const splitPayload = {
+  timeframe: ['0.067', '0.134', '0.200', '0.277', '0.334'],
+  data: { espresso_pressure: ['0.0', '2.1', '9.0', '8.6', '6.0'],
+    espresso_weight: ['0.0', '0.0', '5.0', '20.0', '36.0'], espresso_flow: null },
+};
+const splitCurve = M.shotCurve(splitPayload);
+assert.ok(splitCurve, 'a shot whose elapsed series is top-level and whose value series are nested under `data` must still read a curve');
+assert.equal(splitCurve.p[2], 9);
+assert.equal(splitCurve.w[4], 36);
+assert.equal(splitCurve.f, null, 'a null value series (no flow sensor on this shot) reads null, not a crash');
+ok('shotCurve reads the elapsed series and the value series from different containers when the file splits them, exactly as Visualizer itself does');
+
 const withCurve = { curve, dose: 18, water: null, timeExact: null, time: null };
 let at = M.shotAt(withCurve, 2);
 assert.equal(at.bar, 9, 'shotAt reads the exact sample at a scrub position on the curve');

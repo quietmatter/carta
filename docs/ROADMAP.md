@@ -1294,6 +1294,25 @@ one shot, cached per id so it is never fetched twice in a sitting; the
 cheap list and watch calls are untouched. `docs/ARCHITECTURE.md` §7 has
 the corrected network-posture row and the full account.
 
+**Patch, v7.28.2 — the fetch was right; the read was still wrong.** The
+keeper who reported the original bug tried v7.28.1 and reported it still
+wasn't working — sending a backup export in for debugging. That file
+couldn't carry the answer itself (curves live outside the ledger, in
+`carta7.shots.v1`), so the actual live `/download` response for the
+keeper's own shot was fetched directly and diffed. The finding: Visualizer
+splits a shot's curve across two containers, not one — elapsed seconds at
+the top of the response, pressure/flow/weight nested under `data` —
+and `shotCurve` had only ever searched a single container per call, an
+assumption never actually checked against a live payload since Phase 26
+shipped. Every fixture written for `shotCurve`, including the new one
+added for v7.28.1, used a flat shape that happened not to exercise the
+split, so the pure harness stayed green through both bugs. Fixed by
+hunting every key across both containers; verified directly against the
+keeper's own shot (1,081 real samples, pressure and weight both correct,
+no flow sensor on that particular one) rather than against another
+invented stub. `docs/ARCHITECTURE.md` §7 and `docs/LOGBOOK.md`'s v7.28.2
+entry have the full account.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner
