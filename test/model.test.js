@@ -41,7 +41,7 @@ vm.runInContext(pureSrc + `
   ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
   parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder,
   shotCurve, shotFigures, platePaths, shotAt, shotTempGoal,
-  shotPours, shotMethod, shotPhase, mmss };
+  shotPours, shotMethod, shotPhase, mmss, shotPreinfusion };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -681,8 +681,8 @@ ok('parseVisualizerShot refuses to guess a field the shot left blank or unparsea
 
 assert.deepEqual(M.parseVisualizerShot(), { method: 'espresso', pours: [], dose: null, water: null,
   time: null, grind: null, roaster: '', coffeeName: '', roastDate: '', roastLevel: '',
-  grinderModel: '', timeExact: null, tempC: null, preinfusionSec: null, brewer: '',
-  curve: null, label: 'Untitled shot' });
+  grinderModel: '', timeExact: null, tempC: null, preinfusionSec: null, preinfusionBar: null,
+  machine: '', brewer: '', profile: '', curve: null, label: 'Untitled shot' });
 ok('parseVisualizerShot never throws on a missing payload');
 
 // ---- the plate (ROADMAP.md Phase 26): platePaths/shotFigures/shotCurve/shotAt ----
@@ -953,5 +953,81 @@ assert.equal(M.mmss(184), '3:04');
 assert.equal(M.mmss(42), '0:42');
 assert.equal(M.mmss(0), '0:00');
 ok('mmss states a filter brew\'s minutes the way a filter brew is actually read');
+
+// ---- v7.31.1: the method was being read off the wrong thing. Visualizer
+// normalises every upload into one DE1-shaped schema, so a brew logged from a
+// scale arrives CARRYING an espresso_pressure series that is flat at zero —
+// and "the key exists" was being taken for "a machine wrote this". Reported
+// from a real ledger: a 3:20 Kalita brew filed as an espresso, its water null.
+const flatPressure = (() => {
+  const P = [{s:0,e:9,a:0,b:45},{s:38,e:62,a:45,b:120},{s:88,e:110,a:120,b:180},{s:132,e:152,a:180,b:225}];
+  const at = t => { let w=0; for (const p of P) { if (t>=p.e) w=p.b; else if (t>p.s) { const u=(t-p.s)/(p.e-p.s); w=p.a+(p.b-p.a)*u*u*(3-2*u); break } } return w };
+  const t=[], pres=[], wt=[];
+  for (let i=0;i<=2000;i++){ const x=+(i/10).toFixed(1); t.push(x); pres.push(0); wt.push(+(at(x)+Math.sin(x*7)*0.05).toFixed(2)) }
+  return { duration: 200, bean_weight: '14.9', bean_brand: 'Sey', bean_type: 'Ethiopia Gedeb washed',
+    grinder_model: 'Lido OG', grinder_setting: '1450', machine: 'Kalita Wave 185',
+    timeframe: t, data: { espresso_pressure: pres, espresso_weight: wt } };
+})();
+
+const flatCurve = M.shotCurve(flatPressure);
+assert.equal(flatCurve.method, 'pourover',
+  'a pressure series that never rose is not an espresso, however present the key is');
+assert.equal(flatCurve.p, null, 'and a flat-zero pressure line is dropped rather than inked along the axis');
+assert.ok(flatCurve.wIn && flatCurve.wIn.length > 100, "the scale's own weight becomes the staircase when nothing else states the water");
+ok('shotCurve reads the method off whether pressure was APPLIED, not off whether a pressure key exists');
+
+// a lever pulls at five bar, not nine — the threshold has to clear it
+const lever = M.shotCurve({ timeframe: [0,1,2,3,4,5,6], data: { espresso_pressure: [0,3.2,5,5,4.4,3,2.1] } });
+assert.equal(lever.method, 'espresso', "a lever's gentler pull is still an espresso");
+const trickle = M.shotCurve({ timeframe: [0,1,2,3,4,5,6], data: { espresso_pressure: [0,0.3,0.8,1.1,0.9,0.4,0.1], espresso_weight: [0,10,40,90,150,200,225] } });
+assert.equal(trickle.method, 'pourover', 'a series that peaks under two bar never had pressure applied to it');
+ok('the pressure threshold clears a lever shot and still refuses a trickle');
+
+const flatShot = M.parseVisualizerShot(flatPressure);
+assert.equal(flatShot.method, 'pourover');
+assert.ok(Math.abs(flatShot.water - 225) <= 0.2,
+  'the water is the high-water mark of the scale (225.1 here — its own noise crest), not its last wobbling sample');
+assert.equal(flatShot.machine, 'Kalita Wave 185', 'the machine is a field Visualizer states and Carta now reads');
+assert.equal(flatShot.pours.length, 4);
+assert.equal(M.shotFigures(flatShot).ratio.toFixed(1), '15.1');
+ok('parseVisualizerShot recovers the real reported case — method, water and machine all read back');
+
+// ---- pre-infusion, off the curve (v7.31.1). Visualizer states `preinfusion`
+// on some files and not others; the pressure line has always said it anyway.
+const piProfile = (() => {
+  const bar = t => {
+    if (t < 0.6) return 0.4*t/0.6;
+    if (t < 4.2) return 0.4+2.5*Math.pow((t-0.6)/3.6, 0.75);
+    if (t < 5.4) return 2.9-0.2*Math.sin(Math.PI*(t-4.2)/1.2);
+    if (t < 8.6) return 2.9+6.22*Math.pow((t-5.4)/3.2, 0.85);
+    if (t < 24) return 9.12-3.07*Math.pow((t-8.6)/15.4, 1.15);
+    if (t < 27.4) return 6.05-1.45*((t-24)/3.4);
+    return Math.max(0, 4.6*(1-(t-27.4)/0.7));
+  };
+  const t=[], p=[];
+  for (let i=0;i<=274;i++){ const x=i/10; t.push(x); p.push(+bar(x).toFixed(2)) }
+  return { timeframe: t, data: { espresso_pressure: p } };
+})();
+assert.deepEqual(M.shotPreinfusion(M.shotCurve(piProfile)), { sec: 4.2, bar: 2.9 },
+  "the design board states 4.2 s at 2.9 bar for this profile, and the curve alone says the same");
+
+const straight = { timeframe: [], data: { espresso_pressure: [] } };
+for (let i=0;i<=274;i++){ straight.timeframe.push(i/10); straight.data.espresso_pressure.push(+Math.min(9, i/10*3).toFixed(2)) }
+assert.equal(M.shotPreinfusion(M.shotCurve(straight)), null,
+  'a profile that ramps straight to nine bar has no pre-infusion, and null is not zero');
+
+const noisy = { timeframe: [], data: { espresso_pressure: [] } };
+for (let i=0;i<=274;i++){ const x=i/10; noisy.timeframe.push(x); noisy.data.espresso_pressure.push(+Math.max(0, Math.min(9, x*3+Math.sin(x*40)*0.08)).toFixed(2)) }
+assert.equal(M.shotPreinfusion(M.shotCurve(noisy)), null, 'noise on the way up is not a hold');
+assert.equal(M.shotPreinfusion(flatCurve), null, 'a brew with no pressure has no pre-infusion to state');
+assert.equal(M.shotPreinfusion(null), null);
+ok('shotPreinfusion reads the plateau off the pressure line, and states nothing where there is no plateau');
+
+const piShot = M.parseVisualizerShot(piProfile);
+assert.equal(piShot.preinfusionSec, 4.2);
+assert.equal(piShot.preinfusionBar, 2.9);
+assert.equal(M.parseVisualizerShot({ ...piProfile, preinfusion: '3.5' }).preinfusionSec, 3.5,
+  'a figure the file states outright still wins over the one read off the curve');
+ok('parseVisualizerShot states pre-infusion with the pressure it held, preferring the file where it says so');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);

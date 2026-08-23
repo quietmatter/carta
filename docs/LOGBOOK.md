@@ -7,6 +7,63 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.31.1: the staircase, actually recognised
+
+- **Reported with the ledger to prove it.** A pour-over was being filed as an
+  espresso — the plate drew an arc, the figures argued peak bar, and the water
+  came out blank. The keeper sent their own backup, which is what turned a
+  guess into a diagnosis: a Kalita brew, 14.9 g, `timeSec: 200`, `waterG:
+  null`, no `method`, no `pours`. Three brews and **two cups** off one pull.
+- **The bug was reading the wrong thing.** v7.31.0's rule was *"an
+  `espresso_pressure` array exists, so a machine wrote this."* It does not
+  follow. Visualizer normalizes every upload into one DE1-shaped schema, so a
+  brew logged from a scale arrives **carrying** that key with a series flat at
+  zero. The key being present says nothing; whether pressure was ever
+  **applied** says everything, and the series states it outright. The reading
+  is the peak now — under 2 bar, not an espresso, whatever keys the file
+  carries. Two bar clears this keeper's own lever ("Direct lever 5bar-2bar")
+  several times over, which their ledger let me check rather than assume.
+  A flat-zero pressure line is also dropped rather than inked along the axis.
+- **Their case, reconstructed and now correct**: method `pourover`, water
+  225 g (was `null`), four pours read off a noisy real scale trace, ratio
+  **1:15.1** — against their own Setup note, *"1:15 92C"*. That corroboration
+  is the reason to believe the pour reader on real data and not just on the
+  board's synthetic curve.
+- **Pre-infusion, off the curve.** Visualizer states a `preinfusion` field on
+  some files and not others; the pressure line has always shown it — the fill
+  holds low, levels off, then ramps. `shotPreinfusion` reads that plateau and
+  states **both** halves, duration and the pressure it held. Verified against
+  the design board's own profile: it states *4.2 s at 2.9 bar*, and the curve
+  alone says exactly that. A profile that ramps straight to nine bar states
+  **nothing** — `null`, not zero, because "no pre-infusion" and "the file
+  forgot to say" are different facts and only one of them is one.
+- **The machine.** A field Visualizer states and Carta was not reading.
+  Hunted across plausible names (`firstStr`, the string half of the hunt
+  `shotCurve` already does over series). The espresso ledger states it beside
+  the profile it was pulled on; a filter brew takes it as its **brewer**,
+  because some writers put "Kalita Wave 185" there for want of another field.
+  `profile_title` is the profile, not the machine, and gets its own row.
+- **The duplicate their ledger caught, fixed.** The same shot was written as a
+  cup twice, three brews deep, because nothing between the shots list and
+  *This is the cup* ever asked whether the record already had it — `cupOfShot`
+  existed and only the hero consulted it. The door states the fact and opens
+  the cup that exists rather than refusing: the keeper can still put that cup
+  away and pull again, which is the honest way to redo one.
+- **Tests: 112** (+5), including the flat-zero case as its own fixture, a
+  lever at 5 bar (must stay an espresso), a trickle under 2 bar (must not),
+  and the pre-infusion reader against the board's profile plus a straight ramp
+  and a noisy one.
+- **On using the backup:** it carries `visualizerPassword` and `askKey`. Read
+  for record shapes only; neither was used, and no live call was made with
+  them. Worth stating once, because a ledger export is the keeper's whole
+  record and this is the first time one has been handed over for debugging.
+- **For the founder's desk, seen in passing and not touched:** several
+  coffees in that ledger have a whole pasted bag in the `roaster` field with
+  an empty `name` ("Saint Frank Honduras DRD Geisha"), and two have label
+  fragments as names ("Country: Colombia", "Processing: Infused co-ferment").
+  That is the door's paste parser, not this phase, and it is a real gap —
+  logged here rather than fixed mid-flight.
+
 ## 2026-08-23 — v7.31.0: a pour-over is a staircase
 
 - **Phase 26's second method, from the design board's turn `2a`** (stations

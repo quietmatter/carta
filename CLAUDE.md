@@ -417,7 +417,7 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 107 cases
+node test/model.test.js        # zero deps, plain Node, 112 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
@@ -429,7 +429,8 @@ evaluates them against fixture ledgers — no DOM, no `localStorage`. **If you t
 `originPin`, `meanPin`, `namesBack`, `cfSearchPrompt`, `parseCfSearch`,
 `parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder`,
 `shotCurve`, `shotPours`, `shotFigures`, `shotMethod`, `platePaths`,
-`shotAt`, `shotPhase` (the last seven live in `carta-plate.js`) or
+`shotAt`, `shotPhase`, `shotPreinfusion` (the last eight live in
+`carta-plate.js`) or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**
