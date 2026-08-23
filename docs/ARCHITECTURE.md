@@ -613,6 +613,36 @@ and re-arms the check, guarded three ways: the gap itself, `_vizWaiting`
 still one call per open and still **never a poll** — the gap is what holds
 that, and nothing fires while the app is in the foreground.
 
+**A shot is read twice, and only the second read knows the method (v7.31.3).**
+The watch's own shape (`?essentials=true`, then `/download` in full) means the
+first parse has *no curve in front of it* — and the method is read off the
+curve. That first parse used to default to `'espresso'` and write it down as a
+fact; because `'espresso'` is neither null nor empty, the fill-in that follows
+then refused to correct it when the real curve landed. The Atlas drew a
+pour-over through the espresso arm — no pressure series to draw, so `d="null"`,
+an empty plate, a peak of `—` and a three-minute brew stated as `200s`. The
+Journal was right throughout, because its list fetches the whole file and its
+parse saw the curve first time. **That asymmetry is exactly what the keeper
+reported: "it's there in journal but not in the hero."**
+
+Two rules came out of it:
+
+- **A parse with no curve leaves the method blank**, not `'espresso'`.
+  `shotMethod()` still answers espresso at the point of use, so nothing
+  downstream changed — the default moved to where it is a *reading* rather
+  than a *record*. A blank is correctable; a wrong default was not.
+- **`ensureShotCurve` distinguishes what the FILE states from what the CURVE
+  states.** `SHOT_FILLED` is filled only where the cheap call left a blank, so
+  a figure already stated (or corrected at the door) is never reverted.
+  `SHOT_DERIVED` — `method`, `pours`, `preinfusionSec`, `preinfusionBar`, and
+  a filter brew's `water` — is **re-derived outright** the moment the curve
+  arrives, because the cheap call could not have known any of it.
+
+The general shape is worth keeping in view: **a two-call read needs to say
+which of its fields the cheap call is entitled to have an opinion about.**
+Getting that wrong is silent, and it presents as a rendering bug three
+functions away from the cause.
+
 **The sibling scripts are versioned, and this is a stack law now (v7.31.2).**
 `index.html` is the navigation document and is revalidated on every visit; a
 `<script src>` beside it is an ordinary subresource and is served from cache.
