@@ -603,6 +603,22 @@ persisted — the `essentials=true` request-response shape was never
 diffed against a real payload before this phase shipped, only the field
 names inside it. `docs/LOGBOOK.md`'s v7.28.1 entry has the full account.
 
+**Correction, v7.28.2: the fetch was right; `shotCurve` was still looking
+in the wrong place.** v7.28.1 fixed which call gets made; a keeper's own
+backup file, sent in for debugging, showed the plate still empty on a real
+shot. Diffed directly against a live `/download` response for that shot:
+Visualizer splits the curve across two containers, not one — the
+elapsed-seconds series (`timeframe`) sits at the top of the response,
+while pressure, flow and weight sit nested under a `data` key. `shotCurve`
+had only ever searched one container per call, an assumption baked in
+since Phase 26 shipped and never actually verified against a live payload
+— every fixture written for it, including the one added for v7.28.1, was a
+flat shape that happened not to exercise the split. Fixed by hunting every
+key across both containers; verified against the reporting keeper's own
+shot (1,081 real samples, pressure and weight both reading correctly, no
+flow sensor on that particular shot). `docs/LOGBOOK.md`'s v7.28.2 entry has
+the full account, including how the live payload was actually obtained.
+
 Two notes on what the table no longer says:
 
 - **The brand read (Microlink) was never built.** Carta 7 makes no call on
