@@ -628,8 +628,17 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 }
 
 </style>
-<script src="carta-map.js"></script>
-<script src="carta-plate.js"></script>
+<!-- the sibling scripts carry the version in their URL, and it must be bumped
+     with APP_VERSION (v7.31.2). index.html is the navigation document and is
+     revalidated; a plain `<script src>` beside it is an ordinary subresource
+     and is served from cache — so a keeper could run a NEW index.html against
+     an OLD carta-plate.js, which is exactly what happened at v7.31.1: the
+     parse called a function the cached file did not have yet, threw, and every
+     shot was swallowed by a catch and reported as "no brews on your account".
+     The query string makes that impossible; PLATE_VERSION below makes it loud
+     if this line is ever forgotten. -->
+<script src="carta-map.js?v=7.31.2"></script>
+<script src="carta-plate.js?v=7.31.2"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1372,7 +1381,9 @@ function parseVisualizerShot(d){
   const time=Number(d.duration);
   const roaster=str(d.bean_brand),coffeeName=str(d.bean_type);
   const curve=shotCurve(d),method=(curve&&curve.method)||'espresso';
-  const pre=method==='espresso'?shotPreinfusion(curve):null;
+  // read across the file seam defensively: a plate that isn't there yet costs
+  // this one figure, not the whole shot (v7.31.2)
+  const pre=(method==='espresso'&&typeof shotPreinfusion==='function')?shotPreinfusion(curve):null;
   const pours=method==='pourover'&&curve?shotPours(curve):[];
   // the water a filter brew took: the most the scale ever read, not its last
   // sample. A real scale wobbles a tenth either way and can settle down a
@@ -1591,6 +1602,96 @@ function namesBack(hit,farm){
   const a=fold(hit&&hit.name||''),b=fold(farm||'');
   if(!a||!b)return false;
   return a===b||a.includes(b)||b.includes(a)||lev(a,b)<=Math.min(3,Math.floor(b.length/4));
+}
+/* the door's own reader: a pasted bag into a roaster, a coffee, and whatever
+ * origin the bag actually stated (rewritten v7.31.2, from a real ledger).
+ *
+ * What it used to do was split the whole paste on dashes AND commas and take
+ * the first piece as the roaster. Three things were wrong with that, and all
+ * three showed up in one keeper's record:
+ *
+ *  1. **It never looked at newlines** — and a pasted bag is multi-line by
+ *     definition; that is what "paste the bag" means. With no dash in it the
+ *     entire blob became the coffee's name and the roaster stayed empty, so
+ *     the keeper retyped it by hand. Their ledger has four attempts at one
+ *     coffee, three minutes apart, each leaving a half-finished record behind.
+ *  2. **It threw away labelled lines.** A bag that says "Country: Colombia"
+ *     or "Processing: washed" is naming fields the confirm step already has
+ *     inputs for — and those inputs were never once prefilled, because the
+ *     parse had nowhere to put them. Two of that keeper's coffees are named
+ *     "Country: Colombia" and "Processing: Infused co-ferment".
+ *  3. **The comma separated roaster from coffee**, so "Ethiopia Gedeb,
+ *     washed" — no roaster in it at all — filed "Ethiopia Gedeb" as the
+ *     roaster. The app's own placeholder says what the convention is:
+ *     "Sey's — Ethiopia Gedeb, washed". The dash divides; the comma is part
+ *     of the name. Splitting on the comma only ever got rejoined afterwards,
+ *     so dropping it costs nothing and fixes that.
+ *
+ * Still no guessing: a label it does not know stays an ordinary line rather
+ * than inventing a field, and a paste with nothing to divide it comes back as
+ * a name with no roaster, which is what it honestly is. */
+const DOOR_DASH=/\s+[—–-]\s+/;
+const DOOR_LABELS=[
+  [/^(roaster|roastery|roasted by|by)$/,'roaster'],
+  [/^(coffee|name|lot)$/,'name'],
+  [/^(roast|roast level)$/,'roastLevel'],
+  [/^(country|origin)$/,'country'],
+  [/^region$/,'region'],
+  [/^(farm|estate|finca)$/,'farm'],
+  [/^(producer|grower|farmer)$/,'producer'],
+  [/^(variety|varietal|varietals|cultivar)$/,'variety'],
+  [/^(process|processing|method)$/,'process'],
+  [/^(altitude|elevation)$/,'altitude'],
+  [/^mill$/,'mill'],
+];
+const ORIGIN_KEYS=['country','region','farm','producer','variety','process','altitude','mill'];
+function doorParse(text){
+  const o={},got={};
+  const loose=[];
+  String(text||'').split(/\r?\n/).forEach(raw=>{
+    const line=raw.trim();
+    if(!line)return;
+    const m=line.match(/^([A-Za-z][A-Za-z ]{1,18}):\s*(.+)$/);
+    if(m){
+      const key=fold(m[1]),value=m[2].trim();
+      const hit=DOOR_LABELS.find(([re])=>re.test(key));
+      // a label Carta knows fills the field it names; one it doesn't stays an
+      // ordinary line, because inventing a field is worse than leaving text be
+      if(hit&&value){
+        const f=hit[1];
+        if(ORIGIN_KEYS.indexOf(f)>=0){if(!o[f])o[f]=value}
+        else if(!got[f])got[f]=value;
+        return;
+      }
+    }
+    loose.push(line);
+  });
+  let roaster=got.roaster||'',name=got.name||'';
+  /* whatever the labels didn't claim. A line that divides on the dash carries
+   * both; otherwise a bag reads the way one is printed — whose it is, then
+   * what it is. But only where the roaster is still unknown: where a
+   * "Roaster:" line already said it, every loose line belongs to the coffee,
+   * and taking the first of them as a second roaster would drop the coffee's
+   * own name on the floor. */
+  if(name){/* the labels named it outright; nothing loose to place */}
+  else if(!loose.length){/* nothing to place */}
+  else if(roaster)name=loose.join(', ');
+  else if(loose.length===1){
+    const parts=loose[0].split(DOOR_DASH).map(x=>x.trim()).filter(Boolean);
+    if(parts.length>=2){roaster=parts[0];name=parts.slice(1).join(', ')}
+    else name=loose[0];
+  }else{
+    const head=loose[0].split(DOOR_DASH).map(x=>x.trim()).filter(Boolean);
+    if(head.length>=2){roaster=head[0];name=[head.slice(1).join(', ')].concat(loose.slice(1)).join(', ')}
+    else{roaster=loose[0];name=loose.slice(1).join(', ')}
+  }
+  /* a "Roast:" label means its value already IS a roast level, so it is read
+   * the way Visualizer's own field is (`normalizeRoastLevel`) rather than
+   * through `parseRoastLevel`, which deliberately demands the word "roast"
+   * next to it so a tasting note never passes for one. Unlabelled, the whole
+   * paste goes through that stricter reader, exactly as before. */
+  return {roaster,name,o,
+    roastLevel:(got.roastLevel?normalizeRoastLevel(got.roastLevel):'')||parseRoastLevel(text||'')};
 }
 function meanPin(pins){
   const ps=(pins||[]).filter(Boolean);
@@ -1906,11 +2007,6 @@ function openDoorAt(placeId){
   const p=placeById(placeId);if(!p){openDoor();return}
   openDoor({placeRef:p.id,place:p.name,city:p.city||''});
 }
-function doorParse(text){
-  const parts=text.split(/\s+[—–-]\s+|,\s*/).map(s=>s.trim()).filter(Boolean);
-  if(parts.length>=2)return {roaster:parts[0],name:parts.slice(1).join(', ')};
-  return {roaster:'',name:text.trim()};
-}
 function paintDoor(){
   const s=doorState;
   if(s.step==='text'){
@@ -1994,8 +2090,11 @@ function paintDoor(){
   }
 }
 function doorNext1(){doorState.text=val('d_text');const p=doorParse(doorState.text);
-  if(!p.roaster&&!p.name){toast('Type or paste something first');return}
-  doorState.roaster=p.roaster;doorState.name=p.name;doorState.roastLevel=parseRoastLevel(doorState.text);doorState.step='confirm';paintDoor();}
+  if(!p.roaster&&!p.name&&!Object.keys(p.o).length){toast('Type or paste something first');return}
+  // the origin the bag actually stated, into the fields the confirm step has
+  // always had and the parse could never fill
+  doorState.roaster=p.roaster;doorState.name=p.name;doorState.o=p.o;
+  doorState.roastLevel=p.roastLevel;doorState.step='confirm';paintDoor();}
 // the confirm step carries the answer to "where" with it, so this is the last
 // question the door asks — the gentle join still gets its one interruption
 function doorNext2(kind){
@@ -3338,12 +3437,20 @@ async function callVisualizer(path){
 function applyVisualizerShot(shot){['dose','water','time','grind'].forEach(k=>{if(shot[k]!=null)setDial(k,shot[k])});}
 // shared by both pickers (dial-in's, door's — Phase 25): the list route only
 // names {clock,id}, so each shot's essentials are fetched in parallel, capped at n.
+/* the list, and what it does with a shot it could not read. That `catch` used
+ * to return null and say nothing, so a shot Carta threw on simply vanished —
+ * and a list where every shot vanished read as "no brews on your account",
+ * which is a different and much more alarming claim than the truth. It counts
+ * them now (`_shots.unread`) and the screen says which it means. */
 async function fetchVisualizerShots(n){
   const list=(await callVisualizer(`?page=1&items=${n}`)).data||[];
-  return (await Promise.all(list.map(async s=>{
+  let unread=0;
+  const rows=(await Promise.all(list.map(async s=>{
     try{return {...parseVisualizerShot(await callVisualizer(`/${s.id}/download`)),clock:s.clock,id:s.id}}
-    catch(e){return null}
+    catch(e){unread++;return null}
   }))).filter(Boolean);
+  rows.unread=unread;rows.listed=list.length;
+  return rows;
 }
 function vizShotRowHTML(r,onclickFn){
   return `<button class="lrow" onclick="${onclickFn}('${r.id}')"><span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc([r.time?fmtTime(r.time):'',fmtWhen(new Date(r.clock*1000).toISOString())].filter(Boolean).join(' · '))}</span></span></button>`;
@@ -3736,7 +3843,7 @@ function vShots(){
       ${_shots.busy?'<div class="empty">Reading your brews…</div>'
         :_shots.error?`<div class="empty">${esc(_shots.error)}</div><button class="btn btn-quiet" onclick="loadShots(true)">Try again</button>`
         :!rows?''
-        :!rows.length?'<div class="empty">No brews on your Visualizer account yet.</div>'
+        :!rows.length?`<div class="empty">${rows.listed?`Your account lists ${rows.listed} brew${rows.listed===1?'':'s'}, and none of them could be read. Reload the page — if it persists, the account is reachable and something on this side is wrong.`:'No brews on your Visualizer account yet.'}</div>`
         :!shown.length?`<div class="empty">Nothing ${scope==='pourover'?'poured through a filter':'pulled as a shot'} in the last eight.</div>`
         :shown.map(shotRowHTML).join('')}
       ${rows&&rows.length?`<div class="note">${mixed?'Both methods land in the same list, because they land in the same journal. The shape says which before the label does.':'Eight brews listed, and only the one you pick is read in full. A brew you have already written keeps its score here.'}</div>`:''}
@@ -5939,8 +6046,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.31.1';
+const APP_VERSION='7.31.2';
 const CHANGELOG=[
+  {v:'7.31.2',d:"Your brews, back — and the door reads a bag properly at last. The last version quietly broke the Visualizer list: a page could load its newest self alongside an older cached copy of one of its own script files, and every shot then failed to read and was reported as an empty account. It was the wrong thing to say and the wrong thing to happen. The scripts now carry the version in their address so the two can never disagree, Carta says plainly if they ever do, and a brew that genuinely can't be read is counted and named rather than silently dropped. Separately: pasting a bag into the door works the way pasting a bag should. It reads the lines — a bag is printed on more than one, and Carta was only ever looking at the first — so the roaster and the coffee land where they belong, and a line that names a field (\"Country: Colombia\", \"Process: washed\", \"Altitude: 1,900 m\") fills that field instead of ending up inside the coffee's name. A comma no longer splits a roaster off the front of a coffee that never had one."},
   {v:'7.31.1',d:"The staircase, actually recognised. A pour-over read off a scale was being filed as an espresso — the plate drew an arc, the figures argued peak bar, and the water came out blank. Visualizer files every brew in the same shape whatever made it, so a filter brew arrives carrying a pressure line that never rises, and Carta was reading the presence of that line as proof a machine had been involved. It reads what the line says now: no pressure applied, no espresso, however the file is shaped. The water a filter brew took comes back with it. A shot's pre-infusion no longer depends on Visualizer having filled that field in either — the pressure curve has always shown it, holding low while the basket fills and levelling off before the ramp, so Carta reads it there and states how long it ran and what it held. Where a profile ramps straight to full pressure there was no pre-infusion, and it says nothing rather than nothing-shaped-like-zero. The machine a brew was made on is read too, and named: the espresso ledger states it beside the profile it was pulled on, and a filter brew takes it as its brewer. And a brew already written as a cup can no longer be written a second time — the door now says so and opens the cup that exists."},
   {v:'7.31.0',d:"A pour-over is a staircase. An espresso is one arc under pressure — peak, decline, done inside half a minute — and until now that was the only shape Carta could draw, so a filter brew read off a scale had nowhere to go. It has its own drawing now. Water goes in as a staircase, the cup fills behind it, and the gap between the two is the bed holding on; each pour is a band with what it added written over it, and the wait after it is drawn by being left empty. There is no pressure line, because there is no pressure. The figures change with the shape: a shot is argued about by its peak, a pour-over by its drawdown — how long the bed took to let go once you stopped pouring — with the bloom and the ratio beside it, and the pours listed as they were actually made. Drag across the curve and the readout names what was happening at that second: blooming, pouring pour 3, drawing down, in the cup. Your recent brews holds both methods in one list, because they land in one journal, with a scope if you want only one of them — and no icon or badge saying which is which, because at the size the little curve is drawn an arc and a staircase are already unmistakable. Agitation reads unread, and always will: the hand is half the recipe for a filter brew and no instrument records it. The line we used to print — that a pour-over leaves no shot file — was true of a machine and wrong about a scale, and it is retired. Typing a brew is untouched, and is now what it should always have been: the way in for a brew nothing was watching."},
   {v:'7.30.0',d:"Off the frame, and onto the paper. Carta drew itself inside two ruled borders — an edge around the whole app and a margin just inside it — and every screen now runs to the edge of the glass instead, the way the design board always had them. Every button in the app speaks one size: the larger, lettered shape the board draws, on a permission box that is now a real mark in ink rather than the browser's own control. Four things the shot flow only half did: a shot pulled while Carta was already open in the background is looked for again when you come back to it, not only when the app is loaded cold; the grind and the water temperature your machine recorded now read on a shot's own ledger instead of unread, because they were on a part of the file Carta wasn't opening; a shot naming a coffee you typed in yourself now asks whether it's the same one instead of quietly writing a second copy of it onto the shelf; and every row in Your recent shots carries its own curve again, bare, the way a shot is meant to be recognised. Your Visualizer account has a door of its own now — on the record and in the journal — so signing out or turning the watch off no longer needs an account you haven't set yet. A cup's page drops the last of the photograph frame: its reading leads, in the ember, with what you said about it answering back across the rule and the shot that earned it drawn underneath."},
@@ -5987,6 +6095,16 @@ const CHANGELOG=[
 ];
 
 /* ============ boot ============ */
+/* the sibling scripts, checked. They are versioned in the <head> so a cached
+ * one cannot be served beside a fresh index.html — this is the belt to that
+ * braces, and it exists because the failure it catches was invisible: at
+ * v7.31.1 a stale carta-plate.js made every Visualizer shot throw inside a
+ * catch, and the app calmly reported an empty account. A mismatch is stated
+ * plainly and once, and nothing else is done about it: reloading is the
+ * keeper's move, not something to do to them mid-session. */
+if(window.PLATE_VERSION!==APP_VERSION){
+  setTimeout(()=>toast('Part of Carta is out of date — reload the page.'),400);
+}
 applyTheme();
 render();
 // the watch, if it was turned on (SPEC §3): one call for the latest shot,

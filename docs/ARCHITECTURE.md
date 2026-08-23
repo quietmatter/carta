@@ -613,6 +613,36 @@ and re-arms the check, guarded three ways: the gap itself, `_vizWaiting`
 still one call per open and still **never a poll** — the gap is what holds
 that, and nothing fires while the app is in the foreground.
 
+**The sibling scripts are versioned, and this is a stack law now (v7.31.2).**
+`index.html` is the navigation document and is revalidated on every visit; a
+`<script src>` beside it is an ordinary subresource and is served from cache.
+So a keeper can run a *new* `index.html` against an *old* `carta-map.js` or
+`carta-plate.js` — and at v7.31.1 they did. `parseVisualizerShot` called
+`shotPreinfusion`, which only the new plate had; it threw; the throw landed in
+`fetchVisualizerShots`' own per-shot `catch`, which returned `null`; every shot
+was filtered out; and the screen said **"No brews on your Visualizer account
+yet."** A programming error, laundered into a calm and completely false
+statement about the keeper's own account.
+
+Three things came out of it, and all three are the rule now:
+
+1. **The tags carry `?v=<APP_VERSION>`** and it is bumped with it. This is the
+   fix; the rest is defence in depth. The split at Phase 19 created this
+   exposure and it went unnoticed for eleven versions because no release until
+   v7.31.1 had `index.html` newly *call into* a sibling.
+2. **`PLATE_VERSION`** is published by `carta-plate.js` and checked against
+   `APP_VERSION` at boot. A mismatch says so plainly, once. It exists because
+   the failure mode is silent, not because the query string is unreliable.
+3. **Reads across the seam are guarded** (`typeof shotPreinfusion==='function'`).
+   The same posture §7 takes with the network, applied to the file boundary: a
+   sibling that isn't what was expected costs one figure, never the screen.
+
+The general lesson is worth stating separately, because it is not about
+caching: **a `catch` that returns a neutral value turns a bug into a lie.**
+That one swallowed a `ReferenceError` and produced an empty list
+indistinguishable from an empty account. `fetchVisualizerShots` now counts
+what it could not read and the screen says which of the two it means.
+
 **What the file states, and what the curve states, amended at v7.31.1.**
 Three readings changed, all in the same direction: *stop waiting for a field
 the file may not carry, and read what it already said.*

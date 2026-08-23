@@ -38,7 +38,7 @@ vm.runInContext(pureSrc + `
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
   askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
-  ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
+  ROAST_LEVELS, parseRoastLevel, doorParse, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
   parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder,
   shotCurve, shotFigures, platePaths, shotAt, shotTempGoal,
   shotPours, shotMethod, shotPhase, mmss, shotPreinfusion };
@@ -47,6 +47,9 @@ const M = sandbox.__m;
 
 let n = 0;
 const ok = name => console.log(`PASS  ${++n}. ${name}`);
+// doorParse returns origin and roast level too; most assertions only care
+// about the two fields the door files a coffee under
+const pick = r => ({ roaster: r.roaster, name: r.name });
 
 // ---- fixture ledger: two roasters, two cities, home + café cups ----
 const ledger = () => ({
@@ -1029,5 +1032,55 @@ assert.equal(piShot.preinfusionBar, 2.9);
 assert.equal(M.parseVisualizerShot({ ...piProfile, preinfusion: '3.5' }).preinfusionSec, 3.5,
   'a figure the file states outright still wins over the one read off the curve');
 ok('parseVisualizerShot states pre-infusion with the pressure it held, preferring the file where it says so');
+
+// ---- doorParse (v7.31.2). Rewritten from a real ledger: a keeper pasted a
+// bag four times in three minutes, leaving a half-finished coffee behind on
+// each attempt, because the reader never looked at newlines — and a pasted bag
+// is multi-line by definition. Two of those coffees ended up named after the
+// bag's own labels ("Country: Colombia", "Processing: Infused co-ferment").
+const bagPaste = 'Necessity Coffee\nColombia Risarada Infused co-ferment sequential washed\nCountry: Colombia\nProcessing: Infused co-ferment';
+let bag = M.doorParse(bagPaste);
+assert.equal(bag.roaster, 'Necessity Coffee', 'the first unlabelled line of a bag is whose it is');
+assert.equal(bag.name, 'Colombia Risarada Infused co-ferment sequential washed');
+assert.deepEqual(bag.o, { country: 'Colombia', process: 'Infused co-ferment' },
+  "the bag's own labelled lines fill the fields the confirm step has always had");
+ok('doorParse reads a multi-line bag into a roaster, a coffee and the origin it stated — the exact reported paste');
+
+// the app's own placeholder states the convention: the dash divides, and the
+// comma belongs to the name. Splitting on the comma was only ever rejoined
+// afterwards, so it bought nothing and cost this:
+assert.deepEqual(pick(M.doorParse("Sey's — Ethiopia Gedeb, washed")), { roaster: "Sey's", name: 'Ethiopia Gedeb, washed' });
+assert.deepEqual(pick(M.doorParse('Ethiopia Gedeb, washed')), { roaster: '', name: 'Ethiopia Gedeb, washed' },
+  'a line with no roaster in it files no roaster — the comma is part of the name, not a divider');
+assert.deepEqual(pick(M.doorParse('Sey, Coffee Roasters — Ethiopia Gedeb')), { roaster: 'Sey, Coffee Roasters', name: 'Ethiopia Gedeb' },
+  "a roaster with a comma in its own name survives the dash");
+assert.deepEqual(pick(M.doorParse('Onyx — Geisha Sun-Dried')), { roaster: 'Onyx', name: 'Geisha Sun-Dried' },
+  'a hyphen inside a word is not a divider — only a spaced dash is');
+ok('doorParse divides on the dash and leaves the comma to the name, as the door\'s own placeholder says');
+
+assert.deepEqual(pick(M.doorParse('Ethiopia Gedeb\nWashed\nRoaster: Sey')), { roaster: 'Sey', name: 'Ethiopia Gedeb, Washed' },
+  'where a label already named the roaster, every loose line belongs to the coffee');
+assert.deepEqual(pick(M.doorParse("Sey's — Ethiopia Gedeb\nWashed")), { roaster: "Sey's", name: 'Ethiopia Gedeb, Washed' },
+  'a dash on the first line still divides it, and the lines under it read on');
+ok('doorParse never lets a labelled roaster swallow the coffee\'s own name');
+
+assert.equal(M.doorParse('Necessity Coffee\nGesha\nTasting notes: peach, jasmine').name, 'Gesha, Tasting notes: peach, jasmine',
+  'a label Carta does not know stays an ordinary line rather than inventing a field for itself');
+assert.deepEqual(M.doorParse('Country: Colombia').o, { country: 'Colombia' });
+assert.equal(M.doorParse('Country: Colombia').name, '', 'a paste that named no coffee does not invent one');
+assert.deepEqual(pick(M.doorParse('Saint Frank Honduras DRD Geisha')), { roaster: '', name: 'Saint Frank Honduras DRD Geisha' },
+  'one bare line is a coffee with no roaster stated, which is what it honestly is');
+assert.deepEqual(pick(M.doorParse('')), { roaster: '', name: '' });
+assert.deepEqual(pick(M.doorParse(null)), { roaster: '', name: '' }, 'never throws on nothing');
+ok('doorParse refuses to guess: unknown labels stay text, and an unnamed coffee stays unnamed');
+
+assert.equal(M.doorParse('Sey\nEthiopia Gedeb\nRoast: light').roastLevel, 'Light',
+  'a stated roast level is read off its own label');
+assert.equal(M.doorParse("Sey's — Ethiopia Gedeb, medium roast").roastLevel, 'Medium',
+  'and off the body of the paste where no label states it, exactly as before');
+assert.deepEqual(M.doorParse('Sey\nGedeb\nAltitude: 1,900 - 2,100 m\nVariety: Heirloom\nProducer: Tesfaye').o,
+  { altitude: '1,900 - 2,100 m', variety: 'Heirloom', producer: 'Tesfaye' },
+  'altitude keeps its own dashes and commas — a labelled value is taken whole');
+ok('doorParse carries roast level and every origin field the bag actually stated');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);

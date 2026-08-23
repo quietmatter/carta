@@ -7,6 +7,58 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.31.2: the brews come back, and the door reads a bag
+
+- **A regression report, and it was mine.** "The last PR 125 broke the
+  visualizer connection. No longer sees the brews." Reproduced in ten minutes
+  by serving the new `index.html` beside the *previous* `carta-plate.js`:
+  `parseVisualizerShot` called `shotPreinfusion`, which only the new plate
+  had, threw a `ReferenceError`, and the throw landed inside
+  `fetchVisualizerShots`' own per-shot `catch(e){return null}`. Every shot was
+  filtered out and the screen said **"No brews on your Visualizer account
+  yet."**
+- **Two failures, and the second is the worse one.** The first is caching:
+  `index.html` is the navigation document and gets revalidated; a
+  `<script src>` beside it is an ordinary subresource and does not. Phase 19
+  created that exposure and it slept for eleven versions, because no release
+  until v7.31.1 had `index.html` newly *call into* a sibling. The second is
+  that **a `catch` returning a neutral value turned a bug into a lie** — a
+  programming error laundered into a calm, confident, false statement about
+  the keeper's own account. The caching bug cost an afternoon; the swallowed
+  error is what made it look like something else entirely.
+- **Fixed three ways**: the tags carry `?v=<APP_VERSION>` (the actual fix, and
+  now a stack law in `ARCHITECTURE.md` §1); `PLATE_VERSION` is checked at boot
+  and says so plainly if the tag is ever forgotten; and reads across the seam
+  are guarded with `typeof`, the same posture §7 takes with the network. With
+  all three, the stale case now shows the brews *and* says to reload.
+- **`fetchVisualizerShots` counts what it could not read.** A list where every
+  shot failed no longer claims the account is empty — it says the account
+  lists n brews and none could be read, which is true and points at Carta
+  rather than at the keeper.
+- **The door's paste parser, rewritten** (the other half of this version, and
+  the thing actually asked for). It never looked at newlines — and a pasted
+  bag is multi-line by definition. Their ledger has **four attempts at one
+  coffee, three minutes apart**, each leaving a half-finished record: two of
+  them named after the bag's own labels ("Country: Colombia", "Processing:
+  Infused co-ferment"). It now reads lines; fills the origin fields the
+  confirm step has always had and the parse could never populate; and stops
+  treating a comma as a roaster divider, which had been filing "Ethiopia
+  Gedeb, washed" under a roaster called *Ethiopia Gedeb*. The app's own
+  placeholder states the convention it now follows: the dash divides, the
+  comma belongs to the name. `doorParse` moved into the pure block and is
+  tested — its wrongness was invisible, which is this project's whole standard
+  for what gets a test.
+- **One thing the report attributed to the parser that wasn't.** "Saint Frank
+  Honduras DRD Geisha" as a roaster with an empty name came from the
+  Visualizer pull, not the door: `bean_brand` held the whole string and
+  `bean_type` was empty, and Carta copied both faithfully. Splitting it would
+  be guessing, so it stands. Said plainly rather than quietly counted as
+  fixed.
+- **Tests: 117** (+5 for `doorParse`). The regression itself is covered by a
+  scripted stale-sibling harness rather than a unit test — the failure only
+  exists across two files at different versions, which is not a shape the pure
+  harness can hold.
+
 ## 2026-08-23 — v7.31.1: the staircase, actually recognised
 
 - **Reported with the ledger to prove it.** A pour-over was being filed as an

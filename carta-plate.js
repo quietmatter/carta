@@ -469,6 +469,11 @@ function plateScrub(e){
 /* ---- the seam (ARCHITECTURE.md §1). Published as plain globals the way the
  * map layer's LANDS and decoders are, and read by index.html's own script as
  * such. One direction only: nothing above ever reaches back into the app. */
+/* what this file is, so index.html can tell whether the copy it got is the
+ * copy it expects. A mismatch means a cached sibling (see index.html's <head>)
+ * and is worth saying out loud — at v7.31.1 the same mismatch was silent and
+ * looked to the keeper like their Visualizer account had stopped working. */
+window.PLATE_VERSION='7.31.2';
 window.shotCurve=shotCurve;
 window.shotPours=shotPours;
 window.shotPreinfusion=shotPreinfusion;
