@@ -83,7 +83,9 @@ function shotCurve(d){
   // array of numbers — because what writes a gravimetric file varies more than
   // what writes a machine's.
   const wIn=arr(['espresso_water_dispensed','water_dispensed','espresso_water','water','pour_weight','water_weight']);
-  const cup=arr(['espresso_weight','weight','drink_weight_series','cup_weight']);
+  // `current_total_shot_weight` is what Visualizer's own CSV export calls this
+  // column — confirmed against a real filter brew's export, not guessed at
+  const cup=arr(['espresso_weight','weight','current_total_shot_weight','drink_weight_series','cup_weight']);
   if(!p&&!wIn&&!cup)return null;
   // some writers state elapsed in milliseconds; ten minutes is not a brew, on
   // either method — a long pour-over is five — so the only reading left for a
@@ -120,7 +122,7 @@ function shotCurve(d){
   // a pressure series that never rose is not a line worth drawing over a
   // staircase — it is a flat zero along the axis, and it is dropped rather
   // than inked as if it said something
-  const c={t:r(t),p:pressed?r(p):null,f:r(arr(['espresso_flow','flow','espresso_flow_weight'])),w:r(cup),method};
+  const c={t:r(t),p:pressed?r(p):null,f:r(arr(['espresso_flow','flow','espresso_flow_weight','flow_in','flow_out'])),w:r(cup),method};
   // a pour-over with only one weight series has that series as its water in:
   // a scale under the brewer weighs what you poured. The cup is then unread
   // rather than guessed at from it.
@@ -290,9 +292,13 @@ function platePaths(shot,box){
     return {method:'pourover',water,cup,
       cupArea:cup?`${cup}L${X(c.t[Math.min(c.t.length,(c.w||[]).length)-1])} ${base}L0 ${base}Z`:null,
       waterArea:water?`${water}L${w} ${base}L0 ${base}Z`:null,
-      // the top line is the water actually added — a stated figure, not an
-      // invented axis — with two more under it at the same intervals
-      grid:[.2,.6,1].map(f=>({g:Math.round(inMax*f),y:Y(inMax*f)})),
+      /* the grid is grams off the water actually added, not an invented axis —
+       * but rounded to something a person would say. A real scale trace of a
+       * 250 g brew reads 251.3 at its crest, and printing 50/151/251 up the
+       * side of the plate is a scale's own noise dressed as a gridline. The
+       * STATED figures below the plate keep the true reading; these are marks
+       * to read the shape against. */
+      grid:[.2,.6,1].map(f=>{const g=niceG(inMax*f);return {g,y:Y(g)}}),
       bands:pours.map((p,i)=>({x:X(p.at),w:Math.max(1,X(p.at+p.ms)-X(p.at)),
         label:i?'+'+trimG(p.added):'BLOOM '+trimG(p.added),
         mid:+((X(p.at)+X(p.at+p.ms))/2).toFixed(1)})),
@@ -319,6 +325,8 @@ function platePaths(shot,box){
     dash:Math.round(w*3.34)
   };
 }
+// a round number at the grain the figure is actually poured to
+const niceG=v=>v>=100?Math.round(v/10)*10:v>=20?Math.round(v/5)*5:Math.round(v);
 const mmss=s=>s==null?'':Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0');
 const trimG=g=>g==null?'':String(Math.round(g));
 /* what the brew stated at one instant — the sample at or before that second,
@@ -395,11 +403,25 @@ function plateSVG(shot,box,opts){
         <path class="pr${draw}" style="--dash:${g.dash}" d="${g.pressure}"></path>`}
     ${opts.labels?g.grid.map(l=>`<text class="lb" x="4" y="${(l.y-3).toFixed(1)}">${pour?(l.y===g.grid[g.grid.length-1].y?l.g+' G':l.g):(l.bar===9?'9 BAR':l.bar)}</text>`).join('')
       +g.ticks.map(t=>`<text class="lb" x="${Math.max(0,t.x-(pour?9:5)).toFixed(1)}" y="${box.h}">${t.label}</text>`).join('')
-      +(pour&&opts.bands?g.bands.map(b=>`<text class="lb" x="${b.x<2?2:b.mid}"${b.x<2?'':' text-anchor="middle"'} y="${(g.top-5).toFixed(1)}">${b.label}</text>`).join(''):''):''}
+      +(pour&&opts.bands?g.bands.map(b=>bandLabel(b,g,box)).join(''):''):''}
   </svg>`;
 }
 // one decimal is the precision a dose and a yield are actually weighed to;
 // past 100 g nothing states a tenth and printing one is false precision
+/* a band's own label, kept on the plate. A pour that starts a few seconds in
+ * — which is every brew where the timer runs before the water does — has a
+ * band only a handful of pixels wide, and a label centred on it hangs off the
+ * left edge: a real brew rendered "LOOM 44". So the label is centred where it
+ * fits and anchored to whichever edge it would otherwise cross. The width is
+ * estimated rather than measured, because measuring means a DOM and this
+ * file has none. */
+const bandLabel=(b,g,box)=>{
+  const half=String(b.label).length*2.9;   // ~8px sans at .1em tracking
+  let x=b.mid,anchor=' text-anchor="middle"';
+  if(b.mid-half<2){x=2;anchor=''}
+  else if(b.mid+half>box.w-2){x=box.w-2;anchor=' text-anchor="end"'}
+  return `<text class="lb" x="${x}"${anchor} y="${(g.top-5).toFixed(1)}">${b.label}</text>`;
+};
 const fig1=v=>v==null?'—':(Math.abs(v)>=100?String(Math.round(v)):(Math.round(v*10)/10).toFixed(1));
 /* the three stated figures, at dial scale — and they are three different
  * figures per method, and not quite the same three on the hero as on the
@@ -473,7 +495,7 @@ function plateScrub(e){
  * copy it expects. A mismatch means a cached sibling (see index.html's <head>)
  * and is worth saying out loud — at v7.31.1 the same mismatch was silent and
  * looked to the keeper like their Visualizer account had stopped working. */
-window.PLATE_VERSION='7.31.4';
+window.PLATE_VERSION='7.31.6';
 window.shotCurve=shotCurve;
 window.shotPours=shotPours;
 window.shotPreinfusion=shotPreinfusion;

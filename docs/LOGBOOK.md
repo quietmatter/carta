@@ -7,6 +7,91 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-23 — v7.31.6: the date, settled — and a cup you can correct
+
+- **The keeper handed over their own account** to settle the question v7.31.5
+  left open, and it settled it in a direction no amount of reasoning would
+  have: read-only against their seven shots, the list row carries `clock`,
+  `id`, `updated_at` and nothing else, and the full record's **only** date is
+  `start_time` — which is byte-identical to `clock` on all seven. There is no
+  pour timestamp in Visualizer to find. v7.31.4's hunt is not wrong; it simply
+  has nothing to catch on this account, and its fallback was already the right
+  answer.
+- **So the fix moved from reading to correcting.** If the instrument didn't say
+  when, the keeper can. Tapping the eyebrow on a written cup opens *When was
+  this cup?* — "Read off the instrument where one said so, and yours to correct
+  where none did." The brew's `at` moves with it; `createdAt` never does; the
+  toast carries Undo. A correction is a reading the record couldn't take, not a
+  second opinion about one it could.
+- **Which exposed a quieter bug: the Journal was ordering by the wrong field.**
+  `byNew` sorts on `createdAt` — filing order. Any cup dated backwards would
+  have sat in the wrong place the moment it was corrected, so the correction
+  needed the sort fixed to be worth anything. `byWhen` reads `at` first and
+  falls back to `createdAt`, and it now governs all nine cup lists (Journal,
+  a coffee's cups, a café's, the continuation, the ask and menu refs, the year
+  card). **Cups order by when they happened; everything else still orders by
+  when it was filed** — written into `ARCHITECTURE.md` rather than left as a
+  reading of the code.
+- **The account also confirmed three `unread` rows are honest**, which is worth
+  as much as a fix: no `machine`, `brewer`, `preinfusion` or `temperature`
+  scalar exists on their records. Carta was not failing to read them. It was
+  correctly saying so. `espresso_temperature_goal` *is* there (92 °C), and is
+  read. The confirmed field inventory is now a table in `ARCHITECTURE.md` §7,
+  so the next hunt starts from what was seen rather than what was assumed.
+- **And it validated a threshold by nearly breaking it.** Their lever peaks at
+  **4.9 bar**. `PRESSURE_MIN_BAR=2` files it as espresso correctly; a plausible
+  5 would have misfiled every espresso they have ever pulled. The number was
+  picked to separate *zero* from *some*, and that is why it held.
+- **The thread through this whole run, now a rule and not four patches:** *a
+  default standing in for a reading.* `espresso_pressure` existing taken for
+  pressure applied; `method` guessed before its curve arrived; a cached sibling
+  assumed current; a list row's timestamp assumed to be the brew's. Each shipped
+  as a plausible default and each read to the keeper as a lie.
+- **Tests: 121**, passing. The correction is DOM-coupled, so it is verified in
+  the browser end to end — the eyebrow prefills local time, saving moves
+  `cup.at` and `brew.at` while `createdAt` holds, and the Journal reorders.
+
+## 2026-08-23 — v7.31.5: the plate, against a real brew
+
+- **The keeper sent a real export**, and it was worth more than any amount of
+  reasoning. Two files came: a `.tcl` first (a DE1 *profile* — every field
+  empty, no curve, no date, and it could not have carried one, since a profile
+  is a recipe rather than a record), then the CSV, which is the brew itself:
+  2,107 sample rows and eleven meta rows.
+- **It confirmed the v7.31.1 diagnosis outright.** `pressure` runs to 2,107
+  samples and **every one of them is 0.00**. The key is present; nothing was
+  ever applied through it. That is precisely the case that used to be filed as
+  an espresso, and the peak-based reading handles it.
+- **Their brew, parsed:** pour-over, 4 pours — bloom 44 g at 0:04, then 71 g,
+  76 g, 61 g — ratio 1:16.9, drawdown 1:26, total 3:32. A real bloom-and-three
+  Kalita recipe read back off nothing but the weight trace.
+- **Three field names stopped being guesses**, taken from the export's own
+  columns: `current_total_shot_weight` (what is on the scale),
+  `flow_in`/`flow_out`, and `water_temperature_basket` /`_in` /`_boiler`. Added
+  beside the ones already hunted rather than replacing them — the point of a
+  hunt is that it covers more than one writer.
+- **Two things only a real trace could have shown:**
+  - **The gram grid was printing a scale's noise.** 251.3 g at the crest gave
+    marks at 50 / 151 / 251. The gridlines round now (50 / 150 / 250); the
+    *stated* figures under the plate keep the true reading, 14.9 → 251.3 g.
+    Marks to read a shape against are a different job from figures to argue
+    about, and they should not be rounded — or not rounded — together.
+  - **`LOOM 44`.** Their timer ran before the water did, so the first pour
+    starts at 0:04 and its band is a few pixels wide; the label centred over it
+    hung off the left edge. Band labels now anchor to whichever edge they would
+    otherwise cross. The width is estimated rather than measured, because
+    measuring wants a DOM and `carta-plate.js` deliberately has none.
+- **The date is still the one open question.** The export's meta carries
+  `Date = 2026-08-23T16:49:35Z`, labelled *ISO8601 formatted date* — and
+  `date` is already in `SHOT_TIME_KEYS`, ahead of `clock`. So if the JSON
+  exposes it under that name or `start_time`, v7.31.4 already reads it. What a
+  single sample cannot settle is whether Visualizer's own `Date` is the pour or
+  the upload. Left as it stands rather than guessed at again; the fallback is
+  the old behaviour, so nothing is worse meanwhile.
+- **Tests: 121**, unchanged — every change here is either a name added to a
+  hunt or a rendering rule, and the real brew is held as a fixture in the
+  scratch harness rather than the pure suite.
+
 ## 2026-08-23 — v7.31.4: the date a brew was poured
 
 - **Reported precisely, which made it quick:** "It's pulling the date that I

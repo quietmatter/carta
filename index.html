@@ -620,6 +620,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 /* the quiet way on, under the one that isn't quiet: a sentence, underlined,
    at the size a footnote is read at. Not `.omini`, which is a chip in a
    corner and shouts in small caps — this is a line of prose you can tap. */
+/* a date that can be corrected says so the way every openable figure does:
+   dotted underneath, in the eyebrow's own ink and size */
+.whenlink{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:inherit;
+  letter-spacing:inherit;text-transform:inherit;border-bottom:1px dotted var(--ink-3)}
 .qlink{background:none;border:0;padding:2px 0;cursor:pointer;font-family:var(--sans);font-size:11px;
   color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;letter-spacing:.01em}
 .qlink:active{color:var(--ink)}
@@ -642,7 +646,7 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 
 </style>
 <!-- the sibling scripts carry the version in their URL, and it must be bumped
-     with APP_VERSION (v7.31.4). index.html is the navigation document and is
+     with APP_VERSION (v7.31.6). index.html is the navigation document and is
      revalidated; a plain `<script src>` beside it is an ordinary subresource
      and is served from cache — so a keeper could run a NEW index.html against
      an OLD carta-plate.js, which is exactly what happened at v7.31.1: the
@@ -650,8 +654,8 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.31.4"></script>
-<script src="carta-plate.js?v=7.31.4"></script>
+<script src="carta-map.js?v=7.31.6"></script>
+<script src="carta-plate.js?v=7.31.6"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -729,6 +733,13 @@ function compressPhoto(file,maxEdge,targetBytes){
   });
 }
 const byNew=(a,b)=>b.createdAt.localeCompare(a.createdAt);
+/* a cup is the one record whose own moment can differ from the moment it was
+ * written down — you can pull Tuesday's brew off an instrument on Friday — so
+ * cups are ordered by `at`, which is when the cup happened, and everything
+ * else stays on `createdAt`. For every cup logged as it was drunk the two are
+ * the same value and nothing moves. (v7.31.6; before this the Journal claimed
+ * to be "newest first" and meant newest *typed*.) */
+const byWhen=(a,b)=>(b.at||b.createdAt||'').localeCompare(a.at||a.createdAt||'');
 const live=coll=>(D[coll]||[]).filter(x=>!x.archived);
 function putAway(coll,id){if(!putAwayCore(D,coll,id,new Date().toISOString()))return;save();render();toast('Put away.',()=>restore(coll,id));}
 function restore(coll,id){if(!restoreCore(D,coll,id))return;save();render();toast('Restored.');}
@@ -1501,8 +1512,12 @@ function shotStartedAt(d){
 function shotTempGoal(d){
   if(!d||typeof d!=='object')return null;
   const sources=[d,(d.data&&typeof d.data==='object')?d.data:{}];
+  // the last three are the column names Visualizer's own CSV export uses,
+  // confirmed against a real export. The goal still leads: it is what the
+  // machine was told to hold, which is what a keeper set and can repeat.
   const KEYS=['espresso_temperature_goal','temperature_goal','espresso_water_dispensed_temperature',
-    'espresso_temperature_basket','temperature_basket','basket_temperature','temperature'];
+    'espresso_temperature_basket','temperature_basket','basket_temperature','temperature',
+    'water_temperature_basket','water_temperature_in','water_temperature_boiler'];
   const ok=v=>isFinite(v)&&v>=50&&v<=110;   // a brew temperature, not a sensor's zero or a Fahrenheit reading
   for(let si=0;si<sources.length;si++)for(let ki=0;ki<KEYS.length;ki++){
     const v=sources[si][KEYS[ki]];
@@ -2255,7 +2270,7 @@ function doorPullResolveCoffee(){
 }
 const pickCoffeeMatch=(list,name)=>{if(!list.length)return null;const m=matchNodes(list,name);return (m.exact||m.near)?m:null};
 function joinCoffeeCardHTML(c){
-  const cups=live('cups').filter(x=>x.coffeeRef===c.id).sort(byNew);
+  const cups=live('cups').filter(x=>x.coffeeRef===c.id).sort(byWhen);
   const last=cups[0]&&(cups[0].at||cups[0].createdAt);
   const under=[c.roaster,(c.origin&&c.origin.process)||'',
     c.createdAt?'on the shelf since '+new Date(c.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short'}):''].filter(Boolean).join(' · ');
@@ -2851,7 +2866,7 @@ function brewLine(b){
  * score, its recipe, what you found, and one tap to begin the next from it.
  */
 function vJournal(){
-  const cups=live('cups').sort(byNew);
+  const cups=live('cups').sort(byWhen);
   return `<div>
   <header class="shdr">
     <div>
@@ -2890,8 +2905,8 @@ function measuredAtHomeHTML(){
 // home, carried forward. Nothing invented — every figure on it is already on
 // the record, and the one action begins the next brew from exactly there.
 function continuationHTML(){
-  const home=live('cups').filter(c=>c.kind==='home'&&c.brewRef).sort(byNew);
-  const last=home[0]||live('cups').sort(byNew)[0];
+  const home=live('cups').filter(c=>c.kind==='home'&&c.brewRef).sort(byWhen);
+  const last=home[0]||live('cups').sort(byWhen)[0];
   if(!last)return '';
   const coffee=coffeeById(last.coffeeRef);
   if(!coffee)return '';
@@ -2957,7 +2972,7 @@ function vCup(id){
     <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
       <button class="omini bare" style="flex:none" onclick="cupBack()" aria-label="Back">←</button>
       <div style="flex:1;min-width:0">
-        <div class="eyebrow" style="margin-bottom:4px">${esc([fmtWhenLong(cup.at),fmtClock(cup.at),cup.kind==='bar'?'at the bar':'at home'].filter(Boolean).join(' · '))}</div>
+        <div class="eyebrow" style="margin-bottom:4px"><button class="whenlink" onclick="openCupWhen('${cup.id}')">${esc([fmtWhenLong(cup.at),fmtClock(cup.at)].filter(Boolean).join(' · '))}</button>${esc(' · '+(cup.kind==='bar'?'at the bar':'at home'))}</div>
         <div class="display" style="font-size:1.375rem;margin:0">${esc(cup.kind==='bar'?(place?place.name:'A café'):((coffee&&coffee.name)||coffeeLabel(coffee)||'A cup'))}</div>
       </div>
     </header>
@@ -3014,6 +3029,45 @@ function cupPlateHTML(cup,brew){
       ${foot.map(f=>`<span>${esc(f)}</span>`).join('')}</div>`:''}
   </div>`;
 }
+/* when the cup happened, corrected by hand (v7.31.6).
+ *
+ * Confirmed against a live account: Visualizer carries exactly one timestamp
+ * per brew — the list's `clock` and the file's `start_time` are the same value
+ * on every shot — and for an uploader that files after the fact that is when
+ * the record was made, not when the coffee was poured. There is no second
+ * field to read and no honest way to derive one, so it becomes what `agitation`
+ * already is: a fact the instrument does not hold, left to the keeper to
+ * state. The brew moves with the cup, so a re-brew starts from the same
+ * moment and the two never disagree. */
+function openCupWhen(cupId){
+  const cup=cupById(cupId);if(!cup)return;
+  const d=new Date(cup.at||cup.createdAt||Date.now());
+  const pad=n=>String(n).padStart(2,'0');
+  const local=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  openSheet(`<h3>When was this cup?</h3>
+  <div class="sub">Read off the instrument where one said so, and yours to correct where none did.</div>
+  <label class="f"><span class="l">Poured</span><input type="datetime-local" id="cw_at" value="${esc(local)}"></label>
+  <button class="btn btn-primary" onclick="saveCupWhen('${cup.id}')">Save</button>
+  <button class="btn btn-quiet" onclick="closeSheet()">Cancel</button>
+  <div class="note">A scale files a brew when it syncs, not when you poured it, and most of them state no other time — so this is the one figure on the page an instrument can be wrong about. The journal reads in this order.</div>`);
+}
+function saveCupWhen(cupId){
+  const cup=cupById(cupId);if(!cup)return;
+  const v=val('cw_at');
+  if(!v){toast('Name a date and a time');return}
+  const t=new Date(v);
+  if(isNaN(t)){toast("That date didn't read");return}
+  const was=cup.at;
+  cup.at=t.toISOString();cup.updatedAt=new Date().toISOString();
+  // the brew it was read from moves with it — a re-brew starts from the same
+  // moment, and the two records never state different afternoons
+  const brew=cup.brewRef?brewById(cup.brewRef):null;
+  if(brew)brew.at=cup.at;
+  save();closeSheet();render();
+  toast('Moved to '+fmtWhenLong(cup.at)+'.',()=>{
+    cup.at=was;if(brew)brew.at=was;save();render();
+  },'Undo');
+}
 function cupBack(){
   const b=pageView&&pageView.back;
   if(b&&b.kind==='cafe'&&placeById(b.id)){openCafeScreen(b.id);return}
@@ -3026,7 +3080,7 @@ function putAwayCup(id){pageView=null;tab='journal';putAway('cups',id)}
 function vCafe(id){
   const p=placeById(id);
   if(!p)return `<div class="pad" style="padding-top:26px"><div class="empty">That café isn't on the record.</div></div>`;
-  const cups=live('cups').filter(c=>c.kind==='bar'&&c.placeRef===p.id).sort(byNew);
+  const cups=live('cups').filter(c=>c.kind==='bar'&&c.placeRef===p.id).sort(byWhen);
   const scored=cups.filter(c=>c.score!=null);
   const a=scored.length?scored.reduce((s,c)=>s+c.score,0)/scored.length:null;
   const menus=D.menus.filter(m=>m.placeRef===p.id).sort(byNew);
@@ -3129,7 +3183,7 @@ function coffeeCupRowHTML(cup,coffee){
 }
 function openCoffeeDetail(id){
   const c=coffeeById(id);if(!c)return;
-  const cups=D.cups.filter(x=>x.coffeeRef===id).sort(byNew);
+  const cups=D.cups.filter(x=>x.coffeeRef===id).sort(byWhen);
   const rest=restState(c);
   openSheet(`<h3>${esc(coffeeLabel(c))}</h3>
   ${originLine(c)?`<div class="sub">${esc(originLine(c))}</div>`:''}
@@ -4079,7 +4133,7 @@ function openBarEvidence(){
 function openAnchorEvidence(name){
   const tm=tasteModelMemo();
   const a=tm.bar.anchors.find(x=>fold(x.name)===fold(name));
-  const cups=(a?a.cupRefs:[]).map(cupById).filter(Boolean).sort(byNew);
+  const cups=(a?a.cupRefs:[]).map(cupById).filter(Boolean).sort(byWhen);
   evidenceSheet(a?`${a.name}, ${a.avg.toFixed(1)}`:name,
     a?`${capFirst(words(a.n))} cup${a.n===1?'':'s'} on the record. None of them under ${Math.min(...cups.map(c=>c.score==null?9:c.score))}.`:'',
     cups.map(cupEvidenceRow),
@@ -4094,7 +4148,7 @@ const VECTOR_RULES={
 function openVectorEvidence(kind,value){
   const tm=tasteModelMemo();
   const item=(tm.vector[kind]||[]).find(x=>fold(String(x.value))===fold(String(value)));
-  const cups=(item?item.cupRefs:[]).map(cupById).filter(Boolean).sort(byNew);
+  const cups=(item?item.cupRefs:[]).map(cupById).filter(Boolean).sort(byWhen);
   evidenceSheet(item?`${capFirst(String(item.value))}, ${item.weight.toFixed(1)}`:String(value),
     item?`${capFirst(words(item.n))} cup${item.n===1?'':'s'} carry it. This is their weight, and the cups themselves.`:'',
     cups.map(cupEvidenceRow),VECTOR_RULES[kind]||'');
@@ -5758,7 +5812,7 @@ function altitudeBandHTML(coffees){
 function cupsSheet(title,sub,cups){
   openSheet(`<h3>${esc(title)}</h3>
   <div class="sub">${esc(sub)}</div>
-  ${cups.length?cups.slice().sort(byNew).map(c=>{
+  ${cups.length?cups.slice().sort(byWhen).map(c=>{
     const place=c.kind==='bar'?placeById(c.placeRef):null;
     const coffee=coffeeById(c.coffeeRef);
     return `<button class="lrow" style="min-height:56px" onclick="closeSheet();openCupDetail('${c.id}')">
@@ -6149,8 +6203,10 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.31.4';
+const APP_VERSION='7.31.6';
 const CHANGELOG=[
+  {v:'7.31.6',d:"When the cup happened, and who gets to say. Checked against a real account at last: Visualizer keeps exactly one time for a brew, and for anything a scale files after the fact that time is when the record was made, not when you poured. There is no second date in there to go and find. So it becomes what agitation already is — a fact no instrument in the room recorded, left to you to state. Tap the date on a cup's own page and set it; the brew it was read from moves with it, so a re-brew starts from the same morning. When you wrote it down is kept separately and never changes. And the journal now reads in the order the cups actually happened rather than the order they were typed, which for every cup logged as it was drunk is the same order it always was."},
+  {v:'7.31.5',d:"The plate, against a real brew. A keeper sent one of their own pour-overs straight out of Visualizer, and reading it back turned three guesses into facts. The names Visualizer actually uses for what landed on the scale, for how fast the water went in, and for the basket's own temperature are all read now, alongside the ones Carta was already looking for. The gram marks up the side of a plate are round again: a scale that reads 251.3 g at its crest was printing 50, 151 and 251 up the edge, which is a scale's own noise dressed as a measurement — the figures underneath still state exactly what was weighed. And the first pour's label stays on the plate. A brew whose timer starts before the water does has a very narrow first band, and the word centred over it was hanging off the left edge: a real brew came out reading LOOM 44."},
   {v:'7.31.4',d:"The date a brew was poured, not the date it arrived. A brew filed to Visualizer after the fact — which is most filter brews, since a scale syncs when it can — was being dated by the moment it reached your account rather than the moment you poured it. Carta only ever had the second of those, because it read the date off the list of your brews rather than out of the brew itself. It reads the brew now, and falls back to the old reading only where the file says nothing. A cup written from it is dated by the pour too, so it lands in the journal where it belongs rather than at today; when you wrote it down is kept separately, as it always was. A shot's own screen names the day as well as the hour, since an hour on its own is only ever enough for something poured today. And the mark that says a cup is waiting keeps breathing when you have reduced motion turned on — slower and gentler there, but not stilled: it travels nowhere, and it was the only thing on the Atlas saying something was waiting."},
   {v:'7.31.3',d:"The curve on the front page. A brew waiting on the Atlas was drawing an empty plate — the figures under it right, the line above it missing — while the same brew in the Journal drew perfectly. Carta reads a waiting brew twice: once cheaply, to know it is there, and once in full for its curve. The cheap read carries no curve at all, so it had nothing to say about whether the brew was a shot or a pour-over, and said espresso anyway; when the real curve arrived a moment later, nothing went back to correct that. So a pour-over was drawn as a shot, and a shot's drawing has a pressure line where a pour-over has none. It now leaves the question open until there is something to answer it with, and everything the curve alone knows — the method, the pours, the pre-infusion — is read again when the curve lands rather than only filled in where a blank was left. The mark that says a cup is waiting breathes a little more gently too, the way the design board draws it."},
   {v:'7.31.2',d:"Your brews, back — and the door reads a bag properly at last. The last version quietly broke the Visualizer list: a page could load its newest self alongside an older cached copy of one of its own script files, and every shot then failed to read and was reported as an empty account. It was the wrong thing to say and the wrong thing to happen. The scripts now carry the version in their address so the two can never disagree, Carta says plainly if they ever do, and a brew that genuinely can't be read is counted and named rather than silently dropped. Separately: pasting a bag into the door works the way pasting a bag should. It reads the lines — a bag is printed on more than one, and Carta was only ever looking at the first — so the roaster and the coffee land where they belong, and a line that names a field (\"Country: Colombia\", \"Process: washed\", \"Altitude: 1,900 m\") fills that field instead of ending up inside the coffee's name. A comma no longer splits a roaster off the front of a coffee that never had one."},

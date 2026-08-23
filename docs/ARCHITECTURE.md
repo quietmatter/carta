@@ -617,6 +617,49 @@ and re-arms the check, guarded three ways: the gap itself, `_vizWaiting`
 still one call per open and still **never a poll** — the gap is what holds
 that, and nothing fires while the app is in the foreground.
 
+**Visualizer's real field inventory, confirmed against a live account
+(v7.31.6).** Read-only, at the keeper's explicit request, to settle what had
+been three releases of inference. Recorded here so nobody has to guess again:
+
+| | what is actually there |
+|---|---|
+| list row | `clock`, `id`, `updated_at` — *nothing else* |
+| full record, scalars | `barista`, `bean_brand`, `bean_notes`, `bean_type`, `bean_weight`, `drink_ey`, `drink_tds`, `drink_weight`, `duration`, `espresso_enjoyment`, `espresso_notes`, `grinder_model`, `grinder_setting`, `id`, `profile_title`, `profile_url`, `roast_date`, `roast_level`, `start_time`, `updated_at`, `user_id` |
+| series | `timeframe`, `tags`, and under `data`: `espresso_pressure`, `espresso_weight`, `espresso_flow` *or* `espresso_flow_weight`, `espresso_state_change`, `espresso_temperature_goal` |
+
+Four things this settled that had been assumptions:
+
+- **There is no `machine`, no `brewer`, no `preinfusion` and no `temperature`
+  scalar.** Those `unread` rows are honest, and pre-infusion off the curve
+  (v7.31.1) was not a nicety — it is the only source there is.
+- **`espresso_temperature_goal` is real and present**, which is what makes the
+  water read at all (92 °C on the account's own lever shot).
+- **`PRESSURE_MIN_BAR = 2` is validated on real hardware.** The account's lever
+  peaks at **4.9 bar**. A threshold of 5 would have misfiled every one of its
+  espressos as a pour-over.
+- **`start_time` == `clock`, on every shot.** Which is the next section.
+
+**A brew has one timestamp, and it is the record's (v7.31.6).** `clock` on the
+list row and `start_time` on the full record are the *same value* across every
+shot on the account — and `updated_at` sits within seconds of both on a fresh
+upload. For an uploader that files after the fact, that is when the record was
+made. **There is no pour time in the data at all**, so v7.31.4's hunt (which
+prefers `start_time`) reads the identical figure and gains nothing where the
+uploader is a scale; it stays because it costs nothing and is right for a
+writer that does state one.
+
+So the pour time joins `agitation`: a fact no instrument in the room recorded,
+and therefore the keeper's to state. `openCupWhen`/`saveCupWhen` make the
+cup's own date correctable, and the brew it was read from moves with it so a
+re-brew starts from the same morning. `createdAt` is untouched and still says
+when it was written down.
+
+**Cups order by `at`, everything else by `createdAt` (`byWhen` vs `byNew`).**
+A cup is the one record whose own moment can differ from the moment it was
+written — you can pull Tuesday's brew on Friday. The Journal had claimed
+"newest first" and meant newest *typed*. For every cup logged as it was drunk
+the two are the same value and nothing moves.
+
 **A brew is dated by its pour, not by its upload (v7.31.4).** The only
 timestamp Carta had was `clock` off the *list* row, which is the record's own.
 For anything filed after the fact — which is most filter brews, since a scale
