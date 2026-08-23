@@ -532,6 +532,20 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 .plate .fl{fill:none;stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3}
 .plate .wt{fill:var(--ink);fill-opacity:.08;stroke:none}
 .plate .lb{font-family:var(--sans);font-size:8px;letter-spacing:.1em;fill:var(--text-disabled)}
+/* the pour-over arm (SPEC-phase26-pourover.md §3). The water going in is the
+   subject, so it takes the body ink the pressure line takes on a shot; what is
+   in the cup lags behind it as the same 8% fill, and the gap between the two
+   is the saturated bed. The pours are bands with a hairline top — the band is
+   water going in, and the wait after it is drawn by being left empty. */
+.plate .wi{fill:none;stroke:var(--ink);stroke-width:1.7;stroke-linejoin:round}
+.plate .band{fill:var(--ink);fill-opacity:.05}
+.plate .bandtop{fill:none;stroke:var(--ink);stroke-opacity:.2}
+.plate.hair .wi{stroke-width:1.5}
+.plate.thumb .wi,.plate.tiny .wi{stroke-width:1.2}
+.plate.quiet .wi{stroke-opacity:.55}
+/* the staircase draws on a slower, flatter ease than the arc: it waits where
+   the keeper waited rather than sweeping through the gaps */
+.plate .wi.draw{stroke-dasharray:var(--dash,1300);animation:ca-drawn 1.9s cubic-bezier(.4,.05,.35,1) both}
 .plate.hair .pr{stroke-width:1.5}
 .plate.tiny .pr{stroke-width:1.2}
 .plate.quiet .pr{stroke-opacity:.55}
@@ -551,6 +565,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
   font-size:11px;font-variant-numeric:tabular-nums;color:var(--ink-3)}
 .platebox .read .r+.r{margin-top:3px}
 .platebox .read .r b{font-weight:400;color:var(--ink)}
+/* what was happening at 1:44 — a state, stated, while your finger is on it */
+.platebox .read .ph{display:block;border-top:1px solid var(--line);margin-top:6px;padding-top:5px;
+  font-family:var(--serif);font-style:italic;font-size:12px;color:var(--ink);white-space:nowrap}
+.platebox.pour .read{top:24px;min-width:118px}
 /* the three figures a shot is actually argued about, at dial scale */
 .figs{display:flex;border-bottom:1px solid var(--line);padding:16px 0 14px}
 .figs>div{flex:1;min-width:0}
@@ -562,6 +580,21 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 .figs.small{border-bottom:0;border-top:1px solid var(--line);padding:11px 0 0}
 .figs.small .v{font-size:26px;letter-spacing:-.02em}
 .figs.small .l{margin-top:5px}
+/* the pours (SPEC-phase26-pourover.md §4) — one row per pour: what it was,
+   what it added, when, and the wait that followed. The last `then` is the
+   drawdown and is set in full ink, because it is the figure the brew will
+   actually be argued about. */
+.pours{display:grid;grid-template-columns:1fr auto auto auto;gap:0 16px;margin-top:9px;
+  font-variant-numeric:tabular-nums}
+.pours .h{font-family:var(--sans);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-disabled);padding-bottom:5px}
+.pours .h.r,.pours .n,.pours .a,.pours .w{text-align:right}
+.pours>span:not(.h){border-top:1px solid var(--line)}
+.pours .p{font-family:var(--serif);font-size:15.5px;padding:5px 0}
+.pours .n,.pours .a,.pours .w{font-family:var(--sans);font-size:14px;padding:6px 0 5px}
+.pours .a{color:var(--ink-2)}
+.pours .w{color:var(--ink-3)}
+.pours .w.down{color:var(--ink)}
 /* a cup that has not been written yet, waiting on the passport. A stated fact
    with the cup attached to it — never a badge, a dot or a count on the bar. */
 .waiting{display:flex;align-items:center;gap:8px;margin-bottom:8px;pointer-events:auto}
@@ -589,13 +622,14 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 .qlink:active{color:var(--ink)}
 .qlink.faint{color:var(--ink-3)}
 @media (prefers-reduced-motion:reduce){
-  .plate .pr.draw{animation:none!important;stroke-dasharray:none!important}
+  .plate .pr.draw,.plate .wi.draw{animation:none!important;stroke-dasharray:none!important}
   .plate .fl.ink,.plate .wt.ink{animation:none!important;opacity:1!important}
   .waiting .mk{animation:none!important}
 }
 
 </style>
 <script src="carta-map.js"></script>
+<script src="carta-plate.js"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -645,7 +679,10 @@ function getShotCurve(id){return id==null?null:(loadCurves()[String(id)]||null)}
 function thinCurve(c,cap){
   cap=cap||400;const n=c.t.length;if(n<=cap)return c;
   const step=Math.ceil(n/cap),take=a=>a?a.filter((_,i)=>i%step===0||i===n-1):null;
-  return {t:take(c.t),p:take(c.p),f:take(c.f),w:take(c.w)};
+  // every series the curve carries, and the method with them: a pour-over's
+  // own water-in series is what its staircase is drawn from, and dropping it
+  // here left a written cup with a plate it could no longer draw
+  return {t:take(c.t),p:take(c.p),f:take(c.f),w:take(c.w),wIn:take(c.wIn),method:c.method};
 }
 // resize+recompress in the browser — canvas only, no library. Steps down the
 // quality a few times if a big photo still won't fit under the target.
@@ -1311,15 +1348,27 @@ function parseCfSearch(text,blankKeys){
   });
   return out;
 }
-// reading a Visualizer shot into Carta's own fields (Phases 24-25) — null or ''
-// wherever the shot didn't state something, never guessed; label is a picker's.
+/* reading a Visualizer brew into Carta's own fields (Phases 24-26) — null or
+ * '' wherever the file didn't state something, never guessed; label is a
+ * picker's. The method comes off the curve rather than off a brewer's name:
+ * a machine writes pressure and a scale does not, so the absence is stated by
+ * the file rather than inferred from it (carta-plate.js). A pour-over's own
+ * yield is the water it took, which is what its ratio is argued in — the
+ * `drink_weight` a shot uses is what landed in the cup, and for a filter brew
+ * those are two different figures. */
 function parseVisualizerShot(d){
   d=d||{};
   const num=v=>{if(v==null||v==='')return null;const n=Number(v);return isNaN(n)?null:n};
   const str=v=>(v||'').trim();
   const time=Number(d.duration);
   const roaster=str(d.bean_brand),coffeeName=str(d.bean_type);
-  return {dose:num(d.bean_weight),water:num(d.drink_weight),time:isNaN(time)?null:Math.round(time),
+  const curve=shotCurve(d),method=(curve&&curve.method)||'espresso';
+  const pours=method==='pourover'&&curve?shotPours(curve):[];
+  const waterIn=curve&&curve.wIn?curve.wIn[curve.wIn.length-1]:null;
+  return {method,pours,
+    dose:num(d.bean_weight),
+    water:method==='pourover'?(num(d.drink_weight)!=null&&!waterIn?num(d.drink_weight):waterIn):num(d.drink_weight),
+    time:isNaN(time)?null:Math.round(time),
     grind:num(d.grinder_setting),roaster,coffeeName,
     roastDate:normalizeRoastDate(d.roast_date),roastLevel:normalizeRoastLevel(d.roast_level),
     grinderModel:str(d.grinder_model),
@@ -1331,7 +1380,10 @@ function parseVisualizerShot(d){
     // file stayed silent. The water is what the basket was told to hold —
     // Visualizer's own "basket temp goal" — read by shotTempGoal below.
     tempC:shotTempGoal(d),preinfusionSec:num(d.preinfusion),
-    curve:shotCurve(d),
+    // the brewer, and the paper in it: it matters for a filter brew the way a
+    // basket does for a shot. Stated or nothing, like everything else here.
+    brewer:str(d.brewer)||str(d.drink_type)||str(d.profile_title),
+    curve,
     label:[roaster,coffeeName].filter(Boolean).join(' — ')||'Untitled shot'};
 }
 /* the water, as the machine was told to hold it. Scalar where the file states
@@ -1356,110 +1408,12 @@ function shotTempGoal(d){
   }
   return null;
 }
-/* the curve the shot file actually carries (Phase 26) — pressure and flow and
- * what landed in the cup, against elapsed seconds. Which key each series is
- * under depends on what wrote the file, so each is read by the first key that
- * is genuinely an array of numbers, and a series that isn't there comes back
- * null rather than being interpolated out of the ones that are. No curve at
- * all is a state, not a failure: the shot still states its scalars.
- * Visualizer's own file (confirmed against a live shot, v7.28.2) splits the
- * curve across two containers rather than one: the elapsed-seconds series
- * sits at the top of the response (`timeframe`), the value series (pressure,
- * flow, weight) sit nested under `data` — so every key is hunted for in both
- * containers, never assumed to share one. A machine with no flow sensor
- * states no `espresso_flow` at all; `espresso_flow_weight` (confirmed by
- * integrating it against the shot's own final weight, v7.28.3) is Visualizer
- * computing flow off the scale instead, and is read as a fallback rather than
- * left blank when it's the only flow reading the file actually carries. */
-function shotCurve(d){
-  if(!d||typeof d!=='object')return null;
-  const sources=[d,(d.data&&typeof d.data==='object')?d.data:{}];
-  const arr=keys=>{
-    for(let s=0;s<sources.length;s++){
-      const src=sources[s];
-      for(let i=0;i<keys.length;i++){
-        const v=src[keys[i]];
-        if(Array.isArray(v)&&v.length>1){const o=v.map(Number);if(o.every(n=>isFinite(n)))return o}
-      }
-    }
-    return null;
-  };
-  let t=arr(['timeframe','espresso_elapsed','elapsed','time']);
-  const p=arr(['espresso_pressure','pressure']);
-  if(!t||!p)return null;
-  // some writers state elapsed in milliseconds; a shot that ran ten minutes is
-  // not a shot, so the only reading left is that these are ms
-  if(t[t.length-1]>600)t=t.map(v=>v/1000);
-  const n=Math.min(t.length,p.length);
-  if(n<2)return null;
-  // flow or weight can legitimately run a little short of the clock (a
-  // weight-derived flow reading stopping a beat before the last samples,
-  // say) — r() already trims anything longer than the clock and passes a
-  // shorter series through untouched, so nothing here needs to reject one;
-  // platePaths' own line() maps over the series itself, so a shorter one
-  // just draws a shorter line rather than reading past its own end
-  const r=a=>a?a.slice(0,n).map(v=>Math.round(v*100)/100):null;
-  return {t:r(t),p:r(p),f:r(arr(['espresso_flow','flow','espresso_flow_weight'])),w:r(arr(['espresso_weight','weight']))};
-}
-/* the three figures a shot is argued about: how hard it pushed and when, what
- * came out against what went in, and how long it took. Read off the curve
- * where there is one and off the shot's own scalars where there isn't —
- * never mixed within a figure, and null wherever neither states it. */
-function shotFigures(shot){
-  const c=shot&&shot.curve;
-  let peak=null,peakAt=null;
-  if(c){
-    let i=0;
-    for(let k=1;k<c.p.length;k++)if(c.p[k]>c.p[i])i=k;
-    peak=c.p[i];peakAt=c.t[i];
-  }
-  const dose=shot&&shot.dose!=null?shot.dose:null;
-  const yld=(shot&&shot.water!=null)?shot.water:(c&&c.w?c.w[c.w.length-1]:null);
-  let total=shot&&shot.timeExact!=null?shot.timeExact:(shot&&shot.time!=null?shot.time:null);
-  if(total==null&&c)total=c.t[c.t.length-1];
-  return {peak,peakAt,total,dose,yield:yld,ratio:(dose&&yld)?yld/dose:null};
-}
-/* the plate's own geometry — pure, so it can be checked without a screen.
- * `box` states the frame (`w`,`h`) and where the baseline and the ceiling of
- * the plot sit inside it; pressure and flow each read against their own full
- * scale, and what is in the cup against its own maximum with a little air
- * over it, since the three are different quantities and a shared axis would
- * be a claim none of them makes. */
-function platePaths(shot,box){
-  const c=shot&&shot.curve;
-  if(!c)return null;
-  const w=box.w,base=box.base,top=box.top;
-  const tMax=Math.max(0.1,c.t[c.t.length-1]);
-  const barMax=Math.max(box.barMax||12,Math.ceil(Math.max.apply(null,c.p)));
-  const flowMax=Math.max(box.flowMax||7.5,c.f?Math.max.apply(null,c.f):0);
-  const wMax=c.w?Math.max(0.1,Math.max.apply(null,c.w))*1.18:1;
-  const X=t=>+(t/tMax*w).toFixed(1);
-  const Y=(v,max)=>+(base-Math.max(0,Math.min(v,max))/max*(base-top)).toFixed(1);
-  const line=(vals,max)=>vals?vals.map((v,i)=>(i?'L':'M')+X(c.t[i])+' '+Y(v,max)).join(''):null;
-  const weight=line(c.w,wMax);
-  const ticks=[];
-  for(let s=5;s<tMax;s+=5)ticks.push({x:X(s),s});
-  return {
-    pressure:line(c.p,barMax),flow:line(c.f,flowMax),weight,
-    weightArea:weight?`${weight}L${w} ${base}L0 ${base}Z`:null,
-    grid:[3,6,9].filter(b=>b<barMax).map(b=>({bar:b,y:Y(b,barMax)})),
-    ticks,base,top,w,h:box.h,tMax,barMax,flowMax,wMax,
-    // the dasharray the draw-on animation runs against: over the path's real
-    // length by design, so the reveal never stalls short of the end
-    dash:Math.round(w*3.34)
-  };
-}
-// what the shot stated at one instant — the sample at or before that second,
-// never a value between two of them (a scrub reads the curve, it doesn't
-// smooth it). Null wherever that series isn't on the file at all.
-function shotAt(shot,t){
-  const c=shot&&shot.curve;
-  if(!c)return null;
-  let i=0;
-  while(i<c.t.length-1&&c.t[i+1]<=t)i++;
-  const pick=a=>a?a[Math.min(i,a.length-1)]:null;
-  return {t:c.t[Math.min(i,c.t.length-1)],bar:pick(c.p),flow:pick(c.f),grams:pick(c.w)};
-}
+/* the curve, the plate's geometry and the brew's own figures all moved into
+ * carta-plate.js at the Phase 26 second-method gate (ARCHITECTURE.md §1) —
+ * `shotCurve`, `shotPours`, `shotFigures`, `shotMethod`, `platePaths`,
+ * `shotAt` and `mmss` are read from there as plain globals, the same seam the
+ * map layer publishes across. They stay pure and stay tested; the harness
+ * evaluates that file's own pure block ahead of this one. */
 // Visualizer's roast_level field is already known to BE a roast level, unlike a
 // pasted bag's free text — so no "roast" adjacency, just the word (cf. parseRoastLevel).
 function normalizeRoastLevel(s){
@@ -2152,6 +2106,14 @@ function doorPullFinish(){
   }
   const brew={id:uid(),createdAt:new Date().toISOString(),coffeeRef:coffeeId,setupId,technique:'',
     grind:shot.grind,doseG:shot.dose,waterG:shot.water,tempC:shot.tempC==null?null:shot.tempC,timeSec:shot.time};
+  // the method and the pours ride with the brew (SPEC-phase26-pourover.md §6):
+  // the curve itself keeps out of the ledger, but which drawing it gets and
+  // what it was actually made of are the brew's own record
+  if(shot.method==='pourover'){
+    brew.method='pourover';
+    if(shot.pours&&shot.pours.length)brew.pours=shot.pours;
+    if(shot.brewer)brew.brewer=shot.brewer;
+  }
   // the shot this brew was read from, so a re-brew can start from it and the
   // cup can draw its own curve back (Phase 26). The curve itself keeps out of
   // the ledger — see CURVES_KEY.
@@ -2720,10 +2682,10 @@ function measuredAtHomeHTML(){
     ${visualizerEmail()?`<button class="r qlink" style="text-transform:none;letter-spacing:.06em" onclick="openVisualizerKey()">${esc(state)}</button>`
       :`<span class="r">${esc(state)}</span>`}</div>
     <div class="btnrow" style="margin-top:14px">
-      <button class="btn btn-quiet" onclick="openShotsScreen()">Pull a shot</button>
+      <button class="btn btn-quiet" onclick="openShotsScreen()">Pull a brew</button>
       <button class="btn btn-quiet" style="border-color:var(--line);color:var(--ink-2)" onclick="openHomeDoor()">Type a brew</button>
     </div>
-    <div style="font-family:var(--serif);font-style:italic;font-size:var(--s13);color:var(--ink-3);line-height:1.5;margin:11px 0 4px">A pour-over leaves no shot file. Typing it is the same path it always was: a Setup, the dials, the timer.</div>`;
+    <div style="font-family:var(--serif);font-style:italic;font-size:var(--s13);color:var(--ink-3);line-height:1.5;margin:11px 0 4px">A brew no instrument was watching leaves no file to read. Typing it is the same path it always was: a Setup, the dials, the timer.</div>`;
 }
 // the continuation (design-system pattern, hero-loop): the last cup brewed at
 // home, carried forward. Nothing invented — every figure on it is already on
@@ -2814,7 +2776,7 @@ function vCup(id){
       </div>
       ${cupPlateHTML(cup,brew)}
       <div style="margin-top:26px">${ledgerHTML(ledger)}</div>
-      ${brew&&brew.vizShotId!=null?`<div style="text-align:center;margin-top:20px"><button class="qlink" onclick="openBrewFlow('${coffee?coffee.id:''}')">Brew it again from these numbers →</button></div>`:''}
+      ${brew&&brew.vizShotId!=null?`<div style="text-align:center;margin-top:20px"><button class="qlink" onclick="openBrewFlow('${coffee?coffee.id:''}')">Brew it again from these ${brew.method==='pourover'?'pours':'numbers'} →</button></div>`:''}
       ${place&&placed([place]).length?`<button style="width:100%;margin-top:18px;color:var(--ink);background:none;border:1px solid var(--line);padding:0;cursor:pointer;display:block" onclick="openCafeScreen('${place.id}')">
         ${streetsHTML([place],{boxStyle:'height:132px',zoom:15,still:true,attribLift:4,scoreOf:()=>1})}
         <span style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid var(--line)">
@@ -2837,12 +2799,18 @@ function cupPlateHTML(cup,brew){
   if(cup.kind!=='home'||!brew||brew.vizShotId==null)return '';
   const shot=shotOfBrew(brew);
   if(!shot||!shot.curve)return '';
-  const fg=shotFigures(shot);
-  const foot=[fg.peak==null?null:fig1(fg.peak)+' bar peak',
-    fg.ratio==null?null:`1:${fig1(fg.ratio)} · ${fig1(fg.dose)} → ${fig1(fg.yield)} g`,
-    fg.total==null?null:fig1(fg.total)+' s'].filter(Boolean);
+  const fg=shotFigures(shot),pour=fg.method==='pourover';
+  // the foot rule restates the plate in the method's own three figures — the
+  // pours and the drawdown for a filter brew, the peak for a shot
+  const foot=(pour
+    ?[fg.pours&&fg.pours.length?`${fg.pours.length} pour${fg.pours.length===1?'':'s'}${fg.bloom==null?'':' · '+mmss(fg.bloom)+' bloom'}`:null,
+      fg.ratio==null?null:`1:${fig1(fg.ratio)} · ${fig1(fg.dose)} → ${fig1(fg.yield)} g`,
+      fg.total==null?null:mmss(fg.total)+(fg.drawdown==null?'':' · '+mmss(fg.drawdown)+' down')]
+    :[fg.peak==null?null:fig1(fg.peak)+' bar peak',
+      fg.ratio==null?null:`1:${fig1(fg.ratio)} · ${fig1(fg.dose)} → ${fig1(fg.yield)} g`,
+      fg.total==null?null:fig1(fg.total)+' s']).filter(Boolean);
   return `<div style="margin:20px -20px 0;background:var(--surface-sunk);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
-    ${plateSVG(shot,PLATE_FULL,{grid:true,flow:false,weight:true,style:'height:auto'})}
+    ${plateSVG(shot,PLATE_FULL,{grid:true,flow:false,weight:true,bands:pour,style:'height:auto'})}
     ${foot.length?`<div style="display:flex;justify-content:space-between;gap:10px;padding:0 20px 10px;font-family:var(--sans);font-size:10px;letter-spacing:.06em;color:var(--ink-3);font-variant-numeric:tabular-nums">
       ${foot.map(f=>`<span>${esc(f)}</span>`).join('')}</div>`:''}
   </div>`;
@@ -3324,7 +3292,7 @@ function saveVisualizerKey(){
 }
 function clearVisualizerKey(){
   setPref('visualizerEmail','');setPref('visualizerPassword','');setPref('vizWatch',false);
-  _vizWaiting=null;_shots={busy:false,rows:null,error:null};
+  _vizWaiting=null;_shots={busy:false,rows:null,error:null,scope:'all'};
   closeSheet();render();toast('Signed out. The account is off this device.');
 }
 const VISUALIZER_BASE='https://visualizer.coffee/api/shots';
@@ -3479,7 +3447,7 @@ function ensureShotCurve(shot){
 function openShotScreen(id,extra){openScreen('shot',String(id),extra);ensureShotCurve(vizShotById(id))}
 // station 08, reachable whether or not the watch is on. The list is fetched
 // once a sitting; the row you pick is the only one read in full.
-let _shots={busy:false,rows:null,error:null};
+let _shots={busy:false,rows:null,error:null,scope:'all'};
 function openShotsScreen(){
   if(!visualizerAuthHeader()){openVisualizerKey();return}
   openScreen('shots');loadShots();
@@ -3493,75 +3461,6 @@ async function loadShots(force){
   if(pageView&&pageView.kind==='shots')render();
 }
 
-/* ---- the plate, drawn. One drawing at three sizes: full-bleed where the shot
- * is the subject, a hairline where it is context, a thumb on a row — a shot is
- * recognisable by its shape before its label is read, which is the whole
- * argument for drawing it 44px wide. */
-const PLATE_FULL={w:390,h:176,base:166,top:18},
-      PLATE_HAIR={w:350,h:34,base:31,top:5},
-      PLATE_THUMB={w:44,h:22,base:20,top:3};
-// the draw-on plays on arrival only — once per shot per size, so a scrub, a
-// repaint or a mark never replays it
-let _plateDrawn={};
-function plateDraws(k){if(_plateDrawn[k])return false;_plateDrawn[k]=true;return true}
-function plateSVG(shot,box,opts){
-  const g=platePaths(shot,box);
-  if(!g)return '';
-  opts=opts||{};
-  const draw=opts.draw&&plateDraws(shot.id+':'+box.w)?' draw':'';
-  return `<svg class="plate${opts.cls?' '+opts.cls:''}" viewBox="0 0 ${box.w} ${box.h}"${opts.style?` style="${opts.style}"`:''} aria-hidden="true">
-    ${opts.grid?g.grid.map(l=>`<path class="grid" d="M0 ${l.y}L${box.w} ${l.y}"></path>`).join(''):''}
-    ${opts.grid&&g.ticks.length?`<path class="tick" d="${g.ticks.map(t=>`M${t.x} ${g.base}L${t.x} ${g.base-6}`).join('')}"></path>`:''}
-    ${opts.axis===false?'':`<path class="axis" d="M0 ${g.base}L${box.w} ${g.base}"></path>`}
-    ${opts.weight&&g.weightArea?`<path class="wt${draw?' ink':''}" d="${g.weightArea}"></path>`:''}
-    ${opts.flow&&g.flow?`<path class="fl${draw?' ink':''}" d="${g.flow}"></path>`:''}
-    <path class="pr${draw}" style="--dash:${g.dash}" d="${g.pressure}"></path>
-    ${opts.labels?g.grid.map(l=>`<text class="lb" x="4" y="${(l.y-3).toFixed(1)}">${l.bar===9?'9 BAR':l.bar}</text>`).join('')
-      +g.ticks.map(t=>`<text class="lb" x="${Math.max(0,t.x-5).toFixed(1)}" y="${box.h}">${t.s}s</text>`).join(''):''}
-  </svg>`;
-}
-const fig1=v=>v==null?'—':(Math.round(v*10)/10).toFixed(1);
-// the three stated figures, at dial scale. Where a figure's own parts aren't
-// stated the label falls back to naming the figure rather than inventing them.
-function figsHTML(fg,small){
-  return `<div class="figs${small?' small':''}">
-    <div><div class="v">${fg.peak==null?'—':fig1(fg.peak)+'<span class="u">bar</span>'}</div>
-      <div class="l">${fg.peakAt==null||small?'Peak':esc('Peak, at '+fig1(fg.peakAt)+'s')}</div></div>
-    <div><div class="v">${fg.ratio==null?'—':'1:'+fig1(fg.ratio)}</div>
-      <div class="l">${fg.dose==null||fg.yield==null?'Ratio':esc(fig1(fg.dose)+' → '+fig1(fg.yield)+' g')}</div></div>
-    <div><div class="v">${fg.total==null?'—':fig1(fg.total)+'<span class="u">s</span>'}</div>
-      <div class="l">${small?'Time':'Total'}</div></div>
-  </div>`;
-}
-// the scrub: drag anywhere on the plate and the readout states what the shot
-// stated at that instant. Painted straight into the box — a re-render here
-// would replay the draw-on and lose the crosshair's own place.
-function plateBoxHTML(shot,g){
-  const f=g.tMax?Math.min(1,Math.max(0,(shotFigures(shot).peakAt||0)/g.tMax)):0;
-  return `<div class="platebox" data-shot="${esc(String(shot.id))}"
-      onpointerdown="plateScrub(event)" onpointermove="plateScrub(event)">
-    ${plateSVG(shot,PLATE_FULL,{draw:true,grid:true,flow:true,weight:true,labels:true})}
-    <div class="cross" style="left:${(f*100).toFixed(2)}%"></div>
-    <div class="read">${scrubReadHTML(shotAt(shot,f*g.tMax))}</div>
-  </div>`;
-}
-function scrubReadHTML(at){
-  if(!at)return '';
-  const r=(k,v)=>`<span class="r"><span>${k}</span><b>${v}</b></span>`;
-  return r('at',at.t.toFixed(1)+'s')+r('bar',at.bar==null?'—':at.bar.toFixed(1))
-    +r('ml/s',at.flow==null?'—':at.flow.toFixed(2))+r('in cup',at.grams==null?'—':at.grams.toFixed(1)+' g');
-}
-function plateScrub(e){
-  const box=e.currentTarget,shot=vizShotById(box.getAttribute('data-shot'));
-  if(!shot||!shot.curve)return;
-  const r=box.getBoundingClientRect();if(!r.width)return;
-  const f=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
-  const tMax=shot.curve.t[shot.curve.t.length-1];
-  const cross=box.querySelector('.cross'),read=box.querySelector('.read');
-  if(cross)cross.style.left=(f*100).toFixed(2)+'%';
-  if(read)read.innerHTML=scrubReadHTML(shotAt(shot,f*tMax));
-}
-
 /* ---- station 04: the shot, as a plate. BARELESS — one shot is read in a
  * sitting, and the bar would only offer a way to lose it. */
 function vShot(id,view){
@@ -3571,6 +3470,26 @@ function vShot(id,view){
     <button class="btn btn-quiet" onclick="closePage()">Back</button></div>`;
   const g=platePaths(shot,PLATE_FULL),fg=shotFigures(shot),when=shotWhen(shot);
   const setup=setupById(matchSetupByGrinder(live('setups'),shot.grinderModel));
+  const pour=shotMethod(shot)==='pourover';
+  const setupLine=setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):(shot.grinderModel||'');
+  // the ledger is not the same ledger. A shot is argued with preinfusion and a
+  // roast date; a filter brew with the paper it ran through and the hand that
+  // stirred it — and the hand is half the recipe with no instrument recording
+  // it, which is where `unread` lands hardest in the whole app.
+  const led=pour?[
+    ['Coffee',shot.label==='Untitled shot'?'':shot.label],
+    ['Brewer',shot.brewer||''],
+    ['Grind',[setup&&setup.grinder?setup.grinder:shot.grinderModel,shot.grind==null?'':String(shot.grind)].filter(Boolean).join(' · ')],
+    ['Water',shot.tempC==null?'':fmtTempStated(shot.tempC)+', stated once'],
+    ['Agitation',''],
+  ]:[
+    ['Coffee',shot.label==='Untitled shot'?'':shot.label],
+    ['Setup',setupLine],
+    ['Grind',shot.grind==null?'':String(shot.grind)],
+    ['Water',fmtTempStated(shot.tempC)],
+    ['Preinfusion',shot.preinfusionSec==null?'':fig1(shot.preinfusionSec)+' s'],
+    ['Roast date',shot.roastDate?fmtDateLong(shot.roastDate+'T00:00'):''],
+  ];
   return `<div>
     <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
       <button class="omini bare" style="flex:none" onclick="${view&&view.back==='shots'?'openShotsScreen()':'closePage()'}" aria-label="Back">←</button>
@@ -3579,24 +3498,39 @@ function vShot(id,view){
         <div class="display" style="font-size:1.375rem;margin:0">${esc(shot.coffeeName||shot.label)}, <em>as it poured</em></div>
       </div>
     </header>
-    ${g?plateBoxHTML(shot,g):`<div class="note" style="margin:0;padding:16px 20px;border-top:0;border-bottom:1px solid var(--line)">This shot came without its curve. Its own figures still stand.</div>`}
+    ${g?plateBoxHTML(shot,g):`<div class="note" style="margin:0;padding:16px 20px;border-top:0;border-bottom:1px solid var(--line)">This ${pour?'brew':'shot'} came without its curve. Its own figures still stand.</div>`}
     <div class="pad" style="padding-top:0">
       ${figsHTML(fg)}
-      <div style="margin-top:16px">${ledgerHTML([
-        ['Coffee',shot.label==='Untitled shot'?'':shot.label],
-        ['Setup',setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):(shot.grinderModel||'')],
-        ['Grind',shot.grind==null?'':String(shot.grind)],
-        ['Water',fmtTempStated(shot.tempC)],
-        ['Preinfusion',shot.preinfusionSec==null?'':fig1(shot.preinfusionSec)+' s'],
-        ['Roast date',shot.roastDate?fmtDateLong(shot.roastDate+'T00:00'):''],
-      ])}</div>
+      ${pour?poursHTML(fg.pours):''}
+      <div style="margin-top:16px">${ledgerHTML(led)}</div>
       <button class="btn btn-primary" style="min-height:52px;margin-top:18px" onclick="shotIsTheCup(${jsq(String(shot.id))})">This is the cup →</button>
       <div style="text-align:center;margin-top:15px"><button class="qlink" onclick="shotCorrect(${jsq(String(shot.id))})">Correct something before it is written</button></div>
       <div style="text-align:center;margin-top:10px"><button class="qlink faint" onclick="dismissShot(${jsq(String(shot.id))})">Not mine</button></div>
-      <div class="note">Read off your account, not stored anywhere else. A field Visualizer didn't state reads <em>unread</em> rather than a guess.</div>
+      <div class="note">Read off your ${pour?'scale':'account'}, not stored anywhere else. A field Visualizer didn't state reads <em>unread</em> rather than a guess.</div>
     </div></div>`;
 }
+/* the pours as they were made, and the wait after each — the ledger a shot has
+ * no counterpart for. The gaps ARE the reading: the bed letting go between
+ * pulses, and the last of them is the drawdown, which is why it alone is set
+ * in full ink. A brew whose file states no pours at all draws nothing here
+ * rather than an empty table. */
+function poursHTML(pours){
+  if(!pours||!pours.length)return '';
+  const last=pours.length-1;
+  return `<div class="shead" style="margin-top:15px"><span class="l">The pours</span><span class="r">and each wait after</span></div>
+    <div class="pours">
+      <span class="h">Pour</span><span class="h r">Added</span><span class="h r">At</span><span class="h r">Then</span>
+      ${pours.map((p,i)=>`<span class="p">${i?'Pour '+(i+1):'Bloom'}</span>
+        <span class="n">${esc(String(Math.round(p.added)))} g</span>
+        <span class="a">${esc(mmss(p.at))}</span>
+        <span class="w${i===last?' down':''}">${esc(Math.round(p.then)+' s')}</span>`).join('')}
+    </div>
+    <div style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3);line-height:1.45;margin-top:7px">The gaps are the bed letting go. The last one is the drawdown, and it is the figure this brew will be argued about.</div>`;
+}
 const fmtClock=iso=>iso?new Date(iso).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}):'';
+// "V60 02 · Cafec Abaca" is the ledger's reading, where the paper is half the
+// recipe. A hero and a list row want the brewer on its own.
+const brewerShort=b=>String(b||'').split('·')[0].trim();
 // stated or nothing: a shot file that named no temperature gets `unread`, not
 // a figure read off a curve that was never a scalar (SPEC §4, ARCHITECTURE §4)
 const fmtTempStated=c=>c==null?'':(tempUnit()==='F'?`${Math.round(c2f(c)*10)/10} °F`:`${c} °C`);
@@ -3684,7 +3618,10 @@ function shotOfBrew(brew){
   if(!brew||brew.vizShotId==null)return null;
   const cached=vizShotById(brew.vizShotId);
   return {id:brew.vizShotId,curve:getShotCurve(brew.vizShotId)||(cached&&cached.curve)||null,
+    method:brew.method||(cached&&cached.method)||'espresso',
+    pours:brew.pours||(cached&&cached.pours)||[],
     dose:brew.doseG,water:brew.waterG,time:brew.timeSec,grind:brew.grind,tempC:brew.tempC,
+    brewer:brew.brewer||(cached&&cached.brewer)||'',
     label:cached?cached.label:'',clock:cached?cached.clock:null};
 }
 function saveTasteHome(brewId,skip){
@@ -3713,32 +3650,48 @@ function unwriteCup(cupId,brewId){
 
 /* ---- station 08: the other shots. Reached from the hero, or from the Journal
  * when the watch is off. Each row carries its own curve. */
+/* station 14: both methods land in the same list, because they land in the
+ * same journal. The scope narrows it where the keeper wants one of them; it is
+ * a filter over what has already been fetched, never a second call. And there
+ * is deliberately no icon, no colour and no badge saying which is which — the
+ * 44×22 thumb finally earns the argument it was drawn for, because an arc and
+ * a staircase are unmistakable at that size. */
+const SHOT_SCOPES=[['all','All'],['espresso','Espresso'],['pourover','Pour-over']];
+function setShotScope(k){_shots.scope=k;render()}
 function vShots(){
-  const rows=_shots.rows;
+  const rows=_shots.rows,scope=_shots.scope||'all';
+  const shown=rows?rows.filter(r=>scope==='all'||shotMethod(r)===scope):null;
+  const mixed=rows&&rows.some(r=>shotMethod(r)==='pourover')&&rows.some(r=>shotMethod(r)!=='pourover');
   return `<div>
     <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
       <button class="omini bare" style="flex:none" onclick="go('journal')" aria-label="Back">←</button>
       <div style="flex:1;min-width:0">
         <div class="eyebrow" style="margin-bottom:4px">Visualizer</div>
-        <div class="display" style="font-size:1.375rem;margin:0">Your recent <em>shots</em></div>
+        <div class="display" style="font-size:1.375rem;margin:0">Your recent <em>brews</em></div>
       </div>
     </header>
     <div class="pad" style="padding-top:0">
-      <div class="lede" style="margin-top:16px">The coffee and the brew arrive already right. Only the taste is still yours to type.</div>
-      ${_shots.busy?'<div class="empty">Reading your shots…</div>'
+      ${mixed?`<div style="display:flex;gap:7px;margin:16px 0 4px">
+        ${SHOT_SCOPES.map(([k,l])=>`<button class="pick${scope===k?' on':''}" onclick="setShotScope('${k}')">${l}</button>`).join('')}
+      </div>`:`<div class="lede" style="margin-top:16px">The coffee and the brew arrive already right. Only the taste is still yours to type.</div>`}
+      ${_shots.busy?'<div class="empty">Reading your brews…</div>'
         :_shots.error?`<div class="empty">${esc(_shots.error)}</div><button class="btn btn-quiet" onclick="loadShots(true)">Try again</button>`
         :!rows?''
-        :!rows.length?'<div class="empty">No shots on your Visualizer account yet.</div>'
-        :rows.map(shotRowHTML).join('')}
-      ${rows&&rows.length?'<div class="note">Eight shots listed, and only the one you pick is read in full. A shot you have already written keeps its score here.</div>':''}
+        :!rows.length?'<div class="empty">No brews on your Visualizer account yet.</div>'
+        :!shown.length?`<div class="empty">Nothing ${scope==='pourover'?'poured through a filter':'pulled as a shot'} in the last eight.</div>`
+        :shown.map(shotRowHTML).join('')}
+      ${rows&&rows.length?`<div class="note">${mixed?'Both methods land in the same list, because they land in the same journal. The shape says which before the label does.':'Eight brews listed, and only the one you pick is read in full. A brew you have already written keeps its score here.'}</div>`:''}
       <button class="btn btn-quiet" style="margin-top:18px" onclick="openHomeDoor()">Type a brew instead</button>
     </div></div>`;
 }
 function shotRowHTML(shot){
   const cup=cupOfShot(shot.id),fg=shotFigures(shot),when=shotWhen(shot);
+  const pour=fg.method==='pourover';
   const meta=[when?fmtAgo(when):'',shot.label==='Untitled shot'?'no coffee named':'',
-    fg.ratio==null?null:'1:'+fig1(fg.ratio),fg.total==null?null:fig1(fg.total)+'s',
-    fg.peak==null?null:fig1(fg.peak)+' bar'].filter(Boolean).join(' · ');
+    pour?(brewerShort(shot.brewer)||null):null,
+    fg.ratio==null?null:'1:'+fig1(fg.ratio),
+    fg.total==null?null:(pour?mmss(fg.total):fig1(fg.total)+'s'),
+    pour?null:(fg.peak==null?null:fig1(fg.peak)+' bar')].filter(Boolean).join(' · ');
   const curve=shot.curve?plateSVG(shot,PLATE_THUMB,{cls:'tiny'+(cup?' quiet':''),style:'width:44px;height:22px;flex:none'})
     :'<span style="flex:none;width:44px"></span>';
   return `<button class="lrow" onclick="openShotScreen(${jsq(String(shot.id))},{back:'shots'})">
@@ -5276,9 +5229,13 @@ function vAtlas(){
  * pointer-events:none by design, so everything tappable inside it hands its
  * own taps back the way .askfield already does. */
 function homeShotHeroHTML(shot){
-  const fg=shotFigures(shot),when=shotWhen(shot);
-  const sub=[shot.roaster,shot.roastLevel?shot.roastLevel.toLowerCase():'',
-    shot.grinderModel?'on the '+shot.grinderModel:''].filter(Boolean).join(' · ');
+  const fg=shotFigures(shot),when=shotWhen(shot),pour=shotMethod(shot)==='pourover';
+  // what the brew was made on, said the way each method says it: a shot names
+  // the machine it was pulled on, a filter brew the brewer it ran through
+  const sub=pour
+    ?[shot.roaster,shot.brewer?'a '+brewerShort(shot.brewer)+', read off the scale':'read off the scale'].filter(Boolean).join(' · ')
+    :[shot.roaster,shot.roastLevel?shot.roastLevel.toLowerCase():'',
+      shot.grinderModel?'on the '+shot.grinderModel:''].filter(Boolean).join(' · ');
   return `<div class="fade bottom deep shot" style="height:470px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 20px">
     <div class="waiting"><span class="mk"></span><span class="l">${esc(when?'Poured '+fmtAgo(when):'A shot, waiting')}</span></div>
     <div class="display big" style="margin:0 0 3px">${esc(shot.coffeeName||shot.label)}</div>
@@ -5287,8 +5244,8 @@ function homeShotHeroHTML(shot){
     ${figsHTML(fg,true)}
     <button class="btn btn-primary" style="margin-top:16px;pointer-events:auto" onclick="openShotScreen(${jsq(String(shot.id))})">Log this cup →</button>
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:11px;pointer-events:auto">
-      <span class="asttrust" style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">Read off your account, not stored anywhere else.</span>
-      <button class="qlink" style="flex:none" onclick="openShotsScreen()">Other shots</button>
+      <span class="asttrust" style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">Read off your ${pour?'scale':'account'}, not stored anywhere else.</span>
+      <button class="qlink" style="flex:none" onclick="openShotsScreen()">Other brews</button>
     </div>
   </div>`;
 }
@@ -5923,8 +5880,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.30.0';
+const APP_VERSION='7.31.0';
 const CHANGELOG=[
+  {v:'7.31.0',d:"A pour-over is a staircase. An espresso is one arc under pressure — peak, decline, done inside half a minute — and until now that was the only shape Carta could draw, so a filter brew read off a scale had nowhere to go. It has its own drawing now. Water goes in as a staircase, the cup fills behind it, and the gap between the two is the bed holding on; each pour is a band with what it added written over it, and the wait after it is drawn by being left empty. There is no pressure line, because there is no pressure. The figures change with the shape: a shot is argued about by its peak, a pour-over by its drawdown — how long the bed took to let go once you stopped pouring — with the bloom and the ratio beside it, and the pours listed as they were actually made. Drag across the curve and the readout names what was happening at that second: blooming, pouring pour 3, drawing down, in the cup. Your recent brews holds both methods in one list, because they land in one journal, with a scope if you want only one of them — and no icon or badge saying which is which, because at the size the little curve is drawn an arc and a staircase are already unmistakable. Agitation reads unread, and always will: the hand is half the recipe for a filter brew and no instrument records it. The line we used to print — that a pour-over leaves no shot file — was true of a machine and wrong about a scale, and it is retired. Typing a brew is untouched, and is now what it should always have been: the way in for a brew nothing was watching."},
   {v:'7.30.0',d:"Off the frame, and onto the paper. Carta drew itself inside two ruled borders — an edge around the whole app and a margin just inside it — and every screen now runs to the edge of the glass instead, the way the design board always had them. Every button in the app speaks one size: the larger, lettered shape the board draws, on a permission box that is now a real mark in ink rather than the browser's own control. Four things the shot flow only half did: a shot pulled while Carta was already open in the background is looked for again when you come back to it, not only when the app is loaded cold; the grind and the water temperature your machine recorded now read on a shot's own ledger instead of unread, because they were on a part of the file Carta wasn't opening; a shot naming a coffee you typed in yourself now asks whether it's the same one instead of quietly writing a second copy of it onto the shelf; and every row in Your recent shots carries its own curve again, bare, the way a shot is meant to be recognised. Your Visualizer account has a door of its own now — on the record and in the journal — so signing out or turning the watch off no longer needs an account you haven't set yet. A cup's page drops the last of the photograph frame: its reading leads, in the ember, with what you said about it answering back across the rule and the shot that earned it drawn underneath."},
   {v:'7.29.0',d:"Photos, retired — the ground instead. A cup's photo was the fastest way to a full local ledger, and one keeper's coffee found it: storage nearly spent, a save refused. Photos are gone now — the separate store, the upload slots, all of it — and a stale one already on this device is reclaimed the moment this loads. Wherever a photo used to stand — a cup in the Journal, its own page, a coffee's card — the ground the coffee stands on stands there instead: real terrain over a placed farm, the country's own washed shape where only that much is named, and an honest empty line where the bag says nothing at all."},
   {v:'7.28.3',d:"Flow, on machines with no flow sensor of their own. Pressure and what landed in the cup were drawing right; the ml/s line and readout stayed blank on any shot whose machine has no dedicated flow meter — which is most of them. Visualizer computes flow off the scale itself for exactly that case, under a different name, and Carta wasn't reading it. It does now, and a flow reading that runs a beat shorter than the rest of the plate draws its own true length rather than being thrown out for the mismatch."},

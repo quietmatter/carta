@@ -78,6 +78,7 @@ commission Phase 12 built.
 ```
 index.html            Carta 7 — the app, inline <style> and <script>
 carta-map.js          Carta 7's map layer, split out at Phase 19 (loaded from index.html's <head>)
+carta-plate.js        The plate — a brew's curve, both arms, split out at v7.31.0 (same <head>)
 test/model.test.js    The pure-block harness (zero deps, plain Node)
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
@@ -337,8 +338,13 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 ### Invariants to preserve
 
-- **Two files, no build.** Vanilla JS, inline everything, nothing fetched at
-  load beyond `carta-map.js` itself. `docs/ARCHITECTURE.md` §1 sets the band
+- **Three files, no build.** Vanilla JS, inline everything, nothing fetched at
+  load beyond `carta-map.js` and `carta-plate.js` themselves. The count was
+  two from Phase 19 and became three at v7.31.0, when the plate's second arm
+  forced the gate `SPEC-phase26-pourover.md` §8 had set. **The law was never
+  really about the number** — it is *no bundler, no npm, nothing between the
+  source and the host* — but a fourth file still needs the same argument
+  written into `ARCHITECTURE.md` §1 that the third one got. `docs/ARCHITECTURE.md` §1 sets the band
   for `index.html`: **3–5,000 lines / ≤ 500 KB** (raised from 4,000 at Phase
   13, 4,500 at Phase 15, 4,800 at Phase 16, each with the argument written
   into §1 — the byte ceiling has never moved and is the one that guards the
@@ -411,16 +417,19 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 85 cases
+node test/model.test.js        # zero deps, plain Node, 107 cases
 ```
 
-It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region straight
-out of `index.html` and evaluates it against fixture ledgers — no DOM, no
-`localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
+It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
+**both** `carta-plate.js` and `index.html` (in that order — the plate loads
+first in the browser, and `parseVisualizerShot` reads its globals) and
+evaluates them against fixture ledgers — no DOM, no `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
 `parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel`,
 `originPin`, `meanPin`, `namesBack`, `cfSearchPrompt`, `parseCfSearch`,
-`parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder` or
+`parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder`,
+`shotCurve`, `shotPours`, `shotFigures`, `shotMethod`, `platePaths`,
+`shotAt`, `shotPhase` (the last seven live in `carta-plate.js`) or
 `importClassicMap`, run it and keep it passing**; add cases for new behavior.
 
 Anything reaching for `D` or `document` **does not belong inside the markers**

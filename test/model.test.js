@@ -13,15 +13,23 @@ const path = require('node:path');
 const assert = require('node:assert');
 const vm = require('node:vm');
 
-const HTML = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const OPEN = '/* ==== pure ==== *';
 const CLOSE = '/* ==== /pure ==== */';
-const openAt = HTML.indexOf(OPEN);
-const closeAt = HTML.indexOf(CLOSE);
-if (openAt === -1 || closeAt === -1 || closeAt < openAt) {
-  throw new Error('pure-block markers not found in index.html — did they move?');
-}
-const pureSrc = HTML.slice(openAt, closeAt + CLOSE.length);
+// Two files carry a pure block since the Phase 26 second-method gate moved the
+// plate into carta-plate.js (ARCHITECTURE.md §1). They are evaluated in load
+// order — carta-plate.js first, exactly as the browser loads it — because
+// index.html's own parseVisualizerShot reads shotCurve/shotPours across that
+// seam, the same way the app reads the map layer's globals.
+const slice = file => {
+  const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+  const openAt = src.indexOf(OPEN);
+  const closeAt = src.indexOf(CLOSE);
+  if (openAt === -1 || closeAt === -1 || closeAt < openAt) {
+    throw new Error(`pure-block markers not found in ${file} — did they move?`);
+  }
+  return src.slice(openAt, closeAt + CLOSE.length);
+};
+const pureSrc = slice('carta-plate.js') + '\n' + slice('index.html');
 
 const sandbox = {};
 vm.createContext(sandbox);
@@ -32,7 +40,8 @@ vm.runInContext(pureSrc + `
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
   parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder,
-  shotCurve, shotFigures, platePaths, shotAt, shotTempGoal };
+  shotCurve, shotFigures, platePaths, shotAt, shotTempGoal,
+  shotPours, shotMethod, shotPhase, mmss };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -670,9 +679,10 @@ assert.equal(shot.time, null, 'an unparseable duration is null, never NaN or a g
 assert.equal(shot.roastDate, '', 'a roast_date with no leading YYYY-MM-DD is left blank, never guessed');
 ok('parseVisualizerShot refuses to guess a field the shot left blank or unparseable');
 
-assert.deepEqual(M.parseVisualizerShot(), { dose: null, water: null, time: null, grind: null,
-  roaster: '', coffeeName: '', roastDate: '', roastLevel: '', grinderModel: '', timeExact: null,
-  tempC: null, preinfusionSec: null, curve: null, label: 'Untitled shot' });
+assert.deepEqual(M.parseVisualizerShot(), { method: 'espresso', pours: [], dose: null, water: null,
+  time: null, grind: null, roaster: '', coffeeName: '', roastDate: '', roastLevel: '',
+  grinderModel: '', timeExact: null, tempC: null, preinfusionSec: null, brewer: '',
+  curve: null, label: 'Untitled shot' });
 ok('parseVisualizerShot never throws on a missing payload');
 
 // ---- the plate (ROADMAP.md Phase 26): platePaths/shotFigures/shotCurve/shotAt ----
@@ -743,7 +753,7 @@ assert.ok(Math.abs(figs.ratio - 36 / 18) < 1e-9);
 ok('shotFigures derives peak/yield/ratio off the curve where the shot itself states no scalar');
 
 assert.deepEqual(M.shotFigures({ curve: null, dose: null, water: null, timeExact: null, time: null }),
-  { peak: null, peakAt: null, total: null, dose: null, yield: null, ratio: null });
+  { method: 'espresso', peak: null, peakAt: null, total: null, dose: null, yield: null, ratio: null });
 ok('shotFigures reads every figure null rather than guessed when neither the shot nor a curve states it');
 
 const paths = M.platePaths(withCurve, { w: 200, h: 100, base: 90, top: 10 });
@@ -840,5 +850,108 @@ assert.equal(M.parseVisualizerShot({ duration: 20, data: { espresso_temperature_
   'the shot carries the goal through as its own tempC');
 assert.equal(M.parseVisualizerShot({ duration: 20 }).tempC, null, 'a file silent on temperature still reads unread');
 ok('parseVisualizerShot carries the stated water temperature onto the shot, or leaves it unread');
+
+// ---- the second method (SPEC-phase26-pourover.md §8): a gravimetric file has
+// no pressure array at all, and that absence is what states the method. Every
+// figure below is read off the pours rather than assumed from the clock.
+const pourPayload = (() => {
+  const P = [{s:0,e:8,a:0,b:45},{s:42,e:62,a:45,b:130},{s:80,e:96,a:130,b:190},{s:116,e:132,a:190,b:250}];
+  const at = t => { let w = 0; for (const p of P) { if (t >= p.e) w = p.b; else if (t > p.s) { const u=(t-p.s)/(p.e-p.s); w = p.a+(p.b-p.a)*u*u*(3-2*u); break } } return w };
+  const t = [], wi = [], cup = [];
+  let c = 0;
+  for (let i = 0; i <= 1840; i++) {
+    const x = +(i/10).toFixed(1);
+    t.push(x); wi.push(+at(x).toFixed(2));
+    if (x > 26) c += (Math.max(0, at(x) - 31.5) - c) * 0.01;
+    cup.push(+c.toFixed(2));
+  }
+  return { duration: 184, bean_weight: '15.0', drink_weight: '218', timeframe: t,
+    data: { espresso_water_dispensed: wi, espresso_weight: cup } };
+})();
+
+const pourCurve = M.shotCurve(pourPayload);
+assert.equal(pourCurve.method, 'pourover', 'no pressure array means a scale wrote this, and a scale means a filter brew');
+assert.equal(pourCurve.p, null);
+assert.ok(pourCurve.wIn && pourCurve.wIn.length > 100, 'the water going in is the series the staircase is drawn from');
+assert.equal(M.shotCurve({ espresso_elapsed: [0,1,2], espresso_pressure: [0,9,6] }).method, 'espresso',
+  'a machine that states pressure is still an espresso, unchanged by any of this');
+ok('shotCurve reads the method off the file itself — the absence of pressure, never a brewer\'s name');
+
+const pours = M.shotPours(pourCurve);
+assert.equal(pours.length, 4, 'four pours, and the flat runs between them are not pours');
+assert.equal(Math.round(pours[0].added), 45);
+assert.equal(Math.round(pours[1].added), 85);
+assert.ok(pours[0].at <= 0.5, 'the bloom starts when the water actually starts moving, which reads 0:00');
+assert.equal(M.mmss(pours[0].at), '0:00');
+assert.equal(Math.round(pours[1].at), 42);
+assert.ok(Math.abs(pours[0].then - 34) <= 1.5, 'the wait after the bloom is the gap to the next pour');
+assert.ok(Math.abs(pours[3].then - 52) <= 1.5, 'the last wait is the drawdown — nothing was added after it');
+ok('shotPours reads a staircase back into the pours it was made of, and the waits between them');
+
+const pourFigs = M.shotFigures({ curve: pourCurve, dose: 15, water: 250, timeExact: 184 });
+assert.equal(pourFigs.method, 'pourover');
+assert.ok(Math.abs(pourFigs.bloom - 42) <= 1, 'the bloom is the whole bloom phase — first drop to second pour, not the pour that starts it');
+assert.ok(Math.abs(pourFigs.drawdown - 52) <= 1.5);
+assert.equal(pourFigs.total, 184);
+assert.equal(pourFigs.ratio.toFixed(1), '16.7', 'a filter brew is argued in the water it took, not what landed in the cup');
+assert.equal(pourFigs.peak, undefined, 'there is no peak bar on a brew with no pressure, and none is invented');
+ok('shotFigures returns the pour-over arm — bloom, ratio, drawdown, total — off the pours themselves');
+
+// the two the spec names as the ones that would fail invisibly
+const onePourCurve = M.shotCurve({ timeframe: [0,2,4,6,8,10,20,40,60,80],
+  data: { espresso_water_dispensed: [0,40,90,140,190,250,250,250,250,250] } });
+const onePour = M.shotPours(onePourCurve);
+assert.equal(onePour.length, 1, 'a brew poured in one go is one pour, not one pour and a phantom');
+assert.equal(M.shotFigures({ curve: onePourCurve, dose: 15, timeExact: 80 }).bloom, null,
+  'no second pour means no bloom phase to state — null, never the one wait it does have');
+assert.ok(M.shotFigures({ curve: onePourCurve, dose: 15, timeExact: 80 }).drawdown > 60,
+  'its one wait is still the drawdown, because nothing was added after it');
+ok('shotFigures states no bloom on a brew poured in one go rather than calling its only wait one');
+
+// a file that stops the moment the last pour ends states a drawdown of nothing.
+// That is what the file says; it is not detectable as truncated from the file
+// alone, and inventing an ending for it is what `unread` exists to prevent.
+const cutCurve = M.shotCurve({ timeframe: [0,2,4,6,40,42,44,46],
+  data: { espresso_water_dispensed: [0,20,45,45,45,140,250,250] } });
+const cut = M.shotPours(cutCurve);
+assert.equal(cut[cut.length-1].then, 2,
+  'a file ending two seconds after its last pour states a two-second drawdown — what it recorded, not what a bed would really have taken');
+ok('shotPours reports a truncated drawdown as the file stated it rather than extrapolating an ending');
+
+const pourPlate = M.platePaths({ curve: pourCurve }, { w: 390, h: 176, base: 166, top: 18, topBand: 20 });
+assert.equal(pourPlate.method, 'pourover');
+assert.equal(pourPlate.pressure, undefined, 'no pressure line, because there is no pressure');
+assert.ok(pourPlate.water && pourPlate.water.startsWith('M'), 'the staircase is the path drawn');
+assert.equal(pourPlate.bands.length, 4, 'one band per pour; the gaps are drawn by being left empty');
+assert.equal(pourPlate.bands[0].label, 'BLOOM 45');
+assert.equal(pourPlate.bands[1].label, '+85');
+assert.deepEqual(pourPlate.grid.map(g => g.g), [50, 150, 250], 'the grid is grams off the water actually added, not an invented scale');
+assert.deepEqual(pourPlate.ticks.map(t => t.label), ['1:00', '2:00', '3:00'], 'a three-minute brew is ticked in minutes');
+assert.equal(M.platePaths({ curve: null }, { w: 390, h: 176, base: 166, top: 18 }), null);
+ok('platePaths draws the pour-over arm — staircase, bands, gram grid, minute ticks — and refuses a brew with no curve');
+
+assert.equal(M.shotPhase(pours, 20, 184), 'blooming');
+assert.equal(M.shotPhase(pours, 50, 184), 'pouring pour 2');
+assert.equal(M.shotPhase(pours, 104, 184), 'drawing down', 'every gap after the bloom is the bed letting go, not only the last');
+assert.equal(M.shotPhase(pours, 160, 184), 'drawing down');
+assert.equal(M.shotPhase(pours, 184, 184), 'in the cup');
+assert.equal(M.shotPhase([], 10, 100), '', 'a brew with no pours names no phase rather than guessing one');
+const pourAt = M.shotAt({ curve: pourCurve }, 50);
+assert.equal(pourAt.phase, 'pouring pour 2');
+assert.equal(pourAt.bar, null, 'a scrub over a filter brew reads no pressure, because none was recorded');
+ok('shotAt names what was happening at a given second, read off the pours rather than the clock');
+
+const pourShot = M.parseVisualizerShot(pourPayload);
+assert.equal(pourShot.method, 'pourover');
+assert.equal(pourShot.pours.length, 4);
+assert.equal(pourShot.water, 250, "a filter brew's yield is the water it took — drink_weight is what landed in the cup, and they differ");
+assert.equal(M.shotMethod({ method: 'pourover' }), 'pourover');
+assert.equal(M.shotMethod({}), 'espresso', 'an unstated method is an espresso, which is what every brew before this phase was');
+ok('parseVisualizerShot reads a gravimetric file into the pour-over arm, yield included');
+
+assert.equal(M.mmss(184), '3:04');
+assert.equal(M.mmss(42), '0:42');
+assert.equal(M.mmss(0), '0:00');
+ok('mmss states a filter brew\'s minutes the way a filter brew is actually read');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);
