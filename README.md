@@ -253,7 +253,8 @@ long as you want it.
 
 ## The stack
 
-Two static files, `index.html` and `carta-map.js` — all CSS and JS inline,
+Five static files — `index.html` with all CSS and JS inline, and four siblings
+beside it (`carta-map.js`, `carta-plate.js`, `carta-shot.js`, `carta-ask.js`),
 self-contained, zero dependencies, zero build. `carta-map.js` is the map
 layer: the passport's outlines and highland contours, the drawn-plot and
 street surfaces, and the projection they need (d3-array + d3-geo, the two
@@ -305,6 +306,9 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 |---|---|
 | `index.html` | Carta 7 — the current app. |
 | `carta-map.js` | Carta 7's map layer — the passport, its contours, and the street/drawn-plot surfaces. |
+| `carta-plate.js` | The plate — a brew's own curve drawn, both arms (espresso and pour-over). |
+| `carta-shot.js` | The Visualizer read — the account, the calls, and a shot's own screens. |
+| `carta-ask.js` | The argument — your taste, the brief, the ask, and the one keyed channel out. |
 | `classic/index.html` | Carta 6.18.x, frozen. See `classic/README.md`. |
 | `fonts/` | Self-hosted typefaces (Spectral, Libre Franklin; woff2). |
 | `manifest.json`, `icon-*.svg` | PWA metadata and homescreen icons. |

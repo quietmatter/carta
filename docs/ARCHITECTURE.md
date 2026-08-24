@@ -11,7 +11,7 @@ part of the record.*
 
 Carta 7 is built exactly the way classic was, smaller:
 
-- **Three files, not one — two since Phase 19, three since v7.31.0.**
+- **Five files, not one — two since Phase 19, three since v7.31.0, five since v7.34.0.**
   `index.html`, all CSS and JS
   inline, self-contained, was the whole app through Phase 20. Target
   **3–5,000 lines / ≤ 500 KB** for it — a file one person can read whole.
@@ -234,6 +234,72 @@ Carta 7 is built exactly the way classic was, smaller:
   **5,837 lines / 387.0 KB** as of v7.29.0 — still comfortably inside the
   500 KB byte ceiling, still over the still-unmoved 5,000-line one. The
   next phase that touches this section should true up the tally properly.
+
+  **v7.34.0 trues the tally up and pays the debt down — five files now, and
+  this is the argument the rule above requires for the fourth and fifth.**
+  Called by the founder directly ("split index.html — it's way past the line
+  band"), so the reopening is theirs, not a drift.
+
+  *The true figure it was called on:* **6,483 lines / 438.3 KB** — 1,483 over
+  a ceiling unmoved since Phase 17, the largest overage the project has ever
+  carried, and larger than the 945 the v7.31.1 note last recorded (v7.32.0's
+  Setup import and v7.33.0's durable shot store had both landed on top of it).
+
+  **One fact had changed, and it is the one that made this urgent rather than
+  untidy.** Every overage note above this one says some version of "bytes
+  remain comfortable." At 438.3 of 500 KB that had stopped being true: 87.7%
+  of the ceiling that has *never* moved across all four line-band amendments,
+  and the only one actually guarding the drop-it-on-a-static-host promise.
+  Recent phases run 150–800 lines and 10–50 KB apiece. The byte ceiling was
+  two to four phases out. A line band can be argued about; that one cannot.
+
+  *What moved, and why these two.* The file was searched for the largest
+  things in it that are **not the record itself** — the test this section has
+  used since Phase 19, when the map layer was "the map rather than the app":
+
+  - **`carta-ask.js` (995 lines / 60.3 KB)** — the argument, which
+    `CLAUDE.md` already named as one walk long before it was one file:
+    `vTaste` → `vBrief` → `vAsk` → `vAsking` → `vAskResult`. With it goes the
+    channel it goes out on — `callModel` and the two halves of reading a
+    model's reply back safely (`extractJSON`, `askStr`/`askList`). Those are
+    shared with the menu's *Read it for me* and a coffee's *Search for more*,
+    which is not a smear: §7 already listed all three as one row, one keyed
+    channel out. The file owns the channel; three features use it.
+  - **`carta-shot.js` (872 lines / 51.5 KB)** — the Visualizer read: the
+    account, the calls, the pickers, the shot the Atlas offers unasked, and
+    the four screens a shot has of its own. Its pure half is the file-reading
+    itself, and it loads *after* `carta-plate.js` because
+    `parseVisualizerShot` reads a curve through the plate's own `shotCurve`.
+
+  *Two files rather than one, deliberately.* One file holding both would have
+  needed a name true of neither — the exact failure the v7.31.0 note refused
+  when it declined to append the plate to `carta-map.js`. Five honestly-named
+  files beat four with one lying.
+
+  *What the count costs, stated plainly.* The law was never the number — it is
+  *no bundler, no npm, nothing between the source and the host*, and four
+  `<script src>` tags in the head cost none of that. What it costs is four
+  more things to remember to upload, up from one. That is why the boot guard
+  widened at the same time: it now checks **all three** sibling versions
+  against `APP_VERSION`, not just the plate's, because five files means five
+  chances for a cached one to disagree, and v7.31.1 already shipped what that
+  failure reads like to a keeper ("your Visualizer account is empty").
+
+  *Three blocks were found misfiled inside the extracted ranges and left where
+  they belong* rather than dragged along: the durability/backup block sitting
+  between the brief and the ask, the share plumbing (`downloadBlob`,
+  `shareOrDownload`, `copyPlainText`) beside it, and the Nominatim helpers
+  (`lookupPlace`, `geocodeCafe`, `reverseGeocode`) sitting inside the ask
+  block though café-placing is their main caller. That they had drifted there
+  at all is the clearest evidence the file had outgrown being read whole,
+  which is the thing the band exists to protect.
+
+  **`index.html` now stands at 4,750 lines / 332.8 KB** — inside the band with
+  250 lines and 167 KB of real headroom, close to where Phase 19 left it
+  (4,854 / 321.5 KB). The app total moved 7,534 → 7,668 lines: a move plus two
+  file headers and their seam publishes, not a cut. **The debt Phase 26 opened
+  is closed.** The next phase to cross 5,000 re-earns its argument from here,
+  exactly as this one had to.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single

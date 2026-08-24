@@ -15,11 +15,13 @@ const vm = require('node:vm');
 
 const OPEN = '/* ==== pure ==== *';
 const CLOSE = '/* ==== /pure ==== */';
-// Two files carry a pure block since the Phase 26 second-method gate moved the
-// plate into carta-plate.js (ARCHITECTURE.md §1). They are evaluated in load
-// order — carta-plate.js first, exactly as the browser loads it — because
-// index.html's own parseVisualizerShot reads shotCurve/shotPours across that
-// seam, the same way the app reads the map layer's globals.
+// Four files carry a pure block since the v7.34.0 split (ARCHITECTURE.md §1).
+// They are evaluated in the browser's own <head> order — plate, shot, ask,
+// then index.html — because the seams run that way: parseVisualizerShot (now
+// in carta-shot.js) reads the plate's shotCurve/shotPours, and index.html's
+// own parseCfSearch/parseMenuOCR read the ask's extractJSON/askStr. Everything
+// lands in one evaluated source, so function declarations hoist across the
+// whole of it; the order is what keeps top-level const initializers honest.
 const slice = file => {
   const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   const openAt = src.indexOf(OPEN);
@@ -29,7 +31,8 @@ const slice = file => {
   }
   return src.slice(openAt, closeAt + CLOSE.length);
 };
-const pureSrc = slice('carta-plate.js') + '\n' + slice('index.html');
+const pureSrc = ['carta-plate.js', 'carta-shot.js', 'carta-ask.js', 'index.html']
+  .map(slice).join('\n');
 
 const sandbox = {};
 vm.createContext(sandbox);
