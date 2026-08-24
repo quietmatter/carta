@@ -992,4 +992,4 @@ window.parseAskJSON=parseAskJSON;
 window.matchFigure=matchFigure;
 window.askKindLabel=askKindLabel;
 
-window.ASK_VERSION='7.34.0';
+window.ASK_VERSION='7.34.1';

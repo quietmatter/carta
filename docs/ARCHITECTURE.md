@@ -285,14 +285,19 @@ Carta 7 is built exactly the way classic was, smaller:
   chances for a cached one to disagree, and v7.31.1 already shipped what that
   failure reads like to a keeper ("your Visualizer account is empty").
 
-  *Three blocks were found misfiled inside the extracted ranges and left where
-  they belong* rather than dragged along: the durability/backup block sitting
-  between the brief and the ask, the share plumbing (`downloadBlob`,
-  `shareOrDownload`, `copyPlainText`) beside it, and the Nominatim helpers
-  (`lookupPlace`, `geocodeCafe`, `reverseGeocode`) sitting inside the ask
-  block though café-placing is their main caller. That they had drifted there
-  at all is the clearest evidence the file had outgrown being read whole,
-  which is the thing the band exists to protect.
+  *Three blocks were found misfiled inside the extracted ranges and left in
+  `index.html`* rather than dragged into either new file: the durability/
+  backup block sitting between the brief and the ask, the share plumbing
+  (`downloadBlob`, `shareOrDownload`, `copyPlainText`) beside it, and the
+  Nominatim helpers (`lookupPlace`, `geocodeCafe`, `reverseGeocode`) sitting
+  inside the ask block though café-placing is their main caller. That they had
+  drifted there at all is the clearest evidence the file had outgrown being
+  read whole, which is the thing the band exists to protect. **v7.34.1** moved
+  all three to their actual neighborhoods — durability beside `vRecord`, share
+  plumbing beside the cards, Nominatim beside `geocodeCityPlaces` — a pure
+  reorder (diff, sorted, is empty) verified against all three call sites,
+  including `geocodeCafe`'s cross-file call from `carta-ask.js`'s own
+  grounding.
 
   **`index.html` now stands at 4,750 lines / 332.8 KB** — inside the band with
   250 lines and 167 KB of real headroom, close to where Phase 19 left it
