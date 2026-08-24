@@ -259,7 +259,13 @@ server/               Classic's sync server — dormant
   narrower version of the same match, silent-only, no ask
   (`matchSetupByGrinder`, `resolveOrMintSetupForShot` — see
   `ARCHITECTURE.md` §4). Amended v7.32.0: the silent mint now carries the
-  brewer or machine beside the grinder too, not the grinder alone.
+  brewer or machine beside the grinder too, not the grinder alone. Amended
+  again at v7.34.2: `matchSetupByGrinder` now requires the grinder *and*
+  the brewer to both fold-match before it joins silently — grinder alone
+  was colliding whenever one grinder fed two brewers (an espresso machine
+  and a pour-over dripper on the same burr), silently minting or matching
+  every shot off that grinder onto whichever Setup came first. A Setup
+  that has never named a brewer still joins on the grinder alone.
 - **the cup paths** — `openCafeCup`/`saveCafeCup` (the bar path) and
   `openSetupForm`/`openBrewFlow`/`saveBrewFlow`/`openImpression`/`saveHomeCup`
   (the home path, through the dials and the timer). A brew always needs a
@@ -269,7 +275,12 @@ server/               Classic's sync server — dormant
   the pickers already call, `setupCandidatesFromShots` deduping the
   grinder/brewer pairs it finds against what's already on the record), the
   unchanged blank `openSetupForm` when there isn't or the keeper asks for it
-  by name ("Type it in instead", always one tap away).
+  by name ("Type it in instead", always one tap away). **A cup already
+  written can send its brew back through the same edit form (v7.34.2):**
+  `vCup` offers "Wrong Setup? Correct it →" onto `openBrewFlow(coffeeId,
+  brew.id)` whenever more than one Setup is on the record — until this
+  there was no way to move a brew already attributed to the wrong Setup
+  (most often a mismatched silent join, see above) once its cup existed.
 - **the coffee form** (`openCoffeeForm`) — autosaves once named (Phase 21):
   the coffee mints itself into `D.coffees` the moment a roaster or name is
   typed, the same move the menu capture already makes for its own coffee,

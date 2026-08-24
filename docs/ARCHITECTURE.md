@@ -570,9 +570,24 @@ the same exact-joins/near-asks/else-new shape — but a coffee never gains an
 pulled shot's brew at the existing coffee's id, nothing is written back
 onto the coffee record itself. A Setup gets a narrower version still:
 `matchSetupByGrinder` joins only on an *exact* fold match against the
-Setup's own `grinder` field, with no near-match ask at all — a shot never
-says which Setup pulled it, so a wrong silent guess would be worse than
-simply falling back to whichever Setup is already current.
+Setup's own `grinder` **and** `brewer` fields together, with no near-match
+ask at all — a shot never says which Setup pulled it, so a wrong silent
+guess would be worse than simply falling back to whichever Setup is
+already current. Grinder alone was the original rule and it collided the
+moment one grinder fed two brewers — an espresso machine and a pour-over
+dripper sharing a burr are two different Setups by this app's own law
+("the assembly, not the appliance"), but every shot off that grinder was
+landing silently on whichever Setup came first (v7.34.2, a keeper's own
+account: pour-overs pulled off a shared grinder were minting onto the
+espresso Setup, and `setupCandidatesFromShots` was refusing to offer the
+pour-over pairing as new for the same reason). A Setup that has never
+named a brewer still joins on the grinder alone, exactly as it always
+did — the widening only ever refuses a join it would otherwise have made
+wrongly, it never invents one for less. The same amendment gave a written
+cup's own page a way back: `vCup` offers "Wrong Setup? Correct it →"
+whenever more than one Setup is on the record, straight into the same
+edit form `openBrewFlow`'s Setup dropdown already had — there was
+previously no door back onto a brew's `setupId` once its cup existed.
 
 **Phase 26 reuses the Phase 25 chain verbatim, once a shot is offered
 unprompted rather than pulled at the door.** `vizCheckOnOpen()` fetches at

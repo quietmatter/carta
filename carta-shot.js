@@ -196,12 +196,21 @@ function normalizeRoastLevel(s){
 }
 // roast_date has no confirmed format — keep only a leading YYYY-MM-DD, never a guess
 function normalizeRoastDate(s){const m=String(s||'').trim().match(/^(\d{4}-\d{2}-\d{2})/);return m?m[1]:'';}
-// a Setup joins silently only on an exact grinder-name match — no asking, unlike
-// a roaster or place (ROADMAP.md Phase 25); anything else is left to doorPullFinish
-function matchSetupByGrinder(setups,grinderModel){
+// a Setup joins silently only on an exact grinder-and-brewer match — no
+// asking, unlike a roaster or place (ROADMAP.md Phase 25); anything else is
+// left to doorPullFinish. Grinder alone used to be enough, and it collided
+// the moment one grinder fed two brewers: an espresso machine and a
+// pour-over dripper sharing a burr are two different Setups by this app's
+// own law ("the assembly, not the appliance"), but every shot off that
+// grinder was silently landing on whichever Setup happened to be on the
+// record first. A Setup that has never named a brewer still joins on the
+// grinder alone, exactly as before — the widening only ever refuses a join
+// it would otherwise have made wrongly, never invents one for less.
+function matchSetupByGrinder(setups,grinderModel,brewer){
   if(!grinderModel)return null;
-  const m=matchNodes((setups||[]).map(s=>({id:s.id,name:s.grinder||''})),grinderModel);
-  return m.exact?m.exact.id:null;
+  const g=fold(grinderModel),b=fold(brewer||'');
+  const hit=(setups||[]).find(s=>fold(s.grinder||'')===g&&fold(s.brewer||'')===b);
+  return hit?hit.id:null;
 }
 // a filter brew's brewer is whichever of the two fields the file actually
 // filled in: some writers put "Kalita Wave 185" under `machine`, because that
@@ -219,7 +228,7 @@ function setupCandidatesFromShots(shots,setups){
   (shots||[]).forEach(s=>{
     const grinder=(s&&s.grinderModel)||'',brewer=brewerOf(s);
     if(!grinder&&!brewer)return;
-    if(grinder&&matchSetupByGrinder(setups||[],grinder))return;
+    if(grinder&&matchSetupByGrinder(setups||[],grinder,brewer))return;
     const key=fold(grinder)+'|'+fold(brewer);
     if(seen.has(key))return;
     seen.add(key);
@@ -550,7 +559,7 @@ function vShot(id,view){
     <button class="btn btn-quiet" onclick="openShotsScreen()">Your recent shots</button>
     <button class="btn btn-quiet" onclick="closePage()">Back</button></div>`;
   const g=platePaths(shot,PLATE_FULL),fg=shotFigures(shot),when=shotWhen(shot);
-  const setup=setupById(matchSetupByGrinder(live('setups'),shot.grinderModel));
+  const setup=setupById(matchSetupByGrinder(live('setups'),shot.grinderModel,brewerOf(shot)));
   const pour=shotMethod(shot)==='pourover';
   const setupLine=setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · '))
     :([shot.machine,shot.grinderModel].filter(Boolean).join(' · ')||'');
@@ -869,4 +878,4 @@ window.shotTempGoal=shotTempGoal;
 window.setupCandidatesFromShots=setupCandidatesFromShots;
 window.firstStr=firstStr;
 
-window.SHOT_VERSION='7.34.1';
+window.SHOT_VERSION='7.34.2';
