@@ -7,6 +7,49 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-24 — v7.34.2: a Setup, matched by what it actually is
+
+- **A keeper's own account surfaced two real bugs behind the same root
+  cause.** "A Setup from Visualizer" was reporting no new candidates even
+  though their pour-over shots had never had a Setup of their own — and
+  separately, those same pour-overs were minting straight onto their legacy
+  espresso Setup, silently, with no way back once the cup was written.
+  Both traced to `matchSetupByGrinder` (Phase 25): it joined a shot to a
+  Setup on an exact fold match against the Setup's `grinder` field *alone*.
+  A grinder that feeds two brewers — an espresso machine and a pour-over
+  dripper sharing a burr, an entirely ordinary kitchen — collided every
+  time: `setupCandidatesFromShots` excluded every shot on that grinder as
+  "already have one" regardless of which brewer it named, and
+  `resolveOrMintSetupForShot` silently minted every one of them onto
+  whichever Setup happened to already carry that grinder.
+- **The fix widens the match, not the guess.** `matchSetupByGrinder` now
+  requires the grinder *and* the brewer to both fold-match before it joins
+  silently. A Setup that has never named a brewer still joins on the
+  grinder alone, exactly as before — this only ever refuses a join it
+  would previously have made wrongly, it never invents a new one. Every
+  call site carries the brewer through now: `setupCandidatesFromShots`,
+  `resolveOrMintSetupForShot`, and the pre-write Setup line on a shot's own
+  screen (`vShot`).
+- **Reconciling what already went wrong needed a second door.** A brew's
+  `setupId` was only ever editable through `openBrewFlow`'s edit mode, and
+  the only path into that mode was "Correct something before it is
+  written" — no use to a cup already on the record. `vCup` now offers
+  "Wrong Setup? Correct it →" straight into that same form, whenever more
+  than one Setup exists to choose from. Fixing the underlying legacy Setup
+  itself (naming its brewer, or adding the missing one via "＋ A new
+  Setup") is what makes future pulls land right automatically; this is the
+  door back for brews that already landed wrong.
+- **Tests: 123**, extended rather than grown — new assertions inside the
+  existing `matchSetupByGrinder`/`setupCandidatesFromShots` cases cover the
+  grinder-alone Setup (unchanged), the grinder+brewer exact match (still
+  silent), and the grinder-shared/brewer-different case that was the actual
+  bug (now correctly refused/offered). `node --check` clean on both changed
+  files.
+- Version stamped at all six points: `APP_VERSION`, four `?v=` tags, and
+  the three sibling `*_VERSION` constants.
+
+---
+
 ## 2026-08-24 — v7.34.1: three blocks, put back where they belong
 
 - **Follow-up to v7.34.0**, called directly: *"clean up those three misfiled

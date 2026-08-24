@@ -778,13 +778,17 @@ assert.equal(M.normalizeRoastLevel('City+'), '', 'a roast-shop term Carta\'s own
 assert.equal(M.normalizeRoastLevel(''), '');
 ok("normalizeRoastLevel reads Visualizer's own roast_level onto Carta's five words, or leaves it blank");
 
-// ---- matchSetupByGrinder (ROADMAP.md Phase 25): silent only on an exact fold match ----
+// ---- matchSetupByGrinder (ROADMAP.md Phase 25, widened v7.34.2): silent only on an exact grinder+brewer fold match ----
 const setups = [{ id: 's1', grinder: 'Niche Zero' }, { id: 's2', grinder: 'Baratza Encore' }];
-assert.equal(M.matchSetupByGrinder(setups, 'niche zero'), 's1', 'case/diacritics-only difference still joins silently');
+assert.equal(M.matchSetupByGrinder(setups, 'niche zero'), 's1', 'case/diacritics-only difference still joins silently — a brewer-less Setup joins on the grinder alone');
 assert.equal(M.matchSetupByGrinder(setups, 'Niche Zeroo'), null, 'a near-but-not-exact grinder name is never silently assumed');
 assert.equal(M.matchSetupByGrinder(setups, ''), null);
 assert.equal(M.matchSetupByGrinder([], 'Niche Zero'), null);
-ok("matchSetupByGrinder joins a Setup only on an exact name match, and never invents a join for less");
+const gearSetups = [{ id: 's1', grinder: 'Niche Zero', brewer: 'Slayer' }];
+assert.equal(M.matchSetupByGrinder(gearSetups, 'Niche Zero', 'Slayer'), 's1', 'same grinder and same brewer — still joins silently');
+assert.equal(M.matchSetupByGrinder(gearSetups, 'Niche Zero', 'Kalita Wave 185'), null, 'same grinder, a different stated brewer — no longer the same Setup, the collision this widening fixes');
+assert.equal(M.matchSetupByGrinder(setups, 'Niche Zero', 'Kalita Wave 185'), null, 'a Setup that never named a brewer no longer silently absorbs every brewer sharing its grinder');
+ok("matchSetupByGrinder joins a Setup only on an exact grinder-and-brewer match, and never invents a join for less");
 
 // ---- brewerOf (Phase 26 v7.31.1): whichever of the two fields a shot actually filled in ----
 assert.equal(M.brewerOf({ brewer: 'Kalita Wave 185', machine: '' }), 'Kalita Wave 185');
@@ -808,6 +812,15 @@ assert.deepEqual(candidates[0], { grinder: 'EG-1', brewer: 'Slayer', name: 'EG-1
 assert.deepEqual(candidates[1], { grinder: '', brewer: 'Kalita Wave 185', name: 'Kalita Wave 185' });
 assert.equal(M.setupCandidatesFromShots([], knownSetups).length, 0);
 assert.equal(M.setupCandidatesFromShots(shots, []).length, 3, 'with no Setup on the record yet, the Niche Zero shot candidates too');
+// v7.34.2: a shot sharing a grinder with an existing Setup but naming a different
+// brewer used to be silently excluded here too (matchSetupByGrinder matched on the
+// grinder alone) — the exact collision a keeper hit when a pour-over shared a burr
+// with their legacy espresso Setup. It now correctly still candidates.
+const espressoSetup = [{ id: 's1', grinder: 'Niche Zero', brewer: 'Slayer' }];
+const pourOverOnSameGrinder = [{ grinderModel: 'Niche Zero', brewer: 'Kalita Wave 185', machine: '' }];
+const stillCandidates = M.setupCandidatesFromShots(pourOverOnSameGrinder, espressoSetup);
+assert.equal(stillCandidates.length, 1, 'a different brewer on a shared grinder is a genuinely new Setup, not a repeat');
+assert.deepEqual(stillCandidates[0], { grinder: 'Niche Zero', brewer: 'Kalita Wave 185', name: 'Niche Zero · Kalita Wave 185' });
 ok("setupCandidatesFromShots reads a grinder-and-brewer pair off recent shots, deduped and never repeating a Setup already on the record");
 
 // ---- parseRoastLevel (ROADMAP.md Phase 9): the door/menu-capture parsing ----

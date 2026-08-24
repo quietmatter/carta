@@ -654,10 +654,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.34.1"></script>
-<script src="carta-plate.js?v=7.34.1"></script>
-<script src="carta-shot.js?v=7.34.1"></script>
-<script src="carta-ask.js?v=7.34.1"></script>
+<script src="carta-map.js?v=7.34.2"></script>
+<script src="carta-plate.js?v=7.34.2"></script>
+<script src="carta-shot.js?v=7.34.2"></script>
+<script src="carta-ask.js?v=7.34.2"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -2077,7 +2077,7 @@ function resolveOrMintSetupForShot(shot){
       name:[grinderModel,brewer].filter(Boolean).join(' · '),grinder:grinderModel||'',brewer};
     D.setups.push(st);return st.id;
   }
-  const exact=matchSetupByGrinder(setups,grinderModel);if(exact)return exact;
+  const exact=matchSetupByGrinder(setups,grinderModel,brewerOf(shot));if(exact)return exact;
   const lastBrew=D.brews.slice().sort(byNew)[0];
   return lastBrew?lastBrew.setupId:setups[setups.length-1].id;
 }
@@ -2776,6 +2776,7 @@ function vCup(id){
       </div>
       ${cupPlateHTML(cup,brew)}
       <div style="margin-top:26px">${ledgerHTML(ledger)}</div>
+      ${cup.kind!=='bar'&&brew&&live('setups').length>1?`<div style="text-align:center;margin-top:10px"><button class="qlink" onclick="openBrewFlow('${coffee?coffee.id:''}','${brew.id}')">Wrong Setup? Correct it →</button></div>`:''}
       ${brew&&brew.vizShotId!=null?`<div style="text-align:center;margin-top:20px"><button class="qlink" onclick="openBrewFlow('${coffee?coffee.id:''}')">Brew it again from these ${brew.method==='pourover'?'pours':'numbers'} →</button></div>`:''}
       ${place&&placed([place]).length?`<button style="width:100%;margin-top:18px;color:var(--ink);background:none;border:1px solid var(--line);padding:0;cursor:pointer;display:block" onclick="openCafeScreen('${place.id}')">
         ${streetsHTML([place],{boxStyle:'height:132px',zoom:15,still:true,attribLift:4,scoreOf:()=>1})}
@@ -4664,8 +4665,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.34.1';
+const APP_VERSION='7.34.2';
 const CHANGELOG=[
+  {v:'7.34.2',d:"A Setup, matched by what it actually is. A grinder that feeds two brewers — an espresso machine and a pour-over dripper sharing a burr — was being read as one Setup, because the silent join off a Visualizer shot only ever checked the grinder's name. \"A Setup from Visualizer\" reported nothing new when the second brewer's shots were sitting right there, and shots pulled at the door were minting straight onto the wrong Setup: a keeper's own pour-overs landed on their legacy espresso Setup, silently, because the two happened to share a grinder. The match now checks the brewer too — a Setup that has never named one still joins on the grinder alone, exactly as before, but two Setups differing only in what they're attached to are never folded into one again. And a cup already written couldn't have this corrected at all: its own page now offers \"Wrong Setup? Correct it\" whenever there's more than one Setup to choose from, straight into the same form a new brew's Setup is picked from."},
   {v:'7.34.1',d:"Three blocks, put back where they belong. The split that moved the argument and the Visualizer read into their own files left three things behind in the wrong neighborhood — the backup system, the sharing plumbing every card and the brief lean on, and the café-placing lookup the ask itself calls into. All three had drifted to sit between the dial-in screen and the map surfaces, which is nowhere close to any of their actual callers. Nothing about what they do changed — the backup system now sits beside the record page that shows it, the sharing door sits beside the cards that open it, and the café lookup sits beside the café-placing code that calls it most. A file is only as readable as its neighborhoods are honest."},
   {v:'7.34.0',d:"The file, split again. Nothing changes on the screen — this is the debt Phase 26 opened, paid down. index.html had grown to 6,483 lines against a ceiling of 5,000 that has not moved since Phase 17, and, more to the point, to 438 KB against a 500 KB one that has never moved at all and is the one that actually keeps Carta a thing you drop on a static host. Two whole subsystems move out into files of their own, the way the map layer did and the plate did after it: the argument — your taste, the brief, the ask and what comes back — and everything to do with reading Visualizer. Both are loaded the same way a font or an icon already is. Still nothing to build, nothing to install, nothing between the source and the host; there are simply five files to copy where there were three, and Carta now says so out loud if it ever finds one of them out of date."},
   {v:'7.33.0',d:"The brew, reviewable. A brew read from Visualizer drew its plate on one screen only — the one you passed through on the way to writing the cup. Tap through, score it, and the argument underneath the score closed behind you: the cup kept a picture of the curve, but the reading of it, the scrub, the pours and their waits, the whole ledger of what the machine actually stated, were all one-time. It is the other way round now. Writing the cup is what makes the plate worth keeping, so the plate on a cup's own page is a door: tap it and the brew opens in full, as often as you want it, with the pressure or the pours still scrubbable second by second. A brew already written says so — where it used to offer to be written again, it names the cup it became and its reading instead. And a brew you have opened is kept on this device, so it still reads after it falls off your account's recent eight and still reads with the network off; Your recent brews lists those under the live ones. Twenty of them, thinned for reading rather than for the record, and signing out of Visualizer takes them with it."},
