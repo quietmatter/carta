@@ -7,6 +7,47 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-24 — v7.34.1: three blocks, put back where they belong
+
+- **Follow-up to v7.34.0**, called directly: *"clean up those three misfiled
+  blocks."* The split moved the argument and the Visualizer read into their
+  own files and, in doing so, cut three unrelated blocks clean out of the
+  middle of "setups + the dial-in loop" and left them stranded there — the
+  backup system, the sharing plumbing every card and the brief lean on, and
+  the café-placing lookup the ask itself calls into. All three had been
+  sitting between the dial-in screen and the map surfaces, nowhere near any
+  of their actual callers.
+- **Moved to their real neighborhoods, not just out of the way:** the
+  durability/backup block (`weeksSince`, `exportedLine`, `exportLedgerJSON`,
+  `maybeAutoExport`, `storageUsedBytes`, `lowStorageNoteHTML`) now sits
+  immediately before `vRecord`, the page that reads every one of them. The
+  share plumbing (`downloadBlob`, `shareOrDownload`, `downloadBriefPage`,
+  `copyPlainText`) now sits immediately before the cards section, its main
+  caller. The Nominatim helpers (`lookupPlace`, `geocodeCafe`,
+  `reverseGeocode`) now sit immediately before `geocodeCityPlaces`, which was
+  already carrying a comment naming `geocodeCafe` as its sibling caller before
+  today — the intended neighborhood was legible even while the code sat
+  somewhere else.
+- **A pure reorder, checked as one.** `diff <(sort before) <(sort after)`
+  comes back empty — not one character added, removed, or changed, only
+  moved. Every function still defined exactly once.
+- **The cross-file call was the thing worth actually testing**, not just
+  reading: `carta-ask.js`'s own `groundNamed` calls `geocodeCafe` at runtime,
+  a global function now living in a different neighborhood of a different
+  file than when that call was written. Verified end to end — the ask still
+  grounds a real finding (`grounded: true`) with Nominatim stubbed, after the
+  move.
+- **Tests: 123**, unchanged. Verified in headless Chromium: backup/export
+  (download fires, `exportedAt` pref sets), café placement through
+  `geocodeCityPlaces`/`lookupPlace` (a café lands its coordinates), the ask's
+  own grounding through `geocodeCafe`, and the full prior regression suite.
+  `index.html` unchanged in size (4,753 lines / 333.6 KB) — a reorder costs
+  nothing the band cares about.
+- Version stamped at all six points: `APP_VERSION`, four `?v=` tags, and the
+  three sibling `*_VERSION` constants — bumped even though only `index.html`
+  changed, per the stack law's own rule that a cached sibling must never be
+  left to disagree.
+
 ## 2026-08-24 — v7.34.0: the file, split again — five now
 
 - **The founder's call, made directly:** *"split index.html — it's way past the

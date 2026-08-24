@@ -654,10 +654,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.34.0"></script>
-<script src="carta-plate.js?v=7.34.0"></script>
-<script src="carta-shot.js?v=7.34.0"></script>
-<script src="carta-ask.js?v=7.34.0"></script>
+<script src="carta-map.js?v=7.34.1"></script>
+<script src="carta-plate.js?v=7.34.1"></script>
+<script src="carta-shot.js?v=7.34.1"></script>
+<script src="carta-ask.js?v=7.34.1"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -3059,6 +3059,49 @@ function vShelf(){
  * someone made them, what can be read in, what can be sent out, the instrument
  * it was all written on, and classic with the lights still on.
  */
+
+/* ============ durability (ROADMAP.md Phase 8) — the record's one safety net ============
+ * Carta is one device, one localStorage key, zero sync, by design
+ * (ARCHITECTURE.md §3) — right for a hobby, but it means the whole journal's
+ * durability has rested on a habit nobody was ever asked to form. Quiet and
+ * factual, never urgency theater: a stated fact on the Shelf, the same
+ * register as a coffee's own rest window. */
+function weeksSince(iso){return Math.floor(Math.floor((Date.now()-new Date(iso))/864e5)/7)}
+function exportedLine(){
+  const at=getPref('exportedAt',null);
+  if(!at)return 'Never backed up yet.';
+  const w=weeksSince(at);
+  if(w<1)return 'Backed up this week.';
+  return `Last backed up — ${w} week${w===1?'':'s'} ago.`;
+}
+function exportLedgerJSON(){
+  const stamp=new Date().toISOString().slice(0,10);
+  downloadBlob(new Blob([JSON.stringify(D,null,2)],{type:'application/json'}),`carta-${stamp}.json`);
+  setPref('exportedAt',new Date().toISOString());
+  render();
+  toast('Backed up — saved to your downloads.');
+}
+const AUTO_EXPORT_DAYS=14;   // a fortnight between quiet backups, opt-in only
+function maybeAutoExport(){
+  if(!getPref('autoExport',false))return;
+  const at=getPref('exportedAt',null);
+  const days=at?Math.floor((Date.now()-new Date(at))/864e5):Infinity;
+  if(days>=AUTO_EXPORT_DAYS)exportLedgerJSON();
+}
+// a rough, conservative measure of what this origin has already spent in
+// localStorage — most browsers cap it near 5MB; warn well before a write
+// actually fails, not only after (save()'s own catch stays the last line of
+// defense, not the first)
+const STORAGE_SOFT_LIMIT=4.5*1024*1024;
+function storageUsedBytes(){
+  let used=0;
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);used+=(k.length+(localStorage.getItem(k)||'').length)}}catch(e){}
+  return used*2;   // UTF-16 — the unit a browser's quota actually counts against
+}
+function lowStorageNoteHTML(){
+  return `<div class="note">Storage is getting full. <span class="text-action" onclick="exportLedgerJSON()">Back up now</span> to be safe.</div>`;
+}
+
 function recordMetaLine(){
   const cups=live('cups').length,coffees=live('coffees').length;
   return `${words(cups)} cup${cups===1?'':'s'} · ${words(coffees)} coffee${coffees===1?'':'s'} · on this device only`;
@@ -3312,127 +3355,6 @@ function vBrew(coffeeId,view){
     </div></div>`;
 }
 
-/* ============ sharing an exported page — a friend's phone, or a download ============
- * One door for every card and the brief alike. navigator.share with a real
- * File hits the OS share sheet where it exists (texts, AirDrop, anywhere) —
- * that's PIVOT.md's actual done-when, not a file sitting in Downloads. Falls
- * back to a plain download wherever share isn't offered, or is cancelled. */
-function downloadBlob(blob,filename){
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=filename;
-  document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),2000);
-}
-async function shareOrDownload(html,filename,title){
-  const blob=new Blob([html],{type:'text/html'});
-  try{
-    const file=new File([blob],filename,{type:'text/html'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){
-      await navigator.share({files:[file],title:title||'Carta'});
-      return;
-    }
-  }catch(e){if(e&&e.name==='AbortError')return}   // the keeper cancelled the share sheet — not a failure
-  downloadBlob(blob,filename);
-  toast('Downloaded — open it anywhere, forever.');
-}
-function downloadBriefPage(scopeKind,scopeId){
-  const html=briefPageHTML(D,scopeKind||null,scopeId||null);
-  const name=`carta-brief${scopeId?'-'+fold(scopeId).replace(/\s+/g,'-'):''}.html`;
-  shareOrDownload(html,name,'The brief');
-}
-function copyPlainText(str,msg){
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(str).then(()=>toast(msg||'Copied.'));return}
-  const ta=document.createElement('textarea');ta.value=str;ta.style.position='fixed';ta.style.opacity='0';
-  document.body.appendChild(ta);ta.focus();ta.select();
-  try{document.execCommand('copy')}catch(e){}
-  ta.remove();toast(msg||'Copied.');
-}
-
-/* ============ durability (ROADMAP.md Phase 8) — the record's one safety net ============
- * Carta is one device, one localStorage key, zero sync, by design
- * (ARCHITECTURE.md §3) — right for a hobby, but it means the whole journal's
- * durability has rested on a habit nobody was ever asked to form. Quiet and
- * factual, never urgency theater: a stated fact on the Shelf, the same
- * register as a coffee's own rest window. */
-function weeksSince(iso){return Math.floor(Math.floor((Date.now()-new Date(iso))/864e5)/7)}
-function exportedLine(){
-  const at=getPref('exportedAt',null);
-  if(!at)return 'Never backed up yet.';
-  const w=weeksSince(at);
-  if(w<1)return 'Backed up this week.';
-  return `Last backed up — ${w} week${w===1?'':'s'} ago.`;
-}
-function exportLedgerJSON(){
-  const stamp=new Date().toISOString().slice(0,10);
-  downloadBlob(new Blob([JSON.stringify(D,null,2)],{type:'application/json'}),`carta-${stamp}.json`);
-  setPref('exportedAt',new Date().toISOString());
-  render();
-  toast('Backed up — saved to your downloads.');
-}
-const AUTO_EXPORT_DAYS=14;   // a fortnight between quiet backups, opt-in only
-function maybeAutoExport(){
-  if(!getPref('autoExport',false))return;
-  const at=getPref('exportedAt',null);
-  const days=at?Math.floor((Date.now()-new Date(at))/864e5):Infinity;
-  if(days>=AUTO_EXPORT_DAYS)exportLedgerJSON();
-}
-// a rough, conservative measure of what this origin has already spent in
-// localStorage — most browsers cap it near 5MB; warn well before a write
-// actually fails, not only after (save()'s own catch stays the last line of
-// defense, not the first)
-const STORAGE_SOFT_LIMIT=4.5*1024*1024;
-function storageUsedBytes(){
-  let used=0;
-  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);used+=(k.length+(localStorage.getItem(k)||'').length)}}catch(e){}
-  return used*2;   // UTF-16 — the unit a browser's quota actually counts against
-}
-function lowStorageNoteHTML(){
-  return `<div class="note">Storage is getting full. <span class="text-action" onclick="exportLedgerJSON()">Back up now</span> to be safe.</div>`;
-}
-
-/* One lookup, every branch it knows about. Carta asked for limit=1 from Phase
- * 7 until Phase 15, which meant a café with several branches in one city got
- * whichever one the lookup ranked first — arbitrarily, silently, and once,
- * because geocodeCityPlaces stamps `geocoded` whether or not it worked. A
- * wrong pin was permanent and there was no way in the app to say so.
- * Asking for five and reading their areas costs the same one call. */
-async function lookupPlace(name,neighborhood,city){
-  const q=[name,neighborhood,city].filter(Boolean).join(', ');
-  if(!q)return [];
-  try{
-    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
-    if(!r.ok)return [];
-    const list=await r.json();
-    if(!Array.isArray(list))return [];
-    return dedupeHits(list.map(x=>{
-      const lat=Number(x.lat),lon=Number(x.lon);
-      if(!isFinite(lat)||!isFinite(lon))return null;
-      return {lat,lon,name:String(x.name||'').trim(),hood:hoodOf(x.address),city:cityOf(x.address)};
-    }).filter(Boolean));
-  }catch(e){return []}
-}
-// the ask's own grounding still wants one answer to a question it already
-// asked precisely — it supplies the model's neighborhood, so its lookup is
-// rarely the ambiguous kind. It takes the first and now keeps the area too.
-async function geocodeCafe(name,neighborhood,city){
-  const hits=await lookupPlace(name,neighborhood,city);
-  return hits.length?hits[0]:null;
-}
-// the other direction through the same keyless door (Phase 16): not "where is
-// this name" but "what's at this coordinate" — the question OSM can answer
-// for a café its own search index has never heard of, because the streets
-// around it are mapped whether or not the shop itself is. A coordinate the
-// keeper is vouching for (copied from a map that already has the place) never
-// needs a name to confirm — it IS the confirmation.
-async function reverseGeocode(lat,lon){
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lon}`,{headers:{'Accept':'application/json'}});
-    if(!r.ok)return {hood:'',city:''};
-    const x=await r.json();
-    return {hood:hoodOf(x&&x.address),city:cityOf(x&&x.address)};
-  }catch(e){return {hood:'',city:''}}
-}
 /* ============ the map surfaces — one vocabulary, three elements ============
  * carta-maps.js draws all three (loaded in the <head>): <carta-belt> for the
  * world frame, on Natural Earth's own outlines through d3 + topojson;
@@ -3541,6 +3463,49 @@ document.addEventListener('carta:pin-tap',e=>{
   if(kind==='city'||kind==='cafe'||kind==='cup'){closeSheet();openCafeScreen(id)}
   else if(p.city)openCityChapter(p.city);
 });
+/* One lookup, every branch it knows about. Carta asked for limit=1 from Phase
+ * 7 until Phase 15, which meant a café with several branches in one city got
+ * whichever one the lookup ranked first — arbitrarily, silently, and once,
+ * because geocodeCityPlaces stamps `geocoded` whether or not it worked. A
+ * wrong pin was permanent and there was no way in the app to say so.
+ * Asking for five and reading their areas costs the same one call. */
+async function lookupPlace(name,neighborhood,city){
+  const q=[name,neighborhood,city].filter(Boolean).join(', ');
+  if(!q)return [];
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+    if(!r.ok)return [];
+    const list=await r.json();
+    if(!Array.isArray(list))return [];
+    return dedupeHits(list.map(x=>{
+      const lat=Number(x.lat),lon=Number(x.lon);
+      if(!isFinite(lat)||!isFinite(lon))return null;
+      return {lat,lon,name:String(x.name||'').trim(),hood:hoodOf(x.address),city:cityOf(x.address)};
+    }).filter(Boolean));
+  }catch(e){return []}
+}
+// the ask's own grounding still wants one answer to a question it already
+// asked precisely — it supplies the model's neighborhood, so its lookup is
+// rarely the ambiguous kind. It takes the first and now keeps the area too.
+async function geocodeCafe(name,neighborhood,city){
+  const hits=await lookupPlace(name,neighborhood,city);
+  return hits.length?hits[0]:null;
+}
+// the other direction through the same keyless door (Phase 16): not "where is
+// this name" but "what's at this coordinate" — the question OSM can answer
+// for a café its own search index has never heard of, because the streets
+// around it are mapped whether or not the shop itself is. A coordinate the
+// keeper is vouching for (copied from a map that already has the place) never
+// needs a name to confirm — it IS the confirmation.
+async function reverseGeocode(lat,lon){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lon}`,{headers:{'Accept':'application/json'}});
+    if(!r.ok)return {hood:'',city:''};
+    const x=await r.json();
+    return {hood:hoodOf(x&&x.address),city:cityOf(x&&x.address)};
+  }catch(e){return {hood:'',city:''}}
+}
+
 // geocoding a café is the same lookup the ask already grounds its suggestions
 // with (geocodeCafe, Phase 7) — one keyless Nominatim door, two callers. Fills
 // blanks only, tries each place at most once ever (`geocoded`), and paces
@@ -3687,6 +3652,43 @@ async function replaceCafe(placeId){
     return;
   }
   q.branches=hits;save();render();
+}
+
+/* ============ sharing an exported page — a friend's phone, or a download ============
+ * One door for every card and the brief alike. navigator.share with a real
+ * File hits the OS share sheet where it exists (texts, AirDrop, anywhere) —
+ * that's PIVOT.md's actual done-when, not a file sitting in Downloads. Falls
+ * back to a plain download wherever share isn't offered, or is cancelled. */
+function downloadBlob(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+async function shareOrDownload(html,filename,title){
+  const blob=new Blob([html],{type:'text/html'});
+  try{
+    const file=new File([blob],filename,{type:'text/html'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:title||'Carta'});
+      return;
+    }
+  }catch(e){if(e&&e.name==='AbortError')return}   // the keeper cancelled the share sheet — not a failure
+  downloadBlob(blob,filename);
+  toast('Downloaded — open it anywhere, forever.');
+}
+function downloadBriefPage(scopeKind,scopeId){
+  const html=briefPageHTML(D,scopeKind||null,scopeId||null);
+  const name=`carta-brief${scopeId?'-'+fold(scopeId).replace(/\s+/g,'-'):''}.html`;
+  shareOrDownload(html,name,'The brief');
+}
+function copyPlainText(str,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(str).then(()=>toast(msg||'Copied.'));return}
+  const ta=document.createElement('textarea');ta.value=str;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy')}catch(e){}
+  ta.remove();toast(msg||'Copied.');
 }
 
 /* ============ the cards — the share (ROADMAP.md Phase 5) ============
@@ -4662,8 +4664,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.34.0';
+const APP_VERSION='7.34.1';
 const CHANGELOG=[
+  {v:'7.34.1',d:"Three blocks, put back where they belong. The split that moved the argument and the Visualizer read into their own files left three things behind in the wrong neighborhood — the backup system, the sharing plumbing every card and the brief lean on, and the café-placing lookup the ask itself calls into. All three had drifted to sit between the dial-in screen and the map surfaces, which is nowhere close to any of their actual callers. Nothing about what they do changed — the backup system now sits beside the record page that shows it, the sharing door sits beside the cards that open it, and the café lookup sits beside the café-placing code that calls it most. A file is only as readable as its neighborhoods are honest."},
   {v:'7.34.0',d:"The file, split again. Nothing changes on the screen — this is the debt Phase 26 opened, paid down. index.html had grown to 6,483 lines against a ceiling of 5,000 that has not moved since Phase 17, and, more to the point, to 438 KB against a 500 KB one that has never moved at all and is the one that actually keeps Carta a thing you drop on a static host. Two whole subsystems move out into files of their own, the way the map layer did and the plate did after it: the argument — your taste, the brief, the ask and what comes back — and everything to do with reading Visualizer. Both are loaded the same way a font or an icon already is. Still nothing to build, nothing to install, nothing between the source and the host; there are simply five files to copy where there were three, and Carta now says so out loud if it ever finds one of them out of date."},
   {v:'7.33.0',d:"The brew, reviewable. A brew read from Visualizer drew its plate on one screen only — the one you passed through on the way to writing the cup. Tap through, score it, and the argument underneath the score closed behind you: the cup kept a picture of the curve, but the reading of it, the scrub, the pours and their waits, the whole ledger of what the machine actually stated, were all one-time. It is the other way round now. Writing the cup is what makes the plate worth keeping, so the plate on a cup's own page is a door: tap it and the brew opens in full, as often as you want it, with the pressure or the pours still scrubbable second by second. A brew already written says so — where it used to offer to be written again, it names the cup it became and its reading instead. And a brew you have opened is kept on this device, so it still reads after it falls off your account's recent eight and still reads with the network off; Your recent brews lists those under the live ones. Twenty of them, thinned for reading rather than for the record, and signing out of Visualizer takes them with it."},
   {v:'7.32.0',d:"A Setup, from Visualizer. Adding a Setup meant a blank form — name it, name the grinder, and everything else by hand — even though the account already on the device knows what was on a shot the whole time. “＋ A new Setup” now opens onto your own recent shots first wherever there's a Visualizer account to read: a grinder paired with whatever machine or brewer rode beside it, one tap to seed the form with both, deduped, and never repeating a Setup already on the record. Nothing else a Setup carries — basket, papers, water, the grind scale — is in a shot file, and it says so, so that part stays exactly as typed as it always was. “Type it in instead” is one tap away at every turn, on a page with nothing to read as easily as one with plenty, and an unreachable Visualizer costs nothing: the blank form was always there and still is. A shot pulled quietly at the door mints its Setup a little more honestly too — the machine or brewer beside the grinder, not just the grinder alone."},
