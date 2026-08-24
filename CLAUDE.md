@@ -24,16 +24,17 @@ is a hobby project with a real design record; the record is the point.
 
 Carta is a **coffee journal and a hunting instrument** — the cup you made, the
 cup you were served, and whether either was worth finding again. It is a
-single-page, offline-first PWA: one self-contained `index.html`, all CSS and
-JS inline, no build step, no accounts, no server.
+single-page, offline-first PWA: `index.html` with all CSS and JS inline, plus
+four sibling scripts beside it, no build step, no accounts, no server.
 
 **Carta 7 is a fresh start** (`docs/PIVOT.md` — the fourth turn). The app that
 came before it, Carta 6.18.x, is frozen whole at `classic/index.html`. They
 are two different apps in one repo, and the distinction matters constantly:
 
-1. **Carta 7** (`index.html`, ~4,900 lines, plus `carta-map.js`, the map
-   layer split out at Phase 19) — the product. Every phase of
-   `docs/ROADMAP.md` ships here.
+1. **Carta 7** (`index.html`, ~4,750 lines, plus four siblings loaded from
+   its `<head>`: `carta-map.js` (Phase 19), `carta-plate.js` (v7.31.0),
+   `carta-shot.js` and `carta-ask.js` (both v7.34.0)) — the product. Every
+   phase of `docs/ROADMAP.md` ships here.
 2. **Classic** (`classic/index.html`, ~12,500 lines) — **frozen. No fixes, no
    features, lights on.** Its own architecture map is `classic/CLAUDE.md`;
    read that only if you are working on classic by explicit request. The one
@@ -79,6 +80,8 @@ commission Phase 12 built.
 index.html            Carta 7 — the app, inline <style> and <script>
 carta-map.js          Carta 7's map layer, split out at Phase 19 (loaded from index.html's <head>)
 carta-plate.js        The plate — a brew's curve, both arms, split out at v7.31.0 (same <head>)
+carta-shot.js         The Visualizer read — account, calls, pickers, a shot's four screens (v7.34.0)
+carta-ask.js          The argument — vTaste→vBrief→vAsk→vAsking→vAskResult, and the keyed channel (v7.34.0)
 test/model.test.js    The pure-block harness (zero deps, plain Node)
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
@@ -100,7 +103,10 @@ server/               Classic's sync server — dormant
 
 - **Everything is inline.** Edit the `<style>` and `<script>` blocks in place.
   No external `<script src>` / `<link>` to CDNs at load time — the whole point
-  is a single file you can drop on a static host.
+  is a handful of files you can drop on a static host with nothing in between.
+  The four siblings are plain local `<script src>` tags in the `<head>`, each
+  carrying `?v=<APP_VERSION>`; that is the only exception and it is not one
+  you extend without amending `ARCHITECTURE.md` §1.
 - The JS is **terse, dense, single-quote style** — many one-line helpers,
   multi-statement lines. Match it; don't reformat existing code. Section
   dividers look like `/* ============ store ============ */`.
@@ -232,6 +238,13 @@ server/               Classic's sync server — dormant
   counts, the road's stations, the altitude band, the taste argument, the
   brief's four parts. A screen that needs a number the ledger cannot defend
   states `unread` instead, and its empty state is designed with its full one.
+- **Visualizer** — **lives in `carta-shot.js` since v7.34.0**: the account and
+  its auth, `callVisualizer`/`fetchVisualizerShots`, both pickers, the Setup
+  import, the shot the Atlas offers unasked (`vizCheckOnOpen`/`waitingShot`/
+  `ensureShotCurve`) and a shot's own four screens (`vShot`, `vTasteHome`,
+  `vShots`, plus `openSetupImport`). Its pure half reads the file itself. The
+  two shot stores stay in `index.html`'s store block — they are localStorage
+  plumbing, and the store is documented as one place.
 - **the door** (`openDoor`/`paintDoor`/`doorParse`) — paste the bag or type it;
   Carta reads a roaster and a coffee out of it, offers the gentle join, and
   asks where the cup was in the same step. Opening it from a café skips that
@@ -278,7 +291,9 @@ server/               Classic's sync server — dormant
   through the ask's own channel and keeps it nowhere; the slot repaints itself
   instead of re-rendering, so a repaint never eats what has been typed beside
   it.
-- **the ask** — `vAsk` → `askPromptText` (the brief, verbatim) → `callModel`
+- **the ask** — **lives in `carta-ask.js` since v7.34.0**, whole: the walk, the
+  channel, and the reply-reading helpers three features share. Everything below
+  describes that file, not `index.html`. `vAsk` → `askPromptText` (the brief, verbatim) → `callModel`
   (BYO-key, `api.anthropic.com`, `claude-opus-5` at `ASK_MAX_TOKENS`) →
   `parseAskJSON` → `groundNamed` **grounding every café before it is drawn**,
   paced a second apart → `vAskResult`. Phase 14 made the answer an argument
@@ -353,8 +368,8 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 ### Invariants to preserve
 
-- **Three files, no build.** Vanilla JS, inline everything, nothing fetched at
-  load beyond `carta-map.js` and `carta-plate.js` themselves. **Their `<script
+- **Five files, no build.** Vanilla JS, inline everything, nothing fetched at
+  load beyond the four siblings themselves. **Their `<script
   src>` tags carry `?v=<APP_VERSION>` and that must be bumped with it** — a
   sibling script is an ordinary cached subresource while `index.html` is the
   revalidated navigation document, so without it a keeper can run a new
@@ -443,13 +458,17 @@ node test/model.test.js        # zero deps, plain Node, 121 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
-**both** `carta-plate.js` and `index.html` (in that order — the plate loads
-first in the browser, and `parseVisualizerShot` reads its globals) and
+**all four** of `carta-plate.js`, `carta-shot.js`, `carta-ask.js` and
+`index.html` (in that order — the browser's own `<head>` order, because
+`parseVisualizerShot` reads the plate's globals and `index.html`'s own
+`parseCfSearch`/`parseMenuOCR` read the ask's `extractJSON`/`askStr`) and
 evaluates them against fixture ledgers — no DOM, no `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
 `parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel`,
 `originPin`, `meanPin`, `namesBack`, `cfSearchPrompt`, `parseCfSearch`,
-`parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder`, `brewerOf`, `setupCandidatesFromShots`,
+`parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder`, `brewerOf`, `setupCandidatesFromShots`
+(those five live in `carta-plate.js`'s sibling `carta-shot.js` since v7.34.0),
+`askPromptText`, `parseAskJSON`, `matchFigure` (in `carta-ask.js` since v7.34.0),
 `shotCurve`, `shotPours`, `shotFigures`, `shotMethod`, `platePaths`,
 `shotAt`, `shotPhase`, `shotPreinfusion` (the last eight live in
 `carta-plate.js`), `doorParse` or

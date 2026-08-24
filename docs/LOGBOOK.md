@@ -7,6 +7,66 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-24 — v7.34.0: the file, split again — five now
+
+- **The founder's call, made directly:** *"split index.html — it's way past the
+  line band."* It was: **6,483 lines against a 5,000-line ceiling unmoved since
+  Phase 17** — the largest overage the project has ever carried, and larger
+  than the 945 the v7.31.1 note last recorded, since v7.32.0's Setup import and
+  v7.33.0's durable shot store both landed on top of it.
+- **One fact had changed, and it is what made this urgent rather than untidy.**
+  Every overage note in `ARCHITECTURE.md` §1 above this one says some version
+  of *"bytes remain comfortable."* At **438.3 of 500 KB** that had stopped
+  being true — 87.7% of the ceiling that has never moved across all four line-
+  band amendments, and the only one actually guarding the drop-it-on-a-static-
+  host promise. Recent phases run 150–800 lines and 10–50 KB apiece; that
+  ceiling was two to four phases out. A line band can be argued about. That one
+  cannot, and it is the one the brand rests on.
+- **Two files out, chosen by the Phase 19 test** — the largest things in
+  `index.html` that are *not the record itself*:
+  - **`carta-ask.js`** (995 lines) — the argument, which `CLAUDE.md` already
+    named as one walk long before it was one file: `vTaste` → `vBrief` →
+    `vAsk` → `vAsking` → `vAskResult`. With it goes the keyed channel it goes
+    out on, `callModel`, and the reply-reading helpers the menu's *Read it for
+    me* and a coffee's *Search for more* share with it — which is not a smear:
+    §7 already listed all three as one row, one channel out.
+  - **`carta-shot.js`** (872 lines) — the Visualizer read whole: the account,
+    the calls, both pickers, the shot the Atlas offers unasked, and a shot's
+    own four screens. It loads after `carta-plate.js`, because
+    `parseVisualizerShot` reads a curve through the plate's own `shotCurve`.
+- **Two files rather than one, deliberately.** One file holding both would have
+  needed a name true of neither — the exact failure the v7.31.0 note refused
+  when it declined to append the plate to `carta-map.js`. Five honestly-named
+  files beat four with one lying.
+- **What the count costs, said plainly:** four more things to remember to
+  upload, up from one. Which is why the boot guard widened in the same pass —
+  it checks **all three** sibling versions against `APP_VERSION` now, not just
+  the plate's. Five files is five chances for a cached one to disagree, and
+  v7.31.1 already shipped what that reads like to a keeper: *"your Visualizer
+  account is empty."*
+- **Three blocks were found misfiled inside the extracted ranges and left where
+  they belong** rather than dragged along: the backup block sitting between the
+  brief and the ask, the share plumbing beside it, and the Nominatim helpers
+  sitting inside the ask block though café-placing is their main caller. That
+  they had drifted there at all is the clearest evidence the file had outgrown
+  being read whole — which is the thing the band exists to protect.
+- **`index.html` is back inside the band at 4,750 lines / 332.8 KB**, with 250
+  lines and 167 KB of real headroom — close to where Phase 19 left it. The app
+  total moved 7,534 → 7,668 lines: a move plus two file headers and their seam
+  publishes, **not a cut**. Nothing was rewritten, renamed or restyled.
+- **Tests: 123**, unchanged, now sliced from four pure blocks in the browser's
+  own `<head>` order. Verified end to end in headless Chromium, paper and
+  dusk: the whole argument walk (call, parse, grounding, the record write, and
+  `matchFigure` still resolving a model-written figure back to the cups behind
+  it *across the new file boundary*), the whole shot flow, and the full prior
+  regression suite. The one real risk — `askDraft`, a `let` reassigned from
+  `index.html`'s router and written by an inline handler on the Atlas — was
+  tested in both directions and holds: classic scripts share one global
+  lexical environment, so it is the same binding either way, and it is
+  deliberately *not* published on `window`, where a copy would fork it.
+- **The debt Phase 26 opened is closed.** The next phase to cross 5,000
+  re-earns its argument from here, exactly as this one had to.
+
 ## 2026-08-23 — v7.33.0: the brew, reviewable
 
 - **The keeper's own reading of the board, and it was right:** station 11 (the
