@@ -336,6 +336,9 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
   border-bottom:1px solid var(--line);padding-bottom:8px;margin:24px 0 2px}
 .shead .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:500}
 .shead .r{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;color:var(--ink-3);text-align:right}
+/* over a list of cards the rule is redundant — every card already draws its own
+   edge, and two hairlines 8px apart read as a mistake rather than a system */
+.shead.over{border-bottom:0;padding-bottom:10px;margin:28px 0 0}
 /* the list row, at the size the redesign reads at: the title leads, the meta
    sits off the faintest ink, and the score is set big enough to be the answer */
 .lrow{width:100%;display:flex;align-items:center;gap:14px;text-align:left;color:var(--ink);
@@ -352,6 +355,67 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 .lrow .mapthumb{flex:none;width:60px;height:44px;border:1px solid var(--line);background:var(--surface-page);display:block;overflow:hidden}
 .cshape{display:block;width:100%;height:100%}
 .cshape path{fill:var(--ink);fill-opacity:.14;stroke:var(--ink);stroke-opacity:.5;stroke-width:1.4;vector-effect:non-scaling-stroke}
+/* ---- the listing card (Phase 28) ----------------------------------------
+   The three lists that ARE the product — what Carta found, your cities, every
+   cup — stopped being rows led by a 60×44 thumbnail and became leaves of the
+   record: the brand you'd recognise at the counter set at 25px serif, what it
+   is best for in italic under it, what you actually said about it, and the
+   quantities stepped down to fact rows where detail belongs. The plot hull is
+   gone from the lead; a seal stands there instead, and only where the record
+   can name real ground (see sealHTML). `.lrow` is untouched and still carries
+   every other list in the app — a menu, a Setup, the doors off the record. */
+.lcard+.lcard{margin-top:8px}
+.lcard{display:block;width:100%;text-align:left;color:var(--ink);font:inherit;
+  background:var(--surface-card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:15px 16px 16px;cursor:pointer}
+.lcard:active{border-color:var(--line-strong)}
+/* the head: the seal, the eyebrow it belongs to, and when. Without a seal the
+   labels sit on their own baseline rather than centred against nothing. */
+.lcard .head{display:flex;align-items:center;gap:11px}
+.lcard .head.bare{align-items:baseline;gap:10px}
+.lcard .eyeb{flex:1;font-family:var(--sans);font-size:var(--s10);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.lcard .when{flex:none;font-family:var(--sans);font-size:var(--s10);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3)}
+.lcard .n{display:block;font-family:var(--serif);font-size:25px;font-weight:600;
+  line-height:1.1;letter-spacing:-.01em;margin-top:11px}
+.lcard .head.bare+.n{margin-top:9px}
+.lcard .sub{display:block;font-family:var(--serif);font-style:italic;font-size:var(--s16);
+  line-height:1.35;color:var(--ink-2);margin-top:3px}
+.lcard .said{display:block;font-family:var(--serif);font-size:15.5px;line-height:1.5;
+  color:var(--ink-2);margin-top:9px;max-width:var(--measure)}
+.lcard .said.none{font-style:italic;color:var(--text-subtle)}
+/* a cup answers with its score, so the name and the figure share one line */
+.lcard .body{display:flex;align-items:flex-start;gap:14px;margin-top:11px}
+.lcard .body .mid{flex:1;min-width:0}
+.lcard .body .mid .n{margin-top:0}
+.lcard .ans{flex:none;text-align:right}
+.lcard .sc{display:block;font-family:var(--serif);font-size:25px;font-weight:600;
+  font-variant-numeric:tabular-nums;line-height:1.1;color:var(--accent)}
+.lcard .sc.none{font-style:italic;font-weight:400;font-size:21px;line-height:1.3;color:var(--text-disabled)}
+.lcard .of{display:block;font-family:var(--sans);font-size:var(--s10);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);margin-top:3px}
+.lcard .of.none{color:var(--ink-d)}
+/* the fact rows — `.kv`'s own mechanics, ruled above rather than below, so the
+   last fact closes the card instead of leaving a hairline hanging under it */
+.lcard .facts{display:block;margin-top:11px}
+.lcard .fact{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding:10px 0 0;border-top:1px solid var(--line)}
+.lcard .fact .k{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);flex:none;white-space:nowrap;line-height:1.5}
+.lcard .fact .v{font-family:var(--serif);font-size:15.5px;color:var(--ink);text-align:right}
+.lcard .fact .v.num{font-variant-numeric:tabular-nums}
+.lcard .fact .v.quiet{font-style:italic;color:var(--ink-3)}
+.lcard .fact .v.fall{font-style:italic;color:var(--text-subtle)}
+/* the seal — the country's own outline, drawn the way the passport inks a
+   country that IS a mark rather than ground (`.mk-land`): land in paper, coast
+   an ink hairline, on a sunk disc. A city marks its point on it, filled,
+   because a city has a real coordinate and a filled mark is what that earns. */
+.seal{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);
+  background:var(--paper-2);overflow:hidden;display:flex;align-items:center;justify-content:center;padding:5px}
+.seal svg{display:block;width:100%;height:100%}
+.seal .mk-seal{fill:var(--surface-card);fill-opacity:.9;stroke:var(--ink-2);stroke-width:1.3;vector-effect:non-scaling-stroke}
+.seal .mk-pt{fill:var(--ink)}
 /* a country the record has tasted — a name and its weight, tappable */
 .cchip{display:inline-flex;align-items:baseline;gap:7px;background:none;border:1px solid var(--line-strong);
   color:var(--ink);font-family:var(--serif);font-size:var(--s15);padding:8px 12px;min-height:38px;cursor:pointer;border-radius:var(--radius)}
@@ -712,7 +776,7 @@ function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):cl
   (d.cups||[]).forEach(c=>{if(c.photo)delete c.photo});
   try{localStorage.removeItem('carta7.photos.v1')}catch(e){}
   return d}catch(e){return clone(blank)}}
-function save(){_tasteDirty=true;try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
+function save(){_tasteDirty=true;_cupNoCache=null;_cityLeadCache=null;try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
 
 /* the shot curves — same reasoning as the photos, one key over (Phase 26). A
  * cup carries only its `vizShotId`; the three series it was drawn from live
@@ -2844,24 +2908,180 @@ function passportSVG(interactive){
   return `<div class="plot-box"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${landHTML}${markHTML}</svg></div>`;
 }
 
+/* ============ the seal (Phase 28) ============
+ * A listing used to lead with the drawn plot — a hull folded from your own
+ * pins, which answered "how many points are on the map" when the question was
+ * "where is this". The seal answers the real one, and it costs nothing new:
+ * LANDS is already in the file, 65 coffee-belt outlines, Natural Earth 1:110m
+ * quantised to a twentieth of a degree, under nine kilobytes, offline.
+ *
+ * One country, projected on its own — the same KMX/KMY the passport draws in,
+ * standard parallel at the shape's own mean latitude, so a country is drawn in
+ * its own proportions rather than the world frame's. The viewBox IS the shape's
+ * extent in kilometres; the disc fits it with preserveAspectRatio, which is why
+ * one rule serves 36px in a row and 340px on a page.
+ *
+ * MAPPING.md governs the ink: the seal is monochrome — paper fill, ink hairline
+ * — and never the ember. The ember belongs to the current action and the cup's
+ * score, and a strong colour on a map reads as data about the map. */
+let _sealCache={};
+function landSeal(key){
+  if(key in _sealCache)return _sealCache[key];
+  const rings=key?landRingsRaw(key):null;
+  if(!rings||!rings.length)return _sealCache[key]=null;
+  const all=[];rings.forEach(r=>r.forEach(p=>all.push(p)));
+  if(!all.length)return _sealCache[key]=null;
+  const la0=all.reduce((a,p)=>a+p.lat,0)/all.length;
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  all.forEach(p=>{const x=KMX(p.lon,la0),y=KMY(p.lat);
+    if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y});
+  const n=v=>v.toFixed(1);
+  const d=rings.map(r=>{let s='';
+    r.forEach((p,i)=>{s+=(i?' L ':'M ')+n(KMX(p.lon,la0)-x0)+' '+n(y1-KMY(p.lat))});
+    return s?s+' Z':''}).filter(Boolean).join(' ');
+  return _sealCache[key]=d&&isFinite(x1-x0)?{d,w:x1-x0,h:y1-y0,la0,x0,y1}:null;
+}
+// the seal, or nothing at all. A row never draws a shape the record can't
+// defend — the same refusal cupLeadHTML has always made, pointed at the ground.
+function sealHTML(key,at){
+  const s=landSeal(key);
+  if(!s)return '';
+  const n=v=>v.toFixed(1);
+  // M1: a city has a real coordinate, so it earns a filled mark. Sized off the
+  // shape's own long side, so the dot reads the same on Kenya and on Brazil.
+  const dot=at&&at.lat!=null&&at.lon!=null
+    ?`<circle class="mk-pt" cx="${n(KMX(at.lon,s.la0)-s.x0)}" cy="${n(s.y1-KMY(at.lat))}" r="${Math.round(Math.max(s.w,s.h)*0.0552)}"/>`
+    :'';
+  return `<span class="seal"><svg viewBox="0 0 ${n(s.w)} ${n(s.h)}" preserveAspectRatio="xMidYMid meet"><path class="mk-seal" d="${s.d}"/>${dot}</svg></span>`;
+}
+/* which outline a point actually falls inside. Even-odd across every ring of a
+ * country, so an island counts and a country's own hole doesn't — Lesotho sits
+ * in South Africa's outline as a second ring, and a point in it crosses both. */
+function landAt(at){
+  if(!at||at.lat==null||at.lon==null||!isFinite(at.lat)||!isFinite(at.lon))return null;
+  for(const key of Object.keys(LANDS)){
+    const rings=landRingsRaw(key);if(!rings)continue;
+    let inside=false;
+    for(const r of rings)for(let i=0,j=r.length-1;i<r.length;j=i++){
+      const a=r[i],b=r[j];
+      if((a.lat>at.lat)!==(b.lat>at.lat)&&
+         at.lon<(b.lon-a.lon)*(at.lat-a.lat)/(b.lat-a.lat)+a.lon)inside=!inside;
+    }
+    if(inside)return key;
+  }
+  return null;
+}
+// the passport prints your words wherever it has them; a country you haven't
+// tasted yet has no spelling of yours to print, so the key is title-cased.
+function landLabel(key){
+  const t=tastedCountryMap()[key];
+  return t?t.label:String(key||'').replace(/\b[a-z]/g,c=>c.toUpperCase());
+}
+/* the ground a city stands on, read straight off the record: the mean of the
+ * cafés you have actually placed there, tested against the belt. Where the belt
+ * has no outline — Denmark, Germany, Norway are not coffee-growing countries —
+ * this returns null and the row states the fall rather than drawing a guess. */
+function cityGround(city){
+  const at=meanPin(placed(cityPlaces(city)));
+  if(!at)return null;
+  const key=landAt(at);
+  return key?{key,label:landLabel(key),at}:null;
+}
+// the date a leaf carries: near enough to be relative, past that a real date.
+// "4d ago" is a receipt; "14 March" is a record, and the record is the product.
+function fmtDay(iso){
+  if(!iso)return '';
+  const d=new Date(iso),days=Math.floor((Date.now()-d)/864e5);
+  if(!isFinite(days))return '';
+  if(days<1)return 'Today';
+  if(days===1)return 'Yesterday';
+  if(days<7)return days+' days ago';
+  return d.toLocaleDateString(undefined,{day:'numeric',month:'long'});
+}
+
 /* ============ views ============ */
-/* a cup, in a list. The title leads at 18.5px, the meta sits on secondary ink
- * rather than the faintest, and the score is set at 27px tabular — it is the
- * answer the row exists to give, and it used to be the smallest thing on it.
- * The ground the coffee stands on takes the kind-mark's place where the
- * record can place it (Phase 27); a cup without one says plainly whether it
- * was drunk out or at home. */
+/* a cup, in the Journal (Phase 28). The brand leads, because the brand is what
+ * you actually remember about a cup — the café you stood in, or the roaster
+ * whose bag you opened — with the coffee itself in italic under it. The score
+ * is the one ember on the screen. The seal is the country the coffee grew in,
+ * and nothing at all where the bag never said. Where the old row had a 12.5px
+ * dust line of dials, the leaf quotes what you wrote about the cup instead —
+ * the thing the row never had room for, and the only reason to keep a journal.
+ *
+ * The catalogue number is the record counting itself: cup no. 214 is the 214th
+ * cup on file, put-away cups included, because putting one away doesn't unmake
+ * it. */
+let _cupNoCache=null;
+function cupNo(cup){
+  if(!_cupNoCache){
+    _cupNoCache={};
+    (D.cups||[]).slice()
+      .sort((a,b)=>(a.at||a.createdAt||'').localeCompare(b.at||b.createdAt||''))
+      .forEach((c,i)=>{_cupNoCache[c.id]=i+1});
+  }
+  return _cupNoCache[cup.id]||null;
+}
+// what stretch of the record a list is actually showing, in its own numbering
+function cupRangeLine(list){
+  const ns=(list||[]).map(cupNo).filter(n=>n!=null);
+  if(!ns.length)return '';
+  const hi=Math.max(...ns),lo=Math.min(...ns);
+  return hi===lo?`no. ${hi}`:`no. ${hi} — ${lo}`;
+}
+// what actually went through the bed, at the grain a leaf reads at: the two
+// weights and the time. The grind and the temperature are true only inside one
+// Setup, so they stay on the cup's own page where the Setup is named with them.
+function pourLine(b){
+  if(!b)return '';
+  const w=b.doseG!=null&&b.waterG!=null?`${b.doseG} g → ${b.waterG} g`
+    :b.doseG!=null?`${b.doseG} g`:b.waterG!=null?`${b.waterG} g`:null;
+  return [w,b.timeSec!=null?fmtTime(b.timeSec):null].filter(Boolean).join(' · ');
+}
 function cupRowHTML(cup){
   const coffee=coffeeById(cup.coffeeRef);
-  const place=cup.kind==='bar'?placeById(cup.placeRef):null;
-  const title=cup.kind==='bar'?(place?place.name:'A café'):coffeeLabel(coffee);
+  const bar=cup.kind==='bar';
+  const place=bar?placeById(cup.placeRef):null;
   const brew=cup.brewRef?brewById(cup.brewRef):null;
-  const meta=[cup.kind==='bar'?coffeeLabel(coffee):brewLine(brew),fmtWhen(cup.at)].filter(Boolean).join(' · ');
-  const lead=cupLeadHTML(cup,coffee);
-  return `<button class="lrow" onclick="openCupDetail('${cup.id}')">
-    ${lead}
-    <span class="mid"><span class="t">${esc(title)}</span><span class="m">${esc(meta)}</span></span>
-    <span class="sc${cup.score==null?' none':''}">${cup.score==null?'—':cup.score}</span></button>`;
+  const setup=brew&&brew.setupId?setupById(brew.setupId):null;
+  const rig=setup?(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')):'';
+  const o=originOf(coffee);
+  // out, the café is the name; home, the roaster is — and the coffee follows in
+  // italic either way, so the two lists read as one record rather than two.
+  const name=bar?(place?place.name:'A café'):((coffee&&coffee.roaster)||coffeeLabel(coffee));
+  const sub=bar?coffeeLabel(coffee)
+    :[(coffee&&coffee.name)||'',rig?`on the ${rig}`:''].filter(Boolean).join(', ');
+  const no=cupNo(cup);
+  const ground=[regionOf(coffee),o.country].filter(Boolean).join(', ');
+  const fact=ground?{k:'Grown',v:esc(ground),cls:''}
+    :bar&&place&&(place.neighborhood||place.city)?{k:'Poured in',v:esc(place.neighborhood||place.city),cls:''}
+    :pourLine(brew)?{k:'Poured',v:esc(pourLine(brew)),cls:' num'}:null;
+  // a home brew's dials sit beside the ground when both are known, because on a
+  // cup you made yourself the recipe is half of what you'd come back to read
+  const second=!bar&&ground&&pourLine(brew)?{k:'Poured',v:esc(pourLine(brew)),cls:' num'}:null;
+  const said=(cup.line||'').trim();
+  const seal=sealHTML(landKey(o.country||''));
+  return `<button class="lcard" onclick="openCupDetail('${cup.id}')">
+    <span class="head${seal?'':' bare'}">
+      ${seal}
+      <span class="eyeb">${no?`No. ${no} · `:''}${bar?'out':'home'}</span>
+      <span class="when">${esc(fmtDay(cup.at))}</span>
+    </span>
+    <span class="body">
+      <span class="mid">
+        <span class="n">${esc(name)}</span>
+        ${sub?`<span class="sub">${esc(sub)}</span>`:''}
+      </span>
+      <span class="ans">
+        <span class="sc${cup.score==null?' none':''}">${cup.score==null?'—':cup.score}</span>
+        <span class="of${cup.score==null?' none':''}">${cup.score==null?'unread':'of nine'}</span>
+      </span>
+    </span>
+    <span class="said${said?'':' none'}">${said?esc(said):'Nothing written down yet.'}</span>
+    ${fact||second?`<span class="facts">
+      ${fact?`<span class="fact"><span class="k">${fact.k}</span><span class="v${fact.cls}">${fact.v}</span></span>`:''}
+      ${second?`<span class="fact"><span class="k">${second.k}</span><span class="v${second.cls}">${second.v}</span></span>`:''}
+    </span>`:''}
+  </button>`;
 }
 // the recipe, said the way a recipe is read aloud — the dials in order, nothing
 // spelled out that the numbers already say
@@ -2889,7 +3109,7 @@ function vJournal(){
   <div class="pad" style="padding-top:6px">
     ${measuredAtHomeHTML()}
     ${continuationHTML()}
-    <div class="shead"><span class="l">Every cup, newest first</span></div>
+    <div class="shead over"><span class="l">Every cup, newest first</span><span class="r">${esc(cupRangeLine(cups))}</span></div>
     ${cups.length?cups.map(cupRowHTML).join(''):'<div class="empty">Tap ＋ A cup to start the record.</div>'}
     ${cups.length?'<div class="note">Nothing is deleted. Put a cup away and it leaves the list, not the record.</div>':''}
     ${archivedFold('cups',cupRowHTML,'Put away')}
@@ -4203,11 +4423,81 @@ function cityMetaLine(city){
     `${cups.length} cup${cups.length===1?'':'s'}`,
     lead?`${lead.name} leads at ${trimNum(lead.avg)}`:null].filter(Boolean).join(' · ');
 }
+// how far back the record actually goes in a city — the first cup drunk there,
+// or failing that the first café put on file. Never today's date dressed up.
+function citySince(city){
+  const places=cityPlaces(city);
+  const ids=new Set(places.map(p=>p.id));
+  const stamps=live('cups').filter(c=>c.kind==='bar'&&ids.has(c.placeRef)).map(c=>c.at||c.createdAt)
+    .concat(places.map(p=>p.createdAt)).filter(Boolean).sort();
+  if(!stamps.length)return '';
+  const y=new Date(stamps[0]).getFullYear();
+  return isFinite(y)?`Since ${y}`:'';
+}
+/* what a city amounts to, argued rather than tallied. The bar its best café
+ * actually holds leads, and then the one further fact the record can defend:
+ * that it leads everywhere else, or that its cafés cluster in one quarter.
+ * Where neither is true the figure stands alone — an invented second clause is
+ * the precision VOICE.md refuses, and a city with two cafés has nothing to say
+ * about its quarters yet. */
+let _cityLeadCache=null;
+function cityLead(city){
+  if(!_cityLeadCache){
+    _cityLeadCache={};
+    knownCities().forEach(c=>{
+      let best=null;
+      cityPlaces(c).forEach(p=>{const a=placeAvg(p.id);if(a!=null&&(!best||a>best.avg))best={name:p.name,avg:a}});
+      _cityLeadCache[fold(c)]=best;
+    });
+  }
+  return _cityLeadCache[fold(city)]||null;
+}
+function cityLede(city){
+  const places=cityPlaces(city);
+  const lead=cityLead(city);
+  if(!lead)return null;
+  const others=knownCities().filter(c=>fold(c)!==fold(city));
+  const top=others.length&&others.every(c=>{
+    const o=cityLead(c);
+    return !o||o.avg<lead.avg;
+  });
+  const hoods={};
+  places.forEach(p=>{const h=(p.neighborhood||'').trim();if(h)hoods[h]=(hoods[h]||0)+1});
+  const hood=Object.entries(hoods).sort((a,b)=>b[1]-a[1])[0];
+  const clause=top?' — the highest anywhere on the record.'
+    :hood&&hood[1]>1&&hood[1]<places.length
+      ?`. ${capFirst(words(hood[1]))} of the ${words(places.length)} are in ${hood[0]}.`
+      :'.';
+  return {sub:`${lead.name} leads it`,said:`At ${trimNum(lead.avg)}${clause}`};
+}
 function cityRowHTML(city){
-  return `<button class="lrow" onclick="openCityChapter(${jsq(city)})">
-    ${plotThumbHTML(cityPlaces(city))}
-    <span class="mid"><span class="t">${esc(city)}</span><span class="m">${esc(cityMetaLine(city))}</span></span>
-    <span class="go">→</span></button>`;
+  const places=cityPlaces(city);
+  const ids=new Set(places.map(p=>p.id));
+  const cups=live('cups').filter(c=>c.kind==='bar'&&ids.has(c.placeRef));
+  const ground=cityGround(city);
+  const lede=cityLede(city);
+  const since=citySince(city);
+  const seal=ground?sealHTML(ground.key,ground.at):'';
+  return `<button class="lcard" onclick="openCityChapter(${jsq(city)})">
+    <span class="head${seal?'':' bare'}">
+      ${seal}
+      <span class="eyeb">${ground?esc(ground.label):''}</span>
+      <span class="when">${esc(since)}</span>
+    </span>
+    <span class="n">${esc(city)}</span>
+    ${lede?`<span class="sub">${esc(lede.sub)}</span>
+    <span class="said">${esc(lede.said)}</span>`:''}
+    <span class="facts">
+      <span class="fact">
+        <span class="k">${capFirst(words(places.length))} café${places.length===1?'':'s'}</span>
+        <span class="v num">${words(cups.length)} cup${cups.length===1?'':'s'}</span>
+      </span>
+      ${ground?'':`<span class="fact">
+        <span class="k">The ground</span>
+        <span class="v fall">no outline on file — listed, not drawn</span>
+      </span>`}
+    </span>
+  </button>`;
 }
 /* ============ the Atlas — the passport, and the question on it ============
  * The ask was a button at the bottom of this screen, under everything the
@@ -4298,10 +4588,10 @@ function vAtlas(){
         ${shot?`<div class="shead" style="margin-top:8px"><span class="l">Ask Carta</span><span class="r">on your own key</span></div>
           <div style="margin-top:14px">${askFieldHTML}</div>`:''}
         ${countries.length||cities.length?'':`<div class="lede" style="margin-top:14px">Log a coffee with its country, or a café cup with its city, and the passport starts filling in.</div>`}
-        ${asks.length?`<div class="shead"${shot?'':' style="margin-top:8px"'}><span class="l">What Carta found</span>
+        ${asks.length?`<div class="shead over"${shot?'':' style="margin-top:8px"'}><span class="l">What Carta found</span>
           <span class="r">${words(asks.length)} ask${asks.length===1?'':'s'} · tap to reopen</span></div>
           ${asks.map(askRowHTML).join('')}`:''}
-        ${cities.length?`<div class="shead"${asks.length||shot?'':' style="margin-top:8px"'}><span class="l">Your cities</span><span class="r">${cities.length} on the record</span></div>
+        ${cities.length?`<div class="shead over"${asks.length||shot?'':' style="margin-top:8px"'}><span class="l">Your cities</span><span class="r">${words(cities.length)} on the record</span></div>
           ${cities.map(cityRowHTML).join('')}`:''}
         ${atHomeSlabHTML(asks.length||cities.length||shot)}
         ${countries.length?`<div class="shead"><span class="l">Tasted so far</span><span class="r">tap the map, or a name</span></div>
