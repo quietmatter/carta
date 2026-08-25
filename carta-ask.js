@@ -266,28 +266,57 @@ function openVectorEvidence(kind,value){
     item?`${capFirst(words(item.n))} cup${item.n===1?'':'s'} carry it. This is their weight, and the cups themselves.`:'',
     cups.map(cupEvidenceRow),VECTOR_RULES[kind]||'');
 }
-/* an ask, in the row it is read back through — on the Atlas, where it is now
- * the first thing under the fold, and here in Your taste, where the argument it
- * was made from lives. One row, so both say the same thing: what kind of ask it
- * was, how many of its names stood on real ground, when, and how much of it you
- * have actually walked since. The thumbnail is the ask's own plot. */
-function askMetaLine(a){
-  const named=askNamed(a);
-  const n=named.filter(f=>f.grounded).length;
-  const been=named.filter(f=>f.status==='been').length;
-  return [askKindLabel(a.kind),`${words(n)} placed`,fmtWhen(a.createdAt),
-    been?`${words(been)} marked Been`:null].filter(Boolean).join(' · ');
-}
+// where the ask was pointed, said the way the keeper pointed it — a route is
+// walked, a point is stood at, a city is arrived in
+const ASK_PREP={route:'on the road to',near:'near',friend:'through'};
+/* an ask, as a leaf of the record (Phase 28). The café Carta actually found is
+ * the title, because the brand is what you'd recognise at the counter and the
+ * destination is only where you were standing; the destination steps down to
+ * the eyebrow. What the pick is best FOR — the model's own five words — sets
+ * in italic under it, and the reading of how the ground lies is the body.
+ * The quantities the old meta line ran together survive as facts, where a fact
+ * can be read rather than scanned past.
+ *
+ * The seal is the ground the answer actually stands on: the country holding the
+ * names that were confirmed, with the ask's own point marked on it. Where the
+ * belt has no outline for it, no seal is drawn and the eyebrow starts the row —
+ * the same refusal every other listing makes. */
 function askRowHTML(a){
-  return `<button class="lrow" onclick="openAskResultScreen('${a.id}')">
-    ${plotThumbHTML(askNamed(a))}
-    <span class="mid"><span class="t">${esc(a.destination)}</span><span class="m">${esc(askMetaLine(a))}</span></span>
-    <span class="go">→</span></button>`;
+  const named=askNamed(a);
+  const grounded=named.filter(f=>f.grounded);
+  const been=named.filter(f=>f.status==='been'||f.status==='booked').length;
+  const top=(a.findings||[])[0]||named[0]||null;
+  const rest=named.filter(f=>f!==top).map(f=>f.name).filter(Boolean);
+  const also=rest.length
+    ?rest.slice(0,2).join(' · ')+(rest.length>2?` · ${words(rest.length-2)} more`:'')
+    :'';
+  const at=meanPin(grounded.map(f=>f.lat!=null&&f.lon!=null?{lat:f.lat,lon:f.lon}:null));
+  const key=at?landAt(at):null;
+  const seal=key?sealHTML(key,at):'';
+  const said=(a.read||(a.plan&&a.plan.move)||'').trim();
+  return `<button class="lcard" onclick="openAskResultScreen('${a.id}')">
+    <span class="head${seal?'':' bare'}">
+      ${seal}
+      <span class="eyeb">Found ${esc(ASK_PREP[a.kind]||'in')} ${esc(a.destination)}</span>
+      <span class="when">${esc(fmtDay(a.createdAt))}</span>
+    </span>
+    <span class="n">${esc(top?top.name:a.destination)}</span>
+    ${top&&top.verdict?`<span class="sub">${esc(top.verdict)}</span>`:''}
+    ${said?`<span class="said">${esc(said)}</span>`:''}
+    <span class="facts">
+      ${also?`<span class="fact"><span class="k">Also named</span><span class="v">${esc(also)}</span></span>`:''}
+      <span class="fact">
+        <span class="k">${capFirst(words(grounded.length))} placed</span>
+        ${been?`<span class="v">${words(been)} walked since</span>`
+          :'<span class="v quiet">not walked yet</span>'}
+      </span>
+    </span>
+  </button>`;
 }
 function askSectionHTML(){
   const asks=D.asks.slice().sort(byNew);
   if(!asks.length)return '';
-  return `<div class="shead"><span class="l">What Carta found</span><span class="r">${asks.length} ask${asks.length===1?'':'s'}</span></div>
+  return `<div class="shead over"><span class="l">What Carta found</span><span class="r">${words(asks.length)} ask${asks.length===1?'':'s'} · tap to reopen</span></div>
   ${asks.map(askRowHTML).join('')}`;
 }
 function yearSectionHTML(){
