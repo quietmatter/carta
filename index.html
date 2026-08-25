@@ -411,11 +411,29 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
    country that IS a mark rather than ground (`.mk-land`): land in paper, coast
    an ink hairline, on a sunk disc. A city marks its point on it, filled,
    because a city has a real coordinate and a filled mark is what that earns. */
-.seal{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);
-  background:var(--paper-2);overflow:hidden;display:flex;align-items:center;justify-content:center;padding:5px}
+.seal{flex:none;--sz:36px;--pad:5px;width:var(--sz);height:var(--sz);border-radius:50%;border:1px solid var(--line);
+  background:var(--paper-2);overflow:hidden;display:flex;align-items:center;justify-content:center;padding:var(--pad)}
 .seal svg{display:block;width:100%;height:100%}
 .seal .mk-seal{fill:var(--surface-card);fill-opacity:.9;stroke:var(--ink-2);stroke-width:1.3;vector-effect:non-scaling-stroke}
 .seal .mk-pt{fill:var(--ink)}
+/* the highlands, at the widths that can hold them (Phase 29 · B). Coarsest
+   band strongest: 3,000 m solid, 2,000 m dashed wide, 1,000 m dashed fine —
+   so a seal showing one contour is showing the highest ground, not the most
+   ink. Still monochrome, still never the ember. */
+.seal .tp{fill:none;stroke:var(--ink-3);vector-effect:non-scaling-stroke}
+.seal .tp1{stroke-width:.9;stroke-opacity:.5}
+.seal .tp2{stroke-width:1;stroke-opacity:.62}
+.seal .tp3{stroke-width:1.1;stroke-opacity:.72}
+/* the city plate (Phase 29 · C) — the same disc with a window in it. An open
+   coast is stroked and never filled: an arc has no inside, and a fill would
+   invent a shore out at sea. The scale bar is the one thing on it that isn't
+   ground. Named `.gnd` rather than `.plate`, which is the brew's curve and has
+   been since v7.31.0 — two different drawings, one word, and only one of them
+   can have it. */
+.seal.gnd .pl-arc{fill:none;stroke:var(--ink-2);stroke-width:1.3;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.seal.gnd .pl-mk{fill:var(--ink);fill-opacity:.6}
+.seal.gnd .pl-mk.lead{fill-opacity:1}
+.seal.gnd .pl-bar{stroke:var(--ink-3);stroke-width:1.2;stroke-opacity:.7;vector-effect:non-scaling-stroke}
 /* a country the record has tasted — a name and its weight, tappable */
 .cchip{display:inline-flex;align-items:baseline;gap:7px;background:none;border:1px solid var(--line-strong);
   color:var(--ink);font-family:var(--serif);font-size:var(--s15);padding:8px 12px;min-height:38px;cursor:pointer;border-radius:var(--radius)}
@@ -744,10 +762,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.35.0"></script>
-<script src="carta-plate.js?v=7.35.0"></script>
-<script src="carta-shot.js?v=7.35.0"></script>
-<script src="carta-ask.js?v=7.35.0"></script>
+<script src="carta-map.js?v=7.36.0"></script>
+<script src="carta-plate.js?v=7.36.0"></script>
+<script src="carta-shot.js?v=7.36.0"></script>
+<script src="carta-ask.js?v=7.36.0"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1329,9 +1347,12 @@ function cityOf(address){
 }
 /* And the country, for the same reason and off the same read (Phase 28). A
  * city row wants to say what ground it stands on, and the belt can only answer
- * for the thirty-odd countries coffee grows in — Denmark, Germany and Norway
- * are not among them and never will be. The lookup that already confirms the
- * pin states the country outright, so Carta stops throwing it away.
+ * for the countries it carries. The lookup that already confirms the pin
+ * states the country outright, so Carta stops throwing it away.
+ * Phase 29 · A widened the belt to the four countries the record most often
+ * drinks in, which retires Denmark and Germany as the examples here — it does
+ * not retire the reason: the belt is a fixed list of shapes and a record goes
+ * wherever the keeper does, so there will always be a country it cannot name.
  * It is a label and nothing more: it never keys a lookup, never joins a node,
  * and a place looked up before this simply has no country until it is looked
  * up again, which reads as blank rather than as a guess. */
@@ -2885,7 +2906,11 @@ let _passportCache=null;
 function passportSVG(interactive){
   interactive=interactive!==false;
   const tasted=tastedCountryMap();
-  const keys=Object.keys(LANDS);
+  // the passport is a record of where coffee is GROWN, so the entries the belt
+  // carries only so a café has ground under it stay off it (Phase 29 · A).
+  // <carta-belt> makes the same cut through its own BELT_SET; this is the
+  // printable card's half of it.
+  const keys=Object.keys(LANDS).filter(k=>!LAND_OFF_BELT[k]);
   const allPts=[];
   const rings={};
   keys.forEach(k=>{const rs=landRingsRaw(k);if(!rs)return;rings[k]=rs;rs.forEach(r=>r.forEach(p=>allPts.push(p)))});
@@ -2953,18 +2978,43 @@ function landSeal(key){
     return s?s+' Z':''}).filter(Boolean).join(' ');
   return _sealCache[key]=d&&isFinite(x1-x0)?{d,w:x1-x0,h:y1-y0,la0,x0,y1}:null;
 }
-// the seal, or nothing at all. A row never draws a shape the record can't
-// defend — the same refusal cupLeadHTML has always made, pointed at the ground.
-function sealHTML(key,at){
+/* the seal, or nothing at all. A row never draws a shape the record can't
+ * defend — the same refusal cupLeadHTML has always made, pointed at the ground.
+ *
+ * Phase 29 · B: one source, three widths, one threshold. The seal takes the
+ * width it is drawn at and decides what that width can hold — under 64 px a
+ * 0.05° contour is four dots, so the row keeps the outline alone; above it the
+ * bands arrive. Nothing branches on the surface it was called from, and no
+ * call site passes a surface name: the geometry is the same at 36 px in a
+ * journal row and at 168 px on a page, and only the width differs. */
+const SEAL_PAD=.075;        // the disc's own margin, everywhere but the 36 px row
+function sealHTML(key,at,px){
   const s=landSeal(key);
   if(!s)return '';
-  const n=v=>v.toFixed(1);
+  const w=px||36,n=v=>v.toFixed(1);
   // M1: a city has a real coordinate, so it earns a filled mark. Sized off the
   // shape's own long side, so the dot reads the same on Kenya and on Brazil.
   const dot=at&&at.lat!=null&&at.lon!=null
     ?`<circle class="mk-pt" cx="${n(KMX(at.lon,s.la0)-s.x0)}" cy="${n(s.y1-KMY(at.lat))}" r="${Math.round(Math.max(s.w,s.h)*0.0552)}"/>`
     :'';
-  return `<span class="seal"><svg viewBox="0 0 ${n(s.w)} ${n(s.h)}" preserveAspectRatio="xMidYMid meet"><path class="mk-seal" d="${s.d}"/>${dot}</svg></span>`;
+  // the width decides, and the threshold lives in one place (carta-map.js)
+  const bands=sealBands(w);
+  const lv=bands.length?landTopoRaw(key):null;
+  // a dash pattern is the one thing vector-effect does NOT hold at screen
+  // scale, so it is stated in the viewBox's own kilometres: km per drawn pixel,
+  // times the pattern the ink table asks for. Left in user units it is a
+  // stipple — sub-pixel dashes across sixteen hundred kilometres of country.
+  const kmPx=Math.max(s.w,s.h)/(w*(1-2*SEAL_PAD));
+  const pat=[[1.4,2.4],[2.6,2],null];   // 1,000 m fine, 2,000 m wide, 3,000 m solid
+  const topo=!lv?'':bands.map(b=>{
+    const p=pat[b],da=p?` stroke-dasharray="${n(p[0]*kmPx)} ${n(p[1]*kmPx)}"`:'';
+    return (lv[b]||[]).map(r=>{
+      let d='';r.forEach((q,i)=>{d+=(i?' L ':'M ')+n(KMX(q.lon,s.la0)-s.x0)+' '+n(s.y1-KMY(q.lat))});
+      return d?`<path class="tp tp${b+1}"${da} d="${d} Z"/>`:'';
+    }).join('');
+  }).join('');
+  const size=w===36?'':` style="--sz:${w}px;--pad:${(w*SEAL_PAD).toFixed(1)}px"`;
+  return `<span class="seal"${size}><svg viewBox="0 0 ${n(s.w)} ${n(s.h)}" preserveAspectRatio="xMidYMid meet"><path class="mk-seal" d="${s.d}"/>${topo}${dot}</svg></span>`;
 }
 /* which outline a point actually falls inside. Even-odd across every ring of a
  * country, so an island counts and a country's own hole doesn't — Lesotho sits
@@ -2992,12 +3042,16 @@ function landLabel(key){
 /* the ground a city stands on. Two questions, and they are not the same one:
  * what the country is CALLED, and whether the file can DRAW it.
  *
- * The name comes off the record — the confirmed lookup states it (countryOf)
- * — and falls back to the belt, which can name a country only where coffee
- * grows in it. The outline comes from the belt alone. So Mexico is named and
- * drawn; Denmark is named and not drawn, and the row says so; and a city whose
- * cafés were placed before Carta kept the country is neither, and stays quiet
- * rather than guessing. `key` is null exactly when there is nothing to draw. */
+ * The name comes off the record — the confirmed lookup states it (countryOf) —
+ * and falls back to the belt. The outline comes from the belt alone.
+ *
+ * Amended Phase 29 · A: the belt now reaches the countries the record drinks
+ * in, so Denmark, Germany, Norway and Japan are named AND drawn where they
+ * used to be only named. The split still earns its keep — it is what lets a
+ * city in a country the belt has never carried be named off its own lookup
+ * and honestly not drawn, which is where the record goes next rather than a
+ * case that has been closed. `key` is null exactly when there is nothing to
+ * draw, and the plate below reads it that way. */
 // the name alone, which every listing asks for and which two sources answer:
 // what a confirmed lookup stated, and — free and offline — what the belt can
 // read off the pins themselves. Naming only; it says nothing about drawing.
@@ -3015,6 +3069,67 @@ function cityGround(city){
   const label=cityCountry(city);
   if(!label&&!key)return null;
   return {key,label,at};
+}
+
+/* ============ the plate (Phase 29 · C) ============
+ * A plate is a seal with a window: a box of `span` kilometres centred on the
+ * city, drawing only what closes inside it. One test, made at draw time, no
+ * city-by-city exceptions — a ring the frame would cut is not ground, it is a
+ * chord, so it is dropped. Where nothing is left the plate stops drawing earth
+ * and draws what the record does hold: your own cafés at their own
+ * coordinates, which costs nothing and is never wrong, because it only ever
+ * claims what you logged.
+ *
+ * Kaua‘i is the case where that is an island; Los Angeles is the case where it
+ * is six points and a coastline the city table brings. The window arithmetic
+ * is in carta-map.js beside the tables it reads (plateGround); everything here
+ * is ink. MAPPING.md governs it: paper, one hairline, the ember never on the
+ * map — a strong colour on a map reads as data about the map. */
+const PLATE_SPAN=190,       // the row's frame. The one number chosen by eye
+      PLATE_LEAD_PX=4.5,    // marks are stated as a diameter in drawn pixels and
+      PLATE_MARK_PX=3,      // converted into the window's own kilometres, so a
+      PLATE_FULL_PX=60;     // plate reads the same at 36 px and at 168
+function cityPlate(city,span,px){
+  const g=cityGround(city);
+  // a city can be named without being placed — cityGround answers the name on
+  // its own — and a window needs a coordinate to be centred on
+  if(!g||!g.at)return null;
+  const w=px||36,inner=w-2*(w===36?5:w*SEAL_PAD),at=g.at;
+  const pins=placed(cityPlaces(city));
+  const km=(a,b)=>Math.hypot(KMX(a.lon,at.lat)-KMX(b.lon,at.lat),KMY(a.lat)-KMY(b.lat));
+  let ends=[],across=0;
+  pins.forEach((a,i)=>pins.slice(i+1).forEach(b=>{const d=km(a,b);if(d>across){across=d;ends=[a,b]}}));
+  const ground=plateGround(city,g.key,at,span);
+  // Three discs, in the order the record can defend them. The city's own frame
+  // where the window holds ground; the country's outline where it doesn't but
+  // the belt still knows the country — Copenhagen's Denmark, Anchorage's
+  // Alaska, which is the seal turn 4 drew and Phase A and E made available;
+  // and the record's own points where neither, which is never wrong because it
+  // only claims what you logged. Only the third states a fall.
+  if(!ground.rings.length&&!ground.arcs.length&&g.key)
+    return {drew:true,across,span,html:sealHTML(g.key,at,w)};
+  const win=ground.w,n=v=>v.toFixed(1);
+  const X=p=>KMX(p.lon,at.lat)-KMX(win.lon0,at.lat),Y=p=>KMY(win.lat1)-KMY(p.lat);
+  const line=r=>{let d='';r.forEach((p,i)=>{d+=(i?' L ':'M ')+n(X(p))+' '+n(Y(p))});return d};
+  // a ring is filled and hairlined; an arc is stroked and never closed, because
+  // an open coast has no inside and filling one invents a shore out at sea
+  const rings=ground.rings.map(r=>`<path class="mk-seal" d="${line(r)} Z"/>`).join('');
+  const arcs=ground.arcs.map(a=>`<path class="pl-arc" d="${line(a)}"/>`).join('');
+  const drew=!!(ground.rings.length||ground.arcs.length);
+  // the lead café leads the plate the same way it leads the row's own line;
+  // at row width the plate keeps it and the two ends of the spread, since six
+  // overlapping dots at 36 px are a blot rather than a spread
+  const lead=cityLead(city),leadPin=lead&&pins.find(p=>p.name===lead.name);
+  const show=w>=PLATE_FULL_PX?pins:[leadPin,...ends].filter((p,i,l)=>p&&l.indexOf(p)===i);
+  const r=v=>n(v/2*span/inner);
+  const marks=show.map(p=>`<circle class="pl-mk${p===leadPin?' lead':''}" cx="${n(X(p))}" cy="${n(Y(p))}" r="${r(p===leadPin?PLATE_LEAD_PX:PLATE_MARK_PX)}"/>`).join('');
+  // a drawn frame with no stated scale is a picture; one bar, in the window's
+  // own kilometres, is what makes it a measurement. Not at row width, where it
+  // would be four pixels of hairline under a shape it is meant to explain.
+  const bar=span<150?20:50;
+  const rule=w<PLATE_FULL_PX?'':`<path class="pl-bar" d="M ${n(span*.08)} ${n(span*.93)} L ${n(span*.08+bar)} ${n(span*.93)}"/>`;
+  return {drew,across,span,
+    html:`<span class="seal gnd"${w===36?'':` style="--sz:${w}px;--pad:${(w*SEAL_PAD).toFixed(1)}px"`}><svg viewBox="0 0 ${n(span)} ${n(span)}" preserveAspectRatio="xMidYMid meet">${rings}${arcs}${rule}${marks}</svg></span>`};
 }
 // the date a leaf carries: near enough to be relative, past that a real date.
 // "4d ago" is a receipt; "14 March" is a record, and the record is the product.
@@ -4074,10 +4189,13 @@ async function geocodeCityPlaces(city){
 }
 /* ---- the country, filled in behind you (Phase 28) -------------------------
  * A city row names the ground it stands on, and until now only the belt could
- * answer: Denmark and Germany came out blank because coffee doesn't grow in
- * them. The lookup that confirms a pin states the country outright, so a record
- * written before Carta kept it is brought up to date without the keeper being
- * asked to do anything.
+ * answer, so a city in a country the belt does not carry came out blank. The
+ * lookup that confirms a pin states the country outright, so a record written
+ * before Carta kept it is brought up to date without the keeper being asked to
+ * do anything. Phase 29 · A then added Denmark, Germany, Norway and Japan to
+ * the belt, which does not make this redundant — it makes it cheaper, since
+ * the belt now answers for free in four more countries and this reads only for
+ * the ones still outside it.
  *
  * It is deliberately the smallest job that closes the gap:
  *   · the belt answers first, offline and free — a city whose pins fall inside
@@ -4562,8 +4680,13 @@ function cityRowHTML(city){
   const ground=cityGround(city);
   const lede=cityLede(city);
   const since=citySince(city);
-  // named and drawn are separate states: Denmark is named, never drawn
-  const seal=ground&&ground.key?sealHTML(ground.key,ground.at):'';
+  // the city's own frame, not its country's: the row opens on 190 km around
+  // where your cafés actually are (Phase 29 · C). The plate keeps the earlier
+  // named-and-drawn split rather than replacing it — it falls back to the
+  // country's own outline where its window holds nothing, and only where the
+  // belt cannot name the country either does it draw the record's own cafés.
+  const plate=cityPlate(city,PLATE_SPAN);
+  const seal=plate?plate.html:'';
   return `<button class="lcard" onclick="openCityChapter(${jsq(city)})">
     <span class="head${seal?'':' bare'}">
       ${seal}
@@ -4578,9 +4701,13 @@ function cityRowHTML(city){
         <span class="k">${capFirst(words(places.length))} café${places.length===1?'':'s'}</span>
         <span class="v num">${words(cups.length)} cup${cups.length===1?'':'s'}</span>
       </span>
-      ${seal?'':`<span class="fact">
+      ${plate&&plate.across>=1?`<span class="fact">
+        <span class="k">Across</span>
+        <span class="v num">${Math.round(plate.across)} km</span>
+      </span>`:''}
+      ${plate&&plate.drew?'':`<span class="fact">
         <span class="k">The ground</span>
-        <span class="v fall">no outline on file — listed, not drawn</span>
+        <span class="v fall">${plate?'no outline on file — your own cafés':'no café placed here yet'}</span>
       </span>`}
     </span>
   </button>`;
@@ -5353,8 +5480,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.35.0';
+const APP_VERSION='7.36.0';
 const CHANGELOG=[
+  {v:'7.36.0',d:"Ground for every listing. A city you drink in used to draw its country or admit it had none on file, and Copenhagen, Berlin and Oslo admitted it every time — the outlines Carta carries are where coffee is grown, and none of those grow any. The belt reaches them now, at four hundred and seventy-four bytes, and a city row draws the ground it actually stands on rather than the continent it sits somewhere in: the frame closes from the country to a hundred and ninety kilometres around your own cafés and draws whatever closes inside it. Kaua‘i is the island it is. Los Angeles is the coast at Santa Monica Bay and the turn at Palos Verdes, which the belt could not hold and a table of city coastlines can, for forty-five bytes. Where nothing on file reaches that far the row draws your cafés at their own coordinates, states how far apart they are, and says plainly that the ground isn’t on file — a shape the record cannot defend is still never drawn. Open a seal past thumbnail size and the highlands come with it: the contours have always been in the file, and they are spent at the width that can hold them instead of smudged at the width that cannot. And Alaska is its own outline at last. It rode inside the United States, three thousand kilometres of empty frame that left a Portland pin adrift in the middle of the country; Anchorage draws Alaska now, and Portland draws the coast it stands on. Nothing here fetches, and the whole of it is under two kilobytes. Alongside it, the listing card is finally the card the design board drew: a cup carries one fact row rather than two — a café cup answers where it grew, a brew answers what went through the bed, and the seal was already saying the ground twice — and where the outlines still cannot reach, the city is at least named. The lookup that confirms a café’s address has been stating its country all along and Carta was throwing it away; it keeps it now, fills it in behind you for every café already on the record, and a city row says the country plainly whether or not the file can draw it."},
   {v:'7.35.0',d:"The consolidation turn. One back that always knows where it came from — and the phone’s own back gesture finally works, closing the topmost layer instead of the app. One surface for writing a cup, wherever it was poured, and the same surface corrects a reading already written. The door asks where the cup is first: a café cup saves with a place and a 1–9, and a coffee left unnamed is written as — a cup, unnamed — an honest record you can name later from the cup itself. A welcome on first open; the release notes that were always maintained finally have a door, once per version and any time from Your record. Both keys live on Your record now, a sign-in resumes the errand it interrupted, every failure surface offers the same try-again, and \"Not mine\" has a real Undo. Unread content reads at reading contrast in both themes, focus is visible everywhere, the 1–9 and the dial steppers clear the touch minimum, and the ask’s answer folds to its argument — with a reply Carta can’t read stated as the honest failure it is."},
   {v:'7.34.2',d:"A Setup, matched by what it actually is. A grinder that feeds two brewers — an espresso machine and a pour-over dripper sharing a burr — was being read as one Setup, because the silent join off a Visualizer shot only ever checked the grinder's name. \"A Setup from Visualizer\" reported nothing new when the second brewer's shots were sitting right there, and shots pulled at the door were minting straight onto the wrong Setup: a keeper's own pour-overs landed on their legacy espresso Setup, silently, because the two happened to share a grinder. The match now checks the brewer too — a Setup that has never named one still joins on the grinder alone, exactly as before, but two Setups differing only in what they're attached to are never folded into one again. And a cup already written couldn't have this corrected at all: its own page now offers \"Wrong Setup? Correct it\" whenever there's more than one Setup to choose from, straight into the same form a new brew's Setup is picked from."},
   {v:'7.34.1',d:"Three blocks, put back where they belong. The split that moved the argument and the Visualizer read into their own files left three things behind in the wrong neighborhood — the backup system, the sharing plumbing every card and the brief lean on, and the café-placing lookup the ask itself calls into. All three had drifted to sit between the dial-in screen and the map surfaces, which is nowhere close to any of their actual callers. Nothing about what they do changed — the backup system now sits beside the record page that shows it, the sharing door sits beside the cards that open it, and the café lookup sits beside the café-placing code that calls it most. A file is only as readable as its neighborhoods are honest."},

@@ -295,9 +295,10 @@ function askRowHTML(a){
   const seal=key?sealHTML(key,at):'';
   // named and drawn are two states. The name comes off the record three ways,
   // finest first: a café this ask placed and you have since marked, the city
-  // it was asked about, and the belt. The belt only DRAWS the countries coffee
-  // grows in, so an ask in Berlin is titled Germany and says plainly that
-  // Germany isn't a shape the file holds.
+  // it was asked about, and the belt. The belt only DRAWS the countries it
+  // carries, so an ask outside them is titled from the record and says plainly
+  // that its country isn't a shape the file holds. Berlin was that case until
+  // Phase 29 · A put Germany in the belt; the next one along still is.
   const country=grounded.map(f=>{const q=f.placeRef&&placeById(f.placeRef);return q&&q.country}).find(Boolean)
     ||grounded.map(f=>f.city&&cityCountry(f.city)).find(Boolean)
     ||(key?landLabel(key):'');
@@ -1079,4 +1080,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.35.0';
+window.ASK_VERSION='7.36.0';
