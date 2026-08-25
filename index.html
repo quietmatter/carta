@@ -2998,12 +2998,21 @@ function landLabel(key){
  * drawn; Denmark is named and not drawn, and the row says so; and a city whose
  * cafés were placed before Carta kept the country is neither, and stays quiet
  * rather than guessing. `key` is null exactly when there is nothing to draw. */
-function cityGround(city){
+// the name alone, which every listing asks for and which two sources answer:
+// what a confirmed lookup stated, and — free and offline — what the belt can
+// read off the pins themselves. Naming only; it says nothing about drawing.
+function cityCountry(city){
   const places=cityPlaces(city);
+  const stated=places.map(p=>(p.country||'').trim()).find(Boolean);
+  if(stated)return stated;
   const at=meanPin(placed(places));
   const key=at?landAt(at):null;
-  const stated=(places.map(p=>(p.country||'').trim()).find(Boolean))||'';
-  const label=stated||(key?landLabel(key):'');
+  return key?landLabel(key):'';
+}
+function cityGround(city){
+  const at=meanPin(placed(cityPlaces(city)));
+  const key=at?landAt(at):null;
+  const label=cityCountry(city);
   if(!label&&!key)return null;
   return {key,label,at};
 }
@@ -4007,10 +4016,10 @@ async function geocodeCafe(name,neighborhood,city){
 async function reverseGeocode(lat,lon){
   try{
     const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lon}`,{headers:{'Accept':'application/json'}});
-    if(!r.ok)return {hood:'',city:'',country:''};
+    if(!r.ok)return {ok:false,hood:'',city:'',country:''};
     const x=await r.json();
-    return {hood:hoodOf(x&&x.address),city:cityOf(x&&x.address),country:countryOf(x&&x.address)};
-  }catch(e){return {hood:'',city:'',country:''}}
+    return {ok:true,hood:hoodOf(x&&x.address),city:cityOf(x&&x.address),country:countryOf(x&&x.address)};
+  }catch(e){return {ok:false,hood:'',city:'',country:''}}
 }
 
 // geocoding a café is the same lookup the ask already grounds its suggestions
@@ -4062,6 +4071,58 @@ async function geocodeCityPlaces(city){
     }
     await new Promise(r=>setTimeout(r,1100));
   }
+}
+/* ---- the country, filled in behind you (Phase 28) -------------------------
+ * A city row names the ground it stands on, and until now only the belt could
+ * answer: Denmark and Germany came out blank because coffee doesn't grow in
+ * them. The lookup that confirms a pin states the country outright, so a record
+ * written before Carta kept it is brought up to date without the keeper being
+ * asked to do anything.
+ *
+ * It is deliberately the smallest job that closes the gap:
+ *   · the belt answers first, offline and free — a city whose pins fall inside
+ *     a growing country is named from geometry and never touches the network;
+ *   · one call per CITY, not per café. Every café in a city shares its country,
+ *     so one read is written to all of them: a record with four cities outside
+ *     the belt costs four calls, once, ever;
+ *   · only where a pin already exists, because a reverse read needs a
+ *     coordinate — an unplaced café is left alone, exactly as it is everywhere
+ *     else in the file;
+ *   · once per city whether or not it answered, the same posture
+ *     geocodeCityPlaces takes with `geocoded`; the café's own Look again is the
+ *     door for anything this misses;
+ *   · after the first paint, paced a second apart per Nominatim's usage policy,
+ *     and it stands down in silence when the network doesn't answer. Nothing on
+ *     screen waits for it, nothing announces it, and no cup, café or coffee is
+ *     altered — it only ever fills a blank. */
+async function backfillCountries(){
+  const done=new Set(getPref('countryFilled',[]));
+  const targets=knownCities().filter(city=>{
+    if(done.has(fold(city)))return false;
+    const places=cityPlaces(city);
+    if(places.some(p=>(p.country||'').trim()))return false;  // already named
+    const at=meanPin(placed(places));
+    if(!at)return false;                                     // nothing to read from
+    return !landAt(at);                                      // the belt already names it, for free
+  });
+  if(!targets.length)return;
+  let wrote=false;
+  for(const city of targets){
+    const at=meanPin(placed(cityPlaces(city)));
+    if(!at)continue;
+    const geo=await reverseGeocode(at.lat,at.lon);
+    // an address that states no country is answered and done with; a request
+    // nobody answered is not an answer, and the network being off is never a
+    // fact about Denmark. Only a real reply retires a city.
+    if(geo.ok){done.add(fold(city));setPref('countryFilled',[...done])}
+    if(geo.country){
+      cityPlaces(city).forEach(p=>{if(!(p.country||'').trim())p.country=geo.country});
+      save();wrote=true;
+    }
+    await new Promise(r=>setTimeout(r,1100));
+  }
+  // one repaint, at the end, and only where a city row is actually being read
+  if(wrote&&!pageView&&tab==='atlas')render();
 }
 // one branch, settled: the position and the area the lookup actually stated.
 // The area only ever comes from a confirmed position — an unplaced café is
@@ -5376,6 +5437,12 @@ if(live('cups').length&&getPref('lastSeenVersion','')!==APP_VERSION){
 // after the first paint and never before it — the Atlas has already drawn
 // itself by the time this either lands or quietly doesn't
 vizCheckOnOpen();
+// the country behind your cities, for a record written before Carta kept it.
+// Free and offline wherever the belt can answer; a paced, silent read only for
+// the cities it can't, and never more than once each.
+// its own contract is to stand down in silence, and a boot path is the last
+// place that should ever surface an unhandled rejection
+backfillCountries().catch(()=>{});
 // the app-shortcut's own door (ROADMAP.md Phase 10, manifest.json's
 // shortcuts array) — a long-press on the home screen straight to the
 // door, skipping the Journal. Cleared from the address bar once read, so

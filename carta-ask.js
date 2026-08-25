@@ -293,12 +293,14 @@ function askRowHTML(a){
   const at=meanPin(grounded.map(f=>f.lat!=null&&f.lon!=null?{lat:f.lat,lon:f.lon}:null));
   const key=at?landAt(at):null;
   const seal=key?sealHTML(key,at):'';
-  // named and drawn are two states. The country comes off the cafés this ask
-  // actually placed — the same confirmed lookup that grounded them states it —
-  // and the belt only draws the ones coffee grows in. So an ask in Berlin is
-  // titled Germany and says plainly that Germany isn't a shape the file holds.
-  const country=grounded.map(f=>{const q=f.placeRef&&placeById(f.placeRef);return q&&q.country})
-    .find(Boolean)||(key?landLabel(key):'');
+  // named and drawn are two states. The name comes off the record three ways,
+  // finest first: a café this ask placed and you have since marked, the city
+  // it was asked about, and the belt. The belt only DRAWS the countries coffee
+  // grows in, so an ask in Berlin is titled Germany and says plainly that
+  // Germany isn't a shape the file holds.
+  const country=grounded.map(f=>{const q=f.placeRef&&placeById(f.placeRef);return q&&q.country}).find(Boolean)
+    ||grounded.map(f=>f.city&&cityCountry(f.city)).find(Boolean)
+    ||(key?landLabel(key):'');
   const said=(a.read||(a.plan&&a.plan.move)||'').trim();
   return `<button class="lcard" onclick="openAskResultScreen('${a.id}')">
     <span class="head${seal?'':' bare'}">
