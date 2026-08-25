@@ -23,7 +23,13 @@ function serve(){
 (async()=>{
   const server=await serve();
   const port=server.address().port;
-  const env=fs.readFileSync(path.join(ROOT,'mock/env.js'),'utf8').split('carta7.design.').join('carta7.');
+  // the seeded record, the offline posture and the canned network all come from
+  // the design bundle's own mock. In the bundle it is `mock/env.js`; vendored
+  // into the app repo it is `test/fixtures/env.js`. Same file either way — the
+  // point is that the fold is checked against the record it was designed on.
+  const seed=['mock/env.js','test/fixtures/env.js'].map(f=>path.join(ROOT,f)).find(fs.existsSync);
+  if(!seed){console.error('no seed found: expected mock/env.js or test/fixtures/env.js');process.exit(1)}
+  const env=fs.readFileSync(seed,'utf8').split('carta7.design.').join('carta7.');
   const browser=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
   const problems=[],notes=[];
 
