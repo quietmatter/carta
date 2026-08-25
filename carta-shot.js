@@ -259,19 +259,34 @@ function openVisualizerKey(){
   <label class="chk">
     <input type="checkbox" id="viz_watch" ${getPref('vizWatch',false)===true?'checked':''}>
     <span class="bx" aria-hidden="true">&#10003;</span>
-    <span class="t"><b>Look for a new shot when Carta opens</b>
-      <span>One call for your latest shot, on opening. Off, and the Atlas waits for you to ask for it.</span></span>
+    <span class="t"><b>Look for a new brew when Carta opens</b>
+      <span>One call for your latest brew, on opening. Off, and the Atlas waits for you to ask for it.</span></span>
   </label>
-  <div class="note">Unreachable, Visualizer costs you nothing: the door still opens on typing, and the shot can be pulled later — a shot file keeps.</div>
+  <div class="m" style="margin:2px 0 12px">Your login at <a class="text-action" style="color:var(--ink-2)" href="https://visualizer.coffee" target="_blank" rel="noreferrer">visualizer.coffee</a> — Carta reads brews with it and changes nothing there.</div>
+  <div class="note">Unreachable, Visualizer costs you nothing: the door still opens on typing, and the brew can be pulled later — a brew file keeps.</div>
   <button class="btn btn-primary" style="margin-top:14px" onclick="saveVisualizerKey()">Save</button>
   ${visualizerEmail()?`<button class="btn btn-quiet" onclick="clearVisualizerKey()">Sign out of Visualizer</button>`:''}
   <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="closeSheet()">Not now</button></div>`);
 }
+/* v7.35.0, critique rec 6: signing in used to be a dead end. Every Visualizer
+ * errand — pull a brew at the door, read your recent brews, seed a Setup —
+ * checked for an account, found none, opened this sheet and forgot what it had
+ * been asked to do; saving the account dropped the keeper back where they
+ * started, with the errand to begin again. The errand is held here and resumed
+ * the moment the account is good for it. */
+let _vizResume=null;
+// called from inside an errand's own no-account guard, on the way to the sheet.
+// Deliberately not a wrapper around the errand: a wrapper would have to be
+// applied where the function is defined, and `doorPull` lives in index.html —
+// which would make that file's evaluation depend on this one having loaded,
+// the exact stale-sibling failure APP_VERSION's check exists to survive.
+function vizResumeAfterSignIn(f){_vizResume=f}
 function saveVisualizerKey(){
   const w=document.getElementById('viz_watch');
   setPref('visualizerEmail',val('viz_email'));setPref('visualizerPassword',val('viz_password'));
   setPref('vizWatch',!!(w&&w.checked));
   closeSheet();render();toast('Saved — on this device only.');
+  if(_vizResume&&visualizerAuthHeader()){const f=_vizResume;_vizResume=null;setTimeout(f,60)}
 }
 function clearVisualizerKey(){
   setPref('visualizerEmail','');setPref('visualizerPassword','');setPref('vizWatch',false);
@@ -287,7 +302,11 @@ const VISUALIZER_BASE='https://visualizer.coffee/api/shots';
 async function callVisualizer(path){
   const auth=visualizerAuthHeader();if(!auth)throw new Error('Set your Visualizer account first.');
   const r=await fetch(VISUALIZER_BASE+path,{headers:{'Authorization':auth}});
-  if(!r.ok)throw new Error(r.status===401?"Visualizer didn't recognize that email or password.":`Visualizer call failed (${r.status}).`);
+  // a status code is not a sentence. What the keeper needs to know is whether
+  // anything changed (it didn't) and whether trying again is worth it (it is).
+  if(!r.ok)throw new Error(r.status===401
+    ?"Visualizer didn't recognize that email or password."
+    :"Visualizer didn't answer. Nothing changed — try again in a moment.");
   return r.json();
 }
 function applyVisualizerShot(shot){['dose','water','time','grind'].forEach(k=>{if(shot[k]!=null)setDial(k,shot[k])});}
@@ -314,17 +333,18 @@ function vizShotRowHTML(r,onclickFn){
 let _vizBusy=false,_vizShots=[];
 async function openVisualizerPicker(){
   if(_vizBusy)return;
-  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  if(!visualizerAuthHeader()){vizResumeAfterSignIn(openVisualizerPicker);openVisualizerKey();return}
   const box=document.getElementById('viz_picker');if(!box)return;
   _vizBusy=true;
-  box.innerHTML='<div class="muted small" style="margin-top:8px">Loading your shots…</div>';
+  box.innerHTML='<div class="muted small" style="margin-top:8px">Reading your brews…</div>';
   try{
     const rows=await fetchVisualizerShots(8);
     _vizShots=rows;
     box.innerHTML=rows.length?rows.map(r=>vizShotRowHTML(r,'vizShotPicked')).join('')
-      :'<div class="muted small" style="margin-top:8px">No shots on your Visualizer account yet.</div>';
+      :'<div class="muted small" style="margin-top:8px">No brews on your account yet.</div>';
   }catch(e){
-    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>`;
+    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>
+      <button class="btn btn-quiet mini" style="margin-top:10px;min-height:36px" onclick="openVisualizerPicker()">Try again</button>`;
   }
   _vizBusy=false;
 }
@@ -344,10 +364,10 @@ function vizShotPicked(id){
  * and "Type it in instead" reaches the exact blank form this always could. */
 let _setupCandidates=[];
 async function openSetupImport(){
-  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  if(!visualizerAuthHeader()){vizResumeAfterSignIn(openSetupImport);openVisualizerKey();return}
   openSheet(`<h3>A Setup from Visualizer</h3>
-  <div class="sub">Read off your own shots — the grinder, and whatever machine or brewer rode beside it. Nothing else a Setup carries is in a shot file, so the rest stays yours to add.</div>
-  <div id="setup_import"><div class="muted small" style="margin-top:8px">Reading your shots…</div></div>
+  <div class="sub">Read off your own brews — the grinder, and whatever machine or brewer rode beside it. Nothing else a Setup carries is in a brew file, so the rest stays yours to add.</div>
+  <div id="setup_import"><div class="muted small" style="margin-top:8px">Reading your brews…</div></div>
   <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="openSetupForm()">Type it in instead</button></div>`);
   await loadSetupCandidates();
 }
@@ -360,9 +380,10 @@ async function loadSetupCandidates(){
       ?_setupCandidates.map((c,i)=>`<button class="lrow" onclick="setupCandidatePicked(${i})">
           <span class="mid"><span class="t">${esc(c.name)}</span>
           <span class="m">seen on your Visualizer account</span></span></button>`).join('')
-      :'<div class="muted small" style="margin-top:8px">Nothing new on your last shots — every grinder there already has a Setup, or none of them said one.</div>';
+      :'<div class="muted small" style="margin-top:8px">Nothing new on your last brews — every grinder there already has a Setup, or none of them said one.</div>';
   }catch(e){
-    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>`;
+    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>
+      <button class="btn btn-quiet" style="margin-top:12px" onclick="loadSetupCandidates()">Try again</button>`;
   }
 }
 function setupCandidatePicked(i){
@@ -435,7 +456,13 @@ window.addEventListener('pageshow',vizCheckOnResume);
 // when a cup is poured for someone else, or the machine was run to flush it.
 // Honest and permanent: the id is kept so the hero never offers it again.
 function dismissShot(id){
-  const list=vizDismissed().filter(x=>String(x)!==String(id));
+  // v7.35.0, critique rec 6: this was permanent and one tap away, on a screen
+  // where the tap beside it writes a cup. Everything else Carta puts away is
+  // undoable; so is this now — the dismissal, the kept read and the cache all
+  // come back together, because putting one back without the others would
+  // restore the row and lose the brew behind it.
+  const before={list:vizDismissed().slice(),waiting:_vizWaiting,read:readShotRead(id),cache:_vizCache[String(id)]};
+  const list=before.list.filter(x=>String(x)!==String(id));
   list.push(String(id));
   setPref('vizDismissed',list.slice(-20));
   if(_vizWaiting&&String(_vizWaiting.id)===String(id))_vizWaiting=null;
@@ -443,7 +470,13 @@ function dismissShot(id){
   // be someone else's would sit in Read before for another thirty reads
   forgetShotRead(id);delete _vizCache[String(id)];
   if(pageView&&pageView.kind==='shot')pageView=null;
-  render();toast('Left off. Carta won\'t offer that shot again.');
+  render();
+  toast('Put away — not yours.',function(){
+    setPref('vizDismissed',before.list);
+    if(before.read){loadShotsRead();_shotsReadCache[String(id)]=before.read;saveShotsRead()}
+    if(before.cache)_vizCache[String(id)]=before.cache;
+    _vizWaiting=before.waiting;render();
+  },'Undo');
 }
 // the shot the hero is standing on, or nothing — read by vAtlas on every
 // paint, and cleared the moment its cup is written
@@ -526,7 +559,7 @@ function openShotScreen(id,extra){openScreen('shot',String(id),extra);ensureShot
 // once a sitting; the row you pick is the only one read in full.
 let _shots={busy:false,rows:null,error:null,scope:'all'};
 function openShotsScreen(){
-  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  if(!visualizerAuthHeader()){vizResumeAfterSignIn(openShotsScreen);openVisualizerKey();return}
   openScreen('shots');loadShots();
 }
 async function loadShots(force){
@@ -555,9 +588,9 @@ function shotsReadRows(exclude){
  * sitting, and the bar would only offer a way to lose it. */
 function vShot(id,view){
   const shot=vizShotById(id);
-  if(!shot)return `<div class="pad" style="padding-top:26px"><div class="empty">That shot isn't in hand any more.</div>
-    <button class="btn btn-quiet" onclick="openShotsScreen()">Your recent shots</button>
-    <button class="btn btn-quiet" onclick="closePage()">Back</button></div>`;
+  if(!shot)return `<div class="pad" style="padding-top:26px"><div class="empty">That brew isn't in hand any more.</div>
+    <button class="btn btn-quiet" onclick="openShotsScreen()">Your recent brews</button>
+    <button class="btn btn-quiet" onclick="goBack()">Back</button></div>`;
   const g=platePaths(shot,PLATE_FULL),fg=shotFigures(shot),when=shotWhen(shot);
   const setup=setupById(matchSetupByGrinder(live('setups'),shot.grinderModel,brewerOf(shot)));
   const pour=shotMethod(shot)==='pourover';
@@ -593,11 +626,9 @@ function vShot(id,view){
    * became. This is what makes the plate reviewable — the screen no longer
    * assumes it is being read on the way to somewhere. */
   const cup=cupOfShot(shot.id);
-  const back=view&&view.back==='cup'&&view.cupId?`openScreen('cup',${jsq(view.cupId)})`
-    :view&&view.back==='shots'?'openShotsScreen()':'closePage()';
   return `<div>
     <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
-      <button class="omini bare" style="flex:none" onclick="${back}" aria-label="Back">←</button>
+      ${backMiniHTML('bare','flex:none')}
       <div style="flex:1;min-width:0">
         <div class="eyebrow" style="margin-bottom:4px">${esc(['From Visualizer',whenLine(when),cup?'written':''].filter(Boolean).join(' · '))}</div>
         <div class="display" style="font-size:1.375rem;margin:0">${esc(shot.coffeeName||shot.label)}, <em>as it poured</em></div>
@@ -676,32 +707,51 @@ function shotCorrect(id){shotIsTheCup(id,true)}
 
 /* ---- station 06: the taste, and nothing else. The plate steps back to a
  * hairline — still there, no longer the subject — and the 1–9 takes the page,
- * with the score answering in the ember. Replaces openImpression's sheet on
- * this path only; the typed path keeps the sheet it always had. */
+ * with the score answering in the ember.
+ *
+ * v7.35.0, critique rec 3: this is now the ONLY surface a cup's reading is
+ * written on. `openImpression`'s sheet — the typed path's second scoring
+ * screen, with its own captions, its own field name and its own verb — is
+ * deleted, and both brew paths land here. Rec 9 adds the other direction: a
+ * reading already written is corrected on the same surface it was written on,
+ * which is why `view.editCup` exists and why a café cup (no brew behind it at
+ * all) can stand on this screen too. */
 let _thLine='';
 function openTasteHome(brewId){
   if(!brewById(brewId))return;
   hedState=null;descState=new Set();_thLine='';
   closeSheet();openScreen('tastehome',brewId);
 }
-function vTasteHome(brewId){
-  const brew=brewById(brewId);
-  if(!brew)return `<div class="pad" style="padding-top:26px"><div class="empty">That brew isn't on the record.</div>
+// correcting a cup: the same screen, seeded from what is already written, and
+// naming what it is doing rather than asking the question a second time
+function openTasteEdit(cupId){
+  const cup=cupById(cupId);if(!cup)return;
+  hedState=cup.score==null?null:cup.score;descState=new Set(cup.descriptors||[]);_thLine=cup.line||'';
+  closeSheet();openScreen('tastehome',cup.brewRef||null,{editCup:cupId});
+}
+function vTasteHome(brewId,view){
+  const editCup=(view&&view.editCup)?cupById(view.editCup):null;
+  const brew=brewId?brewById(brewId):null;
+  if(!brew&&!editCup)return `<div class="pad" style="padding-top:26px"><div class="empty">That brew isn't on the record.</div>
     <button class="btn btn-quiet" onclick="go('journal')">Back to the journal</button></div>`;
-  const coffee=coffeeById(brew.coffeeRef),shot=shotOfBrew(brew);
+  const coffee=coffeeById(editCup?editCup.coffeeRef:brew.coffeeRef);
+  // a café cup carries the room it was drunk in instead of a Setup, and says so
+  const place=editCup&&editCup.kind==='bar'?placeById(editCup.placeRef):null;
+  const shot=brew?shotOfBrew(brew):null;
   // the figures come off the shot where there is one and off the brew's own
   // dials where there isn't — the same three either way
-  const fg=shotFigures(shot||{time:brew.timeSec,dose:brew.doseG,water:brew.waterG});
+  const fg=shotFigures(shot||(brew?{time:brew.timeSec,dose:brew.doseG,water:brew.waterG}:{}));
   const hair=shot&&shot.curve?plateSVG(shot,PLATE_HAIR,{cls:'hair quiet',axis:false,style:'flex:1;min-width:0'}):'';
   const stated=[fg.peak==null?null:fig1(fg.peak)+' bar',fg.ratio==null?null:'1:'+fig1(fg.ratio),
     fg.total==null?null:fig1(fg.total)+'s'].filter(Boolean).join(' · ');
+  const eyebrow=[coffeeLabel(coffee),place?place.name:null].filter(Boolean).join(' · ');
   return `<div>
     <header class="shdr" style="display:block;padding-bottom:12px">
       <div style="display:flex;align-items:flex-end;gap:14px">
-        <button class="omini bare" style="flex:none" onclick="go('journal')" aria-label="Back">←</button>
+        ${backMiniHTML('bare','flex:none')}
         <div style="flex:1;min-width:0">
-          <div class="eyebrow" style="margin-bottom:4px">${esc(coffeeLabel(coffee))}</div>
-          <div class="display" style="font-size:1.375rem;margin:0">Was it <em>good?</em></div>
+          <div class="eyebrow" style="margin-bottom:4px">${esc(eyebrow)}</div>
+          <div class="display" style="font-size:1.375rem;margin:0">${editCup?'Correct the <em>reading</em>':'Was it <em>good?</em>'}</div>
         </div>
       </div>
       ${hair||stated?`<div style="display:flex;align-items:center;gap:12px;margin-top:14px">${hair}
@@ -719,8 +769,8 @@ function vTasteHome(brewId){
       ${descRow([...descState])}
       <label class="f" style="margin-top:20px"><span class="l">The line</span>
         <input type="text" id="th_line" value="${esc(_thLine)}" oninput="_thLine=this.value" placeholder="One sentence you'd want to read again…"></label>
-      <button class="btn btn-primary" style="min-height:52px;margin-top:8px" onclick="saveTasteHome('${brew.id}')">Write the cup</button>
-      <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="saveTasteHome('${brew.id}',true)">Skip — the brew still counts</button></div>
+      <button class="btn btn-primary" style="min-height:52px;margin-top:8px" onclick="saveTasteHome('${brew?brew.id:''}',false,'${editCup?editCup.id:''}')">${editCup?'Save the reading':'Write the cup'}</button>
+      ${editCup?'':`<div style="text-align:center;margin-top:14px"><button class="qlink" onclick="saveTasteHome('${brew.id}',true)">Skip — the brew still counts</button></div>`}
     </div></div>`;
 }
 // what a reading means, said once and without a compliment in it. Eight is
@@ -753,7 +803,20 @@ function shotOfBrew(brew){
     brewer:brew.brewer||(cached&&cached.brewer)||'',
     label:cached?cached.label:'',clock:cached?cached.clock:null};
 }
-function saveTasteHome(brewId,skip){
+function saveTasteHome(brewId,skip,editCupId){
+  // correcting: nothing is minted, the cup on the record is amended in place,
+  // and the amendment is undoable the way every other write here is
+  if(editCupId){
+    const cup=cupById(editCupId);if(!cup)return;
+    if(hedState==null){toast('A cup needs its reading — the 1–9 first.');return}
+    const was={score:cup.score,line:cup.line,descriptors:(cup.descriptors||[]).slice()};
+    cup.score=hedState;cup.line=val('th_line');cup.descriptors=[...descState];
+    cup.updatedAt=new Date().toISOString();
+    hedState=null;descState=new Set();_thLine='';
+    save();openScreen('cup',cup.id);
+    toast('Corrected.',()=>{Object.assign(cup,was);save();render()},'Undo');
+    return;
+  }
   if(!skip&&hedState==null){toast("A cup needs its reading — the 1–9 first. Or skip; that's honest too.");return}
   const brew=brewById(brewId);if(!brew)return;
   // `createdAt` is when this was written down; `at` is when the cup happened.
@@ -802,7 +865,7 @@ function vShots(){
   const mixed=all.length>1&&all.some(r=>shotMethod(r)==='pourover')&&all.some(r=>shotMethod(r)!=='pourover');
   return `<div>
     <header class="shdr" style="align-items:flex-end;gap:14px;justify-content:flex-start">
-      <button class="omini bare" style="flex:none" onclick="go('journal')" aria-label="Back">←</button>
+      ${backMiniHTML('bare','flex:none')}
       <div style="flex:1;min-width:0">
         <div class="eyebrow" style="margin-bottom:4px">Visualizer</div>
         <div class="display" style="font-size:1.375rem;margin:0">Your recent <em>brews</em></div>
@@ -836,7 +899,7 @@ function shotRowHTML(shot){
     pour?null:(fg.peak==null?null:fig1(fg.peak)+' bar')].filter(Boolean).join(' · ');
   const curve=shot.curve?plateSVG(shot,PLATE_THUMB,{cls:'tiny'+(cup?' quiet':''),style:'width:44px;height:22px;flex:none'})
     :'<span style="flex:none;width:44px"></span>';
-  return `<button class="lrow" onclick="openShotScreen(${jsq(String(shot.id))},{back:'shots'})">
+  return `<button class="lrow" onclick="openShotScreen(${jsq(String(shot.id))})">
     ${curve}
     <span class="mid"><span class="t"${cup?' style="color:var(--ink-2)"':''}>${esc(shot.label)}</span><span class="m">${esc(meta)}</span></span>
     ${cup?`<span class="sc${cup.score==null?' none':''}">${cup.score==null?'—':cup.score}</span>`
@@ -859,8 +922,10 @@ window.openSetupImport=openSetupImport;
 window.openShotScreen=openShotScreen;
 window.openShotsScreen=openShotsScreen;
 window.openTasteHome=openTasteHome;
+window.openTasteEdit=openTasteEdit;
 window.openVisualizerKey=openVisualizerKey;
 window.openVisualizerPicker=openVisualizerPicker;
+window.vizResumeAfterSignIn=vizResumeAfterSignIn;
 window.shotOfBrew=shotOfBrew;
 window.shotWhen=shotWhen;
 window.vShot=vShot;
@@ -878,4 +943,4 @@ window.shotTempGoal=shotTempGoal;
 window.setupCandidatesFromShots=setupCandidatesFromShots;
 window.firstStr=firstStr;
 
-window.SHOT_VERSION='7.34.2';
+window.SHOT_VERSION='7.35.0';

@@ -145,7 +145,7 @@ function matchFigure(text,tm){
 function vTaste(){
   const cups=live('cups').filter(c=>c.score!=null);
   const head=`<header class="shdr" style="align-items:center;gap:14px">
-    <button class="omini bare" style="flex:none" onclick="closePage()" aria-label="Back">←</button>
+    ${backMiniHTML('bare','flex:none')}
     <div style="flex:1;min-width:0">
       <div class="eyebrow" style="margin-bottom:4px">${cups.length?`Read from ${cups.length} cup${cups.length===1?'':'s'}`:'Nothing read yet'}</div>
       <div class="display" style="font-size:1.5rem;margin:0">Your taste, <em>argued</em></div>
@@ -360,7 +360,7 @@ function vBrief(_id,view){
   ];
   return `<div>
     <header class="shdr" style="align-items:center;gap:14px">
-      <button class="omini bare" style="flex:none" onclick="openTaste()" aria-label="Back">←</button>
+      ${backMiniHTML('bare','flex:none')}
       <div style="flex:1;min-width:0">
         <div class="eyebrow" style="margin-bottom:4px">Prepared from your record</div>
         <div class="display" style="font-size:1.5rem;margin:0">The brief</div>
@@ -430,15 +430,26 @@ function openAskKey(){
   <div class="btnrow">
     ${askKey()?`<button class="btn btn-quiet" onclick="clearAskKey()">Remove key</button>`:''}
     <button class="btn btn-primary" onclick="saveAskKey()">Save</button>
-  </div>`);
+  </div>
+  <div class="note" style="margin-top:16px">A key comes from <a class="text-action" style="color:var(--ink-2)" href="https://console.anthropic.com" target="_blank" rel="noreferrer">console.anthropic.com</a> — a few dollars of credit goes a long way. It lives on this device and is sent to nobody but Anthropic, only when you ask.</div>`);
 }
 function saveAskKey(){
   setPref('askKey',val('ask_key_input'));
   setPref('askModel',val('ask_model_input'));
   closeSheet();
   toast('Saved — on this device only.');
-  if(pageView&&pageView.kind==='ask')render();else openAskScreen();
+  // v7.35.0, critique rec 6: this used to end at the ask screen whatever had
+  // opened it, so setting the key from Your record threw the keeper into an
+  // errand they had not started. It resumes what was interrupted, and where
+  // nothing was interrupted it repaints the page they are standing on.
+  if(pageView&&pageView.kind==='ask')render();
+  else if(_askResume){const f=_askResume;_askResume=null;setTimeout(f,60)}
+  else render();
 }
+// the errand an ask-key sheet interrupted, held so the save can finish it —
+// set from inside the errand's own no-key guard, the way vizResumeAfterSignIn is
+let _askResume=null;
+function askResumeAfterKey(f){_askResume=f}
 function clearAskKey(){setPref('askKey','');setPref('askModel','');openAskKey();}
 /* ============ the ask — a screen, with the door named on it ============
  * The one thing in Carta that calls out, so the screen says so twice: the key
@@ -513,7 +524,7 @@ function vAsk(){
   return `<div>
     <div class="pad" style="padding-top:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:26px">
-        <button class="omini bare" style="flex:none;margin-left:-4px" onclick="go('atlas')" aria-label="Back">←</button>
+        ${backMiniHTML('bare','flex:none;margin-left:-4px')}
         <span class="eyebrow" style="margin:0">Sent with your brief</span>
       </div>
       <div class="eyebrow" style="color:var(--accent);margin-bottom:10px">Ask Carta</div>
@@ -681,8 +692,9 @@ function cancelAsk(){
   openAskScreen();
 }
 function vAsking(){
-  const r=askRun||{dest:'',done:[],now:'',pct:0,pins:[],error:null};
+  const r=askRun||{dest:'',kind:'city',done:[],now:'',pct:0,pins:[],error:null};
   const pct=r.pct+'%';
+  const scope=askScopeOf(r.kind||askDraft.kind,r.dest||askDraft.dest);
   return `<div class="think">
     <div class="pad" style="padding-top:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -697,8 +709,12 @@ function vAsking(){
         <div style="margin-top:30px">
           <div class="done" id="think_done">${r.done.map(l=>`<div>${esc(l)}</div>`).join('')}</div>
           ${r.error?`<div class="empty" style="text-align:left;padding:18px 0 0">${esc(r.error)}</div>
-            <button class="btn btn-quiet" onclick="openAskScreen()">Back to the ask</button>
-            <button class="btn btn-quiet" onclick="copyPlainText(briefPlainText(D,null,null,tasteModelMemo()),'Copied — paste it into your chat.')">Copy the brief instead</button>`
+            ${/* rec 6 · every failure surface offers the same try-again, and it is
+                 the first thing on it. rec 10 · the brief that degrades to a paste
+                 is scoped to the ask that just failed, not to everywhere. */''}
+            <button class="btn btn-primary" style="margin-top:14px" onclick="runAsk()">Try again</button>
+            <button class="btn btn-quiet" onclick="copyScopedBrief()">Copy the brief instead${scope.id?` — scoped to ${esc(scope.id)}`:''}</button>
+            <button class="btn btn-quiet" onclick="openAskScreen()">Back to the ask</button>`
           :`<div class="now" id="think_now">${askNowHTML()}</div>`}
         </div>
       </div>
@@ -709,6 +725,15 @@ function vAsking(){
         <div class="note" style="margin-top:18px;border-top-color:transparent">Each name is checked against a real address before it is drawn. What can’t be confirmed is listed, never guessed onto the map.</div>
       </div>
     </div></div>`;
+}
+// the degrade, scoped the way the ask was: without a key, or after a failure,
+// the brief is the answer — and a brief about everywhere is a worse paste than
+// a brief about the city that was actually asked about
+function copyScopedBrief(){
+  const r=askRun||{};
+  const scope=askScopeOf(r.kind||askDraft.kind,r.dest||askDraft.dest);
+  copyPlainText(briefPlainText(D,scope.kind,scope.id,tasteModelMemo()),
+    'Copied — scoped to '+(scope.id||'everywhere')+'. Paste it into your chat.');
 }
 // what the ask is about to read, said in the record's own figures — three
 // counted facts, not three reassurances
@@ -735,7 +760,9 @@ function askOpeningLines(tm,scope){
 async function runAsk(){
   if(_askBusy)return;
   captureAskDraft();
-  if(!askKey()){openAskKey();return}
+  // a key typed here comes back to the ask that needed it, rather than leaving
+  // the keeper on the composer with the errand unrun (rec 6)
+  if(!askKey()){askResumeAfterKey(runAsk);openAskKey();return}
   const kind=askDraft.kind||'city';
   const destination=(askDraft.dest||'').trim();
   const question=(askDraft.question||'').trim();
@@ -758,6 +785,13 @@ async function runAsk(){
     const raw=await callAskModel(prompt);
     if(_askCancel)return;
     const parsed=parseAskJSON(raw);
+    // v7.35.0, critique rec 10: an unreadable reply used to fall through as an
+    // empty answer — the wait completed, the result screen opened, and it said
+    // Carta had found nothing. That is a different and much worse claim than
+    // the truth, which is that the model replied in a shape Carta will not
+    // stand behind. It fails where every other failure fails: on the wait,
+    // with the same two doors out.
+    if(!parsed.ok)throw new Error("The answer couldn't be read — the model replied, but not in a shape Carta can stand behind. Nothing was written down.");
     const named=(parsed.findings||[]).length+(parsed.mentions||[]).length
       +((parsed.plan&&parsed.plan.wildcard)?1:0);
     askSay(`Reading the answer back — ${words(named)} name${named===1?'':'s'}, ranked and argued.`,ASK_PCT_READBACK);
@@ -908,7 +942,7 @@ function openAskFinding(findId){
 function vAskResult(id){
   const a=D.asks.find(x=>x.id===id);
   if(!a)return `<div class="pad" style="padding-top:26px"><div class="empty">That ask isn’t on the record.</div>
-    <button class="btn btn-quiet" onclick="openTaste()">Back to your taste</button></div>`;
+    <button class="btn btn-quiet" onclick="goBack()">Back</button></div>`;
   const named=askNamed(a),mentions=a.mentions||[],plan=a.plan||null;
   const wild=plan&&plan.wildcard;
   const grounded=named.filter(f=>f.grounded);
@@ -922,12 +956,20 @@ function vAskResult(id){
   ].filter(Boolean).join(' ');
   const routeHTML=r=>`<div class="route"><span class="if">${esc(r.if)}</span><span class="ord">${esc((r.order||[]).join(' · '))}</span></div>`;
   const n=a.findings.length;
+  /* v7.35.0, critique rec 10: the answer arrived as one column — the findings,
+     then the near misses, then the plan, then the wildcard — and the thing that
+     was actually asked for scrolled off the top under everything Carta added
+     around it. The findings stay open, because they are the answer. The rest
+     folds to a head that states its own weight, and opens in place. */
+  const fold=(label,count,body)=>`<details class="fold">
+    <summary><span class="l">${esc(label)}</span><span class="r">${esc(count)} · <span class="fold-word"></span></span></summary>
+    <div class="fold-body">${body}</div></details>`;
   return `<div>
     <div style="position:relative">
       ${pts.length?streetsHTML(pts,{boxStyle:'height:280px',dot:11,plotWrap:'position:absolute;inset:0;padding:78px 60px 34px'})
         :'<div class="mapbox" style="height:150px"></div>'}
       <div class="fade top" style="height:110px;z-index:3"></div>
-      <button class="omini overlay" style="left:18px;top:18px" onclick="go('atlas')">← Atlas</button>
+      ${backMiniHTML('overlay','left:18px;top:18px',true)}
       <button class="omini overlay bare" style="right:12px;top:18px" onclick="openAskScreen()">Ask again</button>
     </div>
     <div class="lift pad" style="padding-top:20px">
@@ -941,27 +983,27 @@ function vAskResult(id){
       ${n?a.findings.map((f,i)=>findingRowHTML(f,i,i+3)).join('')
         :'<div class="empty">Carta didn’t name anything it could stand behind here.</div>'}
       ${a.findings.some(f=>(f.fit||[]).some(figBacked))?`<div class="note" style="border:0;padding:0;margin:12px 0 0">Tap an underlined figure for the cups it was read from. What isn’t underlined, the record can’t open.</div>`:''}
-      ${a.findings.some(f=>f.fit&&f.fit.length)?`<button class="btn btn-quiet" style="margin-top:12px" onclick="openBriefScreen()">The brief these were read from</button>`:''}
 
-      ${mentions.length?`<div class="shead"><span class="l">Close, but not the pick</span></div>
-      ${mentions.map((f,i)=>mentionRowHTML(f,i+n+3)).join('')}`:''}
+      ${mentions.length?fold('Close, but not the pick',`${words(mentions.length)} named`,
+        mentions.map((f,i)=>mentionRowHTML(f,i+n+3)).join('')):''}
 
-      ${plan?`<div class="shead"><span class="l">What Carta would do</span></div>
-      <div class="box">
-        ${plan.move?`<div class="say" style="margin-top:0">${esc(plan.move)}</div>`:''}
-        ${plan.routes&&plan.routes.length?`<div style="margin-top:${plan.move?'12px':'0'}">${plan.routes.map(routeHTML).join('')}</div>`:''}
-      </div>
-      ${wild?`<div class="find" id="find_${wild.id}" style="border-bottom:0">
-        <div class="row">
-          <span style="font-family:var(--serif);font-size:17.5px">${esc(wild.name)}</span>
-          ${groundHTML(wild)}
+      ${plan?fold('What Carta would do',[plan.move?'the move':null,plan.routes&&plan.routes.length?`${words(plan.routes.length)} route${plan.routes.length===1?'':'s'}`:null,wild?'a wildcard':null].filter(Boolean).join(' · ')||'stated',
+        `<div class="box">
+          ${plan.move?`<div class="say" style="margin-top:0">${esc(plan.move)}</div>`:''}
+          ${plan.routes&&plan.routes.length?`<div style="margin-top:${plan.move?'12px':'0'}">${plan.routes.map(routeHTML).join('')}</div>`:''}
         </div>
-        <div class="m" style="margin-top:3px">${whereHTML(wild)}</div>
-        ${wild.why?`<div class="say">${esc(wild.why)}</div>`:''}
-        <div class="note" style="margin-top:8px">Outside the ranking — worth knowing anyway.</div>
-        ${marksHTML(wild)}
-      </div>`:''}`:''}
+        ${wild?`<div class="find" id="find_${wild.id}" style="border-bottom:0">
+          <div class="row">
+            <span style="font-family:var(--serif);font-size:17.5px">${esc(wild.name)}</span>
+            ${groundHTML(wild)}
+          </div>
+          <div class="m" style="margin-top:3px">${whereHTML(wild)}</div>
+          ${wild.why?`<div class="say">${esc(wild.why)}</div>`:''}
+          <div class="note" style="margin-top:8px">Outside the ranking — worth knowing anyway.</div>
+          ${marksHTML(wild)}
+        </div>`:''}`):''}
 
+      ${a.findings.some(f=>f.fit&&f.fit.length)?`<button class="btn btn-quiet" style="margin-top:16px" onclick="openBriefScreen(${jsq(a.kind==='city'?a.destination:'')})">The brief these were read from</button>`:''}
       <div class="note" style="margin-top:16px">Mark one Been or Booked and it is on file — the next time you type its name, Carta already knows it. The pin fills the moment you do.</div>
       <button class="btn btn-quiet" style="margin-top:14px" onclick="openAskScreen()">Ask again</button>
     </div></div>`;
@@ -991,5 +1033,9 @@ window.askPromptText=askPromptText;
 window.parseAskJSON=parseAskJSON;
 window.matchFigure=matchFigure;
 window.askKindLabel=askKindLabel;
+window.askModel=askModel;
+window.askResumeAfterKey=askResumeAfterKey;
+window.runAsk=runAsk;
+window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.34.2';
+window.ASK_VERSION='7.35.0';
