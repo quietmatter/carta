@@ -293,6 +293,12 @@ function askRowHTML(a){
   const at=meanPin(grounded.map(f=>f.lat!=null&&f.lon!=null?{lat:f.lat,lon:f.lon}:null));
   const key=at?landAt(at):null;
   const seal=key?sealHTML(key,at):'';
+  // named and drawn are two states. The country comes off the cafés this ask
+  // actually placed — the same confirmed lookup that grounded them states it —
+  // and the belt only draws the ones coffee grows in. So an ask in Berlin is
+  // titled Germany and says plainly that Germany isn't a shape the file holds.
+  const country=grounded.map(f=>{const q=f.placeRef&&placeById(f.placeRef);return q&&q.country})
+    .find(Boolean)||(key?landLabel(key):'');
   const said=(a.read||(a.plan&&a.plan.move)||'').trim();
   return `<button class="lcard" onclick="openAskResultScreen('${a.id}')">
     <span class="head${seal?'':' bare'}">
@@ -310,6 +316,10 @@ function askRowHTML(a){
         ${been?`<span class="v">${words(been)} walked since</span>`
           :'<span class="v quiet">not walked yet</span>'}
       </span>
+      ${seal||!grounded.length?'':`<span class="fact">
+        <span class="k">${esc(country||'The ground')}</span>
+        <span class="v fall">no outline on file — listed, not drawn</span>
+      </span>`}
     </span>
   </button>`;
 }

@@ -338,7 +338,7 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 .shead .r{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;color:var(--ink-3);text-align:right}
 /* over a list of cards the rule is redundant — every card already draws its own
    edge, and two hairlines 8px apart read as a mistake rather than a system */
-.shead.over{border-bottom:0;padding-bottom:10px;margin:28px 0 0}
+.shead.over{border-bottom:0;padding:0 4px 10px;margin:28px 0 0}
 /* the list row, at the size the redesign reads at: the title leads, the meta
    sits off the faintest ink, and the score is set big enough to be the answer */
 .lrow{width:100%;display:flex;align-items:center;gap:14px;text-align:left;color:var(--ink);
@@ -375,7 +375,7 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 .lcard .head.bare{align-items:baseline;gap:10px}
 .lcard .eyeb{flex:1;font-family:var(--sans);font-size:var(--s10);letter-spacing:var(--track-label);
   text-transform:uppercase;color:var(--ink-3);font-weight:500}
-.lcard .when{flex:none;font-family:var(--sans);font-size:var(--s10);letter-spacing:.1em;
+.lcard .when{font-family:var(--sans);font-size:var(--s10);letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-3)}
 .lcard .n{display:block;font-family:var(--serif);font-size:25px;font-weight:600;
   line-height:1.1;letter-spacing:-.01em;margin-top:11px}
@@ -1326,6 +1326,18 @@ function cityOf(address){
   if(!address||typeof address!=='object')return '';
   for(const k of CITY_KEYS){const v=String(address[k]||'').trim();if(v)return v}
   return '';
+}
+/* And the country, for the same reason and off the same read (Phase 28). A
+ * city row wants to say what ground it stands on, and the belt can only answer
+ * for the thirty-odd countries coffee grows in — Denmark, Germany and Norway
+ * are not among them and never will be. The lookup that already confirms the
+ * pin states the country outright, so Carta stops throwing it away.
+ * It is a label and nothing more: it never keys a lookup, never joins a node,
+ * and a place looked up before this simply has no country until it is looked
+ * up again, which reads as blank rather than as a guess. */
+function countryOf(address){
+  if(!address||typeof address!=='object')return '';
+  return String(address.country||'').trim();
 }
 // two hits are the same café when they land on the same area, or — where
 // neither states one — on the same corner. Rounded to about a city block, so a
@@ -2977,15 +2989,23 @@ function landLabel(key){
   const t=tastedCountryMap()[key];
   return t?t.label:String(key||'').replace(/\b[a-z]/g,c=>c.toUpperCase());
 }
-/* the ground a city stands on, read straight off the record: the mean of the
- * cafés you have actually placed there, tested against the belt. Where the belt
- * has no outline — Denmark, Germany, Norway are not coffee-growing countries —
- * this returns null and the row states the fall rather than drawing a guess. */
+/* the ground a city stands on. Two questions, and they are not the same one:
+ * what the country is CALLED, and whether the file can DRAW it.
+ *
+ * The name comes off the record — the confirmed lookup states it (countryOf)
+ * — and falls back to the belt, which can name a country only where coffee
+ * grows in it. The outline comes from the belt alone. So Mexico is named and
+ * drawn; Denmark is named and not drawn, and the row says so; and a city whose
+ * cafés were placed before Carta kept the country is neither, and stays quiet
+ * rather than guessing. `key` is null exactly when there is nothing to draw. */
 function cityGround(city){
-  const at=meanPin(placed(cityPlaces(city)));
-  if(!at)return null;
-  const key=landAt(at);
-  return key?{key,label:landLabel(key),at}:null;
+  const places=cityPlaces(city);
+  const at=meanPin(placed(places));
+  const key=at?landAt(at):null;
+  const stated=(places.map(p=>(p.country||'').trim()).find(Boolean))||'';
+  const label=stated||(key?landLabel(key):'');
+  if(!label&&!key)return null;
+  return {key,label,at};
 }
 // the date a leaf carries: near enough to be relative, past that a real date.
 // "4d ago" is a receipt; "14 March" is a record, and the record is the product.
@@ -3052,12 +3072,15 @@ function cupRowHTML(cup){
     :[(coffee&&coffee.name)||'',rig?`on the ${rig}`:''].filter(Boolean).join(', ');
   const no=cupNo(cup);
   const ground=[regionOf(coffee),o.country].filter(Boolean).join(', ');
-  const fact=ground?{k:'Grown',v:esc(ground),cls:''}
-    :bar&&place&&(place.neighborhood||place.city)?{k:'Poured in',v:esc(place.neighborhood||place.city),cls:''}
-    :pourLine(brew)?{k:'Poured',v:esc(pourLine(brew)),cls:' num'}:null;
-  // a home brew's dials sit beside the ground when both are known, because on a
-  // cup you made yourself the recipe is half of what you'd come back to read
-  const second=!bar&&ground&&pourLine(brew)?{k:'Poured',v:esc(pourLine(brew)),cls:' num'}:null;
+  // one fact, and only one: a café cup answers where it grew, a home brew
+  // answers what went through the bed. The other half is already on the card —
+  // the seal says the ground, so a `Grown` row beside it would say it twice.
+  const fact=bar
+    ?(ground?{k:'Grown',v:esc(ground),cls:''}
+      :place&&(place.neighborhood||place.city)?{k:'Poured in',v:esc(place.neighborhood||place.city),cls:''}
+      :null)
+    :(pourLine(brew)?{k:'Poured',v:esc(pourLine(brew)),cls:' num'}
+      :ground?{k:'Grown',v:esc(ground),cls:''}:null);
   const said=(cup.line||'').trim();
   const seal=sealHTML(landKey(o.country||''));
   return `<button class="lcard" onclick="openCupDetail('${cup.id}')">
@@ -3077,9 +3100,8 @@ function cupRowHTML(cup){
       </span>
     </span>
     <span class="said${said?'':' none'}">${said?esc(said):'Nothing written down yet.'}</span>
-    ${fact||second?`<span class="facts">
-      ${fact?`<span class="fact"><span class="k">${fact.k}</span><span class="v${fact.cls}">${fact.v}</span></span>`:''}
-      ${second?`<span class="fact"><span class="k">${second.k}</span><span class="v${second.cls}">${second.v}</span></span>`:''}
+    ${fact?`<span class="facts">
+      <span class="fact"><span class="k">${fact.k}</span><span class="v${fact.cls}">${fact.v}</span></span>
     </span>`:''}
   </button>`;
 }
@@ -3964,7 +3986,8 @@ async function lookupPlace(name,neighborhood,city){
     return dedupeHits(list.map(x=>{
       const lat=Number(x.lat),lon=Number(x.lon);
       if(!isFinite(lat)||!isFinite(lon))return null;
-      return {lat,lon,name:String(x.name||'').trim(),hood:hoodOf(x.address),city:cityOf(x.address)};
+      return {lat,lon,name:String(x.name||'').trim(),hood:hoodOf(x.address),city:cityOf(x.address),
+        country:countryOf(x.address)};
     }).filter(Boolean));
   }catch(e){return []}
 }
@@ -3984,10 +4007,10 @@ async function geocodeCafe(name,neighborhood,city){
 async function reverseGeocode(lat,lon){
   try{
     const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lon}`,{headers:{'Accept':'application/json'}});
-    if(!r.ok)return {hood:'',city:''};
+    if(!r.ok)return {hood:'',city:'',country:''};
     const x=await r.json();
-    return {hood:hoodOf(x&&x.address),city:cityOf(x&&x.address)};
-  }catch(e){return {hood:'',city:''}}
+    return {hood:hoodOf(x&&x.address),city:cityOf(x&&x.address),country:countryOf(x&&x.address)};
+  }catch(e){return {hood:'',city:'',country:''}}
 }
 
 // geocoding a café is the same lookup the ask already grounds its suggestions
@@ -4053,18 +4076,19 @@ function settlePlace(p,hit){
   p.lat=hit.lat;p.lon=hit.lon;
   if(hit.hood)p.neighborhood=hit.hood;
   if(hit.city)p.city=hit.city;
+  if(hit.country)p.country=hit.country;
   delete p.branches;
 }
 // the keeper answering the only question they can answer
 function pickBranch(placeId,i){
   const p=placeById(placeId);if(!p||!p.branches)return;
   const hit=p.branches[i];if(!hit)return;
-  const was={lat:p.lat,lon:p.lon,neighborhood:p.neighborhood,city:p.city,branches:p.branches};
+  const was={lat:p.lat,lon:p.lon,neighborhood:p.neighborhood,city:p.city,country:p.country,branches:p.branches};
   const cityChanged=hit.city&&fold(hit.city)!==fold(was.city||'');
   settlePlace(p,hit);save();render();
   toast(`Placed in ${[hit.hood,cityChanged?hit.city:''].filter(Boolean).join(', ')||p.city||'the city'}.`,()=>{
     const q=placeById(placeId);if(!q)return;
-    q.lat=was.lat;q.lon=was.lon;q.neighborhood=was.neighborhood;q.city=was.city;q.branches=was.branches;
+    q.lat=was.lat;q.lon=was.lon;q.neighborhood=was.neighborhood;q.city=was.city;q.country=was.country;q.branches=was.branches;
     save();render();
   },'Undo');
 }
@@ -4106,15 +4130,15 @@ async function pastePlaceLink(placeId){
   const input=document.getElementById('ml_'+placeId);
   const coord=parseMapLink(input&&input.value);
   if(!coord){toast('Couldn\'t read a position from that — paste the map\'s own link, not a shortened share link.');return}
-  const was={lat:p.lat,lon:p.lon,neighborhood:p.neighborhood,city:p.city,branches:p.branches};
+  const was={lat:p.lat,lon:p.lon,neighborhood:p.neighborhood,city:p.city,country:p.country,branches:p.branches};
   const geo=await reverseGeocode(coord.lat,coord.lon);
   const q=placeById(placeId);if(!q)return;
   const cityChanged=geo.city&&fold(geo.city)!==fold(was.city||'');
-  settlePlace(q,{lat:coord.lat,lon:coord.lon,hood:geo.hood,city:geo.city});
+  settlePlace(q,{lat:coord.lat,lon:coord.lon,hood:geo.hood,city:geo.city,country:geo.country});
   save();render();
   toast(`Placed in ${[geo.hood,cityChanged?geo.city:''].filter(Boolean).join(', ')||q.city||'the city'}.`,()=>{
     const r=placeById(placeId);if(!r)return;
-    r.lat=was.lat;r.lon=was.lon;r.neighborhood=was.neighborhood;r.city=was.city;r.branches=was.branches;
+    r.lat=was.lat;r.lon=was.lon;r.neighborhood=was.neighborhood;r.city=was.city;r.country=was.country;r.branches=was.branches;
     save();render();
   },'Undo');
 }
@@ -4477,7 +4501,8 @@ function cityRowHTML(city){
   const ground=cityGround(city);
   const lede=cityLede(city);
   const since=citySince(city);
-  const seal=ground?sealHTML(ground.key,ground.at):'';
+  // named and drawn are separate states: Denmark is named, never drawn
+  const seal=ground&&ground.key?sealHTML(ground.key,ground.at):'';
   return `<button class="lcard" onclick="openCityChapter(${jsq(city)})">
     <span class="head${seal?'':' bare'}">
       ${seal}
@@ -4492,7 +4517,7 @@ function cityRowHTML(city){
         <span class="k">${capFirst(words(places.length))} café${places.length===1?'':'s'}</span>
         <span class="v num">${words(cups.length)} cup${cups.length===1?'':'s'}</span>
       </span>
-      ${ground?'':`<span class="fact">
+      ${seal?'':`<span class="fact">
         <span class="k">The ground</span>
         <span class="v fall">no outline on file — listed, not drawn</span>
       </span>`}
