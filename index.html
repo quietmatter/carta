@@ -2210,16 +2210,16 @@ function doorKind(){
  * asking either — always a home brew, since a synced shot is one by
  * definition. The roaster and the coffee each get one gentle-join question if
  * Carta isn't sure; the Setup gets none (see matchSetupByGrinder). */
-// wrapped in vizErrand (carta-shot.js) so that signing in from here comes back
-// to the pull rather than dropping the keeper at the door with nothing done
-const doorPull=vizErrand(async function(){
+async function doorPull(){
   const s=doorState;
-  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  // signing in from here comes back to the pull rather than dropping the keeper
+  // at the door with nothing done (rec 6)
+  if(!visualizerAuthHeader()){vizResumeAfterSignIn(doorPull);openVisualizerKey();return}
   s.step='pull';s._pullShots=null;s._pullError=null;paintDoor();
   try{s._pullShots=await fetchVisualizerShots(8);}
   catch(e){s._pullError=(e&&e.message)||'Could not reach Visualizer.';}
   if(doorState===s)paintDoor();
-});
+}
 async function doorPullPicked(id){
   const s=doorState,shot=(s._pullShots||[]).find(x=>x.id===id);if(!shot)return;
   // the curve has to be in hand before a brew is minted from this shot

@@ -275,15 +275,12 @@ function openVisualizerKey(){
  * started, with the errand to begin again. The errand is held here and resumed
  * the moment the account is good for it. */
 let _vizResume=null;
-// wrap an errand that needs the account: with no account it remembers the call
-// it was about to make, opens the sheet, and runs it again after the save
-function vizErrand(f){
-  return function(){
-    const a=arguments;
-    if(!visualizerAuthHeader())_vizResume=function(){f.apply(null,a)};
-    return f.apply(null,a);
-  };
-}
+// called from inside an errand's own no-account guard, on the way to the sheet.
+// Deliberately not a wrapper around the errand: a wrapper would have to be
+// applied where the function is defined, and `doorPull` lives in index.html —
+// which would make that file's evaluation depend on this one having loaded,
+// the exact stale-sibling failure APP_VERSION's check exists to survive.
+function vizResumeAfterSignIn(f){_vizResume=f}
 function saveVisualizerKey(){
   const w=document.getElementById('viz_watch');
   setPref('visualizerEmail',val('viz_email'));setPref('visualizerPassword',val('viz_password'));
@@ -334,9 +331,9 @@ function vizShotRowHTML(r,onclickFn){
   return `<button class="lrow" onclick="${onclickFn}('${r.id}')"><span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc([r.time?fmtTime(r.time):'',fmtWhen(new Date(r.clock*1000).toISOString())].filter(Boolean).join(' · '))}</span></span></button>`;
 }
 let _vizBusy=false,_vizShots=[];
-const openVisualizerPicker=vizErrand(async function(){
+async function openVisualizerPicker(){
   if(_vizBusy)return;
-  if(!visualizerAuthHeader()){openVisualizerKey();return}
+  if(!visualizerAuthHeader()){vizResumeAfterSignIn(openVisualizerPicker);openVisualizerKey();return}
   const box=document.getElementById('viz_picker');if(!box)return;
   _vizBusy=true;
   box.innerHTML='<div class="muted small" style="margin-top:8px">Reading your brews…</div>';
@@ -350,7 +347,7 @@ const openVisualizerPicker=vizErrand(async function(){
       <button class="btn btn-quiet mini" style="margin-top:10px;min-height:36px" onclick="openVisualizerPicker()">Try again</button>`;
   }
   _vizBusy=false;
-});
+}
 function vizShotPicked(id){
   const shot=_vizShots.find(s=>s.id===id);if(!shot)return;
   applyVisualizerShot(shot);
@@ -366,14 +363,14 @@ function vizShotPicked(id){
  * them instead of asking the keeper to type it. Unreachable, or nothing found,
  * and "Type it in instead" reaches the exact blank form this always could. */
 let _setupCandidates=[];
-const openSetupImport=vizErrand(async function(){
-  if(!visualizerAuthHeader()){openVisualizerKey();return}
+async function openSetupImport(){
+  if(!visualizerAuthHeader()){vizResumeAfterSignIn(openSetupImport);openVisualizerKey();return}
   openSheet(`<h3>A Setup from Visualizer</h3>
   <div class="sub">Read off your own brews — the grinder, and whatever machine or brewer rode beside it. Nothing else a Setup carries is in a brew file, so the rest stays yours to add.</div>
   <div id="setup_import"><div class="muted small" style="margin-top:8px">Reading your brews…</div></div>
   <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="openSetupForm()">Type it in instead</button></div>`);
   await loadSetupCandidates();
-});
+}
 async function loadSetupCandidates(){
   const box=document.getElementById('setup_import');if(!box)return;
   try{
@@ -561,10 +558,10 @@ function openShotScreen(id,extra){openScreen('shot',String(id),extra);ensureShot
 // station 08, reachable whether or not the watch is on. The list is fetched
 // once a sitting; the row you pick is the only one read in full.
 let _shots={busy:false,rows:null,error:null,scope:'all'};
-const openShotsScreen=vizErrand(function(){
-  if(!visualizerAuthHeader()){openVisualizerKey();return}
+function openShotsScreen(){
+  if(!visualizerAuthHeader()){vizResumeAfterSignIn(openShotsScreen);openVisualizerKey();return}
   openScreen('shots');loadShots();
-});
+}
 async function loadShots(force){
   if(_shots.busy||(_shots.rows&&!force))return;
   _shots.busy=true;_shots.error=null;render();
@@ -928,6 +925,7 @@ window.openTasteHome=openTasteHome;
 window.openTasteEdit=openTasteEdit;
 window.openVisualizerKey=openVisualizerKey;
 window.openVisualizerPicker=openVisualizerPicker;
+window.vizResumeAfterSignIn=vizResumeAfterSignIn;
 window.shotOfBrew=shotOfBrew;
 window.shotWhen=shotWhen;
 window.vShot=vShot;

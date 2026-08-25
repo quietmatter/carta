@@ -446,15 +446,10 @@ function saveAskKey(){
   else if(_askResume){const f=_askResume;_askResume=null;setTimeout(f,60)}
   else render();
 }
-// the errand an ask-key sheet interrupted, held so the save can finish it
+// the errand an ask-key sheet interrupted, held so the save can finish it —
+// set from inside the errand's own no-key guard, the way vizResumeAfterSignIn is
 let _askResume=null;
-function askErrand(f){
-  return function(){
-    const a=arguments;
-    if(!askKey())_askResume=function(){f.apply(null,a)};
-    return f.apply(null,a);
-  };
-}
+function askResumeAfterKey(f){_askResume=f}
 function clearAskKey(){setPref('askKey','');setPref('askModel','');openAskKey();}
 /* ============ the ask — a screen, with the door named on it ============
  * The one thing in Carta that calls out, so the screen says so twice: the key
@@ -762,12 +757,12 @@ function askOpeningLines(tm,scope){
       :'Nothing excluded by name — everywhere goes out.',18],
   ];
 }
-// wrapped in askErrand so a key typed here comes back to the ask that needed
-// it, rather than leaving the keeper on the composer with the errand unrun
-const runAsk=askErrand(async function(){
+async function runAsk(){
   if(_askBusy)return;
   captureAskDraft();
-  if(!askKey()){openAskKey();return}
+  // a key typed here comes back to the ask that needed it, rather than leaving
+  // the keeper on the composer with the errand unrun (rec 6)
+  if(!askKey()){askResumeAfterKey(runAsk);openAskKey();return}
   const kind=askDraft.kind||'city';
   const destination=(askDraft.dest||'').trim();
   const question=(askDraft.question||'').trim();
@@ -843,7 +838,7 @@ const runAsk=askErrand(async function(){
     if(askRun){if(askRun.now)askRun.done.push(askRun.now);askRun.error=msg;askRun.now='';}
     if(pageView&&pageView.kind==='asking')render();else toast(msg);
   }
-});
+}
 /* a finding, set as an entry rather than a card: where it sits in the model's
  * own order, what it is best FOR, where it is, the figures off the brief it was
  * argued from, what to ask for at the counter, and the three marks that put it
@@ -1039,7 +1034,7 @@ window.parseAskJSON=parseAskJSON;
 window.matchFigure=matchFigure;
 window.askKindLabel=askKindLabel;
 window.askModel=askModel;
-window.askErrand=askErrand;
+window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 

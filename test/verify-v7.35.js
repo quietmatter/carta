@@ -169,6 +169,19 @@ function serve(){
   ok(/copy the brief instead\n/i.test(wait+'\n'),'rec 10 — the brief degrades where the ask has no scope',wait);
   ok(await page.evaluate(()=>D.asks.every(a=>a.destination!=='Porto')),'rec 10 — nothing was written down');
 
+  // rec 6 · a sign-in resumes the errand it interrupted
+  await page.evaluate(()=>{
+    setPref('visualizerEmail','');setPref('visualizerPassword','');
+    go('journal');openShotsScreen();          // no account: the key sheet opens instead
+  });
+  await page.waitForTimeout(250);
+  ok(/your visualizer account/i.test(await sheet(page)),'rec 6 — an errand with no account opens the sheet');
+  await page.fill('#viz_email','keeper@example.com');
+  await page.fill('#viz_password','pw');
+  await page.evaluate(()=>saveVisualizerKey());
+  await page.waitForTimeout(1600);
+  ok(await page.evaluate(()=>pageView&&pageView.kind==='shots'),'rec 6 — the sign-in resumes the errand it interrupted');
+
   // …and where the record does know the city, the brief is scoped to it
   await page.evaluate(()=>{askDraft.kind='city';askDraft.dest='Lisbon';go('atlas');openAskScreen()});
   await page.waitForTimeout(200);
