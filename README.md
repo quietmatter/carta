@@ -95,11 +95,16 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   OpenStreetMap hasn't caught up to — paste the map link your phone already
   gave you and Carta reads the pin straight out of it, then fills in the real
   neighborhood the same way a search result would.
-- **Your cities, drawn.** Each city on the Atlas carries its own shape now —
-  a soft silhouette folded from that city's own cafés, one café reading as a
-  small round place and a whole spread city reading as the true, particular
-  outline of your own reach in it. No map, no pins, nothing fetched; it's
-  read straight off your own record, the same way the drawn plot always is.
+- **Your cities, drawn.** Each city on the Atlas carries the ground it
+  actually stands on: a frame a hundred and ninety kilometres wide, centred
+  on your own cafés, drawing whatever closes inside it — an island as the
+  island it is, a coast as the coast it is. Where nothing on file reaches
+  that far, the frame steps back to the country, and where even that is
+  unknown it draws your cafés at their own coordinates and says plainly that
+  the ground isn't on file, with how far apart they are. Nothing is guessed:
+  a shape the record can't defend is never drawn. Open a seal past thumbnail
+  size and the highlands come with it. No map tiles, no pins, nothing
+  fetched — all of it read out of outlines carried in the file itself.
 - **The passport.** Carta opens on it: the world frame full-bleed, every
   country your record can trace, drawn from outlines carried in the file
   itself (no map tiles, no network, nothing to be offline from). Tasted

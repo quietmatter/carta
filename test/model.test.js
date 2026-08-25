@@ -15,13 +15,16 @@ const vm = require('node:vm');
 
 const OPEN = '/* ==== pure ==== *';
 const CLOSE = '/* ==== /pure ==== */';
-// Four files carry a pure block since the v7.34.0 split (ARCHITECTURE.md §1).
-// They are evaluated in the browser's own <head> order — plate, shot, ask,
-// then index.html — because the seams run that way: parseVisualizerShot (now
-// in carta-shot.js) reads the plate's shotCurve/shotPours, and index.html's
-// own parseCfSearch/parseMenuOCR read the ask's extractJSON/askStr. Everything
+// Five files carry a pure block since Phase 29 (ARCHITECTURE.md §1).
+// They are evaluated in the browser's own <head> order — map, plate, shot,
+// ask, then index.html — because the seams run that way: parseVisualizerShot
+// (now in carta-shot.js) reads the plate's shotCurve/shotPours, and
+// index.html's own parseCfSearch/parseMenuOCR read the ask's
+// extractJSON/askStr. Everything
 // lands in one evaluated source, so function declarations hoist across the
 // whole of it; the order is what keeps top-level const initializers honest.
+// carta-map.js leads because it is first in that <head>, and its own landKey
+// and cityKey read index.html's fold() — which hoists back the other way.
 const slice = file => {
   const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   const openAt = src.indexOf(OPEN);
@@ -31,7 +34,7 @@ const slice = file => {
   }
   return src.slice(openAt, closeAt + CLOSE.length);
 };
-const pureSrc = ['carta-plate.js', 'carta-shot.js', 'carta-ask.js', 'index.html']
+const pureSrc = ['carta-map.js', 'carta-plate.js', 'carta-shot.js', 'carta-ask.js', 'index.html']
   .map(slice).join('\n');
 
 const sandbox = {};
@@ -44,7 +47,10 @@ vm.runInContext(pureSrc + `
   ROAST_LEVELS, parseRoastLevel, doorParse, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
   parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder, brewerOf, setupCandidatesFromShots,
   shotCurve, shotFigures, platePaths, shotAt, shotTempGoal,
-  shotPours, shotMethod, shotPhase, mmss, shotPreinfusion, shotStartedAt, tsToMs };
+  shotPours, shotMethod, shotPhase, mmss, shotPreinfusion, shotStartedAt, tsToMs,
+  LANDS, LAND_TOPO, LAND_OFF_BELT, CITY_RINGS, CITY_ARCS, CITY_Q,
+  landPts, landRingsRaw, landTopoRaw, landKey, landAnchor, sealBands,
+  cityKey, cityRingsRaw, cityArcsRaw, cityWindow, ringsInWindow, arcsInWindow, plateGround };
 `, sandbox);
 const M = sandbox.__m;
 
@@ -1178,5 +1184,181 @@ const dated = M.parseVisualizerShot({ duration: 200, start_time: threeDaysAgo })
 assert.equal(dated.at, threeDaysAgo, 'the shot carries when it was poured');
 assert.equal(M.parseVisualizerShot({ duration: 200 }).at, null);
 ok('parseVisualizerShot carries the pour\'s own date, or none at all');
+
+/* ---- the map layer (Phase 29) --------------------------------------------
+   Every phase of the map spec carries a "done when" clause, and each one was
+   written as a real assertion rather than a sentiment. These are them. The
+   geometry is the app's own — decoded through the app's own reader, never a
+   shape baked at authoring time — so a string that stops round-tripping, a
+   ring that stops closing inside its window or a city key that stops putting
+   the record's own cafés on land fails here rather than on a keeper's screen.
+   ------------------------------------------------------------------------ */
+
+// even-odd across every ring, the same test landAt makes in index.html. It
+// lives here rather than being imported because landAt reads the whole belt
+// and these tests are about one shape at a time.
+const inRings = (at, rings) => {
+  let hit = false;
+  for (const r of rings || []) for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const a = r[i], b = r[j];
+    if ((a.lat > at.lat) !== (b.lat > at.lat) &&
+      at.lon < (b.lon - a.lon) * (at.lat - a.lat) / (b.lat - a.lat) + a.lon) hit = !hit;
+  }
+  return hit;
+};
+const KMX = (lon, la0) => lon * 111.32 * Math.cos(la0 * Math.PI / 180), KMY = la => la * 111.32;
+// how far outside a shape a point falls, in kilometres, measured to the nearest
+// drawn edge — the figure that says a café is in the sea rather than on land
+const offshoreKm = (at, rings) => {
+  let best = Infinity;
+  for (const r of rings || []) for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const ax = KMX(r[i].lon, at.lat), ay = KMY(r[i].lat), bx = KMX(r[j].lon, at.lat), by = KMY(r[j].lat);
+    const px = KMX(at.lon, at.lat), py = KMY(at.lat), dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+    const t = L ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L)) : 0;
+    best = Math.min(best, Math.hypot(px - (ax + t * dx), py - (ay + t * dy)));
+  }
+  return best;
+};
+const bboxIn = (ring, w) => ring.every(p => p.lon >= w.lon0 && p.lon <= w.lon1 && p.lat >= w.lat0 && p.lat <= w.lat1);
+
+// real coordinates, the way MAPPING.md wants them — the records these cities
+// carry in the design document are invented, but the places are not
+const AT = {
+  lihue: { lat: 21.9811, lon: -159.3711 }, kapaa: { lat: 22.0752, lon: -159.3190 },
+  koloa: { lat: 21.9067, lon: -159.4700 }, waimea: { lat: 21.9575, lon: -159.6690 },
+  losAngeles: { lat: 34.0522, lon: -118.2437 }, honolulu: { lat: 21.3069, lon: -157.8583 },
+  copenhagen: { lat: 55.6761, lon: 12.5683 }, berlin: { lat: 52.5200, lon: 13.4050 },
+  oslo: { lat: 59.9139, lon: 10.7522 }, tokyo: { lat: 35.6762, lon: 139.6503 },
+  portland: { lat: 45.5152, lon: -122.6784 }, anchorage: { lat: 61.2181, lon: -149.9003 },
+};
+
+// ---- Phase A: the belt reaches the countries the record drinks in ----
+[['denmark', 2, 19, 53], ['germany', 1, 38, 96], ['norway', 1, 48, 144], ['japan', 3, 64, 181]]
+  .forEach(([k, rings, pts, bytes]) => {
+    assert.equal(M.LANDS[k].length, bytes, `${k} is ${bytes} b`);
+    const rs = M.landRingsRaw(k);
+    assert.equal(rs.length, rings, `${k} decodes to ${rings} ring(s)`);
+    assert.equal(rs.reduce((a, r) => a + r.length, 0), pts, `${k} decodes to ${pts} points`);
+  });
+ok('every belt addition round-trips through landPts to the counts it was written from');
+
+assert.equal(Object.keys(M.LANDS).length, 70, 'sixty-five countries, four added, and Alaska split out');
+assert.equal(Object.values(M.LANDS).join('').length, 7745,
+  '7,272 b + 474 for the four, less the one separator Phase E dropped');
+assert.deepEqual(Object.keys(M.LANDS), Object.keys(M.LANDS).slice().sort(), 'the belt stays alphabetical');
+ok('the belt reads 7,745 b over seventy keys, in order');
+
+['copenhagen', 'berlin', 'oslo', 'tokyo'].forEach(c => {
+  const k = { copenhagen: 'denmark', berlin: 'germany', oslo: 'norway', tokyo: 'japan' }[c];
+  assert.ok(inRings(AT[c], M.landRingsRaw(k)), `${c} falls inside ${k}'s outline`);
+});
+ok('a city in the four new countries lands on ground the belt can name — no row states the fall');
+
+// the passport is where coffee is GROWN, so the four stay off it
+['denmark', 'germany', 'norway', 'japan'].forEach(k =>
+  assert.ok(M.LAND_OFF_BELT[k], `${k} is off the growing-world passport`));
+assert.ok(!M.LAND_OFF_BELT['alaska'] && !M.LAND_OFF_BELT['ethiopia'],
+  'Alaska is drawn exactly as it was, and a growing country is never off the frame');
+ok('the four are ground for a seal, not countries on the passport');
+
+// ---- Phase B: the seal spends LAND_TOPO above 64 px ----
+assert.deepEqual(M.sealBands(36), [], 'the row keeps the outline alone');
+assert.deepEqual(M.sealBands(63), [], 'and does right up to the threshold');
+assert.deepEqual(M.sealBands(104), [2, 1], 'the cup sheet takes 3,000 then 2,000 m');
+assert.deepEqual(M.sealBands(168), [2, 1, 0], 'the chapter takes all three');
+assert.deepEqual(M.sealBands(), [], 'a call with no width is a row');
+ok('one threshold, coarsest band first, and nothing branches on the surface');
+
+[['ethiopia', 3], ['kenya', 3]].forEach(([k, levels]) => {
+  const lv = M.landTopoRaw(k);
+  assert.equal(lv.length, levels, `${k} carries all three contour levels`);
+  M.sealBands(104).forEach(b => assert.ok(lv[b].length, `${k} has ground to draw at band ${b}`));
+});
+assert.equal(M.landTopoRaw('kenya')[2].length, 2,
+  "Kenya's 3,000 m band is two marks on the whole country — and they are the two mountains");
+ok('Ethiopia and Kenya both ladder, which is why 64 px was measured on them');
+
+// ---- Phase C: the plate, on the closes-inside-the-window rule ----
+[190, 110].forEach(span => {
+  const g = M.plateGround('Līhu‘e', 'hawai', AT.lihue, span);
+  assert.equal(g.rings.length, 1, `Kaua‘i closes inside a ${span} km window`);
+  assert.ok(g.rings.every(r => bboxIn(r, g.w)), `every drawn ring's bbox is inside the ${span} km window`);
+});
+ok('Kaua‘i draws ground at 190 km and at 110 km, and passes the bbox assertion');
+
+const la = M.plateGround('Los Angeles', 'united states of america', AT.losAngeles, 190);
+assert.equal(la.rings.length, 0, 'a coastline running Mexico to Canada is a chord, not ground');
+assert.equal(la.arcs.length, 1, 'so the city table\'s open coast is what Los Angeles draws');
+ok('Los Angeles draws no ring — the frame would cut every one of them');
+
+['copenhagen', 'berlin', 'oslo', 'tokyo'].forEach(c => {
+  const k = { copenhagen: 'denmark', berlin: 'germany', oslo: 'norway', tokyo: 'japan' }[c];
+  const g = M.plateGround(c, k, AT[c], 190);
+  assert.equal(g.rings.length + g.arcs.length, 0, `${c}'s window holds nothing that closes`);
+});
+ok('where nothing closes the plate draws the record instead, and the fact row says why');
+
+// Honolulu needs no city key to draw: O‘ahu already closes inside the window
+const hon = M.plateGround('Honolulu', 'hawai', AT.honolulu, 190);
+assert.equal(hon.rings.length, 1, 'the belt\'s O‘ahu closes inside a 190 km window');
+assert.equal(M.cityRingsRaw('Honolulu'), null, 'and Honolulu has no city key to fall forward to');
+ok('a city with no key falls back to LANDS, and nothing else in the reader changes');
+
+// ---- Phase D: the city table ----
+assert.equal(M.cityKey('Līhu‘e'), 'lihue', 'an ‘okina is a letter, not a separator');
+assert.equal(M.cityKey('Los Angeles'), 'los angeles');
+assert.equal(M.landPts(M.CITY_ARCS['los angeles'], M.CITY_Q).length, 12, 'the divisor is the only change');
+assert.equal(M.landPts(M.CITY_ARCS['los angeles']).length, 12, 'and the belt is still the default');
+ok('landPts takes a divisor: 20 for the belt, 200 for the city table');
+
+// test one: more vertices in the window than the belt has
+const win = M.cityWindow(AT.losAngeles, 190);
+const beltLA = M.landRingsRaw('united states of america')[0]
+  .filter(p => p.lon >= win.lon0 && p.lon <= win.lon1 && p.lat >= win.lat0 && p.lat <= win.lat1);
+assert.equal(beltLA.length, 1, 'the belt puts one vertex in the Los Angeles window');
+assert.ok(la.arcs[0].length > beltLA.length, 'and the city table puts twelve');
+const beltKauai = M.ringsInWindow(M.landRingsRaw('hawai'), M.cityWindow(AT.lihue, 190));
+assert.equal(beltKauai[0].length, 6, "the belt's Kaua‘i is a six-point hexagon");
+assert.equal(M.cityRingsRaw('Līhu‘e')[0].length, 8, 'and the city table makes it eight');
+ok('adoption test one — a key adds vertices inside the window');
+
+// test two, the one that makes the first safe: every point the record holds in
+// that window still lands on land. A coarser outline can look like the right
+// island and still put your cafés in the sea, and no byte count would show it.
+const four = ['lihue', 'kapaa', 'koloa', 'waimea'];
+const onBelt = four.filter(c => inRings(AT[c], beltKauai));
+const onCity = four.filter(c => inRings(AT[c], M.cityRingsRaw('Līhu‘e')));
+assert.equal(onBelt.length, 1, "the belt's ring holds one of the four cafés — the rest are in the sea");
+assert.equal(onCity.length, 4, 'the city ring holds all four');
+assert.ok(offshoreKm(AT.kapaa, beltKauai) > 3 && offshoreKm(AT.waimea, beltKauai) > 3,
+  'Kapa‘a and Waimea sit over three kilometres off the belt\'s coast');
+ok('adoption test two — every point the record holds in the window lands on land');
+
+assert.ok(!M.CITY_RINGS['honolulu'] && !M.CITY_ARCS['honolulu'],
+  'Honolulu failed test two on this source and is not shipped');
+assert.equal(Object.values(M.CITY_RINGS).join('').length + Object.values(M.CITY_ARCS).join('').length, 76,
+  'the whole city table is 76 b — 31 for Kaua‘i, 45 for the Los Angeles coast');
+ok('the generator refuses to write a rejected key, and the table costs 76 bytes');
+
+// ---- Phase E: the USA entry ----
+assert.equal(M.landRingsRaw('united states of america').length, 1, 'the USA entry is the contiguous states');
+assert.equal(M.landRingsRaw('united states of america')[0].length, 75);
+assert.equal(M.landRingsRaw('alaska').length, 1, 'and Alaska is its own key');
+assert.equal(M.landRingsRaw('alaska')[0].length, 60);
+assert.equal(M.LANDS['united states of america'].length + M.LANDS['alaska'].length, 427,
+  'the same bytes, less the separator between them');
+ok('Alaska is split out of the USA entry at its second ring, for no new bytes');
+
+assert.ok(inRings(AT.portland, M.landRingsRaw('united states of america')), 'Portland is on the contiguous shape');
+assert.ok(!inRings(AT.portland, M.landRingsRaw('alaska')));
+assert.ok(inRings(AT.anchorage, M.landRingsRaw('alaska')), 'an Anchorage row draws Alaska');
+assert.ok(!inRings(AT.anchorage, M.landRingsRaw('united states of america')));
+const usa = M.landRingsRaw('united states of america')[0];
+const la0 = usa.reduce((a, p) => a + p.lat, 0) / usa.length;
+const w = Math.max(...usa.map(p => KMX(p.lon, la0))) - Math.min(...usa.map(p => KMX(p.lon, la0)));
+const h = Math.max(...usa.map(p => KMY(p.lat))) - Math.min(...usa.map(p => KMY(p.lat)));
+assert.ok(Math.abs(w - 5074) < 3 && Math.abs(h - 2694) < 3,
+  `the frame is 5,074 x 2,694 km, not 7,479 x 5,137 — got ${Math.round(w)} x ${Math.round(h)}`);
+ok('the frame closes to the contiguous states, and the pin lands where the shape says it does');
 
 console.log(`\nALL ${n} MODEL TESTS PASSED`);

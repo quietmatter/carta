@@ -173,6 +173,15 @@ server/               Classic's sync server — dormant
     unlabelled.
   - Beside them, `d3-array` + `d3-geo` **vendored verbatim** — the projection
     the passport needs. See the invariants; this is an amendment, not a habit.
+  - Below them, **the ground itself** — `LANDS` (seventy keys, 7,745 b) and
+    `LAND_TOPO`, their decoders, and since Phase 29 the city table
+    (`CITY_RINGS`/`CITY_ARCS` at 0.005°, read by `landPts(s, q)`), the plate's
+    window geometry (`cityWindow`/`ringsInWindow`/`arcsInWindow`/`plateGround`
+    — a ring is drawn only if it closes inside the window), the seal's width
+    ladder (`sealBands` — outline under 64 px, bands above, coarsest first)
+    and `LAND_OFF_BELT`, the entries the belt carries for a café rather than
+    for coffee and so keeps off the passport. All of it inside the pure
+    markers; the ink for it is `sealHTML`/`cityPlate` in `index.html`.
 - **store** — `localStorage` under one key, `carta7.v1`. `D` is the ledger,
   `load()`/`save()`, `live(coll)` filters put-away records, `putAway`/`restore`
   with undo. Photos live in a **separate key** `carta7.photos.v1`
@@ -370,6 +379,10 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
   fields), `roastLevel`, `roastDate`, and `home`/`homeAt` when a café coffee
   crossed the bridge onto the shelf.
 - **places** / **roasters** — the graph's two node kinds, each with `aka[]`.
+  A place also keeps `country` since Phase 28's audit — read off the same
+  confirmed lookup that states its neighborhood and city, a label and nothing
+  more, backfilled behind the keeper by `backfillCountries` for cities the belt
+  cannot name for free.
 - **setups** / **brews** — classic's shapes, minus the spine refs.
 - **menus** — a café's lines as printed, parsed and editable.
 - **asks** — the ask's history: kind, destination, question, model, and
@@ -469,16 +482,21 @@ node test/model.test.js        # zero deps, plain Node, 121 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
-**all four** of `carta-plate.js`, `carta-shot.js`, `carta-ask.js` and
+**all five** of `carta-map.js`, `carta-plate.js`, `carta-shot.js`,
+`carta-ask.js` and
 `index.html` (in that order — the browser's own `<head>` order, because
 `parseVisualizerShot` reads the plate's globals and `index.html`'s own
-`parseCfSearch`/`parseMenuOCR` read the ask's `extractJSON`/`askStr`) and
+`parseCfSearch`/`parseMenuOCR` read the ask's `extractJSON`/`askStr`; the map
+goes first and reads `fold` back the other way, which hoists) and
 evaluates them against fixture ledgers — no DOM, no `localStorage`. **If you touch `tasteModel`, `brief*`, `matchNodes`,
 `joinAlias`, `putAwayCore`, `restoreCore`, `matchFigure`, `hoodOf`, `cityOf`, `dedupeHits`,
 `parseMapLink`, `convexHull`, `roundedHullPath`, `cityShapePath`, `parseRoastLevel`,
 `originPin`, `meanPin`, `namesBack`, `cfSearchPrompt`, `parseCfSearch`,
 `parseVisualizerShot`, `normalizeRoastLevel`, `matchSetupByGrinder`, `brewerOf`, `setupCandidatesFromShots`
 (those five live in `carta-plate.js`'s sibling `carta-shot.js` since v7.34.0),
+`landPts`, `landRingsRaw`, `landTopoRaw`, `landKey`, `landAnchor`, `sealBands`,
+`cityKey`, `cityRingsRaw`, `cityArcsRaw`, `cityWindow`, `ringsInWindow`,
+`arcsInWindow`, `plateGround` (those thirteen live in `carta-map.js` since Phase 29),
 `askPromptText`, `parseAskJSON`, `matchFigure` (in `carta-ask.js` since v7.34.0),
 `shotCurve`, `shotPours`, `shotFigures`, `shotMethod`, `platePaths`,
 `shotAt`, `shotPhase`, `shotPreinfusion` (the last eight live in

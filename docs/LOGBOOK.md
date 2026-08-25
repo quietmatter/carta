@@ -7,6 +7,73 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-25 — Phase 29 (v7.36.0): ground for every listing
+
+- **This release carries two bodies of work that were written in parallel and
+  land together.** The turn-3a artboard audit (the two commits before this one)
+  found five deviations between what PR 136 shipped and what the design board
+  drew, and closed the two that needed a country the record never kept: the
+  lookup that confirms a pin has been stating it all along, so `countryOf`
+  keeps it, `settlePlace` carries it, and `backfillCountries` fills it in
+  behind the keeper for every café already on file. Phase 29 is the map spec
+  on top of that. They meet in one place and agree there: naming a country and
+  drawing it are separate questions, `cityCountry` answers the first and the
+  belt answers the second, and Phase A simply moves four countries from the
+  first column into both. Where the audit's own comments used Denmark and
+  Germany as the countries the belt would *never* carry, this phase corrected
+  them — the reason survives the examples, since a record goes wherever the
+  keeper does and the belt is a fixed list of shapes.
+- **What landed.** The five shippable phases of `CARTA Map Spec.dc.html`, the
+  production spec written out of the Carta listing redesign's own QC pass.
+  **A** the belt reaches Denmark, Germany, Norway and Japan (+474 b) · **B**
+  the seal spends `LAND_TOPO` above 64 px, one threshold, coarsest band first
+  · **C** the city plate, on the closes-inside-the-window rule · **D** the
+  city table, `CITY_RINGS`/`CITY_ARCS` at 0.005° (+76 b) · **E** Alaska split
+  out of the USA entry (−1 b, the separator). **F** — elevation and true
+  1:10m coastlines — is deferred, as the spec defers it: there is no source
+  for it in the repo. Belt 7,272 → 7,745 b over seventy keys. `ROADMAP.md`
+  Phase 29 has the full account.
+- **The finding worth keeping is D's second test.** A city key is adopted
+  only when it puts more vertices in the window *and* every point the record
+  holds there still lands on land — not just the city's own coordinate.
+  Honolulu is the proof and is why the rule is written that way: the finer
+  source gains four vertices and loses the shore the city stands on, so the
+  pin lands at sea and three of four cafés with it. No byte count and no
+  vertex count would have shown it. It is rejected, and its strings are kept
+  in the roadmap so the next source can be measured against the same failure.
+- **Two decisions taken against the design, both stated.** The row falls back
+  to the country seal where its window holds no ground, rather than dropping
+  straight to the record's own points — otherwise Phase A's own promise
+  (Copenhagen draws Denmark) and Phase E's (an Anchorage row draws Alaska)
+  would both have been undone by Phase C the moment it landed. And a
+  two-point `CITY_ARCS['lihue']` fragment 127 km from the city was dropped
+  rather than shipped: it fails the plate's own ≥ 4-vertices rule, which is
+  enforcement rather than deviation, and it is why D costs 76 b and not 86.
+- **The harness has a fifth file.** `carta-map.js` carries a
+  `/* ==== pure ==== */` block now, sliced first because that is the
+  browser's own `<head>` order. Every "done when" clause in the spec is a
+  case in `test/model.test.js` rather than a sentiment — round-trip through
+  the app's own `landPts`, the bbox assertion on every drawn ring, both
+  adoption tests measured against real café coordinates, and the two US
+  frames. **139/139 passing**, up from 123.
+- **For the founder's desk: the line band.** `index.html` crossed 5,000 at
+  **v7.35.0** — 5,364 lines — with no argument, amendment or acknowledged
+  debt written into `ARCHITECTURE.md` §1, which is the exact failure that
+  section exists to prevent. This phase found it and recorded it. With the
+  audit's own 92 lines and Phase 29's 128 on top, the file lands at
+  **5,584 / 387.1 KB**. Bytes are comfortable (the ceiling that has never
+  moved, at 77 % of it); lines are 584 over. Not amended here —
+  both prior overages were founder calls and so is this one, with the extra
+  question of whether the silent crossing means the next split is due rather
+  than another look at the band.
+- **Parked, not absorbed.** `landLabel` title-cases a raw `LANDS` key, so a
+  city row falling back to it reads *United States Of America* over two lines,
+  or *Hawai*. The audit's `cityCountry` fixes this wherever a café has actually
+  been looked up — Nominatim states *United States*, and the stated name wins —
+  so what is left is the case where nothing has been placed yet, or the belt
+  answered for free and nobody read the address. It wants a display-name table
+  beside `LAND_AKA`, which is its own small decision and not this phase's.
+
 ## 2026-08-24 — v7.34.2: a Setup, matched by what it actually is
 
 - **A keeper's own account surfaced two real bugs behind the same root

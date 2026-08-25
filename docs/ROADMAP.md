@@ -1331,6 +1331,96 @@ whatever series it's given, so a shorter one draws a shorter line, not a
 crash or a stretch. 96/96 pure tests passing. `docs/ARCHITECTURE.md` §7
 and `docs/LOGBOOK.md`'s v7.28.3 entry have the full account.
 
+### Phase 29 — ground for every listing (shipped — v7.36.0)
+
+*Phases 27 (photos retired) and 28 (the listing card and its seal) shipped
+without sections of their own here; both are in `docs/LOGBOOK.md` and
+`docs/ARCHITECTURE.md`, and this phase does not backfill them.*
+
+**Where it came from.** The Carta listing redesign went live at Phase 28 and
+was QC'd against its own mockup, which closed one gap and named several
+others: a city row could draw its country but not its own ground, the
+highlands sat in the file unspent above thumbnail size, and the belt stopped
+at the countries that grow coffee, so every city in a consumer country said
+*no outline on file* forever. The design work that followed is in
+`CARTA Map Spec.dc.html` — six phases, five of them shipped here.
+
+- **A · the belt reaches the consumer countries.** Denmark, Germany, Norway
+  and Japan, cut from Natural Earth 1:110m through the belt's own simplifier
+  (≤ 4.4 points per degree of extent, the density its existing sixty-five sit
+  at), quantised to 0.05° and encoded with the same varint. **+474 b**, worst
+  deviation 16 km. Rings are kept at ≥ 1/100 of the main shape's area *and*
+  only where their latitude **and** longitude bands meet it — which keeps
+  Zealand, Hokkaidō, Kyūshū and Shikoku, and drops Svalbard. They are ground
+  for a seal, not countries on the passport: `LAND_OFF_BELT` holds them off
+  the printed frame and `<carta-belt>`'s own `BELT_SET` already did.
+- **B · the seal spends `LAND_TOPO` above 64 px.** `sealHTML(key, at, px)`
+  takes the width it is drawn at: under 64 px the outline alone, because a
+  0.05° contour at row width is four dots; at 64 and above the bands the
+  width can hold, coarsest first, because the highest ground is the simplest
+  shape and a seal showing one contour should show the right one. No call
+  site passes a surface name, and the 36 px row seals are byte-identical to
+  what shipped before it (verified by diff, not by eye).
+- **C · the city plate.** A seal with a window: a box of *span* kilometres
+  centred on the city, drawing only what closes inside it. One test at draw
+  time, no city-by-city exceptions — a ring the frame would cut is a chord,
+  not ground. Where nothing closes but the belt still knows the country, the
+  row falls back to the country seal (Copenhagen's Denmark, Anchorage's
+  Alaska); where it knows neither, the plate draws the record's own cafés at
+  their own coordinates and the fact row states the fall. Marks are stated as
+  a diameter in drawn pixels and converted into the window's kilometres, so a
+  plate reads the same at 36 px and 168.
+- **D · the city table.** `CITY_RINGS` and `CITY_ARCS`, keyed by city and
+  quantised ten times finer than the belt, read by `landPts(s, q)` — one
+  decoder, one new argument. Kept apart because their ink differs: a ring is
+  filled and hairlined, an arc is stroked and never closed, since an open
+  coast has no inside. **+76 b**: Los Angeles (1 → 12 vertices, the coast at
+  Santa Monica Bay and the turn at Palos Verdes, 45 b) and Līhu‘e (6 → 8,
+  31 b). A key is adopted only on two offline tests, and the second is what
+  makes the first safe — **more vertices in the window, and every point the
+  record holds there still on land.** Honolulu passes the first and fails the
+  second on this source, gaining four vertices while losing the shore the
+  city stands on, so it is **not shipped**; its strings are below, rejected,
+  so the next source can be measured against the same failure.
+- **E · Alaska is its own key.** It shipped as the USA entry's second ring,
+  and a ring 5° of longitude clear of the main shape is the same object
+  Svalbard is: it widened the frame to 7,479 × 5,137 km and left a Portland
+  pin adrift at 45 % across. Split at the `;`, the contiguous frame is
+  5,074 × 2,694 km, Portland lands on the coast, and an Anchorage row draws
+  Alaska. **−1 b** — the separator. The printed passport is unchanged: the
+  same 84 subpaths in the same frame, verified by diff.
+- **F · elevation and true 1:10m city coastlines — not built.** It has no
+  source in the repo and the spec defers it. The honest ceiling on what did
+  ship: the city sources carry roughly 15 km of detail in-window, so a plate
+  is truthful at 190 km and 110 km and no further.
+
+**Done when, as assertions.** Every clause above is a case in
+`test/model.test.js` (124–139), which slices a new pure block out of
+`carta-map.js` — the harness's fifth file, evaluated first because that is
+the browser's own `<head>` order. Round-trip, byte counts, the bbox
+assertion, both adoption tests, and the two frames. 139/139 passing.
+
+**Rejected, kept for the record.** Honolulu at 0.005°, which gains vertices
+and loses the shore:
+
+```
+"honolulu" rings: 'nq9BkpInBpB7CAcuBoDD;r29BovIsB_CV1B1CH5BwD0BCmCsB'
+"honolulu" arcs:  '1m9BwlIqBsB'
+```
+
+A second string was dropped rather than shipped: the generator emitted a
+two-point `CITY_ARCS['lihue']` fragment 127 km from the city, which fails the
+plate's own ≥ 4-vertices-in-window rule and falls outside every window the
+plate opens. Dropping it is enforcing the rule, not deviating from it, and it
+is why Phase D costs 76 b rather than the spec's stated 86.
+
+**Open, and named as the author's rather than the data's.** The 190 km and
+110 km spans were chosen by eye and want testing against real records; the
+64 px threshold was measured on Ethiopia and Kenya, whose contours are dense,
+and a country with two contour marks may deserve a lower bar; and Los Angeles
+has no relief on file, which is the one thing that would make its plate about
+Los Angeles rather than about the sea to its west.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner

@@ -26,7 +26,7 @@
  * Taps leave as bubbling events: carta:country-tap {name} · carta:pin-tap {id}.
  */
 (() => {
-  const BELT = ["hawaii","angola","argentina","australia","bangladesh","belize","bolivia","brazil","burundi","cambodia","cameroon","chile","china","colombia","republic of the congo","costa rica","côte d'ivoire","ivory coast","cuba","democratic republic of the congo","dominican republic","ecuador","el salvador","eritrea","ethiopia","ghana","guatemala","guyana","haiti","honduras","india","indonesia","jamaica","kenya","laos","madagascar","malawi","malaysia","mexico","mozambique","myanmar","nepal","nicaragua","nigeria","panama","papua new guinea","paraguay","peru","philippines","puerto rico","rwanda","south sudan","sri lanka","suriname","united republic of tanzania","tanzania","thailand","east timor","timor-leste","togo","trinidad and tobago","uganda","united states of america","venezuela","vietnam","yemen","zambia","zimbabwe"];
+  const BELT = ["hawaii","alaska","angola","argentina","australia","bangladesh","belize","bolivia","brazil","burundi","cambodia","cameroon","chile","china","colombia","republic of the congo","costa rica","côte d'ivoire","ivory coast","cuba","democratic republic of the congo","dominican republic","ecuador","el salvador","eritrea","ethiopia","ghana","guatemala","guyana","haiti","honduras","india","indonesia","jamaica","kenya","laos","madagascar","malawi","malaysia","mexico","mozambique","myanmar","nepal","nicaragua","nigeria","panama","papua new guinea","paraguay","peru","philippines","puerto rico","rwanda","south sudan","sri lanka","suriname","united republic of tanzania","tanzania","thailand","east timor","timor-leste","togo","trinidad and tobago","uganda","united states of america","venezuela","vietnam","yemen","zambia","zimbabwe"];
   const BELT_SET = new Set(BELT);
   const fold = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
   const AKA = { 'united states': 'united states of america', 'usa': 'united states of america', 'us': 'united states of america', 'drc': 'democratic republic of the congo', 'dem rep congo': 'democratic republic of the congo', 'dr congo': 'democratic republic of the congo', 'congo': 'republic of the congo', 'tanzania': 'united republic of tanzania', 'timor leste': 'east timor', 'east timor': 'east timor', 'ivory coast': "côte d'ivoire", 'cote d ivoire': "côte d'ivoire", 'burma': 'myanmar', 'cameron': 'cameroon', 'hawai': 'hawaii', 'dominican rep': 'dominican republic', 'philipines': 'philippines' };
@@ -385,10 +385,31 @@
  * LAND_AKA alias table classic carries for a handful of common alternate
  * English names ("USA" and "united states of america" naming one shape).
  * That table is not the resolver come back — it aligns a typed country name
- * with ONE fixed, embedded geography file, nothing about a coffee record. */
+ * with ONE fixed, embedded geography file, nothing about a coffee record.
+ *
+ * Phase 29 · A — the belt reaches the countries the record DRINKS in. It was
+ * the growing world alone, so a city in Copenhagen had no ground at all and
+ * said so on every row. Denmark, Germany, Norway and Japan are +474 b on
+ * 7,272, cut from the same Natural Earth 1:110m through the same simplifier
+ * and the same varint (docs/ROADMAP.md Phase 29). They are ground for a seal,
+ * not countries on the passport — LAND_OFF_BELT keeps them off it, since the
+ * passport is a record of where coffee is grown and none of these grow any.
+ *
+ * Phase 29 · E — Alaska is its own key. It shipped as the USA entry's second
+ * ring, and a ring 5° of longitude clear of the main shape is the same object
+ * Svalbard was: it widens the frame to 7,479 km and leaves a Portland pin
+ * adrift at 45% across. Contiguous, the frame is 5,074 km and the pin lands
+ * on the coast the shape says it is on. The same bytes, split at the ';' —
+ * and an Anchorage row now draws Alaska rather than a continent.
+ *
+ * Phase 29 · D — CITY_RINGS / CITY_ARCS below the belt: the same encoding at
+ * ten times the resolution, keyed by city, read by the same decoder given a
+ * divisor. A city with no key falls back to LANDS and nothing else changes. */
+/* ==== pure ==== */
 const LAND_A='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',LAND_I={};
 for(let i=0;i<64;i++)LAND_I[LAND_A[i]]=i;
-const LANDS={"angola":'sPzHsBK2DBUzBYhBoBIWFQiBaCCGUADNyBAInBBvBMPBvB0BKSDELAhCxCAB_D0B3BnCRhDGbUnFDXSZApBNDaW4CW0BkBsBEeBWfgCOYTgCTaCI',
+const LANDS={"alaska":'nwFk3CA3LuCLgCrBuCkB2C3BiCpCkCZVrB3BcLiBzBiBVkBlDE_D2BhJ2BrBJIZzEhBMgCqBMJKnEtCcTlBbxCd1C3BjI5B6HiDoBWa2BvCTzBa_BPEoBZOzBH9BcAWdSOWwBsB8BD8CcdacQlFN7BKhCmByEmBgBAFT0CApG6CWWmCAmD6B0GoB6CZ2QnB',
+"angola":'sPzHsBK2DBUzBYhBoBIWFQiBaCCGUADNyBAInBBvBMPBvB0BKSDELAhCxCAB_D0B3BnCRhDGbUnFDXSZApBNDaW4CW0BkBsBEeBWfgCOYTgCTaCI',
 "argentina":'hoC3lBhBpFyBhBDbYPBTlBzB7BT7DFIpCXN9CAEnBcLWMMTlClBN9BlCTLduClBNjBtBVZtB1BjBoB_B1EOP0BpBMBsBqBqBckESGXYOQb-BQIO-DYOLsCeaWoCdyDkB0D2B-BDgDqBSK0BiBkB0BJWbQgBuBBwCpC6DxBGRlB7B0DL-BqCU1B_EjE;51C5hCkBvBsDhBRTlBB3CQA4C',
 "australia":'29EnoBtCdVlB1EDrCpB1BA_BiBAYaOEqBduDjCmESRNmBgBbhBsCOsCQeEdQayCuBmFoB4B8BCmBciBShBQINSMUSJGgB0B0B2BS0BpByBDHWwBqCwCSBUdOWE2DrBwBQSTnBlBRjC8FrDcOOmBSgFgBmC4B7EaQgBhBqB9EiD5BiBtCqBBGpBuCnCcxDZtElD_ENnCjCNvCxB3BaGU5BjB1DgBrBqC5BWEwBTbhBFqBgCDenCvCfQlBsCzDsBvGb;04F_yBYDP7CNKbbfEzByDgCR2BO',
 "bangladesh":'6zDybAdNIChBJWBUHURWjBCEPNVPIFHZIFiBNeGYXKIOaQdUOcgBRUBCbmBDmBAYFThBRDLVWTGYMCU_B',
@@ -406,11 +427,13 @@ const LANDS={"angola":'sPzHsBK2DBUzBYhBoBIWFQiBaCCGUADNyBAInBBvBMPBvB0BKSDELAhCx
 "cote d ivoire":'hK4MGEMFeAIMSCGPaKSHGNSHOKUCaJM5BRfJtBShBBPRAbIZBvBFhCZHACiBEEAQRSLCLKISDUCMGAEQDIEGOGJgBHQCOIC',
 "cuba":'5mDgdiCDkBNQNmBEqCzBkBHBJcBePDJZFvDBaWPKZENMHWXBvBUzBGNIOKnBCbVPAFJTDPEuBkB-BQ',
 "dem rep congo":'2kBzFKvCYXWxBvCHLXIRL3CoBVKGEpBdAfoBdEJWXLfENSrBEBMzCFCwBLQF4CxBAEOTAbHPhB9BBrB2C1DCrBJDMSgBYEOQWASR4B4BBiBSmByB2BkB4FkBiB8Bd6BJSaSDsBUeFUMkCAahBSDyBMuBrBDtBQFxB_BLtCLJLxBOhC',
+"denmark":'0NymCxBnBKR1BBRWAqBSWiBCwBYBVLLELWF;8PwlCXfpBWFS6BMOT',
 "dominican rep":'z5CyWAKJMKIEODWEIgBAYLKCINWABLSAUPPPRIfCHHNBFKNFPbJGBM',
 "ecuador":'l-CFEdLZrBpBvBPXhBHbVPPUREPDAQKKDQWeJSNTXSIMHkBOGIYQaDQyBaoBXICKRgBFMGmBV',
 "el salvador":'1vDgSMBUNCFSEOFHZXANEPIVCLKCGUOBEKC',
 "eritrea":'ytBgSFQS8BEaMMeIUWYtBKlBWR4BlB4B7BULLJREdkBRMJOhBQbCJIXJXSLdtBI',
 "ethiopia":'47BgKxD3DzBBjBbXALNbAPOjBPLR5BIxBiBbANOAWTGXsBRKbiBXEOWWCQ6CUKUwBYUYoCuBHMeYRYKKHcBiBPcZejBbjBEXgBCKFJPuB1BiEvBiBA',
+"germany":'sM4kCCPoBJAN-BSuBNSNKTLJQPGhBQZbAxChBKbsBZbXChBfK_BFFJrCWHJhBAGeUarCSHgDYAKQKkBHOIIiBCGHcSJmB2BC',
 "ghana":'A4NBLQTE7BKPHjBCTUlB9BXVNjBLjBMCQRiBKuBSgBP4CAWmCCSBMGSD',
 "guatemala":'pzDmSCMEIFIUgB0BAAOFCDKdWSAAWqCADrCMAOHEGKDjBbDHEFHLJBCDTNBFTGZCRIVQ',
 "guyana":'1mCsCfCLJfJDHTCXUBSJUGiBKOHSNGESHKVBZeKMASYGKINOEQgBWaNYZCTOBmBhBFjBXJCHHVSbMAGXYhB',
@@ -420,6 +443,7 @@ const LANDS={"angola":'sPzHsBK2DBUzBYhBoBIWFQiBaCCGUADNyBAInBBvBMPBvB0BKSDELAhCx
 "india":'25DqjBHtBdGzBbnBrDdKHnCTJTgCRZVUyB8BjDKBczBUNbeThBdYJIlDrCHCdVX5BZxDjDARrCZR9GTBRdMNjBJdnBlBmBlC6EPqCjB4BjB2G5BXdGzBwBUOLQtBiBaa4CAjB2CZSsBqBwBDoD8DAciBWfUb-BUSoDDoBiBqBvBDfQTATdEMrB-CzBnB3BgE5B-FlBC8BaIEnBkBP8CGCYPMyD-BiBJcQUXNRsBF',
 "indonesia":'szEmFXjBelBFRsBlBvBDL_BlBbPjDFOtBRPYvBQvBPNU7BCF2BlBuBFiBcgCiBxB-CemBLgBKyByDyCF;uiErBWxBwBbLvDrBAzCiClEwFZgCjE0E4CJ-D9DoBAiBb2BzBPfkBP;owFnDCjIjBgBlDDqBsBbsCrFqCZVJgBdUkCY5BAlCyBsCYgCRQtCqBXwCiCuEjB;25EkB8CUflBdHrEAFdkBjBgDgBDTRGzBlBiCpETLPOSiBvBDEObYCmBZLGnDZDRKGsCdcsB2DqBuByCP;0nE_HEPuCDISqCTQZsDdtBP5HoB1DkBcmBiDT;-_E2CenBBjBVEAxBbsCWuB',
 "jamaica":'9gDkXaDWJGJbBLFVGXQGIaC',
+"japan":'owFuuBPfGTTbxBTnCB3BtBbQAelCHvBTtBAoBdZjCZPTOKkBZMPcmBMWaoBUccwCMsBHoBmCcRyC2BYyBFsBQaqBIW3BAflBpBCnB;8zFm3BcHcSKtB7BJhBnB_BcVrBrBBFoBUgBsBCK2BMgBwBpBeN;qoF2qBENVXPMTHLXZMASWYYDQQeH',
 "kenya":'gxB7F5BoBBY3E2CAqBuBoCViCTc0ByBUFAVONcAyBhB6BHMSkBQQNcAhBrBAxEYhBbPJPPBFdLPHZPN',
 "laos":'omE4RjBORZhBOOSCiBfkBDoBdgBdCHNXALGpBXAkBKqBbCBYRMKQiBaCJWBFuBUGYdSlByBAOhBXLLNwBX6BxCebKbFnB',
 "madagascar":'-9BxPUrBGvBMTDRHLNYHLIdDRJHBhB9C3IjCZ1BYb4CDeIcSIWkCPsBDmBUwBqCQ4BwBMUFSSFWcAYOSOP',
@@ -431,6 +455,7 @@ const LANDS={"angola":'sPzHsBK2DBUzBYhBoBIWFQiBaCCGUADNyBAInBBvBMPBvB0BKSDELAhCx
 "nepal":'kuD8iBBREZDPfAvCOVU3BE_D6BQmBqBagBLoBZWFOReHgBR8CL',
 "nicaragua":'xoD2NJHLCFILEJFZKFDhBcHOjBeEGGFQGEIGAAUSAIMMHaUAIEAGKEAGFIBIGKAOGGEOAFLEPHNDPBPEdHDBPCJHLCJGF',
 "nigeria":'sD6HA6CIagBkBDMIQJYGwBQoBKIsBEoBNOPWASKwBTUAYSkBE0BNgBWIBcrBICQPHVhBdfzCVPRzBbNVQPAXXJAdjCnCTfAVaLcbahCA',
+"norway":'mjBg5C-DdzBJsBZjCPfDQcxBQ9BLTdlBRrBKzBBrBUXJXBFZrCGJVnBAhCnC9B3BONNPlBAZjBC1BaTNvBhBZPXbYtCtB1BH3BUNqBL8CkBaqDiBwCqBoC4BgDsCyFwC4CSgCB-BiBoCBoCI',
 "panama":'1gD6KDFIVHLLCFTLMJWKKJEFMTMRBHNPJJBDHUVPLTBFYFFLCHQbIPABJDIEQAGGGJEASQCONAHQBEEKJUCSKYIOMWBBDWBSFcX',
 "papua new guinea":'owFnDwExByBpBGViCZKTlBDKbkBZapBWCBRgBHLFqBRDLZBJKrCK1BwBTkBzBQ5BXEddN_BKBkI;k9FpHpBRVA3BWEM6BBMUEVWEiBcDYYAIFBVLZVBFL',
 "paraguay":'1oCnZMVD1BqBHSIaJILIzBOBQGOFAVTxCjBffFzCSmB8BFSnBQxBcfGpCiCQwBCWSiBmCMmBAkBTCN',
@@ -445,7 +470,7 @@ const LANDS={"angola":'sPzHsBK2DBUzBYhBoBIWFQiBaCCGUADNyBAInBBvBMPBvB0BKSDELAhCx
 "timor leste":'m8EjLGKiBIcCMGQFPJpCdBMDI',"togo":'kB4NFVcXATIHB7CKbfHTmBBUIkBJQD8BPUCMkBA',
 "trinidad and tobago":'jtCuNYGIBBdfDHEMKBQ',
 "uganda":'sqBlB9DBlBRHEAeIQEgBISOWQKMOPGEuBQMaJgBKcAYSUbWhCPbdrBApB',
-"united states of america":'x5Eo9B0iBAOQSdsDTiEGsE3B-C9BQnClB5BQP2EuBHYSIsCAuC2BmEAiBS4BwC6BPA1BiBjB9DrBb1BiBb1EbmCAvCHlBnCZWUrBjBvBKeZwBApBZGcNW9CjExC7CxCC3ByB9DNjCdAVatByCIapB4B3BLzBe_DJInB5Ea5BLhDhCAvCPA5BUtC6D9BOXfhBMlDkDzFPzE2BhDF1B8BzCW3EkHFiDauDfsDgCFUlBJsC;nwFk3CA3LuCLgCrBuCkB2C3BiCpCkCZVrB3BcLiBzBiBVkBlDE_D2BhJ2BrBJIZzEhBMgCqBMJKnEtCcTlBbxCd1C3BjI5B6HiDoBWa2BvCTzBa_BPEoBZOzBH9BcAWdSOWwBsB8BD8CcdacQlFN7BKhCmByEmBgBAFT0CApG6CWWmCAmD6B0GoB6CZ2QnB',
+"united states of america":'x5Eo9B0iBAOQSdsDTiEGsE3B-C9BQnClB5BQP2EuBHYSIsCAuC2BmEAiBS4BwC6BPA1BiBjB9DrBb1BiBb1EbmCAvCHlBnCZWUrBjBvBKeZwBApBZGcNW9CjExC7CxCC3ByB9DNjCdAVatByCIapB4B3BLzBe_DJInB5Ea5BLhDhCAvCPA5BUtC6D9BOXfhBMlDkDzFPzE2BhDF1B8BzCW3EkHFiDauDfsDgCFUlBJsC',
 "venezuela":'9rCwGGLNNpCVLJjCMSJEzBiBDCHdLDPtBPHLfDVWLoBXWUUTwBCcQkBNGjCFbiBpCCTQAoBNcTCQ0BmBuBYIAJXFORBTPXOfSEIcLOBeyBSFSOMObcAaVCNuCEYReDWMCKgDChBLORgBDeRIfUAQJfVDPONhBNARJLad',
 "vietnam":'uiEkNiBQqBCRYkCgBEwBHaGoBJcdc5ByCvBYMOYMNiBxBApBkCWKoCEiBWSNmBHHXUPoBJ1BhBflBJbkC9CkBXafSpCFnCvCzBxClCNaMadY',
 "yemen":'ghC4XsB9CbJJfnDjBhBbdAXPjCLZX7BBLWCWZ6BICAsBQMDSMUQL4BG-BFKNSGeqBkBS0DQ',
@@ -500,23 +525,29 @@ const LAND_TOPO={"angola":"mX7JBFFAGLBFFDEFHBDLCAICADGBENBDONJDHBBGTMHHJCPUAMDCF
 "yemen":"-1BkVIDAFGHDFBREBEIEBFJAHHHKBAHKJJADEEPEDDHOABBDJCDDDGBBHEDBFIFECEGIBAGHCKEAEGDOIGBCDGAGEGAAEIGcGMGIACHIEEBAELCGCDGEEICQFJICCgBBCHEBGIKGFGCCEBeKIAIEEBOEBEXINABEDBAHDBXAFIFFDADGHDBCCGJJBGJFAIHHDCNXHFJBDKRICIFCHOFCAGMAKGCIKGIAEELEPDFMDCRW,-7B8TQAHIICGDEEGBAGGAEOHAADHEBDDGJFDCEEACJFJEFHFODAHLBHEDIDKACDMD,s9ByUUAKGQDAEBIFAXHLABF,oiCgVLCNAFBOFGCMB,o5B6QQECEDCNFAD,-_BmTEEBGFDEF,q_B2TIAEELCAF;-2BoRKAIGMBICBKGEBKFCFOCGGBECNOCIBGBEFDDGFACGHEHRHFEFFBMBEJKBJNKDFDIDDDCJBBDCAFDD,w4BoRMGIDIIKAEERDBGHHFCFBBH,24B2REUDCHHGFBFEB,m2B6VEdIGFOAGGC,03ByUEADQRBSN;",
 "zambia":"ggBlWGCCBGCEBGGGDGACDKCCIIEGOGECEGCBEMOBEOBIGFGKADGKKMDOCDEECIBBIGEBMDALFAGLAAIOIMBIGKCEGDCCGYUEIKAEFCAAIBACAMQMkBGKEFOSAGGCCGGEEaEKMIEBBVGJDHEF,6hBjUJOFBFCLBDJBKUIMKUBKEEDEEEHIHADRAXL,spBxOHHARJLCLDBIJBDFJDCBJLBHJNAFFBH,qlBtKCBECKDDFFCHDEJJAPLLGDFCNHVBRDA,0ezVCEUSKDICCBHRGDAFFDID,-nB5RACGACEEBCECD,gnB1KBJNINFAEFCIM,qkBvKGBFTIDIGCMGK;;",
 "zimbabwe":"ipBjWDGFADLBGFAIKAIBBNEFBAGPHFAIGDCGEBIHEGGGBBEECxBABDEFADHFEIHKAGLLDIFAEGLCBDHGJFGCGFDFEDFFEJABMFKNFLHHEJHANMBIHHPEALLADGNDBGHJFACBKCGDFDEDKFMAZACELGBAIFFALKbJNEIKNACIGAEELCDELA,6iBpaEBKEGBQKOFCCDECCCKEHOHGCACDCCEKACBGEDCCEFGIOGDGECFKDAHQGEBEGIEIBAGFCBEEEBKGCFGCEAIGAGEIDGLECAKIL,6oBrYFDGFFBBHEDDLII,0gB9XKEALIDUKCNHR,0iB_XDECGBEIDAHDB,4iBvWOSTFAFGF;;"};
-function landPts(s){
-  const pts=[];let i=0,x=0,y=0;
+// one decoder, given the divisor the table was quantised at: 20 for the belt's
+// twentieth of a degree, 200 for the city table's two-hundredth. Everything
+// else about the encoding — the alphabet, the zig-zag varint, the delta per
+// point, the ';' between rings — is the same string in both tables.
+function landPts(s,q){
+  const pts=[],d=q||20;let i=0,x=0,y=0;
   const rd=()=>{let r=0,m=1,c;do{c=LAND_I[s[i++]];r+=(c&31)*m;m*=32}while(c&32);return (r&1)?-((r+1)/2):r/2};
-  while(i<s.length){x+=rd();y+=rd();pts.push({lon:x/20,lat:y/20})}
+  while(i<s.length){x+=rd();y+=rd();pts.push({lon:x/d,lat:y/d})}
   return pts;
 }
+// the divisor is passed explicitly at every call site: map() hands its index
+// in as a second argument, so a bare .map(landPts) would decode ring 1 at q=1
 let _landRingsCache={};
 function landRingsRaw(key){
   if(key in _landRingsCache)return _landRingsCache[key];
   const enc=LANDS[key];
-  return _landRingsCache[key]=enc?enc.split(';').map(landPts):null;
+  return _landRingsCache[key]=enc?enc.split(';').map(r=>landPts(r,20)):null;
 }
 let _landTopoCache={};
 function landTopoRaw(key){
   if(key in _landTopoCache)return _landTopoCache[key];
   const enc=LAND_TOPO[key];
-  return _landTopoCache[key]=enc?enc.split(';').map(lv=>lv?lv.split(',').filter(Boolean).map(landPts):[]):null;
+  return _landTopoCache[key]=enc?enc.split(';').map(lv=>lv?lv.split(',').filter(Boolean).map(r=>landPts(r,20)):[]):null;
 }
 function landKey(name){const f=fold(name||'');return LAND_AKA[f]||f}
 function landAnchor(key){
@@ -525,11 +556,102 @@ function landAnchor(key){
   return {lat:big.reduce((a,p)=>a+p.lat,0)/big.length,lon:big.reduce((a,p)=>a+p.lon,0)/big.length};
 }
 
+/* which contours a seal of this width can hold (Phase 29 · B). Under 64 px a
+ * 0.05° contour is four dots, so the row keeps the outline alone; the cup's
+ * own page takes the 2,000 and 3,000 m bands; a page with room takes all
+ * three. Returned coarsest first — LAND_TOPO's levels run 1,000 · 2,000 ·
+ * 3,000 m, so the ladder reads back off the end of it, because the highest
+ * ground is the simplest shape and a seal showing one contour should show
+ * the right one. One threshold, no per-surface branching. */
+const SEAL_BANDS=64, SEAL_ALL=140;
+function sealBands(px){const w=px||36;return w<SEAL_BANDS?[]:w<SEAL_ALL?[2,1]:[2,1,0]}
+
+/* ============ the city table (Phase 29 · D) ============
+ * Two tables, keyed by city, quantised ten times finer than the belt — 0.005°,
+ * five hundred metres on the ground. They are kept apart because their ink
+ * differs, and that split is the whole flag the painter reads:
+ *   CITY_RINGS  closed shapes  → land fill + hairline
+ *   CITY_ARCS   open coastline → hairline only, never filled, never closed
+ * An open arc has no inside; filling one would invent a shore on the sea side.
+ *
+ * A key is adopted only when it passes both offline tests, and the second is
+ * what makes the first safe: more vertices in the window than the belt has,
+ * AND every point the record holds in that window still lands on land — not
+ * just the city's own coordinate. An outline can gain vertices and lose the
+ * shoreline the city stands on, and no byte count would show it. Honolulu is
+ * the proof and is not shipped: it gains four vertices and its O‘ahu is
+ * clipped north of the city's own shore, so the pin lands at sea and three of
+ * four placed cafés with it. Its strings are kept in docs/ROADMAP.md Phase 29,
+ * rejected, so the next source can be measured against the same failure.
+ *
+ * A city with no key falls back to LANDS. Nothing else in the reader changes. */
+const CITY_RINGS={"lihue":'rp-B81IuBDWpBL7BtBjB_DuBQgCmDgB'};
+const CITY_ARCS={"los angeles":'z6tBi-M3BmC9DgD_E6CdX9BOKoBlCyC9CRnF6BXwBvD8B'};
+const CITY_Q=200;
+// an ‘okina is a letter in Hawaiian, not a separator, so it comes out before
+// fold() turns it into a space — otherwise Līhu‘e keys as "lihu e"
+function cityKey(name){return fold(String(name||'').replace(/[‘’'ʻʼ`´]/g,''))}
+let _cityRingsCache={},_cityArcsCache={};
+function cityRingsRaw(city){
+  const k=cityKey(city);if(k in _cityRingsCache)return _cityRingsCache[k];
+  const enc=CITY_RINGS[k];
+  return _cityRingsCache[k]=enc?enc.split(';').map(r=>landPts(r,CITY_Q)):null;
+}
+function cityArcsRaw(city){
+  const k=cityKey(city);if(k in _cityArcsCache)return _cityArcsCache[k];
+  const enc=CITY_ARCS[k];
+  return _cityArcsCache[k]=enc?enc.split(';').map(r=>landPts(r,CITY_Q)):null;
+}
+
+/* ============ the window a plate opens into (Phase 29 · C) ============
+ * A box of `span` kilometres centred on a city, in the same equirectangular
+ * kilometres the seal is projected in. Everything below is one test made at
+ * draw time — no city-by-city exceptions, and no shape baked at authoring. */
+function cityWindow(at,span){
+  const h=span/2,dLat=h/111.32,dLon=h/(111.32*Math.cos(at.lat*Math.PI/180));
+  return {lat0:at.lat-dLat,lat1:at.lat+dLat,lon0:at.lon-dLon,lon1:at.lon+dLon,span,at};
+}
+const inWindow=(p,w)=>p.lon>=w.lon0&&p.lon<=w.lon1&&p.lat>=w.lat0&&p.lat<=w.lat1;
+/* A ring the frame would cut is not ground, it is a chord. Drop it — Kaua‘i
+ * closes inside a 190 km window and is an island; the coastline through Los
+ * Angeles runs Mexico to Canada and is a line passing through. */
+function ringsInWindow(rings,w){return (rings||[]).filter(r=>r.length>2&&r.every(p=>inWindow(p,w)))}
+/* An arc is the other case: open coast, which is honest precisely because it
+ * runs out of frame. It is drawn where the window holds enough of it to read
+ * as a coast rather than a chord, and the disc clips the ends. */
+const ARC_MIN=4;
+function arcsInWindow(arcs,w){return (arcs||[]).filter(a=>a.filter(p=>inWindow(p,w)).length>=ARC_MIN)}
+/* what a plate actually has to draw: the city table where the city has a key,
+ * the belt underneath it where it hasn't, and neither where the window is
+ * empty — at which point the plate draws the record's own points and says so. */
+function plateGround(city,countryKey,at,span){
+  const w=cityWindow(at,span);
+  return {w,
+    rings:ringsInWindow(cityRingsRaw(city)||landRingsRaw(countryKey),w),
+    arcs:arcsInWindow(cityArcsRaw(city),w)};
+}
+/* the belt carries these for the record's own cities, not for coffee. The
+ * passport is a record of where coffee is GROWN, so a country that only ever
+ * appears under a café stays off it — it is ground for a seal, not a country
+ * on the frame. Alaska is not here: it is drawn on the passport exactly as it
+ * was when it rode inside the USA entry (Phase 29 · E moves the bytes, not
+ * the picture), and only a seal reads it as its own shape. */
+const LAND_OFF_BELT={denmark:1,germany:1,norway:1,japan:1};
+/* ==== /pure ==== */
+
 /* what this file hands back to index.html — the seam Phase 19 designed:
  * the app's own passportSVG/tastedCountryMap/landKey callers read these
  * as plain globals, the same way CARTA_LAND_NAMES already goes the other way. */
 window.LANDS=LANDS;
+window.landPts=landPts;
 window.landRingsRaw=landRingsRaw;
 window.landTopoRaw=landTopoRaw;
 window.landKey=landKey;
 window.landAnchor=landAnchor;
+window.LAND_OFF_BELT=LAND_OFF_BELT;
+window.sealBands=sealBands;
+window.cityKey=cityKey;
+window.cityRingsRaw=cityRingsRaw;
+window.cityArcsRaw=cityArcsRaw;
+window.cityWindow=cityWindow;
+window.plateGround=plateGround;

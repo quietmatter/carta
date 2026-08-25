@@ -139,6 +139,31 @@ Carta 7 is built exactly the way classic was, smaller:
   the moved region). `index.html` is back inside the band, per the figures
   above — the debt this section tracked since Phase 18 is closed.
 
+  **Phase 29 widened the seam, deliberately and once.** The map spec's five
+  shipped phases put three more kinds of thing behind it: two data tables
+  (`CITY_RINGS`, `CITY_ARCS` — the city coastline at 0.005°, read by the
+  belt's own decoder given a divisor), the window geometry the plate is drawn
+  from (`cityWindow`, `ringsInWindow`, `arcsInWindow`, `plateGround`), and two
+  small rules the app must not re-derive on its own (`sealBands`, the width
+  ladder; `LAND_OFF_BELT`, the entries the belt carries for a café rather than
+  for coffee). All of it publishes on `window` the same way, and all of it is
+  geometry — no `D`, no `document`, no ledger. The ink stays in `index.html`,
+  where `sealHTML` and `cityPlate` are the only two callers: the split is
+  *what the ground is* on one side of the seam and *how it is drawn* on the
+  other, which is why the plate can change its mind about a disc's width
+  without the map layer knowing.
+
+  **`carta-map.js` gained a pure block at the same phase, and the harness
+  gained a fifth file.** Everything from `LAND_A` to `LAND_OFF_BELT` sits
+  inside `/* ==== pure ==== */` markers now, so `test/model.test.js` slices
+  it first — the browser's own `<head>` order — and every "done when" clause
+  in the map spec is a real assertion rather than a sentiment: strings
+  round-trip through `landPts` to the counts they were written from, every
+  drawn ring's bbox is inside its window, and a city key is only shipped if
+  the record's own cafés still land on land under it. The one function the
+  block does not own is `landAt`, which stays in `index.html` beside the
+  callers that read the whole belt through it.
+
   **Phase 24 is the first small re-crossing since that debt closed.** The
   Visualizer picker (settings sheet, `callVisualizer`, `parseVisualizerShot`,
   `openVisualizerPicker`) added real lines, and a genuine bug was fixed in
@@ -305,6 +330,30 @@ Carta 7 is built exactly the way classic was, smaller:
   file headers and their seam publishes, not a cut. **The debt Phase 26 opened
   is closed.** The next phase to cross 5,000 re-earns its argument from here,
   exactly as this one had to.
+
+  **The crossing happened at v7.35.0 and was not recorded here, which is the
+  failure this section exists to prevent.** The consolidation turn landed
+  `index.html` at **5,364 lines / 371.8 KB** — 364 over a ceiling that has not
+  moved since Phase 17 — without an argument, an amendment or an
+  acknowledged debt written down. It is written down now, at the phase that
+  found it rather than the phase that caused it. Two more bodies of work then
+  landed on top: the turn-3a artboard audit took it to **5,456 lines /
+  376.7 KB** (the country kept off a lookup, and backfilled), and **Phase 29
+  added 128 more** (the seal's width ladder, the city plate and its ink),
+  landing at **5,584 lines / 387.1 KB**. The byte ceiling, the one that has
+  never moved and the one that actually guards the drop-it-on-a-static-host
+  promise, is comfortable at 387.1 of 500 KB. `carta-map.js` moved 535 → 657
+  lines / 108.3 → 115.7 KB, all of it data and the readers over it: +474 b of
+  belt, 76 b of city table, the window geometry, and the pure block that makes
+  the two testable.
+
+  **This is not an amendment and Phase 29 does not claim one.** Both prior
+  overages (Phase 18, Phase 20) were put to the founder directly and recorded
+  as debts against a number that stayed 5,000; the same is true here, with the
+  difference that a phase in between passed the line silently. Whether the
+  band is due another look, or the next split is due, is the founder's call
+  and is on the table — see the v7.34.0 entry above, which named 5,000 as the
+  point past which the one-file law itself, not the band, is what's come due.
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -458,6 +507,14 @@ D = {
                                                         // never a rung, never required (§4 below)
               roastDate?, notes?, site?, palette?, archived? }],
   places:  [{ id, createdAt, name, aka?[], city?, lat?, lon?,
+              country?,                           // Phase 28's audit — the same confirmed
+                                                   //   lookup states it and Carta kept throwing
+                                                   //   it away. A LABEL only: it never keys a
+                                                   //   lookup, never joins a node, and a city row
+                                                   //   uses it to NAME ground the belt may not be
+                                                   //   able to draw. backfillCountries fills it in
+                                                   //   behind the keeper, once per city, and only
+                                                   //   where the belt cannot answer for free
               neighborhood?, geocoded?,           // both stated only by a real lookup;
                                                    //   Phase 15's patch also lets `city` itself
                                                    //   be corrected the same way — a café pasted
