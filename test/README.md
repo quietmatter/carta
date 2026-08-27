@@ -6,7 +6,7 @@ Two harnesses boot the real app against the seeded record in
 
 ```
 npm i playwright-core --no-save
-node test/verify-door.js       # the front door, v7.37.3 — 48 checks
+node test/verify-door.js       # the front door, v7.37.4 — 56 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 ```
 
@@ -32,6 +32,9 @@ easy to break silently:
   irregular coastline can miss entirely
 - **the pulled-up sheet closes behind every way of leaving the Atlas** — the
   tab bar and the ordinary `←`/back gesture both have to land on a closed door
+- **a real phone, not the 852px reference** — fresh-loaded (not resized) at
+  seven heights down to 500px; below ~800px the plate has to give up the map
+  before the leaf gives up its own designed height and starts scrolling
 - **offline** — it asserts that *nothing at all* was fetched off-origin, which
   is the passport's own law
 - dusk, `prefers-reduced-motion`, and 320 px
