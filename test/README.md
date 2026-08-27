@@ -1,17 +1,45 @@
 # Verifying the app in a browser
 
-Two harnesses boot the real app against the seeded record in
+Three harnesses boot the real app against the seeded record in
 `fixtures/env.js` (store keys remapped from `carta7.design.*` to the app's own
-`carta7.*`). Both fail on any console error, any page error, or any assertion.
+`carta7.*`). All fail on any console error, any page error, or any assertion.
 
 ```
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, v7.37.7 — 59 checks
+node test/verify-ask.js        # the ask at the front door, v7.38.0 — 82 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 ```
 
-Both expect a Chromium at `/opt/pw-browsers/chromium`; set `CHROME` to
+All expect a Chromium at `/opt/pw-browsers/chromium`; set `CHROME` to
 override, or edit `executablePath`.
+
+## `verify-ask.js` — the ask at the front door (Phase 31)
+
+Runs the ask **end to end** against the fixture's own canned Anthropic and
+Nominatim doors — the wait is tested as it actually runs, not by driving
+`askSay` by hand — and then walks the rung the answer lands on:
+
+- **the wait is a plate** — full bleed, no bar, the rule measured at `top:78`
+  gutter to gutter off the live DOM rather than off the template, and the
+  200 px pin box at the foot gone
+- **the reframe** — the belt while nothing is placed, `<carta-plot>` from the
+  first confirmed address, with pins actually on it
+- **the ember budget on the wait** — exactly two elements painting `#a63f2b`
+  (the rule's fill and its tip) at *both* stages, and the live line's mark
+  computing to ink rather than the ember
+- **cancel writes nothing** on a real aborted run, mid-grounding
+- **the failure's three doors** are still tappable inside a
+  `pointer-events:none` scrim — the thing a scrim is most likely to break
+- **the ladder** — 03 > 03b > 04 > 02, each asserted at its own plate height
+- **the migration** — an ask already on the record arrives read, stamped from
+  `createdAt`, so upgrading does not hijack the door with the ask history
+- **Not now**, its write, and the undo behind it
+- **an answer that placed nothing** falls back to the passport rather than an
+  empty box; **an answer with nothing to stand behind** says so plainly
+- **the plot's labels** — no two overprint, a crowded name moves off its dot
+  rather than stacking on it, and type over a plate carries the halo
+- dusk, reduced motion, 390×667 and 320px
 
 ## `verify-door.js` — the front door (Phase 30)
 

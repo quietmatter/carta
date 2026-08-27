@@ -226,7 +226,19 @@
 
   class Plot extends HTMLElement {
     static get observedAttributes() { return ['pins', 'pins-from', 'dot', 'labels', 'fit']; }
-    connectedCallback() { this.style.display = 'block'; if (this.getAttribute('fit') === 'frame') this.style.height = '100%'; this.paint(); }
+    connectedCallback() {
+      this.style.display = 'block'; if (this.getAttribute('fit') === 'frame') this.style.height = '100%';
+      this.paint();
+      /* a framed plot is measured against its own box, so it has to re-fit
+         when the box moves — and on the door the box moves on every paint, as
+         the plate takes whatever the leaf leaves it. The same observer
+         <carta-atlas> already keeps, for the same reason. */
+      if (this.getAttribute('fit') === 'frame' && window.ResizeObserver && !this._ro) {
+        this._ro = new ResizeObserver(() => { clearTimeout(this._rt); this._rt = setTimeout(() => this.paint(), 120); });
+        this._ro.observe(this);
+      }
+    }
+    disconnectedCallback() { if (this._ro) { this._ro.disconnect(); this._ro = null; } }
     attributeChangedCallback() { if (this.isConnected) this.paint(); }
     paint() {
       const host = hostOf(this);
@@ -242,17 +254,69 @@
       pins.forEach(p => { const x = px(p), y = py(p); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
       const pad = Math.max(.6, (x1 - x0) * .18, (y1 - y0) * .18);
       x0 -= pad; x1 += pad; y0 -= pad; y1 += pad;
-      const W = 336, P = 4;
-      const H = Math.max(160, Math.round((W - 2 * P) * (y1 - y0) / Math.max(.001, x1 - x0)) + 2 * P);
+      /* The box, and why it is measured rather than assumed.
+       *
+       * A 336-unit viewBox at the data's own aspect ratio, scaled into the
+       * container with `meet`, letterboxes: a portrait spread of cafés in a
+       * landscape plate wastes most of the width, and the whole drawing —
+       * dots, labels and all — shrinks to whatever the tighter axis allows.
+       * At the door's full 416px plate that already put the names at about
+       * 6px; on a phone short enough for `atlasPlateH` to give the plate half
+       * of that, it put them at one. The design asks for `dot="9"` and 10px
+       * names, and the only way those numbers mean anything is if one SVG
+       * unit is one CSS pixel — which is what <carta-atlas> and the seal have
+       * always done, and what this element alone did not.
+       *
+       * So a framed plot builds its box from the box it is actually in. An
+       * unframed one is still laid out by its own aspect ratio, because it
+       * has no height to read: it is a block in a scrolling column. */
+      const P = 4;
+      let W = 336, H;
+      if (frameFit && this.clientWidth > 40 && this.clientHeight > 40) {
+        W = Math.round(this.clientWidth); H = Math.round(this.clientHeight);
+      } else {
+        H = Math.max(160, Math.round((W - 2 * P) * (y1 - y0) / Math.max(.001, x1 - x0)) + 2 * P);
+      }
       const s = Math.min((W - 2 * P) / Math.max(.001, x1 - x0), (H - 2 * P) / Math.max(.001, y1 - y0));
       const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
       const X = p => W / 2 + (px(p) - cx) * s, Y = p => H / 2 - (py(p) - cy) * s;
+      /* Every label is placed against what is already on the plate, and a label
+         that will not fit is DROPPED rather than stacked — the same rule
+         <carta-atlas> keeps for a country's name, and for the same reason: a
+         plot fits its points to the box, so two cafés two streets apart land
+         two dots apart, and a fixed label above each of them overprints into a
+         smear. The marks are registered first: a label may be dropped, a mark
+         never moves for one. Four spots per name, above first, because that is
+         where the label sat when there was only ever one of them. */
+      const FS = 10, placed = [];
+      const hit = (a, b) => !(a.x1 + 2 < b.x0 || b.x1 + 2 < a.x0 || a.y1 + 2 < b.y0 || b.y1 + 2 < a.y0);
+      if (labels) pins.forEach(p => {
+        const x = X(p), y = Y(p);
+        placed.push({ x0: x - r - 2, x1: x + r + 2, y0: y - r - 2, y1: y + r + 2 });
+      });
+      const labelOf = p => {
+        const name = (p.name || '').replace(/[<&]/g, '');
+        if (!labels || !name) return '';
+        const x = X(p), y = Y(p), tw = name.length * FS * .56 + 4;
+        const spots = [[x, y - r - 6, 'middle', x - tw / 2], [x, y + r + FS + 4, 'middle', x - tw / 2],
+                       [x + r + 6, y + FS * .34, 'start', x + r + 6], [x - r - 6, y + FS * .34, 'end', x - r - 6 - tw]];
+        for (const sp of spots) {
+          const box = { x0: sp[3], x1: sp[3] + tw, y0: sp[1] - FS * .85, y1: sp[1] + FS * .3 };
+          if (box.x0 < 2 || box.x1 > W - 2 || box.y0 < 2 || box.y1 > H - 2) continue;
+          if (placed.some(z => hit(box, z))) continue;
+          placed.push(box);
+          /* the halo the rest of the layer already paints its type with, so a
+             name over a dot is read rather than fought with */
+          return `<text x="${sp[0].toFixed(1)}" y="${sp[1].toFixed(1)}" text-anchor="${sp[2]}" style="font-family:var(--sans);font-size:${FS}px;letter-spacing:.04em;fill:var(--ink-3);paint-order:stroke;stroke:var(--ca-halo, var(--surface-card));stroke-width:3px;stroke-linejoin:round;pointer-events:none">${name}</text>`;
+        }
+        return '';
+      };
       host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%;height:${frameFit ? '100%' : 'auto'}">${pins.map(p => `
         <g data-id="${p.id || ''}" style="cursor:pointer">
           <circle cx="${X(p).toFixed(1)}" cy="${Y(p).toFixed(1)}" r="${p.dim ? (r * .72).toFixed(1) : r}" style="${p.dim
         ? 'fill:none;stroke:var(--ca-dim, var(--ink-3));stroke-width:1.2'
         : 'fill:var(--ca-dot, var(--ink));stroke:var(--surface-card);stroke-width:1.5'}"></circle>
-          ${labels ? `<text x="${X(p).toFixed(1)}" y="${(Y(p) - r - 6).toFixed(1)}" text-anchor="middle" style="font-family:var(--sans);font-size:10px;letter-spacing:.04em;fill:var(--ink-3);pointer-events:none">${(p.name || '').replace(/[<&]/g, '')}</text>` : ''}
+          ${labelOf(p)}
         </g>`).join('')}</svg>`;
       host.querySelectorAll('g[data-id]').forEach(g => g.addEventListener('click', () => {
         this.dispatchEvent(new CustomEvent('carta:pin-tap', { detail: { id: g.dataset.id }, bubbles: true, composed: true }));
@@ -1063,3 +1127,13 @@ window.cityRingsRaw=cityRingsRaw;
 window.cityArcsRaw=cityArcsRaw;
 window.cityWindow=cityWindow;
 window.plateGround=plateGround;
+
+/* the boot guard's fourth sibling. index.html has checked the plate, the shot
+ * and the ask against APP_VERSION since v7.34.0 — and the comment on that
+ * check says "every sibling, not just the plate: five files means five chances
+ * for a cached one to disagree with this document." The map was the one it did
+ * not actually check, because this file never published a version to check
+ * against. It is the oldest sibling and the one holding the geometry every
+ * plate on the door is drawn from, so a stale copy of it is exactly the
+ * v7.31.1 failure again with a different symptom. */
+window.MAP_VERSION='7.38.0';

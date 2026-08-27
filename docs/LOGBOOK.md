@@ -7,6 +7,136 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-27 — Phase 31, the ask at the front door, part one (v7.38.0)
+
+- **The commission.** Claude Design handoff `Ask Carta at the Front Door`:
+  take the ask off its three screens of its own and put it on the door's
+  furniture — compose on a leaf over the plate, wait on the plate itself,
+  land as a leaf. Eight specified frames (`1d`–`1i`, `2a`–`2d`), high
+  fidelity, every number measured off the file, plus one production-ready
+  new element (`carta-city.js`).
+- **Two of the four screens shipped; two are held for a founder call.** The
+  wait and the rung are decision-free — they redraw what the app already
+  holds, on furniture it already has, and violate nothing. The composer leaf
+  and the answer-on-the-plate each turn out to need a call the handoff does
+  not make. Guessing on five founder-level questions and building five
+  screens on the guesses is how a design lands twice. They are written up
+  below instead.
+
+### What shipped
+
+- **The wait is the plate.** `vAsking` was a padded page with a 200 px pin
+  box at its foot — the map was the last thing on the screen and the first
+  thing the answer needed. It is full bleed now, `main.fixed` like the door.
+  The belt stands while nothing is placed and reframes to `<carta-plot>` on
+  the first confirmed address, in place, so the plot is mounted once and
+  every pin after it is one `setAttribute` rather than a reprojection.
+- **The ember budget held to two.** The rule's fill and its breathing tip,
+  and nothing else on the screen; the live line's mark drops to ink. Counted
+  in the harness rather than asserted in prose — the same count
+  `verify-door.js` already makes on every door state.
+- **03b, and the ask stops interrupting.** `runAsk` used to open the answer
+  page itself the moment the last name landed. It lands on the door now and
+  the answer waits there, as a rung between the waiting brew and the resting
+  bag. `Not now` is written down (`setAsideAt`) rather than held for the
+  session, and the reasoning is in `ARCHITECTURE.md` §4: a brew put down is
+  nearly gone by the next open; an answer put down and re-offered every open
+  for the life of the record is a nag.
+- **One migration that would have been a bug report, twice over.** The rung's
+  rule is "no `openedAt` means unread", and no ask on any keeper's record has
+  one. Without the back-fill in `load()`, upgrading would have declared every
+  keeper's whole ask history unread and put the newest one on the door over
+  whatever was actually waiting there. Stamped from `createdAt`, so the
+  record never claims a read at a time it could not have happened. **And the
+  first version of that back-fill ran on every load**, which is not a
+  migration but a rule — and the rule reads "every ask is read", so an
+  answer that arrived and was left unopened would have lost its rung to the
+  next reload and never come back. Caught by re-reading the diff rather than
+  by a test; the test that would have caught it exists now.
+- **`ask.read` was very nearly the collision.** It has been the *model's own
+  read of the ground* since Phase 14. The obvious field name for an unread
+  flag is the one already in use for something else.
+
+### Two fixes the design surfaced rather than asked for
+
+- **`<carta-plot>` labels overprinted.** Every label was drawn above its dot
+  unconditionally. Nothing in the app had asked for `labels="on"` on a real
+  city until this design did, and a plot fits its points to its box — four
+  names in one quarter is a smear. Labels now place against what is already
+  on the plate, drop what will not fit, and carry the layer's own halo.
+- **The boot guard was checking three siblings of four.** `carta-map.js`
+  published no version constant, so the comment reading "five files means
+  five chances for a cached one to disagree" had been enforcing three since
+  v7.34.0. `MAP_VERSION` is published and checked.
+
+### For the founder's desk — five calls, and what hangs on each
+
+1. **The composer's *read-as* line.** Frame `1d` replaces the six kind chips
+   with one stated line: "Read as a city, nothing on the record there yet ·
+   *read it as*". Carta has no destination parser. `askScopeOf` only matches
+   a city or a country the record already names, and anything stronger is
+   either a network call at compose time — against *the ask is the one
+   sanctioned outbound question* — or a guess stated as a fact.
+   **Recommendation:** derive it from the record alone and never claim a
+   lookup. A fold-match against `knownCities()` reads "a city, four cafés on
+   the record"; a match against `landKey` reads "a country"; anything else
+   reads "a city" with the *read it as* button one tap away. Honest,
+   keyless, and it degrades to exactly the chips that exist now.
+2. **Where the kind chips and the free-text question go.** The designed leaf
+   has neither, and both are live capability: four of the six kinds (`near`,
+   `country`, `route`, `friend`) are only reachable through the chips, and
+   `askPromptText` takes the question. **Recommendation:** the *read it as*
+   button opens a sheet carrying both — the six kinds and "Anything else" —
+   so the leaf stays as drawn and nothing is silently removed.
+3. **`<carta-city>`, and a sixth file.** The handoff ships it production-
+   ready and it is good work, but it is a sixth file and `ARCHITECTURE.md`
+   §1 requires the argument in writing before the count moves — the third
+   one got it. Three things also need settling before it ships: it carries a
+   **hardcoded thirteen-entry quarter table for Los Angeles**, which is
+   invented data on a record that refuses invented data everywhere else; it
+   keys `CITY_ARCS` through its own weak `toLowerCase().trim()` rather than
+   the app's `cityKey`, so any city with an accent or an apostrophe misses;
+   and its `data-id` falls back to the row number, so a tap on a mark cannot
+   resolve to a finding. **Recommendation:** ship it, with the quarter table
+   replaced by the record's own placed cafés and their confirmed
+   neighborhoods, `cityKey` used for the coast, `data-id` the finding's id
+   only, and the §1 argument written first. Worth knowing before deciding:
+   **`CITY_ARCS` holds one key today — Los Angeles.** Every other city draws
+   a coastless grid with rings, which is honest but is not the "six names
+   land on ground" the design is arguing for.
+4. **The distance anchor.** Frame `2a`'s rows read "Arts District · 0.9 km"
+   under a header that says "distance from Downtown". Carta has no anchor
+   for an ask and no quarter table to name one from. **Recommendation:** the
+   mean pin of the ask's own confirmed findings, labelled for what it
+   actually is ("distance from the centre of what Carta found"), rather than
+   naming a neighbourhood the record cannot defend.
+5. **The one that matters most: the answer page has nowhere for its
+   reasons.** Frame `2a` is a headline and six numbered rows. Today's
+   `vAskResult` carries the verdict, the travel note, the rotates-warning,
+   the `why`, the fit figures that open the very cups they were read from,
+   what to order, the been/booked/skip marks, the near-misses and the plan.
+   The design has a home for none of it. **A recommendation never travels
+   without its reasons** is an invariant, not a preference.
+   **Recommendation:** the six rows become the index and frame `2c` — one
+   mark, on the streets — becomes where a finding's whole argument is read,
+   with the plan and the near-misses under the answer page's own pull. That
+   is a bigger change than the handoff describes and should be agreed before
+   it is built, not after.
+
+### Verification
+
+- `model.test.js`: 139. `verify-door.js`: 59. `verify-v7.35.js`: 40.
+- **`test/verify-ask.js` is new: 82 checks.** The wait's geometry read off
+  the live DOM rather than off the template, the reframe, the ember count at
+  both stages, cancel writing nothing on a real aborted run, the failure's
+  three doors still tappable inside a `pointer-events:none` scrim, the
+  ladder at all four rungs, the migration, *Not now* and its undo, an answer
+  that placed nothing, an answer with nothing to stand behind, the plot's
+  label placement, and dusk / reduced motion / 390×667 / 320px.
+- The ask runs end to end against the fixture's own canned Anthropic and
+  Nominatim doors, so the wait is tested as it actually runs rather than by
+  driving `askSay` by hand.
+
 ## 2026-08-27 — Phase 30, the plate against a real phone (v7.37.7)
 
 - **852 CSS px is a full screen with no browser chrome at all** — the

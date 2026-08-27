@@ -1,1 +1,7 @@
 .DS_Store
+
+# playwright-core, installed on demand for the browser harnesses under test/.
+# There is no package manager for the app itself — ARCHITECTURE.md §1 — and
+# nothing here is ever loaded by index.html.
+node_modules/
+package-lock.json

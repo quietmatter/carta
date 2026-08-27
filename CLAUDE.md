@@ -44,7 +44,9 @@ are two different apps in one repo, and the distinction matters constantly:
    Carta 7, not deleted; it returns only if the roadmap's horizon item does.
 
 There is **no build system, no bundler and no package manager for the app.**
-Do not add one. The one automated test is `test/model.test.js` (below).
+Do not add one. The automated tests are `test/model.test.js` (the pure block,
+zero deps) and three Playwright harnesses under `test/` that boot the real app
+against a seeded fixture — see Running & testing.
 
 ## The design record (`docs/`)
 
@@ -83,6 +85,7 @@ carta-plate.js        The plate — a brew's curve, both arms, split out at v7.3
 carta-shot.js         The Visualizer read — account, calls, pickers, a shot's four screens (v7.34.0)
 carta-ask.js          The argument — vTaste→vBrief→vAsk→vAsking→vAskResult, and the keyed channel (v7.34.0)
 test/model.test.js    The pure-block harness (zero deps, plain Node)
+test/verify-*.js      Browser harnesses — the real app, a seeded fixture, playwright-core
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
 classic/README.md     Classic's own user documentation
@@ -159,6 +162,10 @@ server/               Classic's sync server — dormant
     1,000/2,000/3,000 m contours over a country's own fill; `marks="[…]"`
     stands its regions on the ground their farms were placed on.
   - `<carta-plot>` — the drawn plot: a handful of points fit to a box, offline.
+    **`fit="frame"` measures its own box** (Phase 31) rather than laying a
+    336-unit viewBox out at the data's aspect ratio and letterboxing it in, so
+    one SVG unit is one CSS pixel and `dot`/labels mean what they say; labels
+    place against what is already drawn and are dropped rather than stacked.
   - `<carta-streets>` — a city or a single café: **Leaflet + OpenStreetMap
     tiles, injected at runtime** from unpkg. Unreachable, it hides itself and
     the drawn plot underneath simply stands. (Phase 17 tried a `thumb="on"`
@@ -210,6 +217,15 @@ server/               Classic's sync server — dormant
   thin ledger-coupled wrappers over the pure `matchNodes`. Roasters and places
   carry `aka[]`; a near match *offers* to join and never merges silently.
   **Origin story fields never join.**
+- **the door's ladder** — `vAtlas` picks exactly one leaf, first true branch
+  wins: **03** a waiting brew (`waitingShot`) → **03b** an unread answer
+  (`unreadAnswer`, Phase 31) → **04** a resting bag (`restingBag`) → **02**
+  the question. A brew expires and an answer does not, so the brew leads; you
+  asked for the answer, so it sits above the shelf. `03b`'s *Not now* writes
+  `setAsideAt` rather than holding a session snooze the way the brew's does —
+  an answer re-offered on every open for the life of the record is a nag. See
+  `ARCHITECTURE.md` §4 for `openedAt`/`setAsideAt` and for the `load()`
+  back-fill that keeps a keeper's whole ask history from arriving unread.
 - **router** — **three rooms** on the bar: **Atlas · Journal · Shelf**
   (`TABS`), with **＋ A cup** beside them — the door, reachable from every
   room. `go(tab)` switches room; `openScreen(kind,id,extra)` opens the one
@@ -239,7 +255,13 @@ server/               Classic's sync server — dormant
     the bar would only offer a way to lose your place — `vAsking` most of
     all, since while the ask is out there is exactly one thing to do with the
     screen, and it's on it (Cancel). `vAskResult` is a destination and keeps
-    the bar.
+    the bar. **Phase 31 moved the wait onto the plate** (`.askwait`,
+    `main.fixed` like the door): full bleed, the belt while nothing is placed
+    and `<carta-plot>` from the first confirmed address, the rule at `top:78`,
+    the narration read up out of a scrim, and the whole ember budget the
+    rule's fill and its tip. **And the answer no longer interrupts** —
+    `runAsk` ends on `askLandsOnDoor()` and the answer waits on the door as
+    rung `03b` instead of the result screen being pushed up.
   - **what the keeper owns** — `vRecord` (the ledger, the backup, imports,
     cards, the instrument, classic) → `vSetups` → `vSetup` (the grind history
     that is only true on one Setup, which is why it never leaves that page).
@@ -478,7 +500,17 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is tested even though nothing else is:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 121 cases
+node test/model.test.js         # zero deps, plain Node, 139 cases
+```
+
+Three browser harnesses stand beside it (`test/README.md`), each booting the
+real app against `test/fixtures/env.js` and failing on any console error, any
+page error or any assertion. They need `npm i playwright-core --no-save`:
+
+```bash
+node test/verify-door.js       # the front door — 59 checks
+node test/verify-ask.js        # the ask at the front door — 82 checks
+node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of

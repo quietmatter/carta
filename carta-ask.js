@@ -674,11 +674,11 @@ async function groundNamed(list,fallbackCity,say,onPlaced){
  * the bar never runs backwards when the answer turns out to name eight places
  * instead of five — the ground it covers was allotted before the names arrived.
  */
-let askRun=null;          // {dest,kind,done[],now,pct,pins[],error}
+let askRun=null;          // {dest,kind,reach,done[],now,pct,pins[],total,error}
 let _askCancel=false,_askAbort=null;
 const ASK_PCT_ASKING=22,ASK_PCT_READBACK=48,ASK_PCT_PLACED=96;
-function askBegin(destination,kind){
-  askRun={dest:destination,kind,done:[],now:'',pct:0,pins:[],error:null};
+function askBegin(destination,kind,reach){
+  askRun={dest:destination,kind,reach:reach||'',done:[],now:'',pct:0,pins:[],total:0,error:null};
   _askCancel=false;
   _askAbort=(typeof AbortController==='function')?new AbortController():null;
   openAskingScreen();
@@ -700,18 +700,50 @@ function askPlace(f){
 }
 const askNowHTML=()=>`<span class="mk"></span><span class="ln">${esc(askRun?askRun.now:'')}</span>`;
 const askPinsJSON=()=>JSON.stringify((askRun?askRun.pins:[]));
-function paintAskMap(el){
-  if(!askRun||!askRun.pins.length){el.hidden=true;return}
-  const first=el.hidden;
-  el.hidden=false;
-  if(first)el.classList.add('settle');   // the plot writes itself in as it appears
-  const plot=el.querySelector('carta-plot');
-  if(plot&&!first)plot.setAttribute('pins',askPinsJSON());   // raw JSON — setAttribute does no unescaping
-  else el.innerHTML=`<div class="plotwrap" style="position:absolute;inset:0;padding:26px 30px">
-      <carta-plot class="plot frame" fit="frame" pins="${esc(askPinsJSON())}" dot="10" labels="off"></carta-plot></div>`;
+/* the plate under the wait. The belt the ask was asked from while there is
+ * nothing placed, and the drawn plot from the first confirmed address on — so
+ * the answer is half drawn by the time it is read, on the same full-bleed
+ * surface the door's own question stands on. The 200px pin box that used to
+ * sit at the foot of this screen is gone: the map was the last thing on the
+ * page and the first thing the answer needed.
+ */
+function askPlateHTML(){
+  // the bottom clearance IS the narration's own height, read rather than
+  // repeated: the two are the same measurement — how much of the plate the
+  // scrim is covering — and a literal in both places is a literal that drifts
+  if(askRun&&askRun.pins.length)
+    return `<div class="plotwrap" style="position:absolute;inset:0;padding:96px 44px ${askNarrH()}px">
+      <carta-plot class="plot frame" fit="frame" pins="${esc(askPinsJSON())}" dot="9" labels="on"></carta-plot></div>`;
+  const tasted=Object.values(tastedCountryMap()).map(c=>c.label).join(',');
+  return `<carta-atlas style="position:absolute;inset:0" caption="off"
+    frame="${tasted?'tasted':'belt'}" tasted="${esc(tasted)}"></carta-atlas>`;
 }
+// the reframe happens in place: the plot is mounted once, on the first pin, and
+// every pin after that is one setAttribute. Remounting it per name would
+// reproject the whole box each time and replay the settle on a plate already read.
+function paintAskMap(el){
+  const plot=el.querySelector('carta-plot');
+  if(askRun&&askRun.pins.length&&plot){plot.setAttribute('pins',askPinsJSON());return}   // raw JSON — setAttribute does no unescaping
+  el.innerHTML=askPlateHTML();
+  if(askRun&&askRun.pins.length)el.classList.add('settle');
+}
+// what the rule's right-hand figure says: the reach the ask is going out on
+// until there is something to count, and the count from then on
+function askMetaRight(){
+  const r=askRun||{};
+  if(r.total)return `${words(r.pins.length)} of ${words(r.total)} placed`;
+  return r.reach?esc(r.reach):'';
+}
+// the narration reads up out of the plate, and it says a different true thing
+// before and after the first name goes out to be placed
+const ASK_FOOT_BEFORE='Nothing is written down until an answer comes back. Cancel leaves the record as it is.';
+const ASK_FOOT_PLACING='Each name is checked against a real address before it is drawn. What can’t be confirmed is listed, never guessed onto the map.';
+const askFootText=()=>(askRun&&askRun.total)?ASK_FOOT_PLACING:ASK_FOOT_BEFORE;
+// the scrim grows to hold the lines already read and shrinks once the placings
+// begin, when the plate underneath is the half of the screen doing the work
+const askNarrH=()=>(askRun&&askRun.total)?300:340;
 // the screen is repainted in place rather than re-rendered: a re-render would
-// remount the plot on every stage and re-run the settle on lines already read
+// remount the plate on every stage and re-run the settle on lines already read
 function paintAsking(){
   if(!askRun||!pageView||pageView.kind!=='asking')return;
   const fill=document.getElementById('think_fill');
@@ -719,11 +751,14 @@ function paintAsking(){
   const pct=askRun.pct+'%';
   fill.style.width=pct;
   const tip=document.getElementById('think_tip');if(tip)tip.style.left=pct;
+  const meta=document.getElementById('think_meta');if(meta)meta.innerHTML=askMetaRight();
   const done=document.getElementById('think_done');
   if(done)for(let i=done.children.length;i<askRun.done.length;i++){
     const d=document.createElement('div');d.textContent=askRun.done[i];done.appendChild(d);
   }
   const now=document.getElementById('think_now');if(now)now.innerHTML=askNowHTML();
+  const foot=document.getElementById('think_foot');if(foot)foot.textContent=askFootText();
+  const narr=document.getElementById('think_narr');if(narr&&!askRun.error)narr.style.height=askNarrH()+'px';
   const map=document.getElementById('think_map');if(map)paintAskMap(map);
 }
 // cancelling is a real cancel: the call is aborted where the browser allows it,
@@ -734,40 +769,46 @@ function cancelAsk(){
   askRun=null;
   openAskScreen();
 }
+/* the wait, on the plate. No bar (BARELESS), no leaf, no second column: while
+ * the ask is out there is exactly one thing to do with the screen, and it is
+ * Cancel in the corner. The only ember on it is the rule's own fill and the
+ * tip breathing at the end of it — the live line's mark drops to ink, because
+ * the ember is spent once per screen and the rule is the thing that moves.
+ */
 function vAsking(){
-  const r=askRun||{dest:'',kind:'city',done:[],now:'',pct:0,pins:[],error:null};
+  const r=askRun||{dest:'',kind:'city',done:[],now:'',pct:0,pins:[],total:0,reach:'',error:null};
   const pct=r.pct+'%';
   const scope=askScopeOf(r.kind||askDraft.kind,r.dest||askDraft.dest);
-  return `<div class="think">
-    <div class="pad" style="padding-top:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-        <button class="omini bare" style="flex:none;margin-left:-4px" onclick="cancelAsk()" aria-label="Cancel">← Cancel</button>
-        <span class="eyebrow" style="margin:0">${r.dest?`Asking about ${esc(r.dest)}`:'Asking'}</span>
+  return `<div class="askwait think">
+    <div class="plate mapbox passport" id="think_map">${askPlateHTML()}</div>
+    <div class="fade top" style="height:150px"></div>
+    <div class="overlay" style="left:20px;right:20px;top:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
+      <button class="omini" style="flex:none" onclick="cancelAsk()">Cancel</button>
+    </div>
+    <div class="prog">
+      <div class="rule">
+        <span class="fill" id="think_fill" style="width:${pct}"></span>
+        <span class="tip${r.error?' stalled':''}" id="think_tip" style="left:${pct}"></span>
       </div>
-      <div style="margin-top:34px">
-        <div class="rule">
-          <span class="fill" id="think_fill" style="width:${pct}"></span>
-          <span class="tip${r.error?' stalled':''}" id="think_tip" style="left:${pct}"></span>
-        </div>
-        <div style="margin-top:30px">
-          <div class="done" id="think_done">${r.done.map(l=>`<div>${esc(l)}</div>`).join('')}</div>
-          ${r.error?`<div class="empty" style="text-align:left;padding:18px 0 0">${esc(r.error)}</div>
-            ${/* rec 6 · every failure surface offers the same try-again, and it is
-                 the first thing on it. rec 10 · the brief that degrades to a paste
-                 is scoped to the ask that just failed, not to everywhere. */''}
-            <button class="btn btn-primary" style="margin-top:14px" onclick="runAsk()">Try again</button>
-            <button class="btn btn-quiet" onclick="copyScopedBrief()">Copy the brief instead${scope.id?` — scoped to ${esc(scope.id)}`:''}</button>
-            <button class="btn btn-quiet" onclick="openAskScreen()">Back to the ask</button>`
-          :`<div class="now" id="think_now">${askNowHTML()}</div>`}
-        </div>
+      <div class="meta">
+        <span class="l">${r.dest?`Asking about ${esc(r.dest)}`:'Asking'}</span>
+        <span class="r" id="think_meta">${askMetaRight()}</span>
       </div>
-      <div style="margin-top:auto">
-        <div class="mapbox${r.pins.length?' settle':''}" id="think_map" style="height:200px"${r.pins.length?'':' hidden'}>${
-          r.pins.length?`<div class="plotwrap" style="position:absolute;inset:0;padding:26px 30px">
-            <carta-plot class="plot frame" fit="frame" pins="${esc(askPinsJSON())}" dot="10" labels="off"></carta-plot></div>`:''}</div>
-        <div class="note" style="margin-top:18px;border-top-color:transparent">Each name is checked against a real address before it is drawn. What can’t be confirmed is listed, never guessed onto the map.</div>
-      </div>
-    </div></div>`;
+    </div>
+    <div class="narr" id="think_narr" style="${r.error?'padding-top:26px':`height:${askNarrH()}px`}">
+      <div class="done" id="think_done">${r.done.map(l=>`<div>${esc(l)}</div>`).join('')}</div>
+      ${r.error?`<div class="empty" style="text-align:left;padding:14px 0 0">${esc(r.error)}</div>
+        ${/* rec 6 · every failure surface offers the same try-again, and it is
+             the first thing on it. rec 10 · the brief that degrades to a paste
+             is scoped to the ask that just failed, not to everywhere. */''}
+        <button class="btn btn-primary" style="margin-top:14px" onclick="runAsk()">Try again</button>
+        <button class="btn btn-quiet" onclick="copyScopedBrief()">Copy the brief instead${scope.id?` — scoped to ${esc(scope.id)}`:''}</button>
+        <button class="btn btn-quiet" onclick="openAskScreen()">Back to the ask</button>`
+      :`<div class="now" id="think_now">${askNowHTML()}</div>
+        <div class="foot" id="think_foot">${esc(askFootText())}</div>`}
+    </div>
+  </div>`;
 }
 // the degrade, scoped the way the ask was: without a key, or after a failure,
 // the brief is the answer — and a brief about everywhere is a worse paste than
@@ -812,7 +853,7 @@ async function runAsk(){
   const reach=askReach();
   if(!destination){toast('Where should Carta ask about?');return}
   _askBusy=true;
-  askBegin(destination,kind);
+  askBegin(destination,kind,reach);
   const beat=ms=>sleep(_askCancel?0:ms);
   try{
     const tm=tasteModelMemo();
@@ -837,6 +878,9 @@ async function runAsk(){
     if(!parsed.ok)throw new Error("The answer couldn't be read — the model replied, but not in a shape Carta can stand behind. Nothing was written down.");
     const named=(parsed.findings||[]).length+(parsed.mentions||[]).length
       +((parsed.plan&&parsed.plan.wildcard)?1:0);
+    // the count the rule states — set BEFORE the line that announces it, so the
+    // meta row and the narration agree on the same paint
+    askRun.total=named;
     askSay(`Reading the answer back — ${words(named)} name${named===1?'':'s'}, ranked and argued.`,ASK_PCT_READBACK);
     await beat(reducedMotion()?200:700);
     if(_askCancel)return;
@@ -870,7 +914,7 @@ async function runAsk(){
     D.asks.unshift(ask);save();
     askDraft.dest='';   // the ask is on the record now; the field starts clean
     askRun=null;
-    openAskResultScreen(ask.id);
+    askLandsOnDoor();
   }catch(e){
     _askBusy=false;
     if(_askCancel||(e&&e.name==='AbortError'))return;
@@ -1081,4 +1125,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.37.7';
+window.ASK_VERSION='7.38.0';
