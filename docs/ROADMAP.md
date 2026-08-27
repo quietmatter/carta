@@ -1388,7 +1388,17 @@ were never in the token layer.
 each; the plate draws with the network off; the settle, the breath, the
 plate's draw-on and the sheet's travel all stop under
 `prefers-reduced-motion`; dusk inverts through the roles with nothing
-hard-coded; 320 px holds. `test/verify-door.js` asserts every one of these.
+hard-coded; 320 px holds; a tasted country on the plate opens its chapter; the
+pulled-up sheet closes behind every way of leaving the Atlas, not only the tab
+bar. `test/verify-door.js` asserts every one of these (48 checks).
+
+**Fixed after merge, same phase:** the initial PR (#138) shipped without two
+of the above — `<carta-atlas>` drew a tasted country with no tap behind it
+(sharing geometry with `<carta-belt>` isn't sharing its click wiring), and the
+pulled-up sheet only reset on `go()`, not on `goBack()` (the ordinary `←` and
+the phone's own back gesture). Both found by re-auditing the merged door
+against the mockup rather than assuming the merge closed the phase; see
+`ARCHITECTURE.md` §1 and `LOGBOOK.md`'s v7.37.3 entry.
 
 **Open, carried out of this phase:** `index.html` is 891 lines over the band.
 See `ARCHITECTURE.md` §1 — it is a split, on Phase 19's own seam, and it is a

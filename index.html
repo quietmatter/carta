@@ -851,10 +851,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.37.2"></script>
-<script src="carta-plate.js?v=7.37.2"></script>
-<script src="carta-shot.js?v=7.37.2"></script>
-<script src="carta-ask.js?v=7.37.2"></script>
+<script src="carta-map.js?v=7.37.3"></script>
+<script src="carta-plate.js?v=7.37.3"></script>
+<script src="carta-shot.js?v=7.37.3"></script>
+<script src="carta-ask.js?v=7.37.3"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1811,7 +1811,7 @@ let pageView=null;
  * from the bar is a fresh start and clears it — a room is a floor, not a step.
  */
 let _navStack=[],_navRestoring=false;
-function go(t){stopTimer(true);_navStack.length=0;tab=t;pageView=null;_atlasSheetUp=false;render();maybeAutoExport()}
+function go(t){stopTimer(true);_navStack.length=0;tab=t;pageView=null;render();maybeAutoExport()}
 function openScreen(kind,id,extra){
   // a repaint of the screen you are already on is not a step: re-reading the
   // city while its cafés geocode must not stack forty cities to walk back out of
@@ -1948,6 +1948,15 @@ function render(){
   // throwing the scroll away each time cost the keeper their line (finding 9)
   const same=screenKey===_lastScreenKey;
   const settle=!same&&!reducedMotion();_lastScreenKey=screenKey;
+  // the sheet opens closed every time the Atlas is arrived at fresh (v7.37.1
+  // fixed this for go() alone, which covers the tab bar but not goBack() —
+  // the phone's own back gesture and every screen's own "←" both use it — or
+  // the stack restoring a step; any of those could land back on the Atlas
+  // with the flag still set from before you left). render() is the one place
+  // every path through the app actually passes, so it is the one place that
+  // can hold the rule for all of them: reset on arrival, keep it on a repaint
+  // of the same screen, same as `same` already keeps scroll position.
+  if(view.kind==='atlas'&&!same)_atlasSheetUp=false;
   const m=document.getElementById('main');
   const keep=same?m.scrollTop:0;
   // the Atlas owns its own frame now — a full-bleed plate with a leaf drawn
@@ -5785,8 +5794,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.37.2';
+const APP_VERSION='7.37.3';
 const CHANGELOG=[
+  {v:'7.37.3',d:"Two more ways the door's own furniture stayed put when it was meant to move. A country on the new plate drew as ink same as it always has, but the tap behind it never came along when <carta-atlas> was cut from <carta-belt> — pressing your own tasted ground did nothing, where it has always opened that country's chapter everywhere else in Carta. And the pulled-up record closed itself leaving by the tab bar (7.37.1) but not by the ordinary way back — walk into a city or a country from the risen sheet and press the ordinary ←, and the Atlas came back still pulled up behind it. Both are fixed at the one place every way through the screen actually passes: the plate's own paint wires the tap the same way the passport always has, and the sheet resets on arrival at render() itself rather than in whichever door happened to lead there."},
   {v:'7.37.2',d:"＋ A cup, back on the bar. The front door's own screen and the bar's standing invitation to log a cup had both settled on the same class name, and the plate's rule — full-bleed, corners clipped — bled onto the bar button wherever the cascade didn't say otherwise: the button stretched to fill the screen instead of sitting in its 118px block on the bar. The plate keeps its own name now and the button keeps its place."},
   {v:'7.37.1',d:"The plate's pull, closed behind you. Leaving the Atlas with the record pulled up and coming back — from the Journal, from the Shelf, anywhere — reopened it pulled up, when the door is meant to open closed every time. Leaving the room now closes it, same as walking back into a café closes whatever detent its sheet was left at."},
   {v:'7.37.0',d:"The front door, cut back to one thing at a time. The Atlas opened on a map with a question on it and two thousand pixels of card under it — asks, cities, a Visualizer pitch, a list of every country, a share button, all of it there at once whatever you opened Carta for. It is the plate, one leaf and one pull now. The passport is the whole screen, drawn as a plate rather than a backdrop: a graticule, the band between the tropics stated and labelled, drafting ticks, and the rest of the world behind it in the palest ink, so it reads as a chart of the coffee belt rather than a map with pieces missing. One leaf of paper sits on it, and what the leaf holds is whatever is actually true — a brew waiting with its curve and its figures, a bag resting on the shelf with its best cup so far, or the question. A brew expires and a bag does not, so a brew leads. The field takes a place or a bag and reads which, which is why it no longer says Ask. Everything else is one pull below: the last cup, your cities, what Carta found, what you have tasted, the passport to share. Nothing left the app — it moved one pull and one tap further in. The Visualizer invitation moved to the Shelf, where your machine is; the line about what leaves the device moved to the ask itself, where something actually does."},

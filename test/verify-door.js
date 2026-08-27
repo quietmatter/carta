@@ -154,6 +154,56 @@ const above=e=>e.filter(x=>!x.below).length;
   ok(bag.val==='Tim Wendelboe — Kieni AA','the field — the door opens on the paste',bag.val);
   await ctx.close();
 }
+/* ---------- tap a country on the plate ----------
+   <carta-atlas> shares its geometry with <carta-belt> but did not, at first,
+   share its tap wiring — a country on the new door's plate drew as ink with
+   no listener behind it, so a real tap did nothing. Click the actual painted
+   shape, not its bounding box: an irregular coastline has real gaps inside
+   its own bbox where an SVG path simply isn't there to be hit-tested. */
+{
+  const {ctx,page}=await boot({});
+  const rect=await page.evaluate(()=>{
+    const g=document.querySelector('#atlasplate carta-atlas svg g.mk');
+    if(!g)return null;
+    const path=g.querySelector('path'),r=(path||g).getBoundingClientRect();
+    for(let fx=0.15;fx<=0.85;fx+=0.1)for(let fy=0.15;fy<=0.85;fy+=0.1){
+      const x=r.x+r.width*fx,y=r.y+r.height*fy;
+      const el=document.elementFromPoint(x,y);
+      if(el&&el.closest&&el.closest('g.mk')===g)return {x,y,name:g.dataset.name};
+    }
+    return null;
+  });
+  ok(!!rect,'the plate — a tasted country carries a hit-testable mark',JSON.stringify(rect));
+  if(rect){
+    await page.mouse.click(rect.x,rect.y);
+    await page.waitForTimeout(500);
+    const kind=await page.evaluate(()=>pageView&&pageView.kind);
+    const id=await page.evaluate(()=>pageView&&pageView.id);
+    ok(kind==='country'&&id===rect.name,'tap a country on the plate — opens its chapter',JSON.stringify({kind,id,expected:rect.name}));
+  }
+  await ctx.close();
+}
+/* ---------- the sheet closes behind every way of leaving the Atlas ----------
+   v7.37.1 reset the pulled-up sheet in go() — the tab bar — but goBack() (the
+   standard "<-" every screen carries, and the phone's own back gesture) left
+   it stuck open: drill into a city or a country from the risen sheet, then
+   back out, and the Atlas returned still pulled up. The door is meant to
+   open closed every time it is arrived at fresh. */
+{
+  const {ctx,page}=await boot({});
+  await page.evaluate(()=>toggleAtlasSheet());
+  await page.waitForTimeout(700);
+  const city=await page.evaluate(()=>knownCities()[0]);
+  await page.evaluate(c=>openCityChapter(c),city);
+  await page.waitForTimeout(500);
+  await page.evaluate(()=>goBack());
+  await page.waitForTimeout(700);
+  const s=await st(page);
+  ok(s.h!=='178px'&&/translateY\(110%\)/.test((await page.evaluate(()=>{
+    const sh=document.getElementById('atlassheet');return sh?sh.style.transform:''
+  }))||''),'goBack from a screen opened while pulled up — the sheet closes behind you',JSON.stringify(s));
+  await ctx.close();
+}
 /* ---------- the passport asks for nothing ---------- */
 ok(offsite.length===0,'offline — nothing was fetched at all',JSON.stringify(offsite.slice(0,5)));
 

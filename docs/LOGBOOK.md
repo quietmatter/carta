@@ -7,6 +7,50 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-27 — Phase 30, two more fixes (v7.37.3)
+
+- **Two bugs found auditing the merged front door (PR 138) against its own
+  mockup**, after PR 139 and PR 140 had already fixed two others in the same
+  sweep. Both are the same class of mistake: a piece of the redesign's own
+  furniture that looked complete in isolation but didn't survive contact with
+  every path through the app.
+- **The plate lost the passport's own tap.** `<carta-atlas>` shares its
+  geometry with `<carta-belt>` — the outlines, the projection, the law that a
+  tasted country is the mark — but not, it turns out, the tap behind it. When
+  `<carta-atlas>` was folded into `carta-map.js` (this phase), nobody carried
+  over `Belt`'s `g.mk`/`data-name`/click-listener pattern, so a country on the
+  new front door drew as ink with nothing behind it: tapping your own tasted
+  ground did nothing, where every other passport in the app has opened that
+  country's chapter since Phase 3. Fixed by wiring `<carta-atlas>` the same
+  way, including the cache-hit path — `PLATES[ck]` reuses a cached SVG string
+  by replacing the DOM outright, so a listener attached during the paint that
+  first built it is gone by the time a later plate reuses it, and the tap has
+  to be rewired on every `host.innerHTML` assignment, not just the first.
+- **v7.37.1's fix for the pulled-up sheet was half of one.** It reset
+  `_atlasSheetUp` inside `go()`, which covers the tab bar — but not `goBack()`,
+  which is the ordinary `←` on every screen and the phone's own back gesture.
+  Pull the sheet up, drill into a city or a country chapter from it, then
+  press back: the Atlas came back still pulled up. Moved the reset into
+  `render()` itself, the one place every path through the screen actually
+  passes — reset on arrival, keep it on a repaint of the same screen, the same
+  rule `_lastScreenKey` already holds for scroll position. This also let the
+  now-redundant reset in `go()` come back out.
+- **Not fixed, and noted rather than chased:** the mockup's interaction table
+  also promises "tap the plate (not a country) closes the sheet." The pull
+  handle already does this fully, tapping a country is a *different* action
+  that must keep working from state 05, and country-tap events bubble without
+  `stopPropagation()` — so a plate-wide close handler risks firing alongside a
+  country tap on every press. Left alone rather than adding a fragile
+  target-check for a redundant affordance.
+- **Verification.** Both bugs reproduced against the pre-fix code before being
+  fixed (a country's own bounding-box centre often lands outside its actual
+  painted shape on an irregular coastline — the confirming click has to land
+  on the real geometry, found via `elementFromPoint`, not the box). Two new
+  cases in `test/verify-door.js` (46→48) fail cleanly against the code before
+  this fix and pass after. `model.test.js`: 139. `verify-v7.35.js`: 40.
+
+---
+
 ## 2026-08-27 — Phase 30 (v7.37.0): the front door
 
 - **What landed.** The Atlas redesign from the Claude Design handoff

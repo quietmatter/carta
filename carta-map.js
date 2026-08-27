@@ -444,6 +444,18 @@
      repaints on every state change while several plates may share a box. Keyed
      on everything the drawing depends on, so a box is projected once. */
   const PLATES = {};
+  /* the tap, wired the same way <carta-belt> already wires it — g.mk carries
+     the country's own name, and a click dispatches carta:country-tap the same
+     way it always has (index.html's one listener resolves either the keeper's
+     spelling or a bare LANDS key through landKey). This has to run on BOTH the
+     cache-hit and cache-miss paths: host.innerHTML replaces the DOM either
+     way, and a listener attached to the paint that FIRST built the cached
+     string is long gone by the time a later plate reuses it. */
+  function wireTaps(el, host) {
+    host.querySelectorAll('g.mk').forEach(g => g.addEventListener('click', () => {
+      el.dispatchEvent(new CustomEvent('carta:country-tap', { detail: { name: g.dataset.name }, bubbles: true, composed: true }));
+    }));
+  }
 
   class Atlas extends HTMLElement {
     static get observedAttributes() { return ['tasted', 'frame', 'graticule', 'ticks', 'caption', 'band']; }
@@ -491,7 +503,7 @@
       const frameTasted = (this.getAttribute('frame') || 'tasted') === 'tasted';
       const ck = [W, H, frameTasted ? 'tasted' : 'belt', sig, this.getAttribute('graticule'),
         this.getAttribute('ticks'), this.getAttribute('band'), this.getAttribute('caption')].join('|');
-      if (PLATES[ck]) { host.innerHTML = PLATES[ck]; return; }
+      if (PLATES[ck]) { host.innerHTML = PLATES[ck]; wireTaps(this, host); return; }
 
       /* the belt: the growing world. BELT_SET is the growing countries alone, so
          the four the record only drinks in (LAND_OFF_BELT) fall out here without
@@ -592,7 +604,7 @@
         const lstyle = put && put.inside
           ? 'fill:var(--surface-card)'
           : 'fill:var(--ink);paint-order:stroke;stroke:var(--surface-card);stroke-width:3px;stroke-linejoin:round';
-        marks.push(`<g><path d="${d}" style="fill:var(--ink);stroke:var(--ink);stroke-width:.8;stroke-linejoin:round"/>${leader}${put
+        marks.push(`<g class="mk" data-name="${String(label).replace(/"/g, '&quot;')}" style="cursor:pointer"><path d="${d}" style="fill:var(--ink);stroke:var(--ink);stroke-width:.8;stroke-linejoin:round"/>${leader}${put
           ? `<text x="${n1(put.x)}" y="${n1(put.y)}" text-anchor="${put.anchor}" style="${LABEL};font-size:${size.toFixed(1)}px;${lstyle}">${esc(label)}</text>` : ''}</g>`);
       });
 
@@ -612,6 +624,7 @@
         ${on('graticule') ? `<g style="fill:none;stroke:var(--ink);stroke-opacity:.07;stroke-width:.5">${grat}</g>` : ''}
         ${rest}${bandG}${ground}${marks.join('')}${ticks}${caption}
       </svg>`;
+      wireTaps(this, host);
     }
   }
 
