@@ -851,10 +851,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.37.3"></script>
-<script src="carta-plate.js?v=7.37.3"></script>
-<script src="carta-shot.js?v=7.37.3"></script>
-<script src="carta-ask.js?v=7.37.3"></script>
+<script src="carta-map.js?v=7.37.4"></script>
+<script src="carta-plate.js?v=7.37.4"></script>
+<script src="carta-shot.js?v=7.37.4"></script>
+<script src="carta-ask.js?v=7.37.4"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -5794,8 +5794,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.37.3';
+const APP_VERSION='7.37.4';
 const CHANGELOG=[
+  {v:'7.37.4',d:"A brew dismissed for good measure, not for good. Not now put the waiting shot down, but the app's own resume check — the one that asks Visualizer again once you have been away from the screen for a beat — did not know a dismissal had happened, and the very next time the phone locked and woke it fetched the identical shot and put the same hero back on the door, unprompted. The dismissal now holds against that for as long as the app stays open, the same way it always held against everything else."},
   {v:'7.37.3',d:"Two more ways the door's own furniture stayed put when it was meant to move. A country on the new plate drew as ink same as it always has, but the tap behind it never came along when <carta-atlas> was cut from <carta-belt> — pressing your own tasted ground did nothing, where it has always opened that country's chapter everywhere else in Carta. And the pulled-up record closed itself leaving by the tab bar (7.37.1) but not by the ordinary way back — walk into a city or a country from the risen sheet and press the ordinary ←, and the Atlas came back still pulled up behind it. Both are fixed at the one place every way through the screen actually passes: the plate's own paint wires the tap the same way the passport always has, and the sheet resets on arrival at render() itself rather than in whichever door happened to lead there."},
   {v:'7.37.2',d:"＋ A cup, back on the bar. The front door's own screen and the bar's standing invitation to log a cup had both settled on the same class name, and the plate's rule — full-bleed, corners clipped — bled onto the bar button wherever the cascade didn't say otherwise: the button stretched to fill the screen instead of sitting in its 118px block on the bar. The plate keeps its own name now and the button keeps its place."},
   {v:'7.37.1',d:"The plate's pull, closed behind you. Leaving the Atlas with the record pulled up and coming back — from the Journal, from the Shelf, anywhere — reopened it pulled up, when the door is meant to open closed every time. Leaving the room now closes it, same as walking back into a café closes whatever detent its sheet was left at."},

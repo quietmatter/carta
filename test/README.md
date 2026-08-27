@@ -6,7 +6,7 @@ Two harnesses boot the real app against the seeded record in
 
 ```
 npm i playwright-core --no-save
-node test/verify-door.js       # the front door, v7.37.3 — 48 checks
+node test/verify-door.js       # the front door, v7.37.4 — 51 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 ```
 
@@ -32,6 +32,9 @@ easy to break silently:
   irregular coastline can miss entirely
 - **the pulled-up sheet closes behind every way of leaving the Atlas** — the
   tab bar and the ordinary `←`/back gesture both have to land on a closed door
+- **"Not now" holds against the resume poll** — a dismissal has to survive the
+  app re-asking Visualizer once you've been away from the screen a beat, not
+  just the instant you tap it
 - **offline** — it asserts that *nothing at all* was fetched off-origin, which
   is the passport's own law
 - dusk, `prefers-reduced-motion`, and 320 px
