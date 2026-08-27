@@ -455,6 +455,14 @@ document.addEventListener('visibilitychange',vizCheckOnResume);
 window.addEventListener('pageshow',vizCheckOnResume);
 // when a cup is poured for someone else, or the machine was run to flush it.
 // Honest and permanent: the id is kept so the hero never offers it again.
+/* "Not now" on the door — a snooze, not a verdict. dismissShot below is the
+ * other answer to the same brew and says something much stronger ("not
+ * mine"): it writes the id into the vizDismissed pref, drops the kept read
+ * and the cache with it, and offers an undo. This one only puts the brew
+ * down for the session — the door falls through to the bag, then to the
+ * question, and the brew is offered again on the next open. Nothing is
+ * written, so there is nothing to undo. */
+function snoozeWaitingShot(){_vizWaiting=null;render();}
 function dismissShot(id){
   // v7.35.0, critique rec 6: this was permanent and one tap away, on a screen
   // where the tap beside it writes a cup. Everything else Carta puts away is
@@ -936,6 +944,7 @@ window.visualizerEmail=visualizerEmail;
 window.vizCheckOnOpen=vizCheckOnOpen;
 window.vizShotRowHTML=vizShotRowHTML;
 window.waitingShot=waitingShot;
+window.snoozeWaitingShot=snoozeWaitingShot;
 window.parseVisualizerShot=parseVisualizerShot;
 window.shotStartedAt=shotStartedAt;
 window.tsToMs=tsToMs;
@@ -943,4 +952,4 @@ window.shotTempGoal=shotTempGoal;
 window.setupCandidatesFromShots=setupCandidatesFromShots;
 window.firstStr=firstStr;
 
-window.SHOT_VERSION='7.36.0';
+window.SHOT_VERSION='7.37.0';

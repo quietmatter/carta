@@ -1331,6 +1331,69 @@ whatever series it's given, so a shorter one draws a shorter line, not a
 crash or a stretch. 96/96 pure tests passing. `docs/ARCHITECTURE.md` §7
 and `docs/LOGBOOK.md`'s v7.28.3 entry have the full account.
 
+### Phase 30 — the front door (shipped — v7.37.0)
+
+*From the Claude Design handoff `CARTA Front Door Redesign`. The commission:
+make the door sleeker, more intuitive and far less text-dense; decide what
+earns a place on it and what belongs a tab away; and let the detail — the
+seals, the maps, the brew plates — reveal itself rather than being laid out up
+front.*
+
+**The idea.** The old Atlas was a sticky map with a question on it and ~2,270 px
+of card below — asks, cities, a Visualizer pitch, a chip list, a share button,
+all present at once whatever the app was opened for. The new door is **the
+plate, one leaf and one pull.**
+
+**The ladder.** `vAtlas` picks exactly one leaf; first true branch wins, and
+the rest of the screen is identical between states.
+
+| # | State | Condition | The leaf holds |
+|---|---|---|---|
+| 01 | First open | no cups, no coffees | the question, over an uninked belt |
+| 02 | Nothing live | default | the question |
+| 03 | A brew waiting | `waitingShot()` | that brew, its curve, its figures, **Write the cup →** |
+| 04 | A bag resting | no waiting shot, a coffee on the shelf with a brew behind it | that coffee, its best so far, **Brew it →** |
+
+05 is not a branch — it is any of the above with the sheet pulled up. Priority
+is **03 > 04 > 02**: a brew expires, a bag does not, the question never does.
+
+**What left the door, and where it went.** `welcomeHTML` deleted (state 01
+says it in one display line and one italic line). "What Carta found" and
+"Your cities" became rows and compact rows on the risen sheet. `atHomeSlabHTML`
+moved to the **Shelf** — it is about your machine and your brews, and nothing
+about it is geography. "Tasted so far" and Share became two of the three
+one-line doors. `asktrustHTML` moved into the **ask composer**: the door states
+what leaves the device at the moment something does, not one screen before.
+**Nothing left the app** — it moved one pull and one tap further in.
+
+**One field, two doors.** The field takes a place *or* a bag and the door's own
+parser decides which (`doorParse` first; a roaster, a roast level or any origin
+field means a bag). This is why the button lost its label and became **→** — it
+cannot say "Ask" any more, because it does not always ask.
+
+**The ember, counted.** *The ember marks the standing door; ink marks the
+action in hand.* The field's `→`, both leaf actions and the waiting mark took
+the sanctioned ink fill (`.btn-graphite`, back-ported from the design system),
+so every state shows exactly **one** ember above the fold — `nav.tabs
+button.door`. The v7.30.0 call on that door is untouched and was not reopened.
+
+**The passport became a plate.** `<carta-atlas>` and `WORLD` folded into
+`carta-map.js` — see `ARCHITECTURE.md` §1. Encoded, never fetched.
+
+**Also in this phase:** the app icon and favicon from the same design project —
+the seal cut by the belt, replacing a steaming cup drawn in five colours that
+were never in the token layer.
+
+**Done when** — all five states open; exactly one `#a63f2b` above the fold in
+each; the plate draws with the network off; the settle, the breath, the
+plate's draw-on and the sheet's travel all stop under
+`prefers-reduced-motion`; dusk inverts through the roles with nothing
+hard-coded; 320 px holds. `test/verify-door.js` asserts every one of these.
+
+**Open, carried out of this phase:** `index.html` is 891 lines over the band.
+See `ARCHITECTURE.md` §1 — it is a split, on Phase 19's own seam, and it is a
+phase of its own.
+
 ### Phase 29 — ground for every listing (shipped — v7.36.0)
 
 *Phases 27 (photos retired) and 28 (the listing card and its seal) shipped

@@ -7,6 +7,70 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-27 — Phase 30 (v7.37.0): the front door
+
+- **What landed.** The Atlas redesign from the Claude Design handoff
+  (`CARTA Front Door Redesign`), plus the app icon and favicon from the same
+  project. The door was a sticky map with a question on it and ~2,270 px of
+  card under it — asks, cities, a Visualizer pitch, a chip list and a share
+  button, all present at once whatever the app was opened for. It is **the
+  plate, one leaf and one pull** now, on a priority ladder of four branches:
+  first open · nothing live · a brew waiting · a bag resting, with the record
+  one pull below any of them. A brew expires and a bag does not, so a brew
+  leads — the existing rule ("an unlogged cup outranks the next question")
+  extended by one rung.
+- **The blast radius was almost entirely `vAtlas`,** as the handoff promised.
+  `welcomeHTML` and `homeShotHeroHTML` are deleted; `atHomeSlabHTML` moved to
+  the Shelf, where the machine is; `asktrustHTML` moved into the ask composer,
+  where the key is actually spent rather than one screen before it. `TABS`,
+  `ROOM_OF`, `BARELESS`, the sheet plumbing, the door, the Journal and the
+  Shelf's own rows are untouched.
+- **The passport became a plate.** `<carta-atlas>` is a second element inside
+  `carta-map.js` — not a sixth file, which would have meant a sixth
+  cache-busting query string and the v7.31.1 failure again. It adds drafting,
+  not decoration: a graticule at 30°/15°, the band between the tropics stated
+  and labelled, leader rules, edge ticks. Behind it `WORLD` — 112 countries in
+  11.7 KB, the rest of Natural Earth 1:110m through the same simplifier and
+  the same varint, **encoded rather than fetched**. The board fetched
+  `countries.geo.json`; the passport asks for nothing at all, by law.
+- **The ember is now counted.** The rule the five states hold: *the ember
+  marks the standing door, ink marks the action in hand.* The field's `→`, the
+  two leaf actions and the waiting mark all went to the sanctioned ink fill
+  (`.btn-graphite`, back-ported from the design system), so every state shows
+  exactly one ember above the fold — the bar's own door. The v7.30.0 QC call
+  on that door is untouched and was not reopened.
+- **Three bugs found on the way, all pre-existing.** `--s10` was read three
+  times in `index.html` and never declared, so the app's smallest labels were
+  dropping the declaration and inheriting their parent's size; it is declared
+  now, with `--s42`. The design board's own alias table pointed
+  `timor leste → east timor` (and missed Natural Earth's "Republic of the
+  Congo"), which drew both countries twice — once as a mark and once as
+  context underneath; the encoder filters on the LANDS key instead.
+  `<carta-belt>` reaches `LANDS` in its temporal dead zone on first paint and
+  only survives by swallowing the throw and recovering on a later resize;
+  `<carta-atlas>` waits on the exports block instead.
+- **Decision — no bag weight was invented.** The handoff's state 04 selector
+  asks for "a coffee that still has weight on file", and there is no such
+  field: nothing in the ledger records what is left in a bag. The bag is
+  chosen on what *is* on file (most recently brewed, still on the shelf, with
+  a brew behind it) and its sub line carries no gram figure. Inventing one
+  would be the guess the record refuses everywhere else.
+- **Open — the line band.** `index.html` is **5,891 lines / 404 KB**. It
+  entered this phase already at 5,584, over the 5,000-line band set at Phase
+  17 and never amended since; this phase adds 307. **The byte ceiling — the
+  one that has never moved and is the one that actually guards the
+  drop-it-on-a-static-host promise — is fine at 404 of 500 KB.** Recorded as
+  an overage for the founder's call, not amended here. Phase 17's own note
+  said 5,000 is the point past which the one-file law, not the band, is what
+  has come due; that call is still open and is now 891 lines overdue.
+- **Verification.** `test/verify-door.js` is new — it boots the real app and
+  walks all five states, counting the ember in each, and holds offline, dusk,
+  `prefers-reduced-motion` and 320 px. 45 checks. `verify-v7.35.js` still
+  passes all 40 (its first-open assertion was rewritten: that flow changed by
+  design, so the test changed with it). `model.test.js` all 139.
+
+---
+
 ## 2026-08-25 — Phase 29 (v7.36.0): ground for every listing
 
 - **This release carries two bodies of work that were written in parallel and

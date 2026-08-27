@@ -11,6 +11,15 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
 
 ## What's here right now
 
+- **The front door.** Carta opens on the passport, drawn as a plate — a
+  graticule, the band between the tropics that is the only ground coffee grows
+  on, and the rest of the world behind it in the palest ink. One leaf of paper
+  sits on it, and what the leaf holds is whatever is actually true: a brew
+  waiting to be written, with its curve and its figures; a bag resting on your
+  shelf, with its best cup so far; or the question. A brew expires and a bag
+  does not, so a brew leads. One field takes **a place, or a bag** and reads
+  which. Everything else — your last cup, your cities, what Carta found, what
+  you have tasted, the passport to share — is one pull below.
 - **Three rooms, one door.** Atlas · Journal · Shelf on the bar, with
   **＋ A cup** beside them — the door is reachable from every room, not just
   the top of one. Everything a room opens — a country, a region, a farm, a
@@ -316,9 +325,10 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 | `carta-ask.js` | The argument — your taste, the brief, the ask, and the one keyed channel out. |
 | `classic/index.html` | Carta 6.18.x, frozen. See `classic/README.md`. |
 | `fonts/` | Self-hosted typefaces (Spectral, Libre Franklin; woff2). |
-| `manifest.json`, `icon-*.svg` | PWA metadata and homescreen icons. |
+| `manifest.json`, `icon-*.svg`, `favicon.svg` | PWA metadata and the mark — the seal cut by the belt, at every size and both masks. |
 | `server/` | The optional sync server — dormant in 7.0, kept for the record. |
 | `test/model.test.js` | Zero-dep test for the taste model + the brief. |
+| `test/verify-door.js`, `test/verify-v7.35.js` | Browser harnesses — they boot the real app against a seeded record and walk its flows. |
 | `docs/` | The design record: the pivot, the roadmap, the architecture, the voice standard, and classic's own design history. |
 
 ## Installing on a phone

@@ -34,7 +34,13 @@
  * is unchanged by the fourth turn. Charter: docs/SUBBRAND.md.
  * ========================================================================== */
 :root{
-  --s11:0.6875rem; --s13:0.8125rem; --s15:0.9375rem; --s16:1rem; --s18:1.125rem;
+  /* --s10 is the LABEL FLOOR: the smallest label in the app. It was already
+     read three times below (.lcard .eyeb, .lcard .of) and never declared, so
+     those labels were dropping the declaration and inheriting their parent's
+     size instead. --s42 is the passport hero, one of the three homes the
+     display band is spent in (design-system/assets/tokens.css). */
+  --s10:0.625rem; --s11:0.6875rem; --s13:0.8125rem; --s15:0.9375rem; --s16:1rem; --s18:1.125rem;
+  --s42:2.625rem;
   --track-label:0.12em; --track-foot:0.04em;
   --w-regular:400; --w-medium:500; --w-semibold:600;
   --measure:37ch; --measure-editorial:56ch; --touch-min:44px;
@@ -690,6 +696,9 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
   line-height:1;letter-spacing:-.03em;color:var(--ink)}
 .figs .v .u{font-size:12px;color:var(--ink-3);margin-left:3px}
 .figs .l{font-family:var(--sans);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:6px}
+/* on the door the block is ruled both sides, so it closes itself above the
+   action rather than leaving a hairline hanging under the curve */
+.figs.ruled{border-top:1px solid var(--line);margin-top:14px}
 .figs.small{border-bottom:0;border-top:1px solid var(--line);padding:11px 0 0}
 .figs.small .v{font-size:26px;letter-spacing:-.02em}
 .figs.small .l{margin-top:5px}
@@ -738,6 +747,81 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
   color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;letter-spacing:.01em}
 .qlink:active{color:var(--ink)}
 .qlink.faint{color:var(--ink-3)}
+
+/* ===== the front door — the plate, one leaf, one pull (ROADMAP Phase 30) =====
+ * The Atlas is a fixed frame now, not a scroll: the plate fills it, one leaf of
+ * paper sits on the plate, and the record is one pull below. Everything here is
+ * absolutely positioned inside `main.fixed`, the same frame the city screen
+ * already owns.
+ *
+ * The ember is spent once per screen, on the bar's door. The ember marks the
+ * STANDING invitation; ink marks the action in hand. That is why the field's →,
+ * the two leaf actions and the waiting mark all take ink here — leave the
+ * field ember and states 01/02 carry two ember-filled doors doing one job.
+ */
+.door{position:absolute;inset:0;overflow:hidden}
+/* the plate travels when the record comes up, and <carta-atlas> re-fits into
+   the new box through its own ResizeObserver rather than being remounted */
+.door .passport{transition:height var(--mo-base) var(--mo-ease)}
+/* the leaf — a fade over the plate where the door is asking, a slab of paper
+   where it is offering. Both slide clear when the record rises. */
+.doorleaf{position:absolute;left:0;right:0;bottom:0;z-index:3;
+  display:flex;flex-direction:column;transition:transform var(--mo-base) var(--mo-ease)}
+.doorleaf.fadeleaf{pointer-events:none;justify-content:flex-end;
+  background:linear-gradient(to top,var(--surface-card) 0%,
+    color-mix(in srgb,var(--surface-card) 96%,transparent) 62%,
+    color-mix(in srgb,var(--surface-card) 0%,transparent) 100%)}
+/* a fade is read through, never tapped, so everything live inside one hands its
+   own taps back — the contract .askfield already keeps */
+.doorleaf.fadeleaf .askfield,.doorleaf.fadeleaf .asktrust,
+.doorleaf.fadeleaf .qlink,.doorleaf.fadeleaf .atlashandle{pointer-events:auto}
+.doorleaf.paper{background:var(--surface-card);border-top:1px solid var(--line-strong);
+  padding:20px 20px 0;overflow-y:auto}
+.doorsub{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-3);margin-bottom:16px}
+/* the two facts — .kv's own mechanics, ruled above so the pair closes itself */
+.doorfacts{border-top:1px solid var(--line)}
+.doorfacts .kv{padding:11px 0}
+.doorfacts .kv:last-child{border-bottom:none}
+.doorfacts .v.unread{font-style:italic;color:var(--text-subtle)}
+/* the handle: an invitation at rest, a control once the record is up, which is
+   why it darkens rather than changing shape */
+.atlashandle{width:100%;background:none;border:0;cursor:pointer;
+  display:flex;justify-content:center;padding:16px 0 2px;margin-top:auto}
+.atlashandle span{width:38px;height:3px;background:var(--paper-3);display:block}
+.atlashandle.up{padding:9px 0 3px;margin-top:0;flex:none}
+.atlashandle.up span{background:var(--ink-3)}
+/* the record, one pull below */
+.doorsheet{position:absolute;left:0;right:0;bottom:0;z-index:5;
+  background:var(--surface-card);border-top:1px solid var(--line-strong);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:transform var(--mo-base) var(--mo-ease)}
+.doorsheet .list{flex:1;overflow-y:auto;padding:0 20px 18px}
+.doorcity{padding:11px 0;min-height:56px}
+/* three one-line doors: the label pattern on the left, what it amounts to on
+   the right, and nothing in between. A row whose count is zero is not drawn —
+   never rendered disabled. */
+.doordoors{margin-top:20px;border-top:1px solid var(--line-strong)}
+.doordoor{width:100%;display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  text-align:left;background:none;border:0;border-bottom:1px solid var(--line);
+  padding:14px 4px;min-height:48px;cursor:pointer;color:var(--ink)}
+.doordoor:last-child{border-bottom:none}
+.doordoor:active{background:var(--paper-2)}
+.doordoor .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-2);font-weight:500;white-space:nowrap}
+.doordoor .r{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;
+  color:var(--ink-3);white-space:nowrap}
+/* the field's own button, in ink — an instrument in the hand, not the standing
+   invitation the bar's door is. It cannot say "Ask" any more, because it does
+   not always ask: one field, two doors, and the parser decides which. */
+.askfield button.ink{background:var(--fill-strong);color:var(--text-on-fill);padding:0 20px}
+.askfield button.ink:active{filter:none;background:var(--fill-strong-hover)}
+/* the design system's one sanctioned ink fill (components.css, .btn-graphite) */
+.btn-graphite{background:var(--fill-strong);color:var(--text-on-fill);border:1px solid var(--fill-strong)}
+.btn-graphite:active{background:var(--fill-strong-hover);border-color:var(--fill-strong-hover)}
+/* the waiting mark in ink. .waiting .mk is ember everywhere else; on the door
+   the ember is already spent on the bar, and two would be one too many. */
+.waiting.ink .mk{background:var(--ink)}
+.waiting.ink .l{color:var(--ink-3);font-weight:500;letter-spacing:var(--track-label)}
 @media (prefers-reduced-motion:reduce){
   .plate .pr.draw,.plate .wi.draw{animation:none!important;stroke-dasharray:none!important}
   .plate .fl.ink,.plate .wt.ink{animation:none!important;opacity:1!important}
@@ -751,12 +835,15 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      setting on. It breathes slower and shallower here — the accommodation,
      not the removal. Everything that actually moves above stays stilled. */
   .waiting .mk{animation:ca-breathe-still 3.2s ease-in-out infinite!important}
+  /* the sheet's travel and the plate's reframe are real motion — a slab of
+     paper crossing the screen — so unlike the breath above, they stop. */
+  .door .passport,.doorleaf,.doorsheet{transition:none!important}
 }
 @keyframes ca-breathe-still{0%,100%{opacity:1}50%{opacity:.55}}
 
 </style>
 <!-- the sibling scripts carry the version in their URL, and it must be bumped
-     with APP_VERSION (v7.31.6). index.html is the navigation document and is
+     with APP_VERSION (v7.37.0). index.html is the navigation document and is
      revalidated; a plain `<script src>` beside it is an ordinary subresource
      and is served from cache — so a keeper could run a NEW index.html against
      an OLD carta-plate.js, which is exactly what happened at v7.31.1: the
@@ -764,10 +851,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.36.0"></script>
-<script src="carta-plate.js?v=7.36.0"></script>
-<script src="carta-shot.js?v=7.36.0"></script>
-<script src="carta-ask.js?v=7.36.0"></script>
+<script src="carta-map.js?v=7.37.0"></script>
+<script src="carta-plate.js?v=7.37.0"></script>
+<script src="carta-shot.js?v=7.37.0"></script>
+<script src="carta-ask.js?v=7.37.0"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1863,12 +1950,15 @@ function render(){
   const settle=!same&&!reducedMotion();_lastScreenKey=screenKey;
   const m=document.getElementById('main');
   const keep=same?m.scrollTop:0;
-  m.classList.toggle('fixed',view.kind==='city');
+  // the Atlas owns its own frame now — a full-bleed plate with a leaf drawn
+  // over it — so like the city screen it takes the scroll off main
+  m.classList.toggle('fixed',view.kind==='city'||view.kind==='atlas');
   m.classList.toggle('tall',view.kind==='asking');
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=keep;
   _askSettle=false;
   if(view.kind==='city')mountCity();
+  if(view.kind==='atlas')mountAtlas();
   ariaPass(m);
 }
 /* what fills, says so. Every mark that carries an on-state is a toggle to a
@@ -3627,6 +3717,21 @@ function takenHomeNote(c){
   if(days<TAKEN_HOME_QUIET_DAYS)return '';
   return 'not brewed yet';
 }
+/* the invitation, on the Shelf since the door was cut back to one leaf — shown
+ * only while the machine isn't known yet, and never as a nudge: it states what
+ * the machine already keeps and what reading it would cost. It is about your
+ * machine and your brews, and nothing about it is geography, which is why it
+ * is no longer on the Atlas. The typed door stands beside it, since a
+ * pour-over leaves no shot file. */
+function atHomeSlabHTML(anythingAbove){
+  if(visualizerEmail())return '';
+  const home=live('cups').filter(c=>c.kind==='home').length;
+  return `<div class="shead"${anythingAbove?'':' style="margin-top:8px"'}><span class="l">At home</span>
+    <span class="r">${home?`${words(home)} cup${home===1?'':'s'} measured`:'nothing measured yet'}</span></div>
+    <div class="lede" style="margin-top:14px">Your machine keeps every brew it makes. Carta can read them, and then a cup at home costs you one tap and a number.</div>
+    <button class="btn btn-quiet" onclick="openVisualizerKey()">Connect Visualizer</button>
+    <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="openHomeDoor()">Or type a brew yourself</button></div>`;
+}
 function vShelf(){
   const items=live('coffees').filter(c=>c.home).sort(byNew);
   const archived=D.coffees.filter(c=>c.archived&&c.home);
@@ -3638,6 +3743,7 @@ function vShelf(){
   <div class="pad" style="padding-top:8px">
     ${items.length?items.map(shelfRowHTML).join(''):'<div class="empty">Nothing on the shelf yet. A home brew lands here on its own — or take a café coffee home from its cup.</div>'}
     ${archived.length?`<details class="more" style="margin-top:10px"><summary>Put away (${archived.length})</summary>${archived.map(c=>coffeeRowHTML(c)).join('')}</details>`:''}
+    ${atHomeSlabHTML(items.length||archived.length)}
     <div class="btnrow" style="margin-top:20px">
       <button class="btn btn-quiet" onclick="openCoffeeForm()">＋ Add a coffee</button>
       <button class="btn btn-quiet" onclick="openImportCard()">Import a card</button>
@@ -4737,133 +4843,331 @@ function asktrustHTML(){
   if(askKey())return `<div class="asktrust">Sent with your brief, on your own key — every café checked against a real address before it is drawn.</div>`;
   return `<div class="asktrust">Sent with your brief — every café checked against a real address before it is drawn. The ask brings your own key<button class="qlink" style="margin-left:6px" onclick="openBriefScreen()">no key? the brief pastes anywhere →</button></div>`;
 }
-function welcomeHTML(){
-  return `<div class="welcome">
-    <div class="eyebrow" style="margin-bottom:12px">First open</div>
-    <div class="ln"><strong>Carta keeps the story of your taste</strong> — the cup that stops you mid-sentence, on the record in twenty seconds.</div>
-    <div class="ln"><strong>＋ A cup</strong>, below, is the door — from any room, wherever the cup is. A place and a 1–9 are enough.</div>
-    <div class="ln">Love a café's coffee? <strong>Take it home</strong> in one tap; your brews attach to the card it started.</div>
-    <div class="ln">The passport above inks itself in as your palate travels.</div>
-    <div class="ln"><strong>Your taste</strong>, top right, is argued from your own cups — and prepares a brief for the hunt, with or without a key.</div>
-    <div class="ln">Everything stays on this device. Nothing leaves unless you send it.</div>
-    <button class="btn btn-primary" style="margin-top:18px;min-height:52px" onclick="openDoor()">＋ Your first cup</button>
-    <div style="text-align:center;margin-top:12px"><button class="qlink" onclick="openClassicImport()">Kept a record in classic? Read it in</button></div>
-  </div>`;
-}
-function vAtlas(){
-  const tasted=tastedCountryMap();
-  // nothing on the record at all: the welcome takes the lift, and the ask field
-  // isn't offered — there is no brief behind it yet to argue from
-  if(!live('cups').length&&!live('coffees').length){
-    return `<div>
-      <div class="mapbox passport" style="position:sticky;top:0;height:min(340px,40vh);z-index:1">
-        <carta-belt style="position:absolute;inset:0" fit="cover" lift="on" tasted=""></carta-belt>
-        <div class="fade top" style="height:104px"></div>
-        <div class="overlay" style="left:20px;right:20px;top:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-          <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
-        </div>
-        <div class="fade bottom deep" style="height:120px"></div>
-      </div>
-      <div class="lift pad" style="z-index:2;margin-top:-18px;padding-bottom:26px;padding-top:4px">
-        ${welcomeHTML()}
-      </div>
-    </div>`;
+/* ============ the front door — one plate, one leaf, one pull ============
+ * The Atlas was a sticky map with a question on it and 2,270 px of cards under
+ * it: asks, cities, a Visualizer pitch, a chip list and a share button, all
+ * present at once whatever the app was opened for. It is the plate, one leaf
+ * and one pull now.
+ *
+ * The plate is the whole screen. One leaf of paper sits on it, and what the
+ * leaf holds is decided by what is actually true right now — a priority
+ * ladder, first true branch wins, and the rest of the screen is identical
+ * between states:
+ *
+ *   01  first open      the question, over an uninked belt
+ *   02  nothing live    the question
+ *   03  a brew waiting  that brew, its curve, its figures, Write the cup →
+ *   04  a bag resting   that coffee, its best so far, Brew it →
+ *
+ * 03 outranks 04 outranks 02. A brew expires; a bag does not; the question
+ * never does — the rule vAtlas already held ("an unlogged cup outranks the
+ * next question"), extended by one rung. 05 is not a branch: it is any of the
+ * above with the sheet pulled up, and everything that left the door lives
+ * there — what Carta found, the cities, what has been tasted, the share.
+ *
+ * The ember is spent once per screen, on the bar's door. The ember marks the
+ * standing invitation; ink marks the action in hand — which is why the field's
+ * → and the two leaf actions take the sanctioned ink fill, and why the waiting
+ * mark went to ink. See `.askfield button.ink` and `.waiting.ink .mk`.
+ */
+const ATLAS_PLATE_SHOT=352, ATLAS_PLATE_BAG=450, ATLAS_PLATE_UP=178,
+      ATLAS_SHEET_TOP=160, ATLAS_OVERLAP=18;
+/* whether the record is showing. Transient by design: the door opens closed
+   every time, so this is never persisted — only kept across a repaint of the
+   same screen, the way _lastScreenKey already keeps a scroll position. */
+let _atlasSheetUp=false;
+function toggleAtlasSheet(){_atlasSheetUp=!_atlasSheetUp;mountAtlas();}
+/* the sheet travels and the plate reframes rather than reloading — the same
+   behaviour the city sheet already has. Styles are set in place rather than
+   re-rendered so the transitions actually run and <carta-atlas> re-fits
+   through its own ResizeObserver instead of being torn down and reprojected. */
+function mountAtlas(){
+  const plate=document.getElementById('atlasplate');if(!plate)return;
+  const main=document.getElementById('main');
+  const H=main?(main.clientHeight||795):795;
+  const rest=Number(plate.dataset.rest)||H;
+  plate.style.height=(_atlasSheetUp?ATLAS_PLATE_UP:rest)+'px';
+  const leaf=document.getElementById('atlasleaf');
+  if(leaf)leaf.style.transform=_atlasSheetUp?'translateY(110%)':'none';
+  const sheet=document.getElementById('atlassheet');
+  if(sheet){
+    sheet.style.top=ATLAS_SHEET_TOP+'px';
+    sheet.style.transform=_atlasSheetUp?'none':'translateY(110%)';
+    sheet.setAttribute('aria-hidden',_atlasSheetUp?'false':'true');
   }
-  const countries=Object.values(tasted).sort((a,b)=>a.label.localeCompare(b.label));
-  const cities=knownCities();
-  const counts=countryCupCounts();
-  const asks=D.asks.slice().sort(byNew);
-  // the hero yields (SPEC §2): an unlogged cup outranks the next question, and
-  // it is also the only thing on this screen that expires. The ask steps down
-  // one slab into the lift and comes straight back up once the cup is written.
-  const shot=waitingShot();
-  const askFieldHTML=`<div class="askfield">
-          <input type="text" id="home_ask" value="${esc(askDraft.dest)}" placeholder="A city, a route, a friend's taste…"
-            aria-label="Where to next" oninput="askDraft.dest=this.value" onkeydown="if(event.key==='Enter')askFromHome()">
-          <button onclick="askFromHome()">Ask →</button>
-        </div>`;
-  return `<div>
-    <div class="mapbox passport" style="position:sticky;top:0;height:${shot?'min(600px,66vh)':'min(452px,50vh)'};z-index:1">
-      <carta-belt style="position:absolute;inset:0" fit="cover" frame="tasted" lift="on" tasted="${esc(countries.map(c=>c.label).join(','))}"></carta-belt>
-      <div class="fade top" style="height:104px"></div>
-      <div class="overlay" style="left:20px;right:20px;top:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-        <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
-        <button class="omini bare" onclick="openTaste()">Your taste →</button>
-      </div>
-      ${shot?homeShotHeroHTML(shot):`<div class="fade bottom deep" style="height:210px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 22px">
-        <div class="eyebrow" style="margin-bottom:7px;color:var(--accent)">Ask Carta</div>
-        <div class="display big" style="margin:0 0 14px">Where to <em>next?</em></div>
-        ${askFieldHTML}
-        ${asktrustHTML()}
-      </div>`}
-    </div>
-    <div class="lift" style="z-index:2;margin-top:-18px;padding-bottom:26px">
-      <div style="display:flex;justify-content:center;padding:9px 0 3px"><span style="width:38px;height:3px;background:var(--paper-3);display:block"></span></div>
-      <div class="pad" style="padding-bottom:0">
-        ${shot?`<div class="shead" style="margin-top:8px"><span class="l">Ask Carta</span><span class="r">on your own key</span></div>
-          <div style="margin-top:14px">${askFieldHTML}</div>`:''}
-        ${countries.length||cities.length?'':`<div class="lede" style="margin-top:14px">Log a coffee with its country, or a café cup with its city, and the passport starts filling in.</div>`}
-        ${asks.length?`<div class="shead over"${shot?'':' style="margin-top:8px"'}><span class="l">What Carta found</span>
-          <span class="r">${words(asks.length)} ask${asks.length===1?'':'s'} · tap to reopen</span></div>
-          ${asks.map(askRowHTML).join('')}`:''}
-        ${cities.length?`<div class="shead over"${asks.length||shot?'':' style="margin-top:8px"'}><span class="l">Your cities</span><span class="r">${words(cities.length)} on the record</span></div>
-          ${cities.map(cityRowHTML).join('')}`:''}
-        ${atHomeSlabHTML(asks.length||cities.length||shot)}
-        ${countries.length?`<div class="shead"><span class="l">Tasted so far</span><span class="r">tap the map, or a name</span></div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
-            ${countries.map(c=>`<button class="cchip" onclick="openCountryChapter(${jsq(c.label)})">${esc(c.label)}<span class="n">${counts[landKey(c.label)]||0}</span></button>`).join('')}
-          </div>
-          <button class="btn btn-quiet" style="margin-top:16px;margin-bottom:4px" onclick="sharePassportCard()">Share the passport</button>`:''}
-      </div>
-    </div>
+}
+/* the pull handle, and the grab it becomes once the record is up: the same
+   38x3 mark, darker when it is a control rather than an invitation */
+function atlasHandleHTML(up){
+  return `<button class="atlashandle${up?' up':''}" aria-expanded="${up?'true':'false'}"
+    aria-label="${up?'Close the record':'Open the record'}" onclick="toggleAtlasSheet()"><span></span></button>`;
+}
+/* state 04's one new selector: the coffee the record would actually reach for
+ * — most recently brewed, still on the shelf, with a brew behind it to seed
+ * the next one.
+ *
+ * No weight test, deliberately. The handoff asks for "a coffee that still has
+ * weight on file", and there is no such field: nothing in the ledger records
+ * what is left in a bag (SCHEMA.md has no weight on a coffee, and the door has
+ * never asked for one). Inventing it would be exactly the guess the record
+ * refuses everywhere else, so the bag is chosen on what IS on file and its sub
+ * line simply does not carry a gram figure. Where nothing qualifies the door
+ * falls through to the question rather than inventing a bag.
+ */
+function restingBag(){
+  const brews=D.brews.slice().sort(byWhen);
+  for(const b of brews){
+    const c=coffeeById(b.coffeeRef);
+    if(!c||c.archived||!c.home)continue;
+    const scored=live('cups').filter(x=>x.coffeeRef===c.id&&x.score!=null)
+      .sort((p,q)=>q.score-p.score);
+    return {coffee:c,last:b,best:scored[0]||null};
+  }
+  return null;
+}
+/* what a cup was made on, named the way the record names it elsewhere */
+function bagSetupLabel(cup){
+  const brew=cup&&cup.brewRef?brewById(cup.brewRef):null;
+  const s=brew?setupById(brew.setupId):null;
+  if(!s)return '';
+  return s.name||[s.grinder,s.brewer].filter(Boolean).join(' + ');
+}
+/* a brew's day. Inside the week a weekday reads better than a countdown, which
+   is the one thing fmtWhen does not do; past it, fall straight back to it. */
+function atlasBrewDay(iso){
+  if(!iso)return '';
+  const d=new Date(iso),days=Math.floor((Date.now()-d)/864e5);
+  if(days<1)return 'Today';
+  if(days===1)return 'Yesterday';
+  if(days<7)return d.toLocaleDateString(undefined,{weekday:'long'});
+  return fmtWhenLong(iso);
+}
+/* how long the bag has been resting, said in words */
+function bagRestLine(c){
+  if(!c.roastDate)return 'On the shelf';
+  const days=Math.floor((Date.now()-new Date(c.roastDate+'T00:00'))/864e5);
+  if(!isFinite(days)||days<0)return 'On the shelf';
+  if(days<1)return 'On the shelf · roasted today';
+  return `On the shelf · rested ${words(days)} day${days===1?'':'s'}`;
+}
+/* one field, two doors (SURFACES.md, "One door, and it is a paste field").
+ * The door's own parser decides which: run it first, and if it yields a
+ * roaster or anything that identifies a coffee, this is a bag and the door
+ * opens on it, prefilled. Otherwise the text is a destination and the ask
+ * opens. This is why the button lost its label and became → — it cannot say
+ * "Ask" any more, because it does not always ask. */
+function askFromHome(){
+  const el=document.getElementById('home_ask');
+  const text=el?el.value:askDraft.dest;
+  const t=String(text||'').trim();
+  if(t){
+    const p=doorParse(t);
+    if(p&&(p.roaster||p.roastLevel||Object.keys(p.o||{}).length)){
+      openDoor();doorState.step='text';doorState.text=t;paintDoor();return;
+    }
+  }
+  askDraft.dest=t;
+  openAskScreen();
+}
+/* the field itself. The ink fill is the design system's one sanctioned fill
+   (.btn-graphite), not a new button — and it is ink rather than ember so the
+   screen spends the ember exactly once, on the bar's door. */
+function doorFieldHTML(){
+  return `<div class="askfield">
+    <input type="text" id="home_ask" value="${esc(askDraft.dest)}" placeholder="A place, or a bag…"
+      aria-label="A place, or a bag" oninput="askDraft.dest=this.value"
+      onkeydown="if(event.key==='Enter')askFromHome()">
+    <button class="ink" onclick="askFromHome()" aria-label="Go">→</button>
   </div>`;
 }
-/* the cup waiting on the passport (Phase 26). A stated fact with the cup
- * attached to it — "Poured 11 minutes ago" — and never a badge, a dot or a
- * count on the bar: the tripwire in ROADMAP.md holds. The fade is
- * pointer-events:none by design, so everything tappable inside it hands its
- * own taps back the way .askfield already does. */
-function homeShotHeroHTML(shot){
+/* the bar's own wordmark row. "Your taste" is absent on first open — there is
+   no taste to argue from yet — and while the record is up, which has taken the
+   screen. */
+function doorHeadHTML(taste){
+  return `<div class="overlay" style="left:20px;right:20px;top:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+    <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
+    ${taste?'<button class="omini bare" onclick="openTaste()">Your taste →</button>':''}
+  </div>`;
+}
+/* ---- the leaves ------------------------------------------------------- */
+/* 01 · first open, and 02 · nothing live. The leaf is a bottom fade rather
+   than a slab of paper: nothing is claimed and nothing is empty. */
+function doorAskLeafHTML(first,countries){
+  const n=countries.length;
+  const line=first
+    ?'Nothing on the record <em>yet.</em>'
+    :`${esc(capFirst(words(n)))} countr${n===1?'y':'ies'}, <em>so far.</em>`;
+  const teach=first
+    ?'Paste the bag, or name the place you drank. The map inks itself in as you go.'
+    :'A place to go, or a bag you drank. Carta reads which.';
+  return `<div class="doorleaf fadeleaf" id="atlasleaf"
+      style="height:${first?360:330}px;padding:0 20px ${first?20:14}px">
+    <div class="display" style="font-size:var(--s42);line-height:1.06;letter-spacing:-.025em;margin:0 0 18px">${line}</div>
+    ${doorFieldHTML()}
+    <div class="asktrust">${teach}</div>
+    ${first
+      ?`<div style="text-align:center;margin-top:16px;pointer-events:auto"><button class="qlink" onclick="openClassicImport()">Kept a record in classic? Read it in</button></div>`
+      :atlasHandleHTML(false)}
+  </div>`;
+}
+/* 03 · a brew waiting. The one thing on the screen that expires is the one
+   thing that moves. The mark is ink, not the ember — see the ember budget. */
+/* the door's three figures. Same reading as figsHTML and the same `.figs`
+ * mechanics, but the door states the YIELD where the shot screen states the
+ * ratio — "38 g, from 18 g" is the figure a brew waiting to be written is
+ * actually argued about, and a ratio is a second calculation to do standing
+ * up. figsHTML itself is untouched: vShot and the cup still read through it.
+ */
+function doorFigsHTML(fg){
+  const cell=(v,l)=>`<div><div class="v">${v}</div><div class="l">${esc(l)}</div></div>`;
+  const from=fg.dose==null?'Yield':'From '+trimNum(fg.dose)+' g';
+  const yld=fg.yield==null?'—':trimNum(fg.yield)+'<span class="u">g</span>';
+  const lead=fg.method==='pourover'
+    ?cell(fg.drawdown==null?'—':trimNum(fg.drawdown)+'<span class="u">s</span>','Drawdown')
+    :cell(fg.peak==null?'—':trimNum(fg.peak)+'<span class="u">bar</span>','Peak');
+  return `<div class="figs ruled">${lead}${cell(yld,from)}
+    ${cell(fg.total==null?'—':trimNum(fg.total)+'<span class="u">s</span>','Elapsed')}</div>`;
+}
+function doorShotLeafHTML(shot){
   const fg=shotFigures(shot),when=shotWhen(shot),pour=shotMethod(shot)==='pourover';
-  // what the brew was made on, said the way each method says it: a shot names
-  // the machine it was pulled on, a filter brew the brewer it ran through
   const sub=pour
     ?[shot.roaster,brewerOf(shot)?'a '+brewerShort(brewerOf(shot))+', read off the scale':'read off the scale'].filter(Boolean).join(' · ')
     :[shot.roaster,shot.roastLevel?shot.roastLevel.toLowerCase():'',
       shot.grinderModel?'on the '+shot.grinderModel:''].filter(Boolean).join(' · ');
-  return `<div class="fade bottom deep shot" style="height:470px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 20px">
-    <div class="waiting"><span class="mk"></span><span class="l">${esc(when?'Poured '+fmtAgo(when):'A brew, waiting')}</span></div>
-    <div class="display big" style="margin:0 0 3px">${esc(shot.coffeeName||shot.label)}</div>
-    ${sub?`<div style="font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-3);margin-bottom:12px">${esc(sub)}</div>`:''}
+  return `<div class="doorleaf paper" id="atlasleaf" style="top:${ATLAS_PLATE_SHOT-ATLAS_OVERLAP}px">
+    <div class="waiting ink"><span class="mk"></span><span class="l">${esc(when?'Poured '+fmtAgo(when):'A brew, waiting')}</span></div>
+    <div class="display big" style="margin:12px 0 3px">${esc(shot.coffeeName||shot.label)}</div>
+    ${sub?`<div class="doorsub">${esc(sub)}</div>`:''}
     ${shot.curve?plateSVG(shot,PLATE_HAIR,{cls:'hair',draw:true}):''}
-    ${figsHTML(fg,true)}
-    <button class="btn btn-primary" style="margin-top:16px;pointer-events:auto" onclick="openShotScreen(${jsq(String(shot.id))})">Log this cup →</button>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:11px;pointer-events:auto">
-      <span class="asttrust" style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">Read off your ${pour?'scale':'account'}, not stored anywhere else.</span>
-      <button class="qlink" style="flex:none" onclick="openShotsScreen()">Other brews</button>
+    ${doorFigsHTML(fg)}
+    <button class="btn btn-graphite" style="min-height:52px;padding:15px 16px;margin-top:18px" onclick="openShotScreen(${jsq(String(shot.id))})">Write the cup →</button>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:14px">
+      <span class="asttrust" style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">Read off your ${pour?'scale':'account'}, kept nowhere else.</span>
+      <button class="qlink" style="flex:none;white-space:nowrap" onclick="snoozeWaitingShot()">Not now</button>
+    </div>
+    ${atlasHandleHTML(false)}
+  </div>`;
+}
+/* 04 · a bag resting. The seal is drawn only where the record can name real
+   ground; where it cannot the label starts the row — sealHTML's own refusal. */
+function doorBagLeafHTML(bag){
+  const c=bag.coffee;
+  const country=(c.origin&&c.origin.country||'').trim();
+  const seal=country?sealHTML(landKey(country),null,44):'';
+  const sub=[c.roaster,originLine(c)].filter(Boolean).join(' · ');
+  const bestCup=bag.best;
+  const bestSetup=bestCup?bagSetupLabel(bestCup):'';
+  const best=bestCup?[trimNum(bestCup.score),bestSetup].filter(Boolean).join(' — '):'';
+  const day=atlasBrewDay(bag.last.at||bag.last.createdAt);
+  const inout=bag.last.doseG!=null&&bag.last.waterG!=null
+    ?`${trimNum(bag.last.doseG)} in, ${trimNum(bag.last.waterG)} out`:'';
+  const lastLine=[day,inout].filter(Boolean).join(' · ');
+  const fact=(k,v)=>`<div class="kv"><span class="k">${esc(k)}</span><span class="v${v?'':' unread'}">${v?esc(v):'unread'}</span></div>`;
+  return `<div class="doorleaf paper" id="atlasleaf" style="top:${ATLAS_PLATE_BAG-ATLAS_OVERLAP}px">
+    <div style="display:flex;align-items:center;gap:12px">
+      ${seal}
+      <span class="eyebrow" style="margin:0">${esc(bagRestLine(c))}</span>
+    </div>
+    <div class="display big" style="margin:14px 0 3px">${esc(c.name||'Unnamed coffee')}</div>
+    ${sub?`<div class="doorsub" style="margin-bottom:18px">${esc(sub)}</div>`:''}
+    <div class="doorfacts">${fact('Best so far',best)}${fact('Last brew',lastLine)}</div>
+    <button class="btn btn-graphite" style="min-height:52px;padding:15px 16px;margin-top:12px" onclick="openBrewFlow('${c.id}')">Brew it →</button>
+    <div style="display:flex;justify-content:center;gap:24px;margin-top:10px">
+      <button class="qlink" style="flex:none;white-space:nowrap" onclick="go('shelf')">Something else</button>
+      <button class="qlink" style="flex:none;white-space:nowrap" onclick="openAskScreen()">Where to next</button>
+    </div>
+    ${atlasHandleHTML(false)}
+  </div>`;
+}
+/* 05 · the record, one pull below. One cup, not a list, and compact city rows
+   rather than full cards: the Journal and each city's own page are one tap
+   away, and everything they hold belongs there rather than here. */
+function doorSheetHTML(cities,countries,asks){
+  const cups=live('cups').slice().sort(byWhen);
+  const newest=cups[0]||null;
+  const counts=countryCupCounts();
+  const rows=[];
+  if(asks.length)rows.push(['What Carta found',`${capFirst(words(asks.length))} ask${asks.length===1?'':'s'} →`,'openAsksSheet()']);
+  if(countries.length)rows.push(['Tasted so far',`${capFirst(words(countries.length))} countr${countries.length===1?'y':'ies'} →`,'openTastedSheet()']);
+  if(countries.length)rows.push(['The passport','Share it →','sharePassportCard()']);
+  return `<div class="doorsheet" id="atlassheet" aria-hidden="true">
+    ${atlasHandleHTML(true)}
+    <div class="list">
+      ${newest?`<div class="shead over" style="margin-top:0;padding-top:14px"><span class="l">Lately</span>
+        <span class="r">${esc(capFirst(words(cups.length)))} cup${cups.length===1?'':'s'}</span></div>
+        ${cupRowHTML(newest)}`:''}
+      ${cities.length?`<div class="shead over"><span class="l">Your cities</span><span class="r">${esc(capFirst(words(cities.length)))}</span></div>
+        <div style="display:flex;flex-direction:column">${cities.map(doorCityRowHTML).join('')}</div>`:''}
+      ${rows.length?`<div class="doordoors">${rows.map(r=>
+        `<button class="doordoor" onclick="${r[2]}"><span class="l">${esc(r[0])}</span><span class="r">${esc(r[1])}</span></button>`).join('')}</div>`:''}
     </div>
   </div>`;
 }
-/* the invitation, one slab of paper below the fold — shown only while the
- * machine isn't known yet, and never as a nudge: it states what the machine
- * already keeps and what reading it would cost. The typed door stands beside
- * it, since a pour-over leaves no shot file. */
-function atHomeSlabHTML(anythingAbove){
-  if(visualizerEmail())return '';
-  const home=live('cups').filter(c=>c.kind==='home').length;
-  return `<div class="shead"${anythingAbove?'':' style="margin-top:8px"'}><span class="l">At home</span>
-    <span class="r">${home?`${words(home)} cup${home===1?'':'s'} measured`:'nothing measured yet'}</span></div>
-    <div class="lede" style="margin-top:14px">Your machine keeps every brew it makes. Carta can read them, and then a cup at home costs you one tap and a number.</div>
-    <button class="btn btn-quiet" onclick="openVisualizerKey()">Connect Visualizer</button>
-    <div style="text-align:center;margin-top:14px"><button class="qlink" onclick="openHomeDoor()">Or type a brew yourself</button></div>`;
+/* a city, at the size a row is read at — .lrow's geometry with the seal in the
+   thumbnail slot. The card's sub/said/facts belong on the city's own page. */
+function doorCityRowHTML(city){
+  const places=cityPlaces(city);
+  const ids=new Set(places.map(p=>p.id));
+  const cups=live('cups').filter(c=>c.kind==='bar'&&ids.has(c.placeRef));
+  const ground=cityGround(city);
+  const plate=cityPlate(city,PLATE_SPAN);
+  const meta=[`${capFirst(words(places.length))} caf${places.length===1?'é':'és'}`,
+    `${words(cups.length)} cup${cups.length===1?'':'s'}`].join(' · ');
+  return `<button class="lrow doorcity" onclick="openCityChapter(${jsq(city)})">
+    ${plate?plate.html:(ground?sealHTML(ground.key,null,32):'')}
+    <span class="mid"><span class="t">${esc(city)}</span><span class="m">${esc(meta)}</span></span>
+    <span class="go">→</span></button>`;
 }
-// the field on the passport hands off to the composer rather than firing the
-// call: what kind of ask it is, and how far you'd go, are the difference
-// between an answer and a list — so they are asked before the key is spent.
-function askFromHome(){
-  const el=document.getElementById('home_ask');
-  if(el)askDraft.dest=el.value;
-  openAskScreen();
+
+/* the two rows on the sheet that had no screen of their own. Both are a list
+ * over data the app already holds, opened as a sheet rather than a new room —
+ * the asks through the ask's own row, the countries through the passport's own
+ * chips. Nothing left the app when they left the door; they moved one pull and
+ * one tap further in, which is the whole argument of this screen. */
+function openAsksSheet(){
+  const asks=D.asks.slice().sort(byNew);
+  if(!asks.length)return;
+  openSheet(`<h3>What Carta found</h3>
+  <div class="sub">Every ask you have made, newest first. Tap one to read it again.</div>
+  ${asks.map(askRowHTML).join('')}`);
+}
+function openTastedSheet(){
+  const countries=Object.values(tastedCountryMap()).sort((a,b)=>a.label.localeCompare(b.label));
+  if(!countries.length)return;
+  const counts=countryCupCounts();
+  openSheet(`<h3>Tasted so far</h3>
+  <div class="sub">${esc(capFirst(words(countries.length)))} countr${countries.length===1?'y':'ies'} on the record. Tap one for its chapter.</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+    ${countries.map(c=>`<button class="cchip" onclick="closeSheet();openCountryChapter(${jsq(c.label)})">${esc(c.label)}<span class="n">${counts[landKey(c.label)]||0}</span></button>`).join('')}
+  </div>
+  <button class="btn btn-quiet" style="margin-top:18px" onclick="closeSheet();sharePassportCard()">Share the passport</button>`);
+}
+
+function vAtlas(){
+  const tasted=tastedCountryMap();
+  const countries=Object.values(tasted).sort((a,b)=>a.label.localeCompare(b.label));
+  const cities=knownCities();
+  const asks=D.asks.slice().sort(byNew);
+  const first=!live('cups').length&&!live('coffees').length;
+  // the ladder: a brew expires, a bag does not, the question never does
+  const shot=first?null:waitingShot();
+  const bag=(first||shot)?null:restingBag();
+  const plateRest=shot?ATLAS_PLATE_SHOT:bag?ATLAS_PLATE_BAG:0;   // 0 = full bleed
+  const leaf=shot?doorShotLeafHTML(shot):bag?doorBagLeafHTML(bag)
+    :doorAskLeafHTML(first,countries);
+  return `<div class="door">
+    <div class="mapbox passport" id="atlasplate" data-rest="${plateRest}"
+      style="position:absolute;left:0;right:0;top:0">
+      <carta-atlas style="position:absolute;inset:0" caption="off"
+        frame="${first?'belt':'tasted'}"
+        tasted="${first?'':esc(countries.map(c=>c.label).join(','))}"></carta-atlas>
+      <div class="fade top" style="height:${plateRest?104:120}px"></div>
+      ${doorHeadHTML(!first)}
+      ${plateRest?`<div class="fade bottom" style="height:${shot?110:130}px"></div>`:''}
+    </div>
+    ${leaf}
+    ${first?'':doorSheetHTML(cities,countries,asks)}
+  </div>`;
 }
 
 /* ============ the walk down from a country ============
@@ -5482,8 +5786,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.36.0';
+const APP_VERSION='7.37.0';
 const CHANGELOG=[
+  {v:'7.37.0',d:"The front door, cut back to one thing at a time. The Atlas opened on a map with a question on it and two thousand pixels of card under it — asks, cities, a Visualizer pitch, a list of every country, a share button, all of it there at once whatever you opened Carta for. It is the plate, one leaf and one pull now. The passport is the whole screen, drawn as a plate rather than a backdrop: a graticule, the band between the tropics stated and labelled, drafting ticks, and the rest of the world behind it in the palest ink, so it reads as a chart of the coffee belt rather than a map with pieces missing. One leaf of paper sits on it, and what the leaf holds is whatever is actually true — a brew waiting with its curve and its figures, a bag resting on the shelf with its best cup so far, or the question. A brew expires and a bag does not, so a brew leads. The field takes a place or a bag and reads which, which is why it no longer says Ask. Everything else is one pull below: the last cup, your cities, what Carta found, what you have tasted, the passport to share. Nothing left the app — it moved one pull and one tap further in. The Visualizer invitation moved to the Shelf, where your machine is; the line about what leaves the device moved to the ask itself, where something actually does."},
   {v:'7.36.0',d:"Ground for every listing. A city you drink in used to draw its country or admit it had none on file, and Copenhagen, Berlin and Oslo admitted it every time — the outlines Carta carries are where coffee is grown, and none of those grow any. The belt reaches them now, at four hundred and seventy-four bytes, and a city row draws the ground it actually stands on rather than the continent it sits somewhere in: the frame closes from the country to a hundred and ninety kilometres around your own cafés and draws whatever closes inside it. Kaua‘i is the island it is. Los Angeles is the coast at Santa Monica Bay and the turn at Palos Verdes, which the belt could not hold and a table of city coastlines can, for forty-five bytes. Where nothing on file reaches that far the row draws your cafés at their own coordinates, states how far apart they are, and says plainly that the ground isn’t on file — a shape the record cannot defend is still never drawn. Open a seal past thumbnail size and the highlands come with it: the contours have always been in the file, and they are spent at the width that can hold them instead of smudged at the width that cannot. And Alaska is its own outline at last. It rode inside the United States, three thousand kilometres of empty frame that left a Portland pin adrift in the middle of the country; Anchorage draws Alaska now, and Portland draws the coast it stands on. Nothing here fetches, and the whole of it is under two kilobytes. Alongside it, the listing card is finally the card the design board drew: a cup carries one fact row rather than two — a café cup answers where it grew, a brew answers what went through the bed, and the seal was already saying the ground twice — and where the outlines still cannot reach, the city is at least named. The lookup that confirms a café’s address has been stating its country all along and Carta was throwing it away; it keeps it now, fills it in behind you for every café already on the record, and a city row says the country plainly whether or not the file can draw it."},
   {v:'7.35.0',d:"The consolidation turn. One back that always knows where it came from — and the phone’s own back gesture finally works, closing the topmost layer instead of the app. One surface for writing a cup, wherever it was poured, and the same surface corrects a reading already written. The door asks where the cup is first: a café cup saves with a place and a 1–9, and a coffee left unnamed is written as — a cup, unnamed — an honest record you can name later from the cup itself. A welcome on first open; the release notes that were always maintained finally have a door, once per version and any time from Your record. Both keys live on Your record now, a sign-in resumes the errand it interrupted, every failure surface offers the same try-again, and \"Not mine\" has a real Undo. Unread content reads at reading contrast in both themes, focus is visible everywhere, the 1–9 and the dial steppers clear the touch minimum, and the ask’s answer folds to its argument — with a reply Carta can’t read stated as the honest failure it is."},
   {v:'7.34.2',d:"A Setup, matched by what it actually is. A grinder that feeds two brewers — an espresso machine and a pour-over dripper sharing a burr — was being read as one Setup, because the silent join off a Visualizer shot only ever checked the grinder's name. \"A Setup from Visualizer\" reported nothing new when the second brewer's shots were sitting right there, and shots pulled at the door were minting straight onto the wrong Setup: a keeper's own pour-overs landed on their legacy espresso Setup, silently, because the two happened to share a grinder. The match now checks the brewer too — a Setup that has never named one still joins on the grinder alone, exactly as before, but two Setups differing only in what they're attached to are never folded into one again. And a cup already written couldn't have this corrected at all: its own page now offers \"Wrong Setup? Correct it\" whenever there's more than one Setup to choose from, straight into the same form a new brew's Setup is picked from."},

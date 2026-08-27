@@ -595,6 +595,7 @@ function vAsk(){
         <span style="font-family:var(--serif);font-size:15.5px;color:var(--ink-2)">${key?'Your key is on this device':'No key on this device yet'}</span>
         <button class="text-action" style="flex:none;background:none;border:0;font-family:var(--sans);font-size:12px;cursor:pointer" onclick="openAskKey()">${key?'Change it':'Set one'}</button>
       </div>
+      ${asktrustHTML()}
       <button class="btn btn-primary" style="margin-top:16px;min-height:54px" onclick="runAsk()">Ask Carta</button>
       <div class="note" style="margin-top:18px">The only thing in Carta that calls out, and only when you tap it. No key, or the call fails, and you get the same brief to copy.</div>
     </div></div>`;
@@ -1080,4 +1081,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.36.0';
+window.ASK_VERSION='7.37.0';
