@@ -7,6 +7,39 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-27 — the standalone install, off the bottom edge (v7.37.6)
+
+- **The keeper's first real look at Carta as an installed app** (the manifest
+  fix, v7.37.4, having just made that possible) found the whole app sitting
+  short of the screen — a blank band between the tab bar and the home
+  indicator on an iPhone. Carta's one full-height rule, `height:100vh;
+  height:100dvh` on `body`, was hitting a live regression: iOS's current
+  release leaves a gap at the bottom edge of a full-height standalone web app
+  under `100dvh`, confirmed independently on Apple's own developer forums
+  (thread 803987) — not a Carta-specific mistake, and invisible until now
+  because no fresh install had ever reached standalone mode to show it.
+- **Shipped:** `window.innerHeight` still reads the real, settled height once
+  the app is open full-screen (no toolbar to hide or show there, so it can't
+  be caught mid-animation the way a Safari tab's `vh` classically was) — a
+  `setAppH()` call at boot writes it to a `--app-h` custom property, and
+  `body`'s height reads that first, falling back to `100dvh` for the instant
+  before the script runs and for anything that isn't hitting the iOS bug.
+  Reapplied on `resize` for rotation and any future toolbar-less viewport
+  change.
+- **Also folded in:** the version-sync bug from v7.37.4 (`APP_VERSION`
+  bumped without its sibling scripts) had already been caught and corrected
+  to v7.37.5 by the time this landed — this entry's branch was restarted off
+  that fixed point and renumbers cleanly to v7.37.6, all four version
+  constants and all four `<script src>` query strings in step.
+- **Verified:** `node test/model.test.js` at 139/139; the inline script and
+  all three siblings parse; a plain-Chromium emulation shows no regression
+  (Chromium doesn't carry the iOS bug, so `--app-h` and `100dvh` agree there
+  either way). The fix itself needs a real iPhone to confirm closed — noted
+  to the keeper rather than claimed.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-27 — Phase 30, a third fix (v7.37.5)
 
 - **A dismissal that didn't hold.** "Not now" on the waiting-shot hero
