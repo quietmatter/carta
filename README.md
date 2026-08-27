@@ -296,8 +296,9 @@ Open `index.html` in a browser, or serve the repo statically:
 python3 -m http.server
 ```
 
-No build step. It's deployed to GitHub Pages under `/carta/` (see
-`manifest.json`).
+No build step. It's deployed to GitHub Pages at the custom domain's root
+(`CNAME` → `carta.quiet-matter.com`; see `manifest.json`'s `scope`/`start_url`
+of `/`).
 
 The taste model is the one piece of real logic in the app, so it's the one
 thing with a test:

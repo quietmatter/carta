@@ -7,7 +7,7 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
-## 2026-08-27 — Phase 30, a third fix (v7.37.4)
+## 2026-08-27 — Phase 30, a third fix (v7.37.5)
 
 - **A dismissal that didn't hold.** "Not now" on the waiting-shot hero
   cleared `_vizWaiting`, but the app's own resume check
@@ -39,6 +39,43 @@ Lotmark's desk. Old entries are never rewritten.*
   waiting on the real clock. One new case in `test/verify-door.js`
   (48→51) fails cleanly before this fix and passes after.
   `model.test.js`: 139. `verify-v7.35.js`: 40.
+- **Renumbered 7.37.4 → 7.37.5 on merge.** The manifest-scope fix
+  (entry below) took 7.37.4 while this sat unmerged; both were cut
+  from the same base and both claimed it. Nothing about either fix
+  changed — only this one's version, its four `?v=` tags and the three
+  sibling `*_VERSION` constants the boot guard checks against it.
+
+---
+
+## 2026-08-27 — manifest scope, corrected (v7.37.4)
+
+- **A keeper reported a 404 on Add to Home Screen from Safari** — the site
+  itself loads fine at `carta.quiet-matter.com`, but a fresh install opened
+  to a 404. Cause: `manifest.json`'s `scope`/`start_url` were still `/carta/`,
+  the path Carta 7 was served under before the custom domain (`CNAME` →
+  `carta.quiet-matter.com`, added Phase 6's own day, PR #92) put it at the
+  domain's root instead. Verified live: `carta.quiet-matter.com/` is 200,
+  `carta.quiet-matter.com/carta/` is a genuine GitHub Pages 404. Safari reads
+  `start_url` when it opens an installed icon, so every fresh install has
+  been landing on that 404 since the domain moved.
+- **This corrects the 2026-08-19 entry** (Phase 6 shipped) naming
+  `/carta/` a "kept decision, not a leftover" — that call didn't hold up
+  against the live site and `ARCHITECTURE.md` is amended accordingly, per
+  this file's own rule that an unamended law that quietly stopped being true
+  is the failure this record exists to catch. The keeper's older, already-
+  installed icon still opens fine — it was very likely added before the
+  custom domain moved the site, when `/carta/` was a real path, so its
+  cached `start_url` still resolves; that's unrelated to whether Safari
+  allows a second install of the same site (it does).
+- **Shipped:** `manifest.json`'s `scope` and `start_url` (and the one
+  `shortcuts` entry) now point at `/`. `README.md` and `ARCHITECTURE.md`'s
+  PWA notes corrected to match. `APP_VERSION` bumped to `7.37.4` with a
+  `CHANGELOG` entry, since a keeper who already has the app open will see
+  What's New before the fix reaches their next fresh install.
+- **Not touched:** nothing else changed about how the app is served or
+  installed. No service worker exists to worry about a stale scope caching
+  the wrong shell.
+- **For Lotmark's desk:** nothing new this entry.
 
 ---
 
