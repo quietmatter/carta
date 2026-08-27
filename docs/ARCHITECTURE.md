@@ -11,7 +11,8 @@ part of the record.*
 
 Carta 7 is built exactly the way classic was, smaller:
 
-- **Five files, not one — two since Phase 19, three since v7.31.0, five since v7.34.0.**
+- **Six files, not one — two since Phase 19, three since v7.31.0, five since
+  v7.34.0, six since Phase 31.**
   `index.html`, all CSS and JS
   inline, self-contained, was the whole app through Phase 20. Target
   **3–5,000 lines / ≤ 500 KB** for it — a file one person can read whole.
@@ -419,10 +420,110 @@ Carta 7 is built exactly the way classic was, smaller:
   band is due another look, or the next split is due, is the founder's call
   and is on the table — see the v7.34.0 entry above, which named 5,000 as the
   point past which the one-file law itself, not the band, is what's come due.
+  **Phase 31 is the split that call asked for, and it is the sixth file.**
+  Put to the founder as the top open item at the head of a session and taken
+  directly ("take the split"), so the reopening is theirs. *The true figure it
+  was called on:* **5,956 lines / 421.7 KB** — 956 over a ceiling unmoved
+  since Phase 17, and reached by four separate versions walking past it
+  without an argument apiece (v7.37.4 through v7.37.7, all of them small
+  keeper-reported fixes, none of them the kind of thing that should have to
+  stop for a band). Bytes were comfortable at 84 % and are the reason this
+  was a debt rather than an emergency, exactly as at Phase 30.
+
+  *What moved, and why this cut rather than the one this section named.* The
+  Phase 30 note above named "the room-sized views (`vJournal`, `vShelf`,
+  `vRecord` and the screens under them)" as the obvious cut. **It was not
+  taken, and the change of mind is recorded here rather than made quietly.**
+  Two things decided it, both found by measuring rather than by reading:
+
+  - **The Atlas is one contiguous slab and the rooms are not.** Everything
+    from the door through the four walks — `vAtlas`, its plate/leaf/sheet, and
+    `vCountryChapter` → `vRegionChapter` → `vProducerPage` plus
+    `vCityChapter` — sat in a single unbroken run of 1,126 lines under its own
+    section banner. The rooms are ~880 lines in one run plus the cards and
+    imports in another, which is both a smaller cut (not enough on its own to
+    clear the band) and a riskier one.
+  - **The Atlas is the layer above `carta-map.js`, which is a seam that
+    already exists.** Every screen in the slab reads the ground through
+    `landKey`/`landAnchor`/`LANDS`; none of them is a record of its own. That
+    is the same test Phase 19 used ("the map rather than the app") applied one
+    storey up: this is *the record read against geography*, and the rooms are
+    the record itself.
+
+  So **`carta-atlas.js` (1,196 lines / 70.6 KB)** holds the door and the four
+  walks Phase 13 drew. `index.html` comes back to **4,853 lines / 346.8 KB** —
+  inside the band with 147 lines and 153 KB of real headroom, and within two
+  lines of where Phase 19 left it (4,854) and a hundred of where v7.34.0 did
+  (4,750). The app total moved 9,591 → 9,689 lines: a move plus the file's
+  header, its seam publishes and the harness below, not a cut.
+
+  *The seam, and the one thing it had to fix rather than move.* The file
+  publishes 26 names on `window` the way every sibling does. Two of them are
+  new and exist only because of the cut: `index.html` was writing **into**
+  this slab's own `let` bindings from two hot paths — `save()` clearing
+  `_cityLeadCache`, and `render()` clearing `_atlasSheetUp` on arrival at the
+  Atlas. A bare cross-file assignment to a global `let` does work (classic
+  scripts share one global lexical scope), but it is the opposite of a
+  documented seam, so both became calls: `clearCityLead()` and
+  `resetAtlasSheet()`, owned by the file that owns the state — the same shape
+  `carta-shot.js` uses for `snoozeWaitingShot()` rather than exporting
+  `_vizWaiting`. Five voice helpers (`ONES`/`TENS`/`words`, `capFirst`,
+  `trimNum`) went the other way, out of the slab and into `index.html`'s
+  domain block: they were only living under the Atlas banner by accident,
+  four files call them, and the comment above them already described them as
+  the way *the rest of the app* talks.
+
+  *Worth knowing about that export list, because half of it is
+  documentation.* A `function` declaration in a classic script attaches
+  itself to `window`; a top-level `const` does not. So of the 26, the const
+  arrows (`originOf`, `growerOf`, `regionOf`, `cityPlaces`, `placeCups`,
+  `placeAvg`, `avgOf`) are the half genuinely made reachable by that list,
+  and the rest are listed for the record — which is what every sibling's list
+  has always been doing. `test/verify-split.js` asserts the distinction
+  rather than leaving it to be rediscovered: dropping `window.originOf` fails
+  it, dropping `window.vCityChapter` does not.
+
+  *A gap in the boot guard, found by extending it.* The v7.34.0 note above
+  says the guard "now checks **all three** sibling versions … because five
+  files means five chances for a cached one to disagree." It checked three of
+  four: **`carta-map.js` never had a `MAP_VERSION` at all**, so the largest
+  sibling in the app was the one file a keeper could silently run a stale copy
+  of. It has one now, and the guard checks all five siblings against
+  `APP_VERSION`. That is not this phase's feature; it is a thing the phase
+  could not extend the guard without noticing.
+
+  *What the count costs, stated plainly, one more time.* Still no bundler, no
+  npm, nothing between the source and the host. Still one more thing to
+  remember to upload — six now, up from five — which is exactly what the `?v=`
+  tags and the guard above exist to make cheap and loud. **The debt Phase 30
+  recorded is closed.** The next phase to cross 5,000 re-earns its argument
+  from here, exactly as this one had to.
+
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
   droppable file is brand, not accident.
+
+  **CI exists now, and it is not a build step — the distinction is the whole
+  point of this bullet, so it is stated rather than assumed.**
+  `.github/workflows/tests.yml` runs all five harnesses on every push and
+  pull request to `main`. It adds nothing to what a keeper downloads: no
+  `package.json`, no lockfile, no bundler, no generated artifact, and not one
+  byte of difference to the six files served from the host. What it installs
+  — Playwright, on the runner, with `--no-save` — is the same install
+  `test/README.md` has always told a contributor to run by hand, and it is a
+  *test* dependency, which this project has had since the first browser
+  harness. The law being kept is "nothing between the source and the host";
+  a robot running the tests you would otherwise run yourself is not between
+  them.
+
+  Two things about it are deliberate and should survive anyone tidying it:
+  **it never gates on the line band** (the band is a founder call — Phases
+  18, 20 and 29 all landed over it on purpose — so `verify-static.js` reports
+  the figure and annotates a crossing without failing it, which is what §1
+  asks for: never a *silent* crossing), and **the static pair runs before the
+  browser three**, so a syntax error costs seconds rather than a browser
+  download.
 - **Vendored, exactly twice** *(amended at Phase 12 — `ROADMAP.md` tripwire
   2, moved in the open rather than slipped past)*. The passport's projection
   needs real spherical geometry, and freehanding one is the kind of "small"
@@ -453,8 +554,17 @@ Carta 7 is built exactly the way classic was, smaller:
 index.html            Carta 7 — the app
 carta-map.js          the map layer, split out at Phase 19 (§1)
 carta-plate.js        the plate — both arms, split out at v7.31.0 (§1)
-CLAUDE.md             the working guide to this file (Carta 7)
+carta-shot.js         the Visualizer read, split out at v7.34.0 (§1)
+carta-ask.js          the argument and its channel, split out at v7.34.0 (§1)
+carta-atlas.js        the door and the four walks, split out at Phase 31 (§1)
+CLAUDE.md             the working guide to those files (Carta 7)
 test/model.test.js    the pure-block harness (§9)
+test/verify-static.js the six files parse and agree (§1) — no browser
+test/verify-door.js   the front door in a real browser (Phase 30)
+test/verify-v7.35.js  the v7.35.0 fold in a real browser
+test/verify-split.js  the Phase 31 seam in a real browser
+test/browser.js       where the Chromium is, for those three
+.github/workflows/    CI — all five harnesses; repo machinery, not a build
 classic/index.html    Carta 6.18.x, frozen whole (it is self-contained;
                       freezing it was one `git mv`)
 classic/CLAUDE.md     the third turn's architecture map, kept for the record
