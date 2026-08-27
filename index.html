@@ -759,10 +759,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
  * the two leaf actions and the waiting mark all take ink here — leave the
  * field ember and states 01/02 carry two ember-filled doors doing one job.
  */
-.door{position:absolute;inset:0;overflow:hidden}
+.doorscreen{position:absolute;inset:0;overflow:hidden}
 /* the plate travels when the record comes up, and <carta-atlas> re-fits into
    the new box through its own ResizeObserver rather than being remounted */
-.door .passport{transition:height var(--mo-base) var(--mo-ease)}
+.doorscreen .passport{transition:height var(--mo-base) var(--mo-ease)}
 /* the leaf — a fade over the plate where the door is asking, a slab of paper
    where it is offering. Both slide clear when the record rises. */
 .doorleaf{position:absolute;left:0;right:0;bottom:0;z-index:3;
@@ -837,7 +837,7 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
   .waiting .mk{animation:ca-breathe-still 3.2s ease-in-out infinite!important}
   /* the sheet's travel and the plate's reframe are real motion — a slab of
      paper crossing the screen — so unlike the breath above, they stop. */
-  .door .passport,.doorleaf,.doorsheet{transition:none!important}
+  .doorscreen .passport,.doorleaf,.doorsheet{transition:none!important}
 }
 @keyframes ca-breathe-still{0%,100%{opacity:1}50%{opacity:.55}}
 
@@ -851,10 +851,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.37.1"></script>
-<script src="carta-plate.js?v=7.37.1"></script>
-<script src="carta-shot.js?v=7.37.1"></script>
-<script src="carta-ask.js?v=7.37.1"></script>
+<script src="carta-map.js?v=7.37.2"></script>
+<script src="carta-plate.js?v=7.37.2"></script>
+<script src="carta-shot.js?v=7.37.2"></script>
+<script src="carta-ask.js?v=7.37.2"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -5154,7 +5154,7 @@ function vAtlas(){
   const plateRest=shot?ATLAS_PLATE_SHOT:bag?ATLAS_PLATE_BAG:0;   // 0 = full bleed
   const leaf=shot?doorShotLeafHTML(shot):bag?doorBagLeafHTML(bag)
     :doorAskLeafHTML(first,countries);
-  return `<div class="door">
+  return `<div class="doorscreen">
     <div class="mapbox passport" id="atlasplate" data-rest="${plateRest}"
       style="position:absolute;left:0;right:0;top:0">
       <carta-atlas style="position:absolute;inset:0" caption="off"
@@ -5785,8 +5785,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.37.1';
+const APP_VERSION='7.37.2';
 const CHANGELOG=[
+  {v:'7.37.2',d:"＋ A cup, back on the bar. The front door's own screen and the bar's standing invitation to log a cup had both settled on the same class name, and the plate's rule — full-bleed, corners clipped — bled onto the bar button wherever the cascade didn't say otherwise: the button stretched to fill the screen instead of sitting in its 118px block on the bar. The plate keeps its own name now and the button keeps its place."},
   {v:'7.37.1',d:"The plate's pull, closed behind you. Leaving the Atlas with the record pulled up and coming back — from the Journal, from the Shelf, anywhere — reopened it pulled up, when the door is meant to open closed every time. Leaving the room now closes it, same as walking back into a café closes whatever detent its sheet was left at."},
   {v:'7.37.0',d:"The front door, cut back to one thing at a time. The Atlas opened on a map with a question on it and two thousand pixels of card under it — asks, cities, a Visualizer pitch, a list of every country, a share button, all of it there at once whatever you opened Carta for. It is the plate, one leaf and one pull now. The passport is the whole screen, drawn as a plate rather than a backdrop: a graticule, the band between the tropics stated and labelled, drafting ticks, and the rest of the world behind it in the palest ink, so it reads as a chart of the coffee belt rather than a map with pieces missing. One leaf of paper sits on it, and what the leaf holds is whatever is actually true — a brew waiting with its curve and its figures, a bag resting on the shelf with its best cup so far, or the question. A brew expires and a bag does not, so a brew leads. The field takes a place or a bag and reads which, which is why it no longer says Ask. Everything else is one pull below: the last cup, your cities, what Carta found, what you have tasted, the passport to share. Nothing left the app — it moved one pull and one tap further in. The Visualizer invitation moved to the Shelf, where your machine is; the line about what leaves the device moved to the ask itself, where something actually does."},
   {v:'7.36.0',d:"Ground for every listing. A city you drink in used to draw its country or admit it had none on file, and Copenhagen, Berlin and Oslo admitted it every time — the outlines Carta carries are where coffee is grown, and none of those grow any. The belt reaches them now, at four hundred and seventy-four bytes, and a city row draws the ground it actually stands on rather than the continent it sits somewhere in: the frame closes from the country to a hundred and ninety kilometres around your own cafés and draws whatever closes inside it. Kaua‘i is the island it is. Los Angeles is the coast at Santa Monica Bay and the turn at Palos Verdes, which the belt could not hold and a table of city coastlines can, for forty-five bytes. Where nothing on file reaches that far the row draws your cafés at their own coordinates, states how far apart they are, and says plainly that the ground isn’t on file — a shape the record cannot defend is still never drawn. Open a seal past thumbnail size and the highlands come with it: the contours have always been in the file, and they are spent at the width that can hold them instead of smudged at the width that cannot. And Alaska is its own outline at last. It rode inside the United States, three thousand kilometres of empty frame that left a Portland pin adrift in the middle of the country; Anchorage draws Alaska now, and Portland draws the coast it stands on. Nothing here fetches, and the whole of it is under two kilobytes. Alongside it, the listing card is finally the card the design board drew: a cup carries one fact row rather than two — a café cup answers where it grew, a brew answers what went through the bed, and the seal was already saying the ground twice — and where the outlines still cannot reach, the city is at least named. The lookup that confirms a café’s address has been stating its country all along and Carta was throwing it away; it keeps it now, fills it in behind you for every café already on the record, and a city row says the country plainly whether or not the file can draw it."},
