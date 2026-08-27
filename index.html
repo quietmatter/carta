@@ -89,7 +89,7 @@ html,body{height:100%}
 html{background:var(--surface-page)}
 body{
   background:var(--surface-card);color:var(--ink);font-family:var(--serif);font-size:16px;line-height:1.5;
-  max-width:480px;margin:0 auto;height:100vh;height:100dvh;
+  max-width:480px;margin:0 auto;height:100vh;height:100dvh;height:var(--app-h,100dvh);
   display:flex;flex-direction:column;overflow:hidden;position:relative;
 }
 /* Phase 26: the leaf was ruled twice — the sheet's own edge and the margin it
@@ -851,10 +851,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.37.5"></script>
-<script src="carta-plate.js?v=7.37.5"></script>
-<script src="carta-shot.js?v=7.37.5"></script>
-<script src="carta-ask.js?v=7.37.5"></script>
+<script src="carta-map.js?v=7.37.6"></script>
+<script src="carta-plate.js?v=7.37.6"></script>
+<script src="carta-shot.js?v=7.37.6"></script>
+<script src="carta-ask.js?v=7.37.6"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -5794,8 +5794,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.37.5';
+const APP_VERSION='7.37.6';
 const CHANGELOG=[
+  {v:'7.37.6',d:"The app, off the bottom of the screen on an iPhone home-screen install. iOS's own 100dvh has a live regression (its current release leaves a gap at the screen's bottom edge in a full-height standalone web app, confirmed on Apple's own developer forums) — Carta's one full-height rule sat right on it. window.innerHeight still reads the real, settled height once the app is open full-screen, so it now stands in as the app's height instead."},
   {v:'7.37.5',d:"A brew dismissed for good measure, not for good. Not now put the waiting shot down, but the app's own resume check — the one that asks Visualizer again once you have been away from the screen for a beat — did not know a dismissal had happened, and the very next time the phone locked and woke it fetched the identical shot and put the same hero back on the door, unprompted. The dismissal now holds against that for as long as the app stays open, the same way it always held against everything else."},
   {v:'7.37.4',d:"Add to Home Screen, fixed. manifest.json's scope and start_url still pointed at /carta/, the path the app was served from before the custom domain — carta.quiet-matter.com serves it at the root now, so /carta/ 404s and a fresh install opened to that 404 every time. Both now point at /."},
   {v:'7.37.3',d:"Two more ways the door's own furniture stayed put when it was meant to move. A country on the new plate drew as ink same as it always has, but the tap behind it never came along when <carta-atlas> was cut from <carta-belt> — pressing your own tasted ground did nothing, where it has always opened that country's chapter everywhere else in Carta. And the pulled-up record closed itself leaving by the tab bar (7.37.1) but not by the ordinary way back — walk into a city or a country from the risen sheet and press the ordinary ←, and the Atlas came back still pulled up behind it. Both are fixed at the one place every way through the screen actually passes: the plate's own paint wires the tap the same way the passport always has, and the sheet resets on arrival at render() itself rather than in whichever door happened to lead there."},
@@ -5860,6 +5861,14 @@ const CHANGELOG=[
 ];
 
 /* ============ boot ============ */
+// standalone iOS has a live 100dvh regression (Apple Developer Forums,
+// thread 803987, iOS 26): a full-height PWA leaves a gap at the bottom
+// edge that 100dvh's own definition doesn't allow for. window.innerHeight
+// still reads the real, settled height in standalone (no toolbar to
+// hide/show there), so it stands in as --app-h; the 100dvh above is only
+// the pre-JS and non-iOS fallback.
+function setAppH(){document.documentElement.style.setProperty('--app-h',innerHeight+'px')}
+setAppH();addEventListener('resize',setAppH);
 /* the sibling scripts, checked. They are versioned in the <head> so a cached
  * one cannot be served beside a fresh index.html — this is the belt to that
  * braces, and it exists because the failure it catches was invisible: at
