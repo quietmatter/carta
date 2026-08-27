@@ -7,7 +7,7 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
-## 2026-08-27 — Phase 30, the plate against a real phone (v7.37.6)
+## 2026-08-27 — Phase 30, the plate against a real phone (v7.37.7)
 
 - **852 CSS px is a full screen with no browser chrome at all** — the
   iPhone 15 Pro's own dimensions, standalone. It is not what most
@@ -46,13 +46,15 @@ Lotmark's desk. Old entries are never rewritten.*
   resize handling anywhere. Four new cases in `test/verify-door.js`
   (52→56) fail cleanly before this fix and pass after. `model.test.js`:
   139. `verify-v7.35.js`: 40.
-- **Renumbered 7.37.4 → 7.37.6 on merge.** Cut from the same base as the
-  "Not now" resume-poll fix, independently, and both claimed 7.37.4 — then
-  the manifest-scope fix (entry below) landed and took that number first.
-  The resume-poll fix takes 7.37.5 and this takes 7.37.6; nothing about
-  any of the three fixes changed, only this one's version, its four `?v=`
-  tags and the three sibling `*_VERSION` constants the boot guard checks
-  against it.
+- **Renumbered 7.37.4 → 7.37.7 on merge, twice over.** Cut from the same
+  base as the "Not now" resume-poll fix, independently, and both claimed
+  7.37.4 — then the manifest-scope fix took that number first, the
+  resume-poll fix took 7.37.5, and while this branch was resolving against
+  those, the standalone bottom-edge fix (entry below) landed on 7.37.6.
+  This takes 7.37.7. Nothing about any of the four fixes changed, only this
+  one's version, its four `?v=` tags and the three sibling `*_VERSION`
+  constants the boot guard checks against it — which is exactly the cost
+  the guard exists to make cheap and loud rather than silent.
 - **The plate no longer paints twice.** Folding this into `main` surfaced a
   race the branch had carried all along: `<carta-atlas>` measures its own box
   in `connectedCallback`, which runs while `innerHTML` is still being parsed —
@@ -67,11 +69,48 @@ Lotmark's desk. Old entries are never rewritten.*
   which re-reads it on arrival and as the sheet travels. First paint is
   correct at every size checked; four consecutive full runs, no failures.
 - **The gap has closed.** 7.37.5 was still unmerged when the paragraph
-  above was written; it has since landed, so its CHANGELOG line and its
-  own logbook entry arrive here through `main` rather than being written
-  on its behalf, and the run reads 7.37.6 → 7.37.5 → 7.37.4 unbroken.
-  Merging that fix first is what this branch was waiting on, and it is
-  the last thing it needed.
+  above was written, and 7.37.6 not yet written; both have since landed, so
+  their CHANGELOG lines and their own logbook entries arrive here through
+  `main` rather than being written on their behalf, and the run reads
+  7.37.7 → 7.37.6 → 7.37.5 → 7.37.4 unbroken. The one thing worth
+  checking twice was whether the standalone fix and this one pull against
+  each other, since both are about how tall the app thinks it is: they
+  don't. `--app-h` sets the height of `body`; `atlasMainH()` reads
+  `main.clientHeight`, which is derived from it. The plate follows the
+  corrected height rather than fighting it.
+
+---
+
+## 2026-08-27 — the standalone install, off the bottom edge (v7.37.6)
+
+- **The keeper's first real look at Carta as an installed app** (the manifest
+  fix, v7.37.4, having just made that possible) found the whole app sitting
+  short of the screen — a blank band between the tab bar and the home
+  indicator on an iPhone. Carta's one full-height rule, `height:100vh;
+  height:100dvh` on `body`, was hitting a live regression: iOS's current
+  release leaves a gap at the bottom edge of a full-height standalone web app
+  under `100dvh`, confirmed independently on Apple's own developer forums
+  (thread 803987) — not a Carta-specific mistake, and invisible until now
+  because no fresh install had ever reached standalone mode to show it.
+- **Shipped:** `window.innerHeight` still reads the real, settled height once
+  the app is open full-screen (no toolbar to hide or show there, so it can't
+  be caught mid-animation the way a Safari tab's `vh` classically was) — a
+  `setAppH()` call at boot writes it to a `--app-h` custom property, and
+  `body`'s height reads that first, falling back to `100dvh` for the instant
+  before the script runs and for anything that isn't hitting the iOS bug.
+  Reapplied on `resize` for rotation and any future toolbar-less viewport
+  change.
+- **Also folded in:** the version-sync bug from v7.37.4 (`APP_VERSION`
+  bumped without its sibling scripts) had already been caught and corrected
+  to v7.37.5 by the time this landed — this entry's branch was restarted off
+  that fixed point and renumbers cleanly to v7.37.6, all four version
+  constants and all four `<script src>` query strings in step.
+- **Verified:** `node test/model.test.js` at 139/139; the inline script and
+  all three siblings parse; a plain-Chromium emulation shows no regression
+  (Chromium doesn't carry the iOS bug, so `--app-h` and `100dvh` agree there
+  either way). The fix itself needs a real iPhone to confirm closed — noted
+  to the keeper rather than claimed.
+- **For Lotmark's desk:** nothing new this entry.
 
 ---
 
