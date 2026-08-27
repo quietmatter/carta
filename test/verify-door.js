@@ -222,6 +222,30 @@ const above=e=>e.filter(x=>!x.below).length;
   }))||''),'goBack from a screen opened while pulled up — the sheet closes behind you',JSON.stringify(s));
   await ctx.close();
 }
+/* ---------- "Not now" holds against the resume poll ----------
+   snoozeWaitingShot() only cleared _vizWaiting, and vizCheckOnResume() only
+   guards on _vizWaiting being falsy — so the very next resume more than 90s
+   (VIZ_RESUME_GAP) after the last check re-fetched the identical shot and put
+   the just-dismissed hero straight back on the door, unprompted. A phone
+   locking is enough to cross 90s; this simulates exactly that without
+   waiting on the clock. */
+{
+  const {ctx,page}=await boot({});
+  const before=await page.evaluate(()=>waitingShot()&&waitingShot().id);
+  ok(!!before,'a shot is waiting to snooze',before);
+  await page.evaluate(()=>snoozeWaitingShot());
+  await page.waitForTimeout(300);
+  ok(!(await page.evaluate(()=>waitingShot())),'"Not now" clears it immediately');
+  await page.evaluate(()=>{ _vizCheckedAt=Date.now()-91000; });
+  await page.evaluate(()=>{
+    Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true});
+    vizCheckOnResume();
+  });
+  await page.waitForTimeout(2000);   // the mocked list+download calls, in series
+  const after=await page.evaluate(()=>waitingShot()&&waitingShot().id);
+  ok(after!==before,'the resume poll, >90s later, does not silently revive the same dismissed shot',JSON.stringify({before,after}));
+  await ctx.close();
+}
 /* ---------- a real phone, not the 852px reference ----------
    852 is the iPhone 15 Pro's FULL screen, standalone, no browser chrome — it
    is not what most keepers actually get. A browser tab, or almost any phone

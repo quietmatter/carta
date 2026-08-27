@@ -53,12 +53,65 @@ Lotmark's desk. Old entries are never rewritten.*
   any of the three fixes changed, only this one's version, its four `?v=`
   tags and the three sibling `*_VERSION` constants the boot guard checks
   against it.
-- **This entry sits above 7.37.5's, which is not in this branch.** 7.37.5
-  is the resume-poll fix, still unmerged at the time this was written, so
-  its own CHANGELOG line and logbook entry arrive with it rather than
-  being written here on its behalf — the gap between 7.37.6 and 7.37.4
-  closes when it lands, and that ordering is the one thing this branch
-  depends on.
+- **The plate no longer paints twice.** Folding this into `main` surfaced a
+  race the branch had carried all along: `<carta-atlas>` measures its own box
+  in `connectedCallback`, which runs while `innerHTML` is still being parsed —
+  before `mountAtlas()` could have set anything — so the plate painted once at
+  the element's own 480px fallback, then reached its real size only on the
+  ResizeObserver's next tick. A visible flash, a wasted projection pass (the
+  source itself puts one at a few hundred ms of synchronous main-thread work),
+  and a genuinely flaky first frame: the country-tap check failed one run in
+  four because it sampled a shape whose geometry was still the fallback's.
+  `atlasPlateH()` is now one formula read by **both** `vAtlas` — which states
+  the height and the leaf's top in the markup it emits — and `mountAtlas()`,
+  which re-reads it on arrival and as the sheet travels. First paint is
+  correct at every size checked; four consecutive full runs, no failures.
+- **The gap has closed.** 7.37.5 was still unmerged when the paragraph
+  above was written; it has since landed, so its CHANGELOG line and its
+  own logbook entry arrive here through `main` rather than being written
+  on its behalf, and the run reads 7.37.6 → 7.37.5 → 7.37.4 unbroken.
+  Merging that fix first is what this branch was waiting on, and it is
+  the last thing it needed.
+
+---
+
+## 2026-08-27 — Phase 30, a third fix (v7.37.5)
+
+- **A dismissal that didn't hold.** "Not now" on the waiting-shot hero
+  cleared `_vizWaiting`, but the app's own resume check
+  (`vizCheckOnResume`, pre-existing, untouched by this phase) only guards
+  on `_vizWaiting` being falsy — it does not know a dismissal happened,
+  only that nothing is currently waiting. The very next time the check
+  re-ran — which is any time the phone has been locked, or another app
+  glanced at, for more than `VIZ_RESUME_GAP` (90 seconds) — it re-fetched
+  the identical shot and put the dismissed hero straight back on the
+  door, unprompted, with no `render()` call from the keeper anywhere in
+  the chain. Ninety seconds is nothing on a phone; this was the common
+  case, not an edge one.
+- **Fixed with a second, session-only list beside the permanent one.**
+  `_snoozedShotIds` (a `Set`, in-memory, cleared only by a real reload)
+  sits beside `vizDismissed()` (the permanent, persisted "not mine"
+  list) and is checked the same way, at the same point, in
+  `vizCheckOnOpen`. `snoozeWaitingShot()` now records the id before
+  clearing `_vizWaiting`. A genuinely different, later shot is
+  unaffected — confirmed by mocking a second id through the same check
+  and watching it surface normally while the dismissed one stays down.
+- **Found auditing the merged door a third time**, this time against the
+  handoff's own parenthetical — "(existing behaviour)" — next to Not
+  now's spec line. There was no existing per-session dismiss anywhere in
+  the app before this redesign; the phrase was aspirational, not a
+  pointer to code that already worked this way, and the gap it was
+  pointing past is exactly what surfaced.
+- **Verification.** Reproduced by aging `_vizCheckedAt` past
+  `VIZ_RESUME_GAP` and firing `vizCheckOnResume()` directly rather than
+  waiting on the real clock. One new case in `test/verify-door.js`
+  (48→51) fails cleanly before this fix and passes after.
+  `model.test.js`: 139. `verify-v7.35.js`: 40.
+- **Renumbered 7.37.4 → 7.37.5 on merge.** The manifest-scope fix
+  (entry below) took 7.37.4 while this sat unmerged; both were cut
+  from the same base and both claimed it. Nothing about either fix
+  changed — only this one's version, its four `?v=` tags and the three
+  sibling `*_VERSION` constants the boot guard checks against it.
 
 ---
 
