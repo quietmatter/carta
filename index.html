@@ -851,10 +851,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.37.4"></script>
-<script src="carta-plate.js?v=7.37.4"></script>
-<script src="carta-shot.js?v=7.37.4"></script>
-<script src="carta-ask.js?v=7.37.4"></script>
+<script src="carta-map.js?v=7.37.6"></script>
+<script src="carta-plate.js?v=7.37.6"></script>
+<script src="carta-shot.js?v=7.37.6"></script>
+<script src="carta-ask.js?v=7.37.6"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -5826,9 +5826,10 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.37.4';
+const APP_VERSION='7.37.6';
 const CHANGELOG=[
-  {v:'7.37.4',d:"The plate gives up the map before it gives up the door. 852 CSS px is the iPhone 15 Pro's full screen with no browser chrome at all — most keepers get less than that, in an ordinary tab or on a shorter phone, and the leaf holding Write the cup or Brew it was taking that shortfall directly: on anything under about 800px tall it turned into an internally-scrolled strip with the action pushed out of sight and no fixed clearance above the bar. The plate shrinks first now, all the way to a floor that still reads as a plate, so the leaf keeps its full designed height on any phone down to iPhone SE size before it ever needs to scroll at all."},
+  {v:'7.37.6',d:"The plate gives up the map before it gives up the door. 852 CSS px is the iPhone 15 Pro's full screen with no browser chrome at all — most keepers get less than that, in an ordinary tab or on a shorter phone, and the leaf holding Write the cup or Brew it was taking that shortfall directly: on anything under about 800px tall it turned into an internally-scrolled strip with the action pushed out of sight and no fixed clearance above the bar. The plate shrinks first now, all the way to a floor that still reads as a plate, so the leaf keeps its full designed height on any phone down to iPhone SE size before it ever needs to scroll at all."},
+  {v:'7.37.4',d:"Add to Home Screen, fixed. manifest.json's scope and start_url still pointed at /carta/, the path the app was served from before the custom domain — carta.quiet-matter.com serves it at the root now, so /carta/ 404s and a fresh install opened to that 404 every time. Both now point at /."},
   {v:'7.37.3',d:"Two more ways the door's own furniture stayed put when it was meant to move. A country on the new plate drew as ink same as it always has, but the tap behind it never came along when <carta-atlas> was cut from <carta-belt> — pressing your own tasted ground did nothing, where it has always opened that country's chapter everywhere else in Carta. And the pulled-up record closed itself leaving by the tab bar (7.37.1) but not by the ordinary way back — walk into a city or a country from the risen sheet and press the ordinary ←, and the Atlas came back still pulled up behind it. Both are fixed at the one place every way through the screen actually passes: the plate's own paint wires the tap the same way the passport always has, and the sheet resets on arrival at render() itself rather than in whichever door happened to lead there."},
   {v:'7.37.2',d:"＋ A cup, back on the bar. The front door's own screen and the bar's standing invitation to log a cup had both settled on the same class name, and the plate's rule — full-bleed, corners clipped — bled onto the bar button wherever the cascade didn't say otherwise: the button stretched to fill the screen instead of sitting in its 118px block on the bar. The plate keeps its own name now and the button keeps its place."},
   {v:'7.37.1',d:"The plate's pull, closed behind you. Leaving the Atlas with the record pulled up and coming back — from the Journal, from the Shelf, anywhere — reopened it pulled up, when the door is meant to open closed every time. Leaving the room now closes it, same as walking back into a café closes whatever detent its sheet was left at."},

@@ -6,7 +6,7 @@ Two harnesses boot the real app against the seeded record in
 
 ```
 npm i playwright-core --no-save
-node test/verify-door.js       # the front door, v7.37.4 — 56 checks
+node test/verify-door.js       # the front door, v7.37.6 — 56 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 ```
 
