@@ -91,22 +91,36 @@ Lotmark's desk. Old entries are never rewritten.*
    `askPromptText` takes the question. **Recommendation:** the *read it as*
    button opens a sheet carrying both — the six kinds and "Anything else" —
    so the leaf stays as drawn and nothing is silently removed.
-3. **`<carta-city>`, and a sixth file.** The handoff ships it production-
-   ready and it is good work, but it is a sixth file and `ARCHITECTURE.md`
-   §1 requires the argument in writing before the count moves — the third
-   one got it. Three things also need settling before it ships: it carries a
-   **hardcoded thirteen-entry quarter table for Los Angeles**, which is
-   invented data on a record that refuses invented data everywhere else; it
-   keys `CITY_ARCS` through its own weak `toLowerCase().trim()` rather than
-   the app's `cityKey`, so any city with an accent or an apostrophe misses;
-   and its `data-id` falls back to the row number, so a tap on a mark cannot
-   resolve to a finding. **Recommendation:** ship it, with the quarter table
-   replaced by the record's own placed cafés and their confirmed
-   neighborhoods, `cityKey` used for the coast, `data-id` the finding's id
-   only, and the §1 argument written first. Worth knowing before deciding:
-   **`CITY_ARCS` holds one key today — Los Angeles.** Every other city draws
-   a coastless grid with rings, which is honest but is not the "six names
-   land on ground" the design is arguing for.
+3. **Where `<carta-city>` lives — and the second split changed the answer.**
+   Three things need settling before it ships whatever is decided here: it
+   carries a **hardcoded thirteen-entry quarter table for Los Angeles**,
+   which is invented data on a record that refuses invented data everywhere
+   else; it keys `CITY_ARCS` through its own weak `toLowerCase().trim()`
+   rather than the app's `cityKey`, so any city with an accent or an
+   apostrophe misses; and its `data-id` falls back to the row number, so a
+   tap on a mark cannot resolve to a finding. The quarter table should be
+   the record's own placed cafés and their confirmed neighborhoods,
+   `cityKey` should key the coast, and `data-id` should be the finding's id
+   and nothing else.
+
+   *Where* it goes was, when this was first written, a question about a
+   sixth file and the `ARCHITECTURE.md` §1 argument the count owes. The
+   split made it a seventh — and, more usefully, gave it a better home.
+   **Recommendation, revised: fold it into `carta-map.js` as the fourth
+   custom element**, beside the other three and beside the
+   `CITY_ARCS`/`CITY_RINGS` tables it actually reads. No new file, so no §1
+   argument is owed at all, and the element sits next to its own data. The
+   cost is that `carta-map.js` is already the largest file at 148 KB; a
+   seventh file with the argument written is the alternative if that matters
+   more than the count.
+
+   Worth knowing before deciding either way: **`CITY_ARCS` holds one key
+   today — Los Angeles**, and `CITY_RINGS` one, Līhuʻe. Every other city
+   draws a coastless grid with rings, which is honest but is not the "six
+   names land on ground" the design is arguing for. A third option is
+   therefore live: **don't build it**, and let the answer page use
+   `carta-plot`, which since v7.39.0 measures its own box and draws legibly
+   at plate scale.
 4. **The distance anchor.** Frame `2a`'s rows read "Arts District · 0.9 km"
    under a header that says "distance from Downtown". Carta has no anchor
    for an ask and no quarter table to name one from. **Recommendation:** the
