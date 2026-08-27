@@ -6,7 +6,7 @@ Two harnesses boot the real app against the seeded record in
 
 ```
 npm i playwright-core --no-save
-node test/verify-door.js       # the front door, v7.37.0 — 45 checks
+node test/verify-door.js       # the front door, v7.37.3 — 48 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 ```
 
@@ -27,6 +27,11 @@ easy to break silently:
 - **the plate** reframes at its new box rather than reloading, and the
   `clientHeight` rule holds (a `getBoundingClientRect` measurement collapses
   it under any page transform)
+- **a country on the plate opens its chapter** — clicked on the real painted
+  shape via `elementFromPoint`, not the group's bounding box, which an
+  irregular coastline can miss entirely
+- **the pulled-up sheet closes behind every way of leaving the Atlas** — the
+  tab bar and the ordinary `←`/back gesture both have to land on a closed door
 - **offline** — it asserts that *nothing at all* was fetched off-origin, which
   is the passport's own law
 - dusk, `prefers-reduced-motion`, and 320 px

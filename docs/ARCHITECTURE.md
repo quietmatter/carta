@@ -206,6 +206,18 @@ Carta 7 is built exactly the way classic was, smaller:
   `paint()` swallows the throw and recovers on a later ResizeObserver pass —
   which works, and is why nobody noticed, but leaves the first frame blank.
 
+  **`<carta-atlas>` did not, at first, carry `<carta-belt>`'s tap.** Sharing
+  geometry does not share behaviour: a tasted country here drew with the same
+  ink but no `g.mk`/`data-name`/click-listener behind it, so tapping it did
+  nothing — a real regression against the rest of the app, where a tasted
+  country has opened its chapter since Phase 3. Fixed at v7.37.3 the same way
+  `<carta-belt>` does it, with one addition `<carta-belt>` doesn't need:
+  `PLATES[ck]`'s cache-hit path replaces the DOM via `host.innerHTML` exactly
+  as the cache-miss path does, so the tap has to be rewired on *every*
+  assignment to it, not only the one that first built the cached string — a
+  listener bound during that first paint is gone once a later plate reuses
+  the cached markup.
+
   **`carta-map.js` gained a pure block at the same phase, and the harness
   gained a fifth file.** Everything from `LAND_A` to `LAND_OFF_BELT` sits
   inside `/* ==== pure ==== */` markers now, so `test/model.test.js` slices
