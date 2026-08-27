@@ -465,7 +465,10 @@ server/               dormant — kept for the record and the horizon's
                       backup option; not part of 7.x, not deleted
 ```
 
-PWA notes: `manifest.json` keeps scope `/carta/`; classic gets no manifest
+PWA notes: `manifest.json` keeps scope `/` (corrected 2026-08-27 — see
+`LOGBOOK.md`; the site is served at the custom domain's root, and `/carta/`
+404s live, so a fresh Add to Home Screen installed with the old
+`/carta/` start_url and 404'd on open); classic gets no manifest
 of its own (it's a page, not an install target). It carries one `shortcuts`
 entry (Phase 10) pointing at `?open=door`. Version identity restarted at
 `APP_VERSION = '7.0.0'` with a fresh `CHANGELOG` whose first entry names the
