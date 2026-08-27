@@ -6,7 +6,7 @@ Two harnesses boot the real app against the seeded record in
 
 ```
 npm i playwright-core --no-save
-node test/verify-door.js       # the front door, v7.37.4 — 51 checks
+node test/verify-door.js       # the front door, v7.37.7 — 59 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 ```
 
@@ -35,6 +35,9 @@ easy to break silently:
 - **"Not now" holds against the resume poll** — a dismissal has to survive the
   app re-asking Visualizer once you've been away from the screen a beat, not
   just the instant you tap it
+- **a real phone, not the 852px reference** — fresh-loaded (not resized) at
+  seven heights down to 500px; below ~800px the plate has to give up the map
+  before the leaf gives up its own designed height and starts scrolling
 - **offline** — it asserts that *nothing at all* was fetched off-origin, which
   is the passport's own law
 - dusk, `prefers-reduced-motion`, and 320 px

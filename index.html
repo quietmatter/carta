@@ -851,10 +851,10 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.37.6"></script>
-<script src="carta-plate.js?v=7.37.6"></script>
-<script src="carta-shot.js?v=7.37.6"></script>
-<script src="carta-ask.js?v=7.37.6"></script>
+<script src="carta-map.js?v=7.37.7"></script>
+<script src="carta-plate.js?v=7.37.7"></script>
+<script src="carta-shot.js?v=7.37.7"></script>
+<script src="carta-ask.js?v=7.37.7"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4881,6 +4881,17 @@ function asktrustHTML(){
  */
 const ATLAS_PLATE_SHOT=352, ATLAS_PLATE_BAG=450, ATLAS_PLATE_UP=178,
       ATLAS_SHEET_TOP=160, ATLAS_OVERLAP=18;
+/* the reference the paper leaf's own height was designed against — 852 minus
+ * the 57px bar (`main` already excludes the bar, since nav.tabs is its own
+ * sibling, not its child) — and the least the plate is ever allowed to give
+ * up. A phone shorter than 852 CSS px is the common case, not the exception:
+ * that is every browser tab, and most phones outside an installed PWA at
+ * full screen. Without this, a leaf's height was `main.clientHeight - top`,
+ * so any shortfall came straight out of the leaf holding the action in hand
+ * — Write the cup, Brew it — pushing it into a scrolled-to area with no
+ * fixed clearance above the bar rather than the plate simply showing less
+ * map. See mountAtlas(). */
+const ATLAS_REF_MAIN=852-57, ATLAS_PLATE_FLOOR=120;
 /* whether the record is showing. Transient by design: the door opens closed
    every time, so this is never persisted — only kept across a repaint of the
    same screen, the way _lastScreenKey already keeps a scroll position. */
@@ -4890,14 +4901,38 @@ function toggleAtlasSheet(){_atlasSheetUp=!_atlasSheetUp;mountAtlas();}
    behaviour the city sheet already has. Styles are set in place rather than
    re-rendered so the transitions actually run and <carta-atlas> re-fits
    through its own ResizeObserver instead of being torn down and reprojected. */
+/* what `main` actually gives the door, before anything is drawn into it —
+   `main` is the persistent element, so this reads true at template time. */
+const atlasMainH=()=>{const m=document.getElementById('main');return (m&&m.clientHeight)||ATLAS_REF_MAIN};
+/* the plate's height in the box it is actually in. ONE formula, read by both
+ * vAtlas — so the very first paint is already the right size — and mountAtlas,
+ * which re-reads it on arrival and as the sheet travels.
+ *
+ * Give the leaf its own designed height first: it is where the record and the
+ * action live, not the map. The plate takes what is left, down to a floor that
+ * still reads as a plate rather than a sliver. The leaf sits ATLAS_OVERLAP
+ * above the plate's bottom edge, so the plate height that leaves the leaf
+ * exactly leafNeeded tall is (H - leafNeeded) + ATLAS_OVERLAP, not
+ * H - leafNeeded — dropping that term quietly shrank the plate 18px past
+ * where it needed to. designRest 0 is the full-bleed pair (01/02).
+ */
+function atlasPlateH(designRest,H){
+  if(!designRest)return H;
+  const leafNeeded=ATLAS_REF_MAIN-designRest+ATLAS_OVERLAP;
+  return Math.max(ATLAS_PLATE_FLOOR,Math.min(designRest,(H-leafNeeded)+ATLAS_OVERLAP));
+}
 function mountAtlas(){
   const plate=document.getElementById('atlasplate');if(!plate)return;
-  const main=document.getElementById('main');
-  const H=main?(main.clientHeight||795):795;
-  const rest=Number(plate.dataset.rest)||H;
+  const designRest=Number(plate.dataset.rest)||0;
+  const rest=atlasPlateH(designRest,atlasMainH());
   plate.style.height=(_atlasSheetUp?ATLAS_PLATE_UP:rest)+'px';
   const leaf=document.getElementById('atlasleaf');
-  if(leaf)leaf.style.transform=_atlasSheetUp?'translateY(110%)':'none';
+  if(leaf){
+    leaf.style.transform=_atlasSheetUp?'translateY(110%)':'none';
+    // the leaf's own overlap onto the plate travels with whatever the plate
+    // actually rendered at, not the literal it was drawn against
+    if(designRest)leaf.style.top=(rest-ATLAS_OVERLAP)+'px';
+  }
   const sheet=document.getElementById('atlassheet');
   if(sheet){
     sheet.style.top=ATLAS_SHEET_TOP+'px';
@@ -5037,13 +5072,13 @@ function doorFigsHTML(fg){
   return `<div class="figs ruled">${lead}${cell(yld,from)}
     ${cell(fg.total==null?'—':trimNum(fg.total)+'<span class="u">s</span>','Elapsed')}</div>`;
 }
-function doorShotLeafHTML(shot){
+function doorShotLeafHTML(shot,plateH){
   const fg=shotFigures(shot),when=shotWhen(shot),pour=shotMethod(shot)==='pourover';
   const sub=pour
     ?[shot.roaster,brewerOf(shot)?'a '+brewerShort(brewerOf(shot))+', read off the scale':'read off the scale'].filter(Boolean).join(' · ')
     :[shot.roaster,shot.roastLevel?shot.roastLevel.toLowerCase():'',
       shot.grinderModel?'on the '+shot.grinderModel:''].filter(Boolean).join(' · ');
-  return `<div class="doorleaf paper" id="atlasleaf" style="top:${ATLAS_PLATE_SHOT-ATLAS_OVERLAP}px">
+  return `<div class="doorleaf paper" id="atlasleaf" style="top:${plateH-ATLAS_OVERLAP}px">
     <div class="waiting ink"><span class="mk"></span><span class="l">${esc(when?'Poured '+fmtAgo(when):'A brew, waiting')}</span></div>
     <div class="display big" style="margin:12px 0 3px">${esc(shot.coffeeName||shot.label)}</div>
     ${sub?`<div class="doorsub">${esc(sub)}</div>`:''}
@@ -5059,7 +5094,7 @@ function doorShotLeafHTML(shot){
 }
 /* 04 · a bag resting. The seal is drawn only where the record can name real
    ground; where it cannot the label starts the row — sealHTML's own refusal. */
-function doorBagLeafHTML(bag){
+function doorBagLeafHTML(bag,plateH){
   const c=bag.coffee;
   const country=(c.origin&&c.origin.country||'').trim();
   const seal=country?sealHTML(landKey(country),null,44):'';
@@ -5072,7 +5107,7 @@ function doorBagLeafHTML(bag){
     ?`${trimNum(bag.last.doseG)} in, ${trimNum(bag.last.waterG)} out`:'';
   const lastLine=[day,inout].filter(Boolean).join(' · ');
   const fact=(k,v)=>`<div class="kv"><span class="k">${esc(k)}</span><span class="v${v?'':' unread'}">${v?esc(v):'unread'}</span></div>`;
-  return `<div class="doorleaf paper" id="atlasleaf" style="top:${ATLAS_PLATE_BAG-ATLAS_OVERLAP}px">
+  return `<div class="doorleaf paper" id="atlasleaf" style="top:${plateH-ATLAS_OVERLAP}px">
     <div style="display:flex;align-items:center;gap:12px">
       ${seal}
       <span class="eyebrow" style="margin:0">${esc(bagRestLine(c))}</span>
@@ -5161,11 +5196,19 @@ function vAtlas(){
   const shot=first?null:waitingShot();
   const bag=(first||shot)?null:restingBag();
   const plateRest=shot?ATLAS_PLATE_SHOT:bag?ATLAS_PLATE_BAG:0;   // 0 = full bleed
-  const leaf=shot?doorShotLeafHTML(shot):bag?doorBagLeafHTML(bag)
+  /* the height this plate will actually stand at, worked out BEFORE the markup
+     rather than corrected after it. <carta-atlas> measures its own box on
+     connect, which happens while innerHTML is being parsed — before
+     mountAtlas() could have set anything — so a plate with no height here
+     paints once at the element's fallback size, flashes, and only reaches the
+     right scale on the ResizeObserver's next tick. Stating it up front costs
+     nothing and spares a whole projection pass. */
+  const plateH=atlasPlateH(plateRest,atlasMainH());
+  const leaf=shot?doorShotLeafHTML(shot,plateH):bag?doorBagLeafHTML(bag,plateH)
     :doorAskLeafHTML(first,countries);
   return `<div class="doorscreen">
     <div class="mapbox passport" id="atlasplate" data-rest="${plateRest}"
-      style="position:absolute;left:0;right:0;top:0">
+      style="position:absolute;left:0;right:0;top:0;height:${plateH}px">
       <carta-atlas style="position:absolute;inset:0" caption="off"
         frame="${first?'belt':'tasted'}"
         tasted="${first?'':esc(countries.map(c=>c.label).join(','))}"></carta-atlas>
@@ -5794,10 +5837,10 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.37.6';
+const APP_VERSION='7.37.7';
 const CHANGELOG=[
-  {v:'7.37.6',d:"The app, off the bottom of the screen on an iPhone home-screen install. iOS's own 100dvh has a live regression (its current release leaves a gap at the screen's bottom edge in a full-height standalone web app, confirmed on Apple's own developer forums) — Carta's one full-height rule sat right on it. window.innerHeight still reads the real, settled height once the app is open full-screen, so it now stands in as the app's height instead."},
-  {v:'7.37.5',d:"A brew dismissed for good measure, not for good. Not now put the waiting shot down, but the app's own resume check — the one that asks Visualizer again once you have been away from the screen for a beat — did not know a dismissal had happened, and the very next time the phone locked and woke it fetched the identical shot and put the same hero back on the door, unprompted. The dismissal now holds against that for as long as the app stays open, the same way it always held against everything else."},
+  {v:'7.37.7',d:"The plate gives up the map before it gives up the door. 852 CSS px is the iPhone 15 Pro's full screen with no browser chrome at all — most keepers get less than that, in an ordinary tab or on a shorter phone, and the leaf holding Write the cup or Brew it was taking that shortfall directly: on anything under about 800px tall it turned into an internally-scrolled strip with the action pushed out of sight and no fixed clearance above the bar. The plate shrinks first now, all the way to a floor that still reads as a plate, so the leaf keeps its full designed height on any phone down to iPhone SE size before it ever needs to scroll at all."},
+  {v:'7.37.6',d:"The app, off the bottom of the screen on an iPhone home-screen install. iOS's own 100dvh has a live regression (its current release leaves a gap at the screen's bottom edge in a full-height standalone web app, confirmed on Apple's own developer forums) — Carta's one full-height rule sat right on it. window.innerHeight still reads the real, settled height once the app is open full-screen, so it now stands in as the app's height instead."},  {v:'7.37.5',d:"A brew dismissed for good measure, not for good. Not now put the waiting shot down, but the app's own resume check — the one that asks Visualizer again once you have been away from the screen for a beat — did not know a dismissal had happened, and the very next time the phone locked and woke it fetched the identical shot and put the same hero back on the door, unprompted. The dismissal now holds against that for as long as the app stays open, the same way it always held against everything else."},
   {v:'7.37.4',d:"Add to Home Screen, fixed. manifest.json's scope and start_url still pointed at /carta/, the path the app was served from before the custom domain — carta.quiet-matter.com serves it at the root now, so /carta/ 404s and a fresh install opened to that 404 every time. Both now point at /."},
   {v:'7.37.3',d:"Two more ways the door's own furniture stayed put when it was meant to move. A country on the new plate drew as ink same as it always has, but the tap behind it never came along when <carta-atlas> was cut from <carta-belt> — pressing your own tasted ground did nothing, where it has always opened that country's chapter everywhere else in Carta. And the pulled-up record closed itself leaving by the tab bar (7.37.1) but not by the ordinary way back — walk into a city or a country from the risen sheet and press the ordinary ←, and the Atlas came back still pulled up behind it. Both are fixed at the one place every way through the screen actually passes: the plate's own paint wires the tap the same way the passport always has, and the sheet resets on arrival at render() itself rather than in whichever door happened to lead there."},
   {v:'7.37.2',d:"＋ A cup, back on the bar. The front door's own screen and the bar's standing invitation to log a cup had both settled on the same class name, and the plate's rule — full-bleed, corners clipped — bled onto the bar button wherever the cascade didn't say otherwise: the button stretched to fill the screen instead of sitting in its 118px block on the bar. The plate keeps its own name now and the button keeps its place."},

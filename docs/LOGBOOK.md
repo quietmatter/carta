@@ -7,6 +7,80 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-27 — Phase 30, the plate against a real phone (v7.37.7)
+
+- **852 CSS px is a full screen with no browser chrome at all** — the
+  iPhone 15 Pro's own dimensions, standalone. It is not what most
+  keepers get: an ordinary browser tab is shorter, and a good many
+  phones are too. The leaf holding **Write the cup →** / **Brew it →**
+  was taking that shortfall directly — its own height was simply
+  whatever `main.clientHeight` left over once the plate's fixed pixel
+  count (352 / 450) was subtracted, so any viewport shorter than the
+  reference came straight out of the one thing holding the action in
+  hand. Below roughly 800px tall the leaf started needing its own
+  internal scroll to reach the button at all, with no fixed clearance
+  above the bar — reported directly, from real use, not found in
+  a headless pass.
+- **Fixed by inverting the priority.** `mountAtlas()` now computes the
+  leaf's own designed height first (`ATLAS_REF_MAIN - designRest +
+  ATLAS_OVERLAP` — the height it was drawn at, 852 minus the bar) and
+  gives the plate whatever is left, down to a 120px floor that still
+  reads as a plate rather than a sliver. On any real phone down to
+  iPhone SE size (390×667) the leaf now keeps its full designed height
+  and never needs to scroll; only below that floor does it fall back to
+  its existing `overflow-y:auto` as a last resort.
+- **One arithmetic slip caught by the harness, not by eye.** The first
+  version of this fix shrank the plate 18px past where it needed to —
+  ATLAS_OVERLAP, the leaf's own overlap onto the plate's bottom edge,
+  dropped out of the conversion between "the leaf's top position" and
+  "the plate's own rendered height." It was invisible at a glance (the
+  leaf simply got 18px MORE room than designed, never less) but wrong
+  against the spec, and it slipped past the existing test because that
+  test checked `data-rest` — the design literal baked into the markup —
+  never `style.height`, the value `mountAtlas()` actually applies. Both
+  are asserted now.
+- **Verification.** Fresh-loaded (not resized) at seven heights from 852
+  down to 500px to confirm the plate actually shrinks per-load, the way
+  a phone actually arrives — a live resize doesn't retrigger
+  `mountAtlas()` at all, matching the rest of the app, which has no
+  resize handling anywhere. Four new cases in `test/verify-door.js`
+  (52→56) fail cleanly before this fix and pass after. `model.test.js`:
+  139. `verify-v7.35.js`: 40.
+- **Renumbered 7.37.4 → 7.37.7 on merge, twice over.** Cut from the same
+  base as the "Not now" resume-poll fix, independently, and both claimed
+  7.37.4 — then the manifest-scope fix took that number first, the
+  resume-poll fix took 7.37.5, and while this branch was resolving against
+  those, the standalone bottom-edge fix (entry below) landed on 7.37.6.
+  This takes 7.37.7. Nothing about any of the four fixes changed, only this
+  one's version, its four `?v=` tags and the three sibling `*_VERSION`
+  constants the boot guard checks against it — which is exactly the cost
+  the guard exists to make cheap and loud rather than silent.
+- **The plate no longer paints twice.** Folding this into `main` surfaced a
+  race the branch had carried all along: `<carta-atlas>` measures its own box
+  in `connectedCallback`, which runs while `innerHTML` is still being parsed —
+  before `mountAtlas()` could have set anything — so the plate painted once at
+  the element's own 480px fallback, then reached its real size only on the
+  ResizeObserver's next tick. A visible flash, a wasted projection pass (the
+  source itself puts one at a few hundred ms of synchronous main-thread work),
+  and a genuinely flaky first frame: the country-tap check failed one run in
+  four because it sampled a shape whose geometry was still the fallback's.
+  `atlasPlateH()` is now one formula read by **both** `vAtlas` — which states
+  the height and the leaf's top in the markup it emits — and `mountAtlas()`,
+  which re-reads it on arrival and as the sheet travels. First paint is
+  correct at every size checked; four consecutive full runs, no failures.
+- **The gap has closed.** 7.37.5 was still unmerged when the paragraph
+  above was written, and 7.37.6 not yet written; both have since landed, so
+  their CHANGELOG lines and their own logbook entries arrive here through
+  `main` rather than being written on their behalf, and the run reads
+  7.37.7 → 7.37.6 → 7.37.5 → 7.37.4 unbroken. The one thing worth
+  checking twice was whether the standalone fix and this one pull against
+  each other, since both are about how tall the app thinks it is: they
+  don't. `--app-h` sets the height of `body`; `atlasMainH()` reads
+  `main.clientHeight`, which is derived from it. The plate follows the
+  corrected height rather than fighting it.
+
+---
+
 ## 2026-08-27 — the standalone install, off the bottom edge (v7.37.6)
 
 - **The keeper's first real look at Carta as an installed app** (the manifest

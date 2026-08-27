@@ -55,9 +55,17 @@ const st=p=>p.evaluate(()=>{
   const m=document.getElementById('main'),pl=document.getElementById('atlasplate');
   const lf=document.getElementById('atlasleaf'),sh=document.getElementById('atlassheet');
   const svg=pl&&pl.querySelector('carta-atlas svg');
+  // rest is the design literal baked into the markup (352/450/0) — what the
+  // plate was DRAWN at. h is style.height — what mountAtlas() actually
+  // APPLIED, which can differ at any viewport shorter than the 852px
+  // reference. A check against rest alone would not have caught the 18px
+  // arithmetic slip mountAtlas() had at the exact reference height: h is the
+  // one that has to match a real box on a real screen.
   return {fixed:m.classList.contains('fixed'),rest:pl&&pl.dataset.rest,h:pl&&pl.style.height,
-    leaf:lf&&lf.className,top:lf&&lf.style.top,sheet:!!sh,
-    viewBox:svg&&svg.getAttribute('viewBox')};
+    leaf:lf&&lf.className,top:lf&&lf.style.top,
+    leafHeight:lf&&Math.round(lf.getBoundingClientRect().height),
+    leafOverflows:lf&&(lf.scrollHeight>lf.clientHeight+1),
+    sheet:!!sh,viewBox:svg&&svg.getAttribute('viewBox')};
 });
 /* the ember, counted the way the handoff asks it to be: elements actually
    PAINTING #a63f2b, split by whether they sit below the fold */
@@ -90,7 +98,15 @@ const above=e=>e.filter(x=>!x.below).length;
 {
   const {ctx,page}=await boot({});
   const s=await st(page),t=await txt(page);
-  ok(s.rest==='352','03 — a waiting brew leads, and the plate is 352 tall',JSON.stringify(s));
+  ok(s.rest==='352','03 — a waiting brew leads, drawn at 352',JSON.stringify(s));
+  // this boot's own viewport (390x800, main.clientHeight 743) is already
+  // shorter than the 852px reference the 352 above was drawn at, so the real
+  // applied height is smaller than the design literal by construction — the
+  // leaf's own height is the thing that must not move: it holds Write the
+  // cup, and a viewport shorter than the reference must come out of the
+  // plate first, never out of the leaf, until the plate hits its floor.
+  ok(s.h==='300px','03 — shorter than the reference: the plate gives up the room, not the leaf',JSON.stringify(s));
+  ok(s.leafHeight===461&&!s.leafOverflows,'03 — the leaf keeps its full designed height, no scroll needed',JSON.stringify(s));
   ok(/Poured/i.test(t)&&/Write the cup/i.test(t),'03 — the brew, and its action',t);
   ok(/Peak/i.test(t)&&/From /i.test(t)&&/Elapsed/i.test(t),'03 — the three figures',t);
   ok(/Not now/i.test(t),'03 — the snooze');
@@ -117,7 +133,9 @@ const above=e=>e.filter(x=>!x.below).length;
 {
   const {ctx,page}=await boot({snooze:true});
   const s=await st(page),t=await txt(page);
-  ok(s.rest==='450','04 — the plate is 450 tall',JSON.stringify(s));
+  ok(s.rest==='450','04 — drawn at 450',JSON.stringify(s));
+  ok(s.h==='398px','04 — shorter than the reference: the plate gives up the room, not the leaf',JSON.stringify(s));
+  ok(s.leafHeight===363&&!s.leafOverflows,'04 — the leaf keeps its full designed height, no scroll needed',JSON.stringify(s));
   ok(/On the shelf/i.test(t),'04 — the head names the shelf',t);
   ok(/Best so far/i.test(t)&&/Last brew/i.test(t),'04 — the two facts',t);
   ok(/Brew it/i.test(t),'04 — the action');
@@ -226,6 +244,31 @@ const above=e=>e.filter(x=>!x.below).length;
   await page.waitForTimeout(2000);   // the mocked list+download calls, in series
   const after=await page.evaluate(()=>waitingShot()&&waitingShot().id);
   ok(after!==before,'the resume poll, >90s later, does not silently revive the same dismissed shot',JSON.stringify({before,after}));
+  await ctx.close();
+}
+/* ---------- a real phone, not the 852px reference ----------
+   852 is the iPhone 15 Pro's FULL screen, standalone, no browser chrome — it
+   is not what most keepers actually get. A browser tab, or almost any phone
+   with its address bar showing, is shorter. The plate and the leaf used to
+   split that shortfall by literal subtraction: the leaf's own height was
+   whatever main.clientHeight left over after the plate's fixed pixel count,
+   so any phone shorter than the reference took the loss out of the leaf —
+   the one thing holding Write the cup / Brew it — turning it into an
+   internally-scrolled box with no fixed clearance above the bar, rather
+   than the plate simply showing a little less map. iPhone SE-class (390x667)
+   is a common real size and a good floor to hold this at. */
+{
+  const {ctx,page}=await boot({ctx:{viewport:{width:390,height:667}}});
+  const s=await st(page);
+  ok(!s.leafOverflows,'a short phone (390x667), a brew waiting — no scroll needed to reach the action',JSON.stringify(s));
+  ok(s.leafHeight>=450,'…and the leaf holds close to its full designed height (461 at the reference)',JSON.stringify(s));
+  await ctx.close();
+}
+{
+  const {ctx,page}=await boot({ctx:{viewport:{width:390,height:667}},snooze:true});
+  const s=await st(page);
+  ok(!s.leafOverflows,'a short phone (390x667), a bag resting — no scroll needed to reach the action',JSON.stringify(s));
+  ok(s.leafHeight>=350,'…and the leaf holds close to its full designed height (363 at the reference)',JSON.stringify(s));
   await ctx.close();
 }
 /* ---------- the passport asks for nothing ---------- */
