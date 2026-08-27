@@ -1,19 +1,11 @@
-<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="192" height="192" fill="#232019" rx="42"/>
-  
-  <!-- Coffee cup body -->
-  <path d="M 50 60 L 60 140 Q 60 150 70 150 L 122 150 Q 132 150 132 140 L 142 60 Z" fill="#EFE9DC" stroke="#232019" stroke-width="2"/>
-  
-  <!-- Coffee inside -->
-  <ellipse cx="96" cy="85" rx="38" ry="8" fill="#8B6F47"/>
-  <path d="M 60 80 Q 60 100 65 120 Q 70 135 75 145" fill="none" stroke="#6B4E27" stroke-width="1.5" opacity="0.6"/>
-  
-  <!-- Handle -->
-  <path d="M 142 85 Q 160 85 160 110 Q 160 135 142 135" fill="none" stroke="#EFE9DC" stroke-width="6" stroke-linecap="round"/>
-  
-  <!-- Steam wisps -->
-  <path d="M 75 55 Q 75 40 80 30" fill="none" stroke="#D4CCBA" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
-  <path d="M 96 50 Q 96 35 101 20" fill="none" stroke="#D4CCBA" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
-  <path d="M 117 55 Q 117 40 122 30" fill="none" stroke="#D4CCBA" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 512 512" role="img" aria-label="Carta">
+  <title>Carta</title>
+  <desc>The seal, cut by the belt. Every rule stands at a real latitude: the band is the ground between the Tropic of Cancer and the Tropic of Capricorn, where coffee grows; the graticule runs at thirty degrees.</desc>
+  <rect width="512" height="512" fill="#f2eee6"></rect>
+  <circle cx="256" cy="256" r="176" fill="#241d18"></circle>
+  <path d="M85.33 213V299M170.67 102.07V409.93M256 80V432M341.33 102.07V409.93M426.67 213V299M213 85.33H299M102.07 170.67H409.93M102.07 341.33H409.93M213 426.67H299" fill="none" stroke="#f2eee6" stroke-opacity=".13" stroke-width="1.4"></path>
+  <rect x="0" y="189.34" width="512" height="133.32" fill="#f2eee6"></rect>
+  <path d="M85.33 213V299M170.67 189.34V322.66M256 189.34V322.66M341.33 189.34V322.66M426.67 213V299" fill="none" stroke="#241d18" stroke-opacity=".12" stroke-width="1.4"></path>
+  <path d="M0 256H512" fill="none" stroke="#241d18" stroke-opacity=".14" stroke-width="1.5"></path>
+  <path d="M0 189.34H512M0 322.66H512" fill="none" stroke="#241d18" stroke-opacity=".3" stroke-width="2"></path>
 </svg>

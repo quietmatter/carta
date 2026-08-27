@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Carta">
+  <title>Carta</title>
+  <style>
+    /* the light values are presentation attributes on the elements below, and
+       this block carries only the dark override. That ordering matters: some
+       rasterisers ignore &lt;style&gt; inside an &lt;img&gt;-referenced SVG, and with the
+       light values in here the mark renders as a solid black square. */
+    @media (prefers-color-scheme: dark) {
+      .ground { fill: #171310 }
+      .seal { fill: #f0e9dd }
+      .rule { stroke: #f0e9dd }
+    }
+  </style>
+  <rect class="ground" width="512" height="512" fill="#f2eee6"></rect>
+  <circle class="seal" cx="256" cy="256" r="236" fill="#241d18"></circle>
+  <rect class="ground" x="0" y="189.34" width="512" height="133.32" fill="#f2eee6"></rect>
+  <path class="rule" d="M0 189.34H512M0 322.66H512" fill="none" stroke="#241d18" stroke-opacity=".3" stroke-width="3"></path>
+</svg>
