@@ -86,7 +86,10 @@ carta-shot.js         The Visualizer read — account, calls, pickers, a shot's 
 carta-ask.js          The argument — vTaste→vBrief→vAsk→vAsking→vAskResult, and the keyed channel (v7.34.0)
 carta-atlas.js        The Atlas — the door, and the four walks down from it, split out at Phase 31 (same <head>)
 test/model.test.js    The pure-block harness (zero deps, plain Node)
+test/verify-static.js The six files parse and agree — zero deps, no browser
 test/verify-*.js      Three browser harnesses — the front door, the v7.35 fold, the Phase 31 seam
+test/browser.js       Where the Chromium is, for those three
+.github/workflows/    CI — all five harnesses on every push and PR to main
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
 classic/README.md     Classic's own user documentation
@@ -532,6 +535,21 @@ function in it reaches for `D` or the DOM, which is why the whole slab was
 always outside the markers and why Phase 31 could move it without touching
 this harness at all.)
 
+**The static harness** — the other one that needs no browser, and the one to
+run first:
+
+```bash
+node test/verify-static.js     # the six files parse and agree — 19 checks
+```
+
+All six parse; `APP_VERSION`, all five `?v=` tags and all five published
+`*_VERSION` constants agree; the boot guard covers every sibling; the `<head>`
+and the directory agree on which siblings exist. **It also prints
+`index.html` against the band and never fails on it** — the band is the
+founder's call (Phases 18, 20 and 29 all landed over it deliberately), so
+this only makes a *silent* crossing impossible, which is what
+`ARCHITECTURE.md` §1 actually asks for.
+
 **The browser harnesses** — three of them, each booting the real app against
 the seeded record in `test/fixtures/env.js` and failing on any console error,
 any page error, or any assertion:
@@ -543,10 +561,20 @@ node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 node test/verify-split.js      # the Phase 31 seam — 12 checks
 ```
 
+`test/browser.js` finds a Chromium for all three (`CHROME`, then playwright's
+own install if it is really on disk, then the dev container's path).
 `test/README.md` says what each one holds. `verify-split.js` is the one to
 extend if you move code across a file boundary: it walks the four chapter
 screens, checks the published `window` seam, and checks that all six files
 agree on one version at boot.
+
+**All five run in CI** — `.github/workflows/tests.yml`, on every push and PR
+to `main`, the static pair first and the browser three gated behind it. **It
+is not a build step and must not become one:** it installs Playwright on the
+runner, touches nothing a keeper downloads, and adds no dependency, bundler
+or package manager to the app. There is still no `package.json`, and the
+`--no-save` install is the same one this file has always told you to run by
+hand.
 
 Everything else painted by `index.html` — and all of `classic/` — has no
 automated harness. **Verify by loading the page**, in both paper and dusk. A

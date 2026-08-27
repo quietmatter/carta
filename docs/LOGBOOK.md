@@ -7,6 +7,57 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-27 — the harnesses run themselves now (CI)
+
+- **Asked for directly** after the Phase 31 PR opened against a repo with no
+  `.github/` at all: the four harnesses (139 + 59 + 40 checks, plus the new
+  12) had only ever run when somebody remembered to run them, which held fine
+  at one contributor and stops holding the moment a change lands without
+  them. `.github/workflows/tests.yml` now runs all of them on every push and
+  pull request to `main`.
+- **It is not a build step, and §1 says so in its own words rather than
+  leaving it to be inferred.** Nothing here touches what a keeper downloads:
+  no `package.json`, no lockfile, no bundler, no generated artifact, and not
+  one byte of difference to the six files on the host. The Playwright install
+  is on the runner, with `--no-save`, and is the same one `test/README.md`
+  has always told a contributor to run by hand. The law is *nothing between
+  the source and the host*; a robot running the tests you would run yourself
+  is not between them.
+- **A fifth harness, `test/verify-static.js` (19 checks, zero deps).** All six
+  files parse; `APP_VERSION`, all five `?v=` tags and all five published
+  `*_VERSION` constants agree; the boot guard covers every sibling; the
+  `<head>` and the directory agree on which siblings exist. Every one of
+  those is a failure this project has actually shipped or nearly shipped —
+  v7.31.1's stale sibling, the four-way renumber of v7.37.4–.7, and the
+  `MAP_VERSION` gap Phase 31 found. It fails cleanly on each, checked by
+  breaking each one deliberately and watching only the right check go red.
+- **The band is reported, never gated.** `verify-static.js` prints
+  `index.html` against 5,000 lines / 500 KB and raises a PR annotation when
+  over — and always exits 0. Gating would fight this project's own
+  governance: Phases 18, 20 and 29 all landed over the band by an explicit
+  founder call. What the record actually asks for is that a crossing is never
+  *silent*, and four versions crossed silently before Phase 31. This makes
+  silence impossible without making the call for anybody.
+- **One real bug found by building it, not by reading.** `verify-v7.35.js`
+  hard-coded `/opt/pw-browsers/chromium` with no override — it could only
+  ever have run in this project's dev container, and would have failed
+  outright on a runner. The other two honoured `CHROME` but defaulted to the
+  same container path. All three now resolve through `test/browser.js`.
+- **And one subtlety worth writing down.** The obvious fix — ask Playwright
+  for `chromium.executablePath()` — is wrong on its own: that call *predicts*
+  a path for the installed `playwright-core` version rather than checking a
+  browser is there. Tried here it returned a confident path to nothing
+  (`chromium-1234`, against a container holding `chromium-1194`) and the
+  launch died with "executable doesn't exist" instead of falling through. So
+  `browser.js` uses its answer only when the file really exists. Found by
+  running the CI command sequence locally before pushing it, which is the
+  only reason it isn't a red first run.
+- **No version bump, no CHANGELOG entry.** Nothing user-visible changed and
+  no app file was touched — the six files are byte-identical to the split
+  commit. Nothing parked, nothing for Lotmark's desk.
+
+---
+
 ## 2026-08-27 — Phase 31, the second split (v7.38.0)
 
 - **The debt is paid.** `index.html` went into this phase at **5,956 / 5,000**

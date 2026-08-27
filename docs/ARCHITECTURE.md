@@ -503,6 +503,27 @@ Carta 7 is built exactly the way classic was, smaller:
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
   droppable file is brand, not accident.
+
+  **CI exists now, and it is not a build step — the distinction is the whole
+  point of this bullet, so it is stated rather than assumed.**
+  `.github/workflows/tests.yml` runs all five harnesses on every push and
+  pull request to `main`. It adds nothing to what a keeper downloads: no
+  `package.json`, no lockfile, no bundler, no generated artifact, and not one
+  byte of difference to the six files served from the host. What it installs
+  — Playwright, on the runner, with `--no-save` — is the same install
+  `test/README.md` has always told a contributor to run by hand, and it is a
+  *test* dependency, which this project has had since the first browser
+  harness. The law being kept is "nothing between the source and the host";
+  a robot running the tests you would otherwise run yourself is not between
+  them.
+
+  Two things about it are deliberate and should survive anyone tidying it:
+  **it never gates on the line band** (the band is a founder call — Phases
+  18, 20 and 29 all landed over it on purpose — so `verify-static.js` reports
+  the figure and annotates a crossing without failing it, which is what §1
+  asks for: never a *silent* crossing), and **the static pair runs before the
+  browser three**, so a syntax error costs seconds rather than a browser
+  download.
 - **Vendored, exactly twice** *(amended at Phase 12 — `ROADMAP.md` tripwire
   2, moved in the open rather than slipped past)*. The passport's projection
   needs real spherical geometry, and freehanding one is the kind of "small"
@@ -538,9 +559,12 @@ carta-ask.js          the argument and its channel, split out at v7.34.0 (§1)
 carta-atlas.js        the door and the four walks, split out at Phase 31 (§1)
 CLAUDE.md             the working guide to those files (Carta 7)
 test/model.test.js    the pure-block harness (§9)
+test/verify-static.js the six files parse and agree (§1) — no browser
 test/verify-door.js   the front door in a real browser (Phase 30)
 test/verify-v7.35.js  the v7.35.0 fold in a real browser
 test/verify-split.js  the Phase 31 seam in a real browser
+test/browser.js       where the Chromium is, for those three
+.github/workflows/    CI — all five harnesses; repo machinery, not a build
 classic/index.html    Carta 6.18.x, frozen whole (it is self-contained;
                       freezing it was one `git mv`)
 classic/CLAUDE.md     the third turn's architecture map, kept for the record

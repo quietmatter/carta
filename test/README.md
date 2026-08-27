@@ -1,19 +1,60 @@
-# Verifying the app in a browser
+# Verifying the app
 
-Three harnesses boot the real app against the seeded record in
-`fixtures/env.js` (store keys remapped from `carta7.design.*` to the app's own
-`carta7.*`). All three fail on any console error, any page error, or any
-assertion.
+Five harnesses. Two need nothing but Node; three boot the real app in a
+browser against the seeded record in `fixtures/env.js` (store keys remapped
+from `carta7.design.*` to the app's own `carta7.*`). All of them fail on any
+assertion, and the browser three also fail on any console error or page error.
 
 ```
+# no browser, no network, seconds
+node test/verify-static.js     # the six files parse and agree — 19 checks
+node test/model.test.js        # the taste model and the brief — 139 cases
+
+# the real app, in a real browser
 npm i playwright-core --no-save
-node test/verify-door.js       # the front door, v7.37.7 — 59 checks
+node test/verify-door.js       # the front door, all five states — 59 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 node test/verify-split.js      # the Phase 31 seam — 12 checks
 ```
 
-All three expect a Chromium at `/opt/pw-browsers/chromium`; set `CHROME` to
-override, or edit `executablePath`.
+**All five run in CI** on every push and pull request to `main`
+(`.github/workflows/tests.yml`). The static pair runs first and the browser
+three are gated behind it, so a syntax error never pays for a browser
+download.
+
+## Finding a browser
+
+`browser.js` resolves one for all three browser harnesses, in this order:
+`CHROME` if you set it, then whatever `npx playwright install chromium` put
+down, then `/opt/pw-browsers/chromium` (this project's dev container).
+
+The middle step is the subtle one, and it is why this is shared code rather
+than a line repeated three times: playwright's `executablePath()` *predicts*
+a path for the version of `playwright-core` installed — it does not check a
+browser is there. On a machine whose installed build differs it returns a
+confident path to nothing, and the launch dies with "executable doesn't
+exist" instead of falling through. So its answer is used only when the file
+really exists.
+
+## `verify-static.js` — the six files, without a browser
+
+- **everything parses** — CLAUDE.md's own advice is that a syntax check has
+  caught something in nearly every phase; this runs it over all six rather
+  than whichever file was being edited
+- **one version everywhere** — `APP_VERSION`, all five `?v=` query strings,
+  and all five published `*_VERSION` constants. This is the failure that
+  shipped at v7.31.1 and read to the keeper as "your Visualizer account is
+  empty"; the boot guard catches it at runtime, this catches it before merge
+- **the boot guard covers every sibling** — `carta-map.js` sat unchecked from
+  the day the guard was written until Phase 31, so the guard itself is now
+  checked
+- **the head and the directory agree** — a new sibling with no `<script src>`,
+  or a tag left behind after one is removed
+- **the band, reported and never gated** — `index.html`'s lines and bytes
+  against `ARCHITECTURE.md` §1's 5,000 / 500 KB, printed always and annotated
+  on the PR when over. The band is a founder call (Phases 18, 20 and 29 all
+  landed over it deliberately), so this never fails the build — it only makes
+  a *silent* crossing impossible, which is the thing §1 actually asks for
 
 ## `verify-split.js` — the seam (Phase 31)
 
