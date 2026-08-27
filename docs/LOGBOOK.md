@@ -7,6 +7,64 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-27 — Phase 31, the second split (v7.38.0)
+
+- **The debt is paid.** `index.html` went into this phase at **5,956 / 5,000**
+  — 891 of that carried out of Phase 30, and four more versions' worth on top
+  (v7.37.4–.7, all small keeper-reported fixes landing in a file with no
+  headroom left to land in). It comes out at **4,853 / 346.8 KB**, inside the
+  band with real room and within two lines of where Phase 19's split left it.
+  Nothing was cut: the app total moved 9,591 → 9,689 lines, which is a move
+  plus a file header, its seam and its harness.
+- **`carta-atlas.js` — 1,196 lines / 70.6 KB.** The door and the four walks
+  down from it: `vAtlas` with its plate, leaf and risen sheet, then
+  `vCountryChapter` → `vRegionChapter` → `vProducerPage`, and `vCityChapter`.
+  It is the layer directly above `carta-map.js` — the record read against
+  geography, where the map layer is the ground itself.
+- **A cut the record had named was not taken, and that is the decision worth
+  logging.** `ARCHITECTURE.md` §1 named the room-sized views (`vJournal`,
+  `vShelf`, `vRecord`) as the obvious split. Measuring beat reading: the
+  Atlas is one contiguous 1,126-line slab under its own banner, the rooms are
+  two scattered runs that together clear the band by less, and the Atlas sits
+  on a seam Phase 19 already proved. Recorded as a change of mind in §1 and
+  in the roadmap rather than made quietly — the failure this record exists to
+  catch is a stated thing quietly stopping being true.
+- **Two bare cross-file writes became a real seam.** `save()` was clearing
+  `_cityLeadCache` and `render()` was clearing `_atlasSheetUp` by bare
+  assignment into what is now another file. That works — classic scripts
+  share one global lexical scope — and it is the opposite of a documented
+  seam, so both became calls the owning file publishes (`clearCityLead`,
+  `resetAtlasSheet`), the shape `carta-shot.js` already uses for
+  `snoozeWaitingShot`. Five voice helpers (`words`, `capFirst`, `trimNum` and
+  the two number tables) went the other way into the domain block: four files
+  call them and they were under the Atlas banner by accident.
+- **Half of every sibling's export list is documentation, and now the record
+  says so.** A `function` declaration in a classic script attaches itself to
+  `window`; a top-level `const` does not. Dropping `window.vCityChapter`
+  changes nothing; dropping `window.originOf` breaks the app. Found by
+  deliberately breaking each and watching only one fail —
+  `test/verify-split.js` holds the distinction now.
+- **A gap in the boot guard, found by extending it.** The guard's own comment
+  said it covered every sibling. It checked three of four: `carta-map.js`,
+  the largest file in the app, never had a `MAP_VERSION` to check, so it was
+  the one file a keeper could silently run a stale copy of — the v7.31.1
+  failure with no alarm on it. It has one now, and all five siblings are
+  checked. Not this phase's feature; a thing the phase could not extend the
+  guard without noticing.
+- **Verification.** `model.test.js` 139/139, untouched — nothing in the moved
+  slab was ever inside a pure block, so the harness still slices five files,
+  not six. `verify-door.js` 59/59 and `verify-v7.35.js` 40/40, both
+  unchanged. New: **`test/verify-split.js`** (12) opens all four chapter
+  screens with the app's own openers — *nothing had ever opened three of them
+  automatically*, which is precisely how a split breaks a screen quietly —
+  and asserts the published seam, both new seam calls, and that all six files
+  agree on one version at boot. A static pass over every bare call in the new
+  file found no dangling reference.
+- **Nothing parked, nothing for Lotmark's desk.** Pure debt service, and the
+  band is the founder's number again rather than an overdraft.
+
+---
+
 ## 2026-08-27 — Phase 30, the plate against a real phone (v7.37.7)
 
 - **852 CSS px is a full screen with no browser chrome at all** — the

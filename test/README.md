@@ -1,17 +1,40 @@
 # Verifying the app in a browser
 
-Two harnesses boot the real app against the seeded record in
+Three harnesses boot the real app against the seeded record in
 `fixtures/env.js` (store keys remapped from `carta7.design.*` to the app's own
-`carta7.*`). Both fail on any console error, any page error, or any assertion.
+`carta7.*`). All three fail on any console error, any page error, or any
+assertion.
 
 ```
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, v7.37.7 — 59 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
+node test/verify-split.js      # the Phase 31 seam — 12 checks
 ```
 
-Both expect a Chromium at `/opt/pw-browsers/chromium`; set `CHROME` to
+All three expect a Chromium at `/opt/pw-browsers/chromium`; set `CHROME` to
 override, or edit `executablePath`.
+
+## `verify-split.js` — the seam (Phase 31)
+
+The Atlas moved into `carta-atlas.js`. This walks what moved:
+
+- **the four walks** — country, region, producer, city — each opened through
+  the app's own opener and asserted to paint its own record, not its empty
+  state. `verify-door.js` only ever taps into the country chapter, and
+  nothing anywhere opened the other three, which is exactly how a split
+  breaks a screen quietly
+- **the published seam** — every name in `carta-atlas.js`'s export list is
+  really on `window`. Worth knowing what this can and cannot catch: a
+  `function` declaration in a classic script attaches itself to `window`
+  either way, so its export line is documentation; the `const` arrows
+  (`originOf`, `growerOf`, `regionOf`, `cityPlaces`, …) are the half that
+  genuinely needs publishing, and dropping one fails here
+- **the two seam calls** — `render()` → `resetAtlasSheet()` and `save()` →
+  `clearCityLead()`, which replaced two bare cross-file writes into the
+  moved file's own `let` bindings
+- **the version guard** — all six files agree, the check that makes a
+  forgotten `?v=` tag loud (`ARCHITECTURE.md` §1)
 
 ## `verify-door.js` — the front door (Phase 30)
 

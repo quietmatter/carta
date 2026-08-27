@@ -267,14 +267,15 @@ long as you want it.
 
 ## The stack
 
-Five static files — `index.html` with all CSS and JS inline, and four siblings
-beside it (`carta-map.js`, `carta-plate.js`, `carta-shot.js`, `carta-ask.js`),
+Six static files — `index.html` with all CSS and JS inline, and five siblings
+beside it (`carta-map.js`, `carta-plate.js`, `carta-shot.js`, `carta-ask.js`,
+`carta-atlas.js`),
 self-contained, zero dependencies, zero build. `carta-map.js` is the map
 layer: the passport's outlines and highland contours, the drawn-plot and
 street surfaces, and the projection they need (d3-array + d3-geo, the two
 modules it actually uses, vendored verbatim), loaded from `index.html`'s own
-`<head>` — so the map works with the network switched off. Drop both files
-on any static host; there's still nothing to build. Everything lives in this
+`<head>` — so the map works with the network switched off. Drop all six
+files on any static host; there's still nothing to build. Everything lives in this
 browser's `localStorage`
 (`carta7.v1`). No account, no server — the ask is the one deliberate,
 keeper-initiated exception to offline (bring your own key or never touch it);
@@ -324,12 +325,13 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 | `carta-plate.js` | The plate — a brew's own curve drawn, both arms (espresso and pour-over). |
 | `carta-shot.js` | The Visualizer read — the account, the calls, and a shot's own screens. |
 | `carta-ask.js` | The argument — your taste, the brief, the ask, and the one keyed channel out. |
+| `carta-atlas.js` | The Atlas — the front door, and the walks down from it into a country, a region, a farm, a city. |
 | `classic/index.html` | Carta 6.18.x, frozen. See `classic/README.md`. |
 | `fonts/` | Self-hosted typefaces (Spectral, Libre Franklin; woff2). |
 | `manifest.json`, `icon-*.svg`, `favicon.svg` | PWA metadata and the mark — the seal cut by the belt, at every size and both masks. |
 | `server/` | The optional sync server — dormant in 7.0, kept for the record. |
 | `test/model.test.js` | Zero-dep test for the taste model + the brief. |
-| `test/verify-door.js`, `test/verify-v7.35.js` | Browser harnesses — they boot the real app against a seeded record and walk its flows. |
+| `test/verify-door.js`, `test/verify-v7.35.js`, `test/verify-split.js` | Browser harnesses — they boot the real app against a seeded record and walk its flows. |
 | `docs/` | The design record: the pivot, the roadmap, the architecture, the voice standard, and classic's own design history. |
 
 ## Installing on a phone

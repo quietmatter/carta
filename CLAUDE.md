@@ -31,10 +31,10 @@ four sibling scripts beside it, no build step, no accounts, no server.
 came before it, Carta 6.18.x, is frozen whole at `classic/index.html`. They
 are two different apps in one repo, and the distinction matters constantly:
 
-1. **Carta 7** (`index.html`, ~4,750 lines, plus four siblings loaded from
+1. **Carta 7** (`index.html`, ~4,850 lines, plus five siblings loaded from
    its `<head>`: `carta-map.js` (Phase 19), `carta-plate.js` (v7.31.0),
-   `carta-shot.js` and `carta-ask.js` (both v7.34.0)) — the product. Every
-   phase of `docs/ROADMAP.md` ships here.
+   `carta-shot.js` and `carta-ask.js` (both v7.34.0), `carta-atlas.js`
+   (Phase 31)) — the product. Every phase of `docs/ROADMAP.md` ships here.
 2. **Classic** (`classic/index.html`, ~12,500 lines) — **frozen. No fixes, no
    features, lights on.** Its own architecture map is `classic/CLAUDE.md`;
    read that only if you are working on classic by explicit request. The one
@@ -53,10 +53,12 @@ Reference, never runtime. The four that govern current work:
 - **`PIVOT.md`** — the thesis. Record + hunt, the seven joys, and §10's list
   of what the fourth turn deliberately left behind.
 - **`ROADMAP.md`** — the route. Phases, adopted decisions, and five tripwires
-  read at every phase gate. **Phases 1–20 shipped.** Phase 20 landed ahead of
-  Phase 19 — a founder-level call, made knowing it deepened the line-band
-  debt Phase 18 landed rather than paying it down — and **Phase 19 then paid
-  that debt**, splitting the map layer out into `carta-map.js`.
+  read at every phase gate. **Phases 1–31 shipped.** Two of them exist only
+  to pay the line band down: Phase 19 split the map layer out into
+  `carta-map.js` (after Phase 20 landed ahead of it, a founder-level call
+  made knowing it deepened the debt), and **Phase 31 split the Atlas out**
+  into `carta-atlas.js` after Phases 29–30 and four v7.37.x fixes walked the
+  file past 5,000 again.
 - **`ARCHITECTURE.md`** — the kit. Stack laws, storage, the data model, the
   taste model, network posture, and §10's list of what is deliberately not
   built. **Amend it deliberately** — an unamended law that quietly stopped
@@ -82,12 +84,14 @@ carta-map.js          Carta 7's map layer, split out at Phase 19 (loaded from in
 carta-plate.js        The plate — a brew's curve, both arms, split out at v7.31.0 (same <head>)
 carta-shot.js         The Visualizer read — account, calls, pickers, a shot's four screens (v7.34.0)
 carta-ask.js          The argument — vTaste→vBrief→vAsk→vAsking→vAskResult, and the keyed channel (v7.34.0)
+carta-atlas.js        The Atlas — the door, and the four walks down from it, split out at Phase 31 (same <head>)
 test/model.test.js    The pure-block harness (zero deps, plain Node)
+test/verify-*.js      Three browser harnesses — the front door, the v7.35 fold, the Phase 31 seam
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
 classic/README.md     Classic's own user documentation
 fonts/                Self-hosted typefaces (Spectral + Libre Franklin, woff2)
-manifest.json         PWA metadata; scope /carta/, one shortcut → ?open=door
+manifest.json         PWA metadata; scope /, one shortcut → ?open=door
 icon-192.svg          App icons
 icon-512.svg
 README.md             User-facing docs for Carta 7
@@ -104,7 +108,7 @@ server/               Classic's sync server — dormant
 - **Everything is inline.** Edit the `<style>` and `<script>` blocks in place.
   No external `<script src>` / `<link>` to CDNs at load time — the whole point
   is a handful of files you can drop on a static host with nothing in between.
-  The four siblings are plain local `<script src>` tags in the `<head>`, each
+  The five siblings are plain local `<script src>` tags in the `<head>`, each
   carrying `?v=<APP_VERSION>`; that is the only exception and it is not one
   you extend without amending `ARCHITECTURE.md` §1.
 - The JS is **terse, dense, single-quote style** — many one-line helpers,
@@ -217,7 +221,9 @@ server/               Classic's sync server — dormant
   view, `ROOM_OF` says which room a screen belongs to, `BARELESS` names the
   screens that hide the bar. The settle animation plays on a screen change,
   never on a repaint. `render()` is the single paint.
-- **views** — `vAtlas` (home: the passport full-bleed and sticky, the ask's
+- **views** — **`vAtlas` and two of the four walks live in `carta-atlas.js`
+  since Phase 31** (marked below); the rest are in `index.html`. `vAtlas`
+  (home: the passport full-bleed and sticky, the ask's
   own field standing on its fade since Phase 20, tasted countries inked with
   the keeper's own spelling and tappable, cities underneath with their own
   plots), `vJournal` (every cup newest first, opening
@@ -225,7 +231,7 @@ server/               Classic's sync server — dormant
   coffees you've got, and the door to the record), `vTaste` (**Your taste** —
   what the Scout room used to argue, folded into the Atlas), and the screens.
   Phase 13 grouped the screens into four walks:
-  - **down from a country** — `vCountryChapter` (the road: six stations,
+  - **down from a country** (`carta-atlas.js`) — `vCountryChapter` (the road: six stations,
     filled where the record reaches them and dashed across the gaps; then
     regions, growers, roasters, pours) → `vRegionChapter` (a scope on the
     same greens, with the altitude band) → `vProducerPage` (the farm ledger,
@@ -233,7 +239,8 @@ server/               Classic's sync server — dormant
     `origin`; none is a record of its own, so each carries the country it was
     read in and hands it back on the way out.
   - **the places** — `vCityChapter` (streets, with the list on a sheet at
-    three detents), `vCafe`, `vCup`, `vMenu`.
+    three detents — in `carta-atlas.js`, since a city is read off the ground
+    the same way a country is), `vCafe`, `vCup`, `vMenu`.
   - **the argument** — `vTaste` → `vBrief` → `vAsk` → `vAsking` → `vAskResult`.
     The first four are `BARELESS`: one argument read in a sitting apiece, so
     the bar would only offer a way to lose your place — `vAsking` most of
@@ -392,8 +399,8 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 ### Invariants to preserve
 
-- **Five files, no build.** Vanilla JS, inline everything, nothing fetched at
-  load beyond the four siblings themselves. **Their `<script
+- **Six files, no build.** Vanilla JS, inline everything, nothing fetched at
+  load beyond the five siblings themselves. **Their `<script
   src>` tags carry `?v=<APP_VERSION>` and that must be bumped with it** — a
   sibling script is an ordinary cached subresource while `index.html` is the
   revalidated navigation document, so without it a keeper can run a new
@@ -428,9 +435,21 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
   `index.html`'s `<head>` with a plain `<script src>` — no bundler, no
   build, still two files you drop on a static host. `index.html` now stands
   at **4,854 lines / 321.5 KB**, comfortably back inside the band;
-  `carta-map.js` holds **535 lines / 108.4 KB**. The debt is closed; see
+  `carta-map.js` holds **535 lines / 108.4 KB**. That debt closed; see
   `ARCHITECTURE.md` §1 for the seam (`window`-published globals) and the
   full run of amendments and overages.
+
+  **It then reopened twice more and Phase 31 paid it a second time.**
+  v7.34.0 split the argument and the Visualizer read out (`carta-ask.js`,
+  `carta-shot.js`) at 6,483 lines; the file then walked past 5,000 again
+  across Phases 29–30 and four v7.37.x fixes, reaching **5,956 / 5,000**
+  (421.7 of 500 KB). **Phase 31 moved the Atlas out** into `carta-atlas.js`
+  — the door, its plate and leaf and sheet, and the four walks down from it
+  — landing `index.html` at **4,853 lines / 346.8 KB** and the new sibling
+  at **1,196 lines / 70.6 KB**. §1 names the cut that was *not* taken (the
+  room-sized views, which it had named as obvious) and why, the two bare
+  cross-file writes that became `clearCityLead`/`resetAtlasSheet`, and the
+  `MAP_VERSION` the boot guard had been missing since it was written.
 - **Vendoring is amended, not assumed.** `d3-array` + `d3-geo` are pasted in
   verbatim (Phase 12, `ARCHITECTURE.md` §1 and §10; living in `carta-map.js`
   since Phase 19, not `index.html`). The count is **two**. A third needs an
@@ -471,14 +490,15 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 **The app:** open `index.html` in a browser, or serve the repo statically
 (`python3 -m http.server`) and visit it. No build. Deployed to GitHub Pages
-under `/carta/` (hence the manifest `scope`/`start_url`).
+at the custom domain's root (hence the manifest `scope`/`start_url` of `/` —
+corrected at v7.37.4, see `LOGBOOK.md`).
 
-**The one harness** — the taste model is the only piece of real logic whose
+**The pure harness** — the taste model is the piece of real logic whose
 wrongness would be invisible (a bad brief just looks like a mediocre brief),
-so it is tested even though nothing else is:
+so it is the one tested without a browser:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 121 cases
+node test/model.test.js        # zero deps, plain Node, 139 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
@@ -506,6 +526,27 @@ evaluates them against fixture ledgers — no DOM, no `localStorage`. **If you t
 Anything reaching for `D` or `document` **does not belong inside the markers**
 — move it outside, next to its coupled wrapper, the way `matchNode`/`putAway`
 wrap `matchNodes`/`putAwayCore`.
+
+(`carta-atlas.js` is **not** in that slice and the count is still five: every
+function in it reaches for `D` or the DOM, which is why the whole slab was
+always outside the markers and why Phase 31 could move it without touching
+this harness at all.)
+
+**The browser harnesses** — three of them, each booting the real app against
+the seeded record in `test/fixtures/env.js` and failing on any console error,
+any page error, or any assertion:
+
+```bash
+npm i playwright-core --no-save
+node test/verify-door.js       # the front door, all five states — 59 checks
+node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
+node test/verify-split.js      # the Phase 31 seam — 12 checks
+```
+
+`test/README.md` says what each one holds. `verify-split.js` is the one to
+extend if you move code across a file boundary: it walks the four chapter
+screens, checks the published `window` seam, and checks that all six files
+agree on one version at boot.
 
 Everything else painted by `index.html` — and all of `classic/` — has no
 automated harness. **Verify by loading the page**, in both paper and dusk. A
