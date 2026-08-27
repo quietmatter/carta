@@ -5085,7 +5085,6 @@ function doorBagLeafHTML(bag){
 function doorSheetHTML(cities,countries,asks){
   const cups=live('cups').slice().sort(byWhen);
   const newest=cups[0]||null;
-  const counts=countryCupCounts();
   const rows=[];
   if(asks.length)rows.push(['What Carta found',`${capFirst(words(asks.length))} ask${asks.length===1?'':'s'} →`,'openAsksSheet()']);
   if(countries.length)rows.push(['Tasted so far',`${capFirst(words(countries.length))} countr${countries.length===1?'y':'ies'} →`,'openTastedSheet()']);
@@ -5114,7 +5113,7 @@ function doorCityRowHTML(city){
   const meta=[`${capFirst(words(places.length))} caf${places.length===1?'é':'és'}`,
     `${words(cups.length)} cup${cups.length===1?'':'s'}`].join(' · ');
   return `<button class="lrow doorcity" onclick="openCityChapter(${jsq(city)})">
-    ${plate?plate.html:(ground?sealHTML(ground.key,null,32):'')}
+    ${plate?plate.html:(ground?sealHTML(ground.key,ground.at,32):'')}
     <span class="mid"><span class="t">${esc(city)}</span><span class="m">${esc(meta)}</span></span>
     <span class="go">→</span></button>`;
 }
