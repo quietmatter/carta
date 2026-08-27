@@ -608,10 +608,6 @@ button.led:active{background:var(--paper-2)}
 @keyframes ca-written{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 /* a screen that runs to the bottom of the room it is in, so what it ends with
    sits on the fold rather than wherever the text happens to stop */
-main.tall{display:flex;flex-direction:column}
-main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
-.think{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
-.think>.pad{flex:1 1 auto;display:flex;flex-direction:column}
 .think .rule{position:relative;height:1px;background:var(--line)}
 .think .rule .fill{position:absolute;left:0;top:0;height:1px;background:var(--accent);transition:width var(--mo-considered) var(--mo-ease)}
 .think .rule .tip{position:absolute;top:-2px;width:5px;height:5px;margin-left:-3px;background:var(--accent);
@@ -841,6 +837,50 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 }
 @keyframes ca-breathe-still{0%,100%{opacity:1}50%{opacity:.55}}
 
+/* ============ the wait, on the plate (Phase 31 · the ask at the front door) ==
+ * The ask used to wait on a page of its own: a rule, a column of lines, and a
+ * 200px pin box at the foot that only filled once the placings began. The map
+ * was the last thing on the screen and the first thing the answer needed.
+ *
+ * It waits on the plate now — the same full-bleed surface the door's own
+ * question stands on. The plate is the belt while there is nothing placed, and
+ * reframes to the drawn plot as the first address confirms, so the answer is
+ * half drawn before it is read. Nothing else on the screen moves: the bar is
+ * already gone (BARELESS), and the only ember left is the rule's own fill and
+ * the tip that breathes at its end.
+ */
+.askwait{position:absolute;inset:0;overflow:hidden}
+.askwait .plate{position:absolute;inset:0;background:var(--surface-sunk);overflow:hidden}
+.askwait .prog{position:absolute;z-index:4;left:20px;right:20px;top:78px}
+.askwait .prog .meta{display:flex;justify-content:space-between;gap:12px;margin-top:9px}
+.askwait .prog .meta .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
+  text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.askwait .prog .meta .r{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;color:var(--ink-3);text-align:right}
+/* the narration reads UP out of the plate, so the scrim is the paper and the
+   lines are what is written on it. Read through, never tapped — the one thing
+   in it that is a control hands its own taps back, the way .fadeleaf does. */
+.askwait .narr{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:0 20px 18px;
+  display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;
+  transition:height var(--mo-base) var(--mo-ease);
+  background:linear-gradient(to top,var(--surface-card) 0%,
+    color-mix(in srgb,var(--surface-card) 96%,transparent) 62%,
+    color-mix(in srgb,var(--surface-card) 0%,transparent) 100%)}
+.askwait .narr .btn,.askwait .narr .empty{pointer-events:auto}
+/* the live line's mark is INK here, not the ember. The ember on this screen is
+   the rule — the one thing that is actually moving — and a second one would be
+   one too many (the ember budget, .doorscreen's own rule). It does not breathe
+   either: the tip already carries that, three inches above it. */
+.askwait .now .mk{background:var(--ink);animation:none}
+.askwait .foot{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3);margin-top:18px}
+
+/* ---- 03b · an answer unread ---------------------------------------------
+ * The bag leaf's own geometry, holding an answer. Everything here is a role
+ * the leaf already had — .doorleaf.paper, .kv, .btn-graphite, the handle — so
+ * dusk needs no override and the row reads the same as the two rungs above it.
+ */
+.doorfound{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.doorfound .r{font-family:var(--sans);font-size:12.5px;color:var(--ink-3);letter-spacing:.01em;text-align:right}
+
 </style>
 <!-- the sibling scripts carry the version in their URL, and it must be bumped
      with APP_VERSION (v7.37.0). index.html is the navigation document and is
@@ -851,11 +891,11 @@ main.tall>*{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.38.0"></script>
-<script src="carta-plate.js?v=7.38.0"></script>
-<script src="carta-shot.js?v=7.38.0"></script>
-<script src="carta-ask.js?v=7.38.0"></script>
-<script src="carta-atlas.js?v=7.38.0"></script>
+<script src="carta-map.js?v=7.39.0"></script>
+<script src="carta-plate.js?v=7.39.0"></script>
+<script src="carta-shot.js?v=7.39.0"></script>
+<script src="carta-ask.js?v=7.39.0"></script>
+<script src="carta-atlas.js?v=7.39.0"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -883,6 +923,24 @@ let D=load();
 function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};d.menus=d.menus||[];d.asks=d.asks||[];
   (d.cups||[]).forEach(c=>{if(c.photo)delete c.photo});
   try{localStorage.removeItem('carta7.photos.v1')}catch(e){}
+  /* Phase 31 · every ask already on the record has been read — it was read on
+     the screen the ask itself pushed up, which is what an ask used to do. The
+     door's new 03b rung reads `openedAt`, and without this every keeper's
+     whole ask history would arrive unread on the upgrade and the newest one
+     would take the door out from under whatever is actually waiting there.
+     Stamped from `createdAt`, so the record never claims a read happened at a
+     time it could not have.
+
+     ONCE, behind a flag, and the flag is the whole point: run unconditionally
+     this would also stamp the answer that came back five minutes ago and has
+     not been opened yet, so an unread answer would survive a repaint and lose
+     its rung to the next reload. The flag rides in `prefs` and is written by
+     the same `save()` that writes any ask after it, so an ask can never reach
+     the disk unread while the flag is still absent from it. */
+  if(!d.prefs.asksReadBackfill){
+    (d.asks||[]).forEach(a=>{if(a&&!a.openedAt&&!a.setAsideAt)a.openedAt=a.createdAt||new Date().toISOString()});
+    d.prefs.asksReadBackfill=new Date().toISOString();
+  }
   return d}catch(e){return clone(blank)}}
 function save(){_tasteDirty=true;_cupNoCache=null;clearCityLead();try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
 
@@ -1856,7 +1914,13 @@ function openAskingScreen(){openScreen('asking')}
 // arriving at an answer plays the settle once; marking one of its findings
 // re-reads the same screen and must not write it in all over again
 let _askSettle=false;
-function openAskResultScreen(id){_askSettle=!reducedMotion();openScreen('askresult',id)}
+function openAskResultScreen(id){_askSettle=!reducedMotion();markAnswerRead(id);openScreen('askresult',id)}
+/* where an ask actually ends (Phase 31). It used to push the answer page up
+ * the moment the last name was placed; the answer waits on the door now, as
+ * rung 03b, and the keeper opens it when they are ready to read it. Nothing
+ * full-screen arrives unasked — the one screen the ask takes is the wait, and
+ * by here the wait is over. */
+function askLandsOnDoor(){_navStack.length=0;tab='atlas';pageView=null;render()}
 function openAskScreenFor(city){askDraft=Object.assign({},askDraft,{kind:'city',dest:city||''});openScreen('ask')}
 function openMenuScreen(menuId,placeId){openScreen('menu',menuId||null,{placeRef:placeId||(menuById(menuId)||{}).placeRef||null})}
 function openRecord(){openScreen('record')}
@@ -1974,8 +2038,9 @@ function render(){
   const keep=same?m.scrollTop:0;
   // the Atlas owns its own frame now — a full-bleed plate with a leaf drawn
   // over it — so like the city screen it takes the scroll off main
-  m.classList.toggle('fixed',view.kind==='city'||view.kind==='atlas');
-  m.classList.toggle('tall',view.kind==='asking');
+  // the wait owns its own frame now (Phase 31): a full-bleed plate with the
+  // narration scrimmed over it, the same shape the door itself keeps
+  m.classList.toggle('fixed',view.kind==='city'||view.kind==='atlas'||view.kind==='asking');
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=keep;
   _askSettle=false;
@@ -4721,6 +4786,7 @@ function applyClassicImport(){
  * which file they are read from.
  */
 
+
 /* ============ theme — paper by day, dusk by night, following the device ============ */
 const duskMQ=matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
@@ -4733,8 +4799,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.38.0';
+const APP_VERSION='7.39.0';
 const CHANGELOG=[
+  {v:'7.39.0',d:"The ask comes home to the front door. It used to take three full screens of its own — a page of chips to compose on, a page to wait on, and an answer page pushed up in your face the moment the last name landed. The wait is now the plate itself: the belt you asked from, reframing to the drawn city as each address is confirmed, with the narration read up out of it and the one moving thing on the screen the hairline filling at the top. And the answer no longer interrupts you. It waits on the door as a rung of its own — the name Carta argued first, what it is best for, where it is, and the page one tap below — above the shelf, because you asked for it, and under a waiting brew, because a brew expires and an answer does not. Not now puts it down for good and it stays under What Carta found. Cancel still leaves the record exactly as it was, on every path."},
   {v:'7.38.0',d:"The file, split a third time. Nothing changes on the screen — this is the debt Phase 30 recorded, paid down. index.html had reached 5,956 lines against a ceiling of 5,000 that has not moved since Phase 17, and had walked past that number in four separate versions without anyone stopping to make the argument each crossing was owed. The Atlas moves out into a file of its own, carta-atlas.js, the way the map layer did and the argument and the Visualizer read did after it: the front door itself, the plate and its leaf and the record that pulls up underneath, and the four walks down from it — a country, a region, a farm, a city's own streets. index.html is back to 4,852 lines, almost exactly where the first split left it. Six files to copy where there were five, still nothing to build and nothing to install. Carta also now notices a stale map file the way it already noticed the other four — it had been left out of that check since the day the check was written."},
   {v:'7.37.7',d:"The plate gives up the map before it gives up the door. 852 CSS px is the iPhone 15 Pro's full screen with no browser chrome at all — most keepers get less than that, in an ordinary tab or on a shorter phone, and the leaf holding Write the cup or Brew it was taking that shortfall directly: on anything under about 800px tall it turned into an internally-scrolled strip with the action pushed out of sight and no fixed clearance above the bar. The plate shrinks first now, all the way to a floor that still reads as a plate, so the leaf keeps its full designed height on any phone down to iPhone SE size before it ever needs to scroll at all."},
   {v:'7.37.6',d:"The app, off the bottom of the screen on an iPhone home-screen install. iOS's own 100dvh has a live regression (its current release leaves a gap at the screen's bottom edge in a full-height standalone web app, confirmed on Apple's own developer forums) — Carta's one full-height rule sat right on it. window.innerHeight still reads the real, settled height once the app is open full-screen, so it now stands in as the app's height instead."},  {v:'7.37.5',d:"A brew dismissed for good measure, not for good. Not now put the waiting shot down, but the app's own resume check — the one that asks Visualizer again once you have been away from the screen for a beat — did not know a dismissal had happened, and the very next time the phone locked and woke it fetched the identical shot and put the same hero back on the door, unprompted. The dismissal now holds against that for as long as the app stays open, the same way it always held against everything else."},

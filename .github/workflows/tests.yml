@@ -66,6 +66,9 @@ jobs:
       # and on a laptop. Set CHROME to override either.
       - name: the front door, all five states
         run: node test/verify-door.js
+      - name: the ask at the front door
+        if: ${{ !cancelled() }}
+        run: node test/verify-ask.js
       - name: the v7.35.0 fold
         if: ${{ !cancelled() }}
         run: node test/verify-v7.35.js

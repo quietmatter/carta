@@ -15,11 +15,14 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   graticule, the band between the tropics that is the only ground coffee grows
   on, and the rest of the world behind it in the palest ink. One leaf of paper
   sits on it, and what the leaf holds is whatever is actually true: a brew
-  waiting to be written, with its curve and its figures; a bag resting on your
-  shelf, with its best cup so far; or the question. A brew expires and a bag
-  does not, so a brew leads. One field takes **a place, or a bag** and reads
-  which. Everything else — your last cup, your cities, what Carta found, what
-  you have tasted, the passport to share — is one pull below.
+  waiting to be written, with its curve and its figures; **an answer to an ask
+  you have not read yet**, with the name Carta argued first and what it is
+  best for; a bag resting on your shelf, with its best cup so far; or the
+  question. A brew expires and a bag does not, so a brew leads; an answer
+  never expires, but you did ask for it, so it sits above the shelf. One
+  field takes **a place, or a bag** and reads which. Everything else — your
+  last cup, your cities, what Carta found, what you have tasted, the passport
+  to share — is one pull below.
 - **Three rooms, one door.** Atlas · Journal · Shelf on the bar, with
   **＋ A cup** beside them — the door is reachable from every room, not just
   the top of one. Everything a room opens — a country, a region, a farm, a
@@ -67,14 +70,18 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   sends, the composer states what's actually going out as a ledger — the
   bar, your scores, what's excluded by name, the scope — with a door onto
   the brief's exact text for anyone who wants to read all of it. The wait
-  is a screen of its own, narrating your own record's figures, then the
-  call, then each name landing on a map the moment its address is
-  confirmed; **Cancel** is a real cancel and leaves nothing on the record.
+  is **the plate itself** — the same map the door opens on, narrating your
+  own record's figures, then the call, then reframing from the world to the
+  city as each name's address is confirmed and its pin lands; **Cancel** is a
+  real cancel and leaves nothing on the record.
   Every café it names is checked against a real place lookup before it's
   ever drawn as a pin — what can't be confirmed is listed, never guessed
   onto the map. No key, or the call fails, and Carta falls back to the same
-  plain-text brief, copied, with a way back to the ask. What comes back
-  settles in as **its own page, on its own streets**, and it argues rather
+  plain-text brief, copied, with a way back to the ask. Nothing is pushed at
+  you when it comes back: **the answer waits on the door**, one tap from its
+  page, and **Not now** puts it down for good — it stays under *What Carta
+  found*, one pull below. What comes back settles in as **its own page, on
+  its own streets**, and it argues rather
   than lists: the cafés **ranked, each saying what it is best for** — the
   cleanest cup, the one worth the drive, the sleeper — with the figures off
   your own brief it was read from underneath, and what to ask for once

@@ -44,7 +44,9 @@ are two different apps in one repo, and the distinction matters constantly:
    Carta 7, not deleted; it returns only if the roadmap's horizon item does.
 
 There is **no build system, no bundler and no package manager for the app.**
-Do not add one. The one automated test is `test/model.test.js` (below).
+Do not add one. The automated tests are `test/model.test.js` (the pure block,
+zero deps) and three Playwright harnesses under `test/` that boot the real app
+against a seeded fixture — see Running & testing.
 
 ## The design record (`docs/`)
 
@@ -87,9 +89,9 @@ carta-ask.js          The argument — vTaste→vBrief→vAsk→vAsking→vAskRe
 carta-atlas.js        The Atlas — the door, and the four walks down from it, split out at Phase 31 (same <head>)
 test/model.test.js    The pure-block harness (zero deps, plain Node)
 test/verify-static.js The six files parse and agree — zero deps, no browser
-test/verify-*.js      Three browser harnesses — the front door, the v7.35 fold, the Phase 31 seam
-test/browser.js       Where the Chromium is, for those three
-.github/workflows/    CI — all five harnesses on every push and PR to main
+test/verify-*.js      Four browser harnesses — the front door, the ask at the front door, the v7.35 fold, the Phase 31 seam
+test/browser.js       Where the Chromium is, for those four
+.github/workflows/    CI — all six harnesses on every push and PR to main
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
 classic/README.md     Classic's own user documentation
@@ -166,6 +168,10 @@ server/               Classic's sync server — dormant
     1,000/2,000/3,000 m contours over a country's own fill; `marks="[…]"`
     stands its regions on the ground their farms were placed on.
   - `<carta-plot>` — the drawn plot: a handful of points fit to a box, offline.
+    **`fit="frame"` measures its own box** (Phase 31) rather than laying a
+    336-unit viewBox out at the data's aspect ratio and letterboxing it in, so
+    one SVG unit is one CSS pixel and `dot`/labels mean what they say; labels
+    place against what is already drawn and are dropped rather than stacked.
   - `<carta-streets>` — a city or a single café: **Leaflet + OpenStreetMap
     tiles, injected at runtime** from unpkg. Unreachable, it hides itself and
     the drawn plot underneath simply stands. (Phase 17 tried a `thumb="on"`
@@ -217,6 +223,16 @@ server/               Classic's sync server — dormant
   thin ledger-coupled wrappers over the pure `matchNodes`. Roasters and places
   carry `aka[]`; a near match *offers* to join and never merges silently.
   **Origin story fields never join.**
+- **the door's ladder** (in `carta-atlas.js` since Phase 31's second split) —
+  `vAtlas` picks exactly one leaf, first true branch
+  wins: **03** a waiting brew (`waitingShot`) → **03b** an unread answer
+  (`unreadAnswer`, Phase 31) → **04** a resting bag (`restingBag`) → **02**
+  the question. A brew expires and an answer does not, so the brew leads; you
+  asked for the answer, so it sits above the shelf. `03b`'s *Not now* writes
+  `setAsideAt` rather than holding a session snooze the way the brew's does —
+  an answer re-offered on every open for the life of the record is a nag. See
+  `ARCHITECTURE.md` §4 for `openedAt`/`setAsideAt` and for the `load()`
+  back-fill that keeps a keeper's whole ask history from arriving unread.
 - **router** — **three rooms** on the bar: **Atlas · Journal · Shelf**
   (`TABS`), with **＋ A cup** beside them — the door, reachable from every
   room. `go(tab)` switches room; `openScreen(kind,id,extra)` opens the one
@@ -249,7 +265,13 @@ server/               Classic's sync server — dormant
     the bar would only offer a way to lose your place — `vAsking` most of
     all, since while the ask is out there is exactly one thing to do with the
     screen, and it's on it (Cancel). `vAskResult` is a destination and keeps
-    the bar.
+    the bar. **Phase 31 moved the wait onto the plate** (`.askwait`,
+    `main.fixed` like the door): full bleed, the belt while nothing is placed
+    and `<carta-plot>` from the first confirmed address, the rule at `top:78`,
+    the narration read up out of a scrim, and the whole ember budget the
+    rule's fill and its tip. **And the answer no longer interrupts** —
+    `runAsk` ends on `askLandsOnDoor()` and the answer waits on the door as
+    rung `03b` instead of the result screen being pushed up.
   - **what the keeper owns** — `vRecord` (the ledger, the backup, imports,
     cards, the instrument, classic) → `vSetups` → `vSetup` (the grind history
     that is only true on one Setup, which is why it never leaves that page).
@@ -550,25 +572,26 @@ founder's call (Phases 18, 20 and 29 all landed over it deliberately), so
 this only makes a *silent* crossing impossible, which is what
 `ARCHITECTURE.md` §1 actually asks for.
 
-**The browser harnesses** — three of them, each booting the real app against
+**The browser harnesses** — four of them, each booting the real app against
 the seeded record in `test/fixtures/env.js` and failing on any console error,
 any page error, or any assertion:
 
 ```bash
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
+node test/verify-ask.js        # the ask at the front door — 82 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 node test/verify-split.js      # the Phase 31 seam — 12 checks
 ```
 
-`test/browser.js` finds a Chromium for all three (`CHROME`, then playwright's
+`test/browser.js` finds a Chromium for all four (`CHROME`, then playwright's
 own install if it is really on disk, then the dev container's path).
 `test/README.md` says what each one holds. `verify-split.js` is the one to
 extend if you move code across a file boundary: it walks the four chapter
 screens, checks the published `window` seam, and checks that all six files
 agree on one version at boot.
 
-**All five run in CI** — `.github/workflows/tests.yml`, on every push and PR
+**All six run in CI** — `.github/workflows/tests.yml`, on every push and PR
 to `main`, the static pair first and the browser three gated behind it. **It
 is not a build step and must not become one:** it installs Playwright on the
 runner, touches nothing a keeper downloads, and adds no dependency, bundler

@@ -73,6 +73,21 @@ Carta 7 is built exactly the way classic was, smaller:
   the DOM but nothing in the pure block. **That is a phase of its own and it
   is the founder's call to schedule, not a coding agent's to take mid-task.**
 
+  **That call was taken, and the debt is closed** — see the second split
+  below (v7.38.0). Written while it was still open: the ask-at-the-door work
+  (v7.39.0) was cut from the same base and would have taken `index.html` to
+  6,100, a further 209 past an already 891-over band, and recorded that
+  overage here rather than amending a fifth time. The split landed first and
+  the arithmetic changed under it: `index.html` is at **4,920 lines /
+  352.1 KB** with v7.39.0's own additions on top of the split — inside the
+  band, with eighty lines of headroom. The two rooms of CSS and the router's
+  two stamps stayed in `index.html`; the rung itself (`unreadAnswer`,
+  `markAnswerRead`, `setAsideAnswer`, `doorAnswerLeafHTML`, `answerPinsJSON`,
+  `answerPad`) went where the door now lives, `carta-atlas.js`. **The band is
+  a live number again rather than a debt, and `verify-static.js` now prints
+  it on every run** — which is the thing that would have made all four quiet
+  crossings above impossible.
+
   Phase 17 itself shipped twice in one sitting, and both drafts are worth
   recording. The first spent its lines on tile-server citizenship — a live
   Leaflet map, gated to boot only while a thumbnail was actually on screen —
@@ -728,6 +743,7 @@ D = {
                        coffeeRef? }] }],               // set when tasted/taken home
   asks:    [{ id, createdAt, kind, destination,        // Phase 7 — the ask's history
               question, reach, model, read,            // reach + read: Phase 14
+              openedAt, setAsideAt,                    // Phase 31 — the door's 03b rung
               findings:[{ id, name, neighborhood, city, why,
                           verdict, fit:[], order,      // Phase 14 — what it's best FOR,
                           travel, stale,               //   read off the brief, and how far
@@ -738,6 +754,7 @@ D = {
                      wildcard:{ ...same shape } } }],  // outside the ranking
   prefs:   { tempUnit, askKey, askModel,               // the key lives here and nowhere else
              exportedAt, autoExport,
+             asksReadBackfill?,                        // Phase 31 — the one-off migration's flag
              vizWatch?, vizDismissed?[], ... }         // Phase 26 — vizWatch: false by
                                                          // default, set only in the shot's own
                                                          // settings row; vizDismissed: last 20
@@ -756,7 +773,38 @@ home), `prefs.exportedAt` / `prefs.autoExport` (Phase 8), `origin.mill`
 law as every other origin field; a coffee without them is unplaced, which is
 most coffees and is drawn as a fact rather than a gap). `asks` is the one
 collection the original six missed; it is the record of what was asked and
-what came back. **Phase 14 widened it and broke nothing:** every field it
+what came back.
+
+**Phase 31 added two more, and they are the only two on the record that are
+about *reading* rather than about what happened.** `openedAt` is stamped when
+the answer's own page is actually opened, and `setAsideAt` when the keeper
+taps *Not now* on the door; an ask carrying neither is the door's `03b` rung.
+Both are ISO stamps rather than booleans for the same reason every other
+field here is — the record says when, not merely whether. Two consequences
+worth stating out loud:
+
+1. **`ask.read` is the model's prose, not a read receipt.** It has been the
+   model's own read of the ground since Phase 14, and the temptation to hang
+   an unread flag on a field already called `read` is exactly the collision
+   this note exists to prevent.
+2. **`load()` back-fills `openedAt` from `createdAt` for every ask already on
+   the record, once.** Without the back-fill the rung's own rule — "no
+   `openedAt` means unread" — would declare a keeper's entire ask history
+   unread on the upgrade, and the newest of them would take the door out from
+   under whatever was actually waiting there. Stamped from `createdAt` rather
+   than from now, so the record never claims a read happened at a time it
+   could not have.
+
+   **And it is flagged (`prefs.asksReadBackfill`) rather than run on every
+   load, which is the half that is easy to miss.** Unflagged it is not a
+   migration at all but a rule, and the rule says "every ask is read" — so
+   the answer that came back five minutes ago and has not been opened would
+   be stamped read by the next reload, and the rung would appear once and
+   never again. The flag rides in `prefs`, so the same `save()` that writes
+   any ask writes the flag with it: an ask can never reach the disk unread
+   while the flag is still absent from it.
+
+**Phase 14 widened it and broke nothing:** every field it
 added is optional, so an ask stored under the Phase 7 shape still opens and
 still reads — the screen draws a part only where the model filled it. The
 three places an ask can name a café — `findings`, `mentions`, `plan.wildcard`
@@ -1096,6 +1144,15 @@ Three things came out of it, and all three are the rule now:
 2. **`PLATE_VERSION`** is published by `carta-plate.js` and checked against
    `APP_VERSION` at boot. A mismatch says so plainly, once. It exists because
    the failure mode is silent, not because the query string is unreliable.
+   v7.34.0 widened the check to every sibling — and **for four versions it
+   did not actually mean every sibling.** `carta-shot.js` and `carta-ask.js`
+   were added to the list; `carta-map.js` was not, because it published no
+   version constant to check against, so the comment above the guard said
+   "five files means five chances" while the guard enforced three of four.
+   **v7.38.0 publishes `MAP_VERSION` and adds it.** The map is the oldest
+   sibling and holds the geometry every plate on the door is drawn from, so
+   a stale copy of it is the v7.31.1 failure again with a different symptom
+   — which makes it the last one that should have been the unguarded one.
 3. **Reads across the seam are guarded** (`typeof shotPreinfusion==='function'`).
    The same posture §7 takes with the network, applied to the file boundary: a
    sibling that isn't what was expected costs one figure, never the screen.

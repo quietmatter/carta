@@ -1,9 +1,9 @@
 # Verifying the app
 
-Five harnesses. Two need nothing but Node; three boot the real app in a
+Six harnesses. Two need nothing but Node; four boot the real app in a
 browser against the seeded record in `fixtures/env.js` (store keys remapped
 from `carta7.design.*` to the app's own `carta7.*`). All of them fail on any
-assertion, and the browser three also fail on any console error or page error.
+assertion, and the browser four also fail on any console error or page error.
 
 ```
 # no browser, no network, seconds
@@ -13,23 +13,24 @@ node test/model.test.js        # the taste model and the brief — 139 cases
 # the real app, in a real browser
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
+node test/verify-ask.js        # the ask at the front door — 82 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 node test/verify-split.js      # the Phase 31 seam — 12 checks
 ```
 
-**All five run in CI** on every push and pull request to `main`
+**All six run in CI** on every push and pull request to `main`
 (`.github/workflows/tests.yml`). The static pair runs first and the browser
-three are gated behind it, so a syntax error never pays for a browser
+four are gated behind it, so a syntax error never pays for a browser
 download.
 
 ## Finding a browser
 
-`browser.js` resolves one for all three browser harnesses, in this order:
+`browser.js` resolves one for all four browser harnesses, in this order:
 `CHROME` if you set it, then whatever `npx playwright install chromium` put
 down, then `/opt/pw-browsers/chromium` (this project's dev container).
 
 The middle step is the subtle one, and it is why this is shared code rather
-than a line repeated three times: playwright's `executablePath()` *predicts*
+than a line repeated four times: playwright's `executablePath()` *predicts*
 a path for the version of `playwright-core` installed — it does not check a
 browser is there. On a machine whose installed build differs it returns a
 confident path to nothing, and the launch dies with "executable doesn't
@@ -76,6 +77,33 @@ The Atlas moved into `carta-atlas.js`. This walks what moved:
   moved file's own `let` bindings
 - **the version guard** — all six files agree, the check that makes a
   forgotten `?v=` tag loud (`ARCHITECTURE.md` §1)
+
+## `verify-ask.js` — the ask at the front door (Phase 31)
+
+Runs the ask **end to end** against the fixture's own canned Anthropic and
+Nominatim doors — the wait is tested as it actually runs, not by driving
+`askSay` by hand — and then walks the rung the answer lands on:
+
+- **the wait is a plate** — full bleed, no bar, the rule measured at `top:78`
+  gutter to gutter off the live DOM rather than off the template, and the
+  200 px pin box at the foot gone
+- **the reframe** — the belt while nothing is placed, `<carta-plot>` from the
+  first confirmed address, with pins actually on it
+- **the ember budget on the wait** — exactly two elements painting `#a63f2b`
+  (the rule's fill and its tip) at *both* stages, and the live line's mark
+  computing to ink rather than the ember
+- **cancel writes nothing** on a real aborted run, mid-grounding
+- **the failure's three doors** are still tappable inside a
+  `pointer-events:none` scrim — the thing a scrim is most likely to break
+- **the ladder** — 03 > 03b > 04 > 02, each asserted at its own plate height
+- **the migration** — an ask already on the record arrives read, stamped from
+  `createdAt`, so upgrading does not hijack the door with the ask history
+- **Not now**, its write, and the undo behind it
+- **an answer that placed nothing** falls back to the passport rather than an
+  empty box; **an answer with nothing to stand behind** says so plainly
+- **the plot's labels** — no two overprint, a crowded name moves off its dot
+  rather than stacking on it, and type over a plate carries the halo
+- dusk, reduced motion, 390×667 and 320px
 
 ## `verify-door.js` — the front door (Phase 30)
 

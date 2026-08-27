@@ -1562,6 +1562,77 @@ and a country with two contour marks may deserve a lower bar; and Los Angeles
 has no relief on file, which is the one thing that would make its plate about
 Los Angeles rather than about the sea to its west.
 
+### Phase 31 — the ask at the front door (part shipped — v7.39.0)
+
+*From the Claude Design handoff `Ask Carta at the Front Door`. The commission:
+move the ask off its three screens of its own and onto the door's own
+furniture — compose on a leaf over the plate, wait on the plate itself, and
+land as a leaf, a new rung on the door's ladder. Nothing new in the design
+language: the leaf, the plate, the pull, the fact row, the chip and the ember
+are all already in the app.*
+
+**Two of the four screens shipped at v7.39.0**, behind the second split
+(above), which took v7.38.0 and moved the door this phase adds a rung to.
+The wait and the rung are
+decision-free redraws of what the app already holds. The composer leaf and the
+answer-on-the-plate are not — each turns out to need a founder call the
+handoff does not make, and both are held for those calls rather than guessed
+at. The full account is in `LOGBOOK.md`; the short version is below.
+
+**The wait, on the plate (frames `1e`/`1f`).** `vAsking` was a padded page: a
+rule, a column of lines, and a 200 px pin box at the foot that only filled
+once the placings began — the map was the last thing on the screen and the
+first thing the answer needed. It is the plate now, full bleed, `main.fixed`
+like the door itself. The plate is the belt the ask was asked from while
+nothing is placed, and reframes to `<carta-plot>` as the first address
+confirms, so the answer is half drawn before it is read. The rule moves to
+`top:78` and states the reach until it has a count and the count after that;
+the narration reads up out of a scrim that shrinks once the placings begin.
+**The ember budget is the rule's fill and its tip, and nothing else** — the
+live line's mark drops to ink, because the thing that is moving is the rule.
+Cancel is unchanged and still a real cancel on every path.
+
+**03b · an answer unread (frames `1g`/`1h`).** The ask used to push its answer
+page up the moment the last name landed. It does not any more: the answer
+**waits on the door**, on the bag leaf's own geometry — the name the model
+argued first, what it is best for, where it is and how far you said you would
+go, and the page one tap below. The ladder becomes **03 > 03b > 04 > 02**: you
+asked for it, so it sits above the shelf; a brew expires and an answer does
+not, so it sits under the brew. *Not now* drops it a rung and is **written
+down**, unlike the waiting brew's session-only snooze — a brew put down is
+nearly gone by the next open, and an answer offered again on every open for
+the life of the record is a nag. It stays under *What Carta found*, one pull
+below.
+
+**Two fixes the design surfaced rather than asked for.**
+
+- `<carta-plot>` drew a label above every dot unconditionally. The design is
+  the first surface to ask for `labels="on"` on a real city, where a plot
+  fitted to its box lands two cafés two streets apart two dots apart, and
+  four names over that became a smear. It places against what is already on
+  the plate now and drops what will not fit — the rule `<carta-atlas>`
+  already keeps for a country's name, and the halo the rest of the layer
+  already paints its type with.
+- The boot guard checked three of the four siblings — `carta-map.js`
+  published no version to check against, so the comment saying "five files
+  means five chances" had been enforcing three for four versions. Found here
+  and fixed on the second split's own branch at the same time, independently;
+  `MAP_VERSION` is published and checked, and the merge kept one of the two.
+  See `ARCHITECTURE.md` §1.
+
+**Held for a founder call, with the reasoning written down rather than
+guessed at.** The composer leaf needs a *read-as* line ("Read as a city,
+nothing on the record there yet") where the app has no destination parser and
+no keyless way to get one; it also drops the six kind chips and the free-text
+question, both of which are reachable capability today. The answer on the
+plate needs `<carta-city>` (a sixth file, and the argument `ARCHITECTURE.md`
+§1 requires for one), a quarter table the handoff ships hardcoded for Los
+Angeles alone, a distance anchor the record does not define, and — the one
+that matters most — it has no place on it for the verdicts, the fit figures,
+the mentions, the plan or the been/booked/skip marks, which is the
+*recommendation never travels without its reasons* invariant. Each is written
+up with options in `LOGBOOK.md`.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner

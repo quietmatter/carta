@@ -210,7 +210,7 @@ function asktrustHTML(){
  * → and the two leaf actions take the sanctioned ink fill, and why the waiting
  * mark went to ink. See `.askfield button.ink` and `.waiting.ink .mk`.
  */
-const ATLAS_PLATE_SHOT=352, ATLAS_PLATE_BAG=450, ATLAS_PLATE_UP=178,
+const ATLAS_PLATE_SHOT=352, ATLAS_PLATE_BAG=450, ATLAS_PLATE_ANSWER=416, ATLAS_PLATE_UP=178,
       ATLAS_SHEET_TOP=160, ATLAS_OVERLAP=18;
 /* the reference the paper leaf's own height was designed against — 852 minus
  * the 57px bar (`main` already excludes the bar, since nav.tabs is its own
@@ -458,6 +458,89 @@ function doorBagLeafHTML(bag,plateH){
     ${atlasHandleHTML(false)}
   </div>`;
 }
+/* 03b · an answer unread. You asked for it, so it sits above the shelf — and
+ * under the brew, because a brew expires and an answer does not. That is the
+ * whole of the rung's argument: everything on this ladder is ordered by what
+ * you lose by not looking at it, and an answer loses nothing.
+ *
+ * Which is also why "Not now" is written down rather than held for the
+ * session, the way the waiting brew's is. A brew put down is offered again on
+ * the next open because by then it is nearly gone; an answer put down and
+ * offered again on every open for the rest of the record's life is a nag. It
+ * stays exactly where every other answer already lives — under What Carta
+ * found, one pull below the door.
+ */
+function unreadAnswer(){
+  return D.asks.find(a=>a&&!a.openedAt&&!a.setAsideAt)||null;
+}
+// the answer stops being unread the moment it is actually opened — stamped
+// where the screen opens, not where the ask lands, so the ladder is telling
+// the truth about what has been read rather than about what has arrived
+function markAnswerRead(id){
+  const a=D.asks.find(x=>x.id===id);
+  if(a&&!a.openedAt){a.openedAt=new Date().toISOString();save()}
+}
+function setAsideAnswer(id){
+  const a=D.asks.find(x=>x.id===id);
+  if(!a)return;
+  a.setAsideAt=new Date().toISOString();save();render();
+  toast('Set aside — still under What Carta found.',function(){
+    delete a.setAsideAt;save();render();
+  },'Undo');
+}
+/* the leaf: one name, what it is for, two facts, and the page one tap below —
+ * the bag leaf's own geometry, holding an answer instead of a coffee. Where
+ * the ask came back with nothing it could stand behind, the leaf says that
+ * plainly rather than drawing an empty ledger, which is the same refusal the
+ * farm page's `unread` makes. */
+function doorAnswerLeafHTML(a,plateH){
+  const named=askNamed(a),grounded=named.filter(f=>f.grounded).length;
+  const lost=named.length-grounded;
+  const top=(a.findings||[])[0]||null;
+  const where=top?[top.neighborhood,a.reach].filter(Boolean).join(' · '):'';
+  const fact=(k,v)=>`<div class="kv"><span class="k">${esc(k)}</span><span class="v${v?'':' unread'}">${v?esc(v):'unread'}</span></div>`;
+  /* the grounding, said on the door. "Zero confirmed" is arithmetic, not
+     English — where nothing placed, the line says the thing that is actually
+     true about the answer instead of counting to zero out loud. */
+  const confirmed=!named.length?'Nothing came back to place.'
+    :!grounded?`No address could be confirmed — ${lost===1?'the one name is':'every name is'} listed, never drawn.`
+    :lost?`${capFirst(words(grounded))} confirmed. ${capFirst(words(lost))} listed, never drawn.`
+    :`Every name confirmed against a real address.`;
+  return `<div class="doorleaf paper" id="atlasleaf" style="top:${plateH-ATLAS_OVERLAP}px">
+    <div class="doorfound">
+      <span class="eyebrow" style="margin:0">What Carta found</span>
+      <span class="r">${esc(a.destination)} · ${esc(words(named.length))} name${named.length===1?'':'s'}</span>
+    </div>
+    ${top?`<div class="display big" style="margin:12px 0 3px">${esc(top.name)}</div>
+      ${top.why?`<div class="doorsub" style="margin-bottom:16px">${esc(top.why)}</div>`:''}
+      <div class="doorfacts">${fact('Best for',top.verdict||'')}${fact('Where',where)}</div>`
+    :`<div class="doorsub" style="margin:14px 0 4px">Carta didn’t name anything it could stand behind here.</div>`}
+    <button class="btn btn-graphite" style="min-height:52px;padding:15px 16px;margin-top:14px" onclick="openAskResultScreen(${jsq(String(a.id))})">${
+      named.length>1?`Read all ${esc(words(named.length))} →`:'Read the answer →'}</button>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:12px">
+      <span style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">${esc(confirmed)}</span>
+      <button class="qlink" style="flex:none;white-space:nowrap" onclick="setAsideAnswer(${jsq(String(a.id))})">Not now</button>
+    </div>
+    ${atlasHandleHTML(false)}
+  </div>`;
+}
+/* the pins an unread answer stands on — the same grounding rule the answer's
+ * own page keeps, held one screen earlier: a name the lookup confirmed is a
+ * pin, and a name it did not is not drawn at all. Where nothing was confirmed
+ * the plate falls back to the passport, which claims nothing. */
+const answerPinsJSON=a=>JSON.stringify(askNamed(a).filter(f=>f.grounded&&f.lat!=null&&f.lon!=null)
+  .map(f=>({id:f.id,name:f.name,lat:f.lat,lon:f.lon,dim:(a.mentions||[]).indexOf(f)>-1})));
+/* the plot's clearance and the plate's two fades, scaled to the plate the
+ * answer is actually standing on. 104/56 and 120/110 are what the design
+ * reserves at the plate's full 416 — the wordmark row above it, the leaf's
+ * own edge below. A phone shorter than the 852px reference gets a shorter
+ * plate (atlasPlateH), and a fixed 160px of clearance plus 230px of scrim
+ * inside a 207px plate leaves a strip to draw six cafés in and then fades
+ * the strip out. The clearance and the scrims take the shortfall with the
+ * plate, which is the same priority Phase 30 set between the plate and the
+ * leaf: the thing that is carrying the information keeps its room. */
+const answerPlateK=h=>Math.min(1,Math.max(.35,h/ATLAS_PLATE_ANSWER));
+const answerPad=h=>{const k=answerPlateK(h);return{t:Math.round(104*k),b:Math.round(56*k)}};
 /* 05 · the record, one pull below. One cup, not a list, and compact city rows
    rather than full cards: the Journal and each city's own page are one tap
    away, and everything they hold belongs there rather than here. */
@@ -529,8 +612,9 @@ function vAtlas(){
   const first=!live('cups').length&&!live('coffees').length;
   // the ladder: a brew expires, a bag does not, the question never does
   const shot=first?null:waitingShot();
-  const bag=(first||shot)?null:restingBag();
-  const plateRest=shot?ATLAS_PLATE_SHOT:bag?ATLAS_PLATE_BAG:0;   // 0 = full bleed
+  const answer=(first||shot)?null:unreadAnswer();
+  const bag=(first||shot||answer)?null:restingBag();
+  const plateRest=shot?ATLAS_PLATE_SHOT:answer?ATLAS_PLATE_ANSWER:bag?ATLAS_PLATE_BAG:0;   // 0 = full bleed
   /* the height this plate will actually stand at, worked out BEFORE the markup
      rather than corrected after it. <carta-atlas> measures its own box on
      connect, which happens while innerHTML is being parsed — before
@@ -539,17 +623,28 @@ function vAtlas(){
      right scale on the ResizeObserver's next tick. Stating it up front costs
      nothing and spares a whole projection pass. */
   const plateH=atlasPlateH(plateRest,atlasMainH());
-  const leaf=shot?doorShotLeafHTML(shot,plateH):bag?doorBagLeafHTML(bag,plateH)
+  const leaf=shot?doorShotLeafHTML(shot,plateH)
+    :answer?doorAnswerLeafHTML(answer,plateH)
+    :bag?doorBagLeafHTML(bag,plateH)
     :doorAskLeafHTML(first,countries);
+  /* the answer stands on its own ground: the plot of what it placed, drawn at
+     the plate's own size. Where it placed nothing there is nothing honest to
+     draw, so the passport stands instead — it claims only what you logged. */
+  const pins=answer?answerPinsJSON(answer):'[]';
+  const drawn=answer&&pins!=='[]';
+  const apad=answer?answerPad(plateH):null,ak=answer?answerPlateK(plateH):1;
   return `<div class="doorscreen">
     <div class="mapbox passport" id="atlasplate" data-rest="${plateRest}"
       style="position:absolute;left:0;right:0;top:0;height:${plateH}px">
-      <carta-atlas style="position:absolute;inset:0" caption="off"
+      ${drawn
+        ?`<div class="plotwrap" style="position:absolute;inset:0;padding:${apad.t}px 40px ${apad.b}px">
+            <carta-plot class="plot frame" fit="frame" pins="${esc(pins)}" dot="9" labels="on"></carta-plot></div>`
+        :`<carta-atlas style="position:absolute;inset:0" caption="off"
         frame="${first?'belt':'tasted'}"
-        tasted="${first?'':esc(countries.map(c=>c.label).join(','))}"></carta-atlas>
-      <div class="fade top" style="height:${plateRest?104:120}px"></div>
+        tasted="${first?'':esc(countries.map(c=>c.label).join(','))}"></carta-atlas>`}
+      <div class="fade top" style="height:${answer?Math.round(120*ak):plateRest?104:120}px"></div>
       ${doorHeadHTML(!first)}
-      ${plateRest?`<div class="fade bottom" style="height:${shot?110:130}px"></div>`:''}
+      ${plateRest?`<div class="fade bottom" style="height:${shot?110:answer?Math.round(110*ak):130}px"></div>`:''}
     </div>
     ${leaf}
     ${first?'':doorSheetHTML(cities,countries,asks)}
@@ -1176,6 +1271,7 @@ window.coffeeCardMapHTML=coffeeCardMapHTML;
 window.coffeeGroundHTML=coffeeGroundHTML;
 window.cupLeadHTML=cupLeadHTML;
 window.growerOf=growerOf;
+window.markAnswerRead=markAnswerRead;
 window.mountAtlas=mountAtlas;
 window.openCountryCups=openCountryCups;
 window.originOf=originOf;
@@ -1185,6 +1281,7 @@ window.placeCups=placeCups;
 window.placeFarms=placeFarms;
 window.regionOf=regionOf;
 window.resetAtlasSheet=resetAtlasSheet;
+window.setAsideAnswer=setAsideAnswer;
 window.toggleAtlasSheet=toggleAtlasSheet;
 window.unplaceFarm=unplaceFarm;
 window.vAtlas=vAtlas;
@@ -1193,4 +1290,4 @@ window.vCountryChapter=vCountryChapter;
 window.vProducerPage=vProducerPage;
 window.vRegionChapter=vRegionChapter;
 
-window.ATLAS_VERSION='7.38.0';
+window.ATLAS_VERSION='7.39.0';
