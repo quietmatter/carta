@@ -1128,12 +1128,7 @@ window.cityArcsRaw=cityArcsRaw;
 window.cityWindow=cityWindow;
 window.plateGround=plateGround;
 
-/* the boot guard's fourth sibling. index.html has checked the plate, the shot
- * and the ask against APP_VERSION since v7.34.0 — and the comment on that
- * check says "every sibling, not just the plate: five files means five chances
- * for a cached one to disagree with this document." The map was the one it did
- * not actually check, because this file never published a version to check
- * against. It is the oldest sibling and the one holding the geometry every
- * plate on the door is drawn from, so a stale copy of it is exactly the
- * v7.31.1 failure again with a different symptom. */
-window.MAP_VERSION='7.38.0';
+// the guard index.html's boot checks (ARCHITECTURE.md §1). The map had none
+// until Phase 31, though the guard's own comment already claimed every sibling
+// was covered — a stale carta-map.js is exactly the failure it exists to catch.
+window.MAP_VERSION='7.39.0';

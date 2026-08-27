@@ -7,7 +7,7 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
-## 2026-08-27 — Phase 31, the ask at the front door, part one (v7.38.0)
+## 2026-08-27 — Phase 31, the ask at the front door, part one (v7.39.0)
 
 - **The commission.** Claude Design handoff `Ask Carta at the Front Door`:
   take the ask off its three screens of its own and put it on the door's
@@ -67,7 +67,10 @@ Lotmark's desk. Old entries are never rewritten.*
 - **The boot guard was checking three siblings of four.** `carta-map.js`
   published no version constant, so the comment reading "five files means
   five chances for a cached one to disagree" had been enforcing three since
-  v7.34.0. `MAP_VERSION` is published and checked.
+  v7.34.0. Found on this branch and, independently, on the second split's —
+  two readings of the same guard, a few hours apart, both landing on the
+  sibling the sentence above it had always claimed was covered. The merge
+  kept the split's wording; `MAP_VERSION` is published and checked.
 
 ### For the founder's desk — five calls, and what hangs on each
 
@@ -123,6 +126,28 @@ Lotmark's desk. Old entries are never rewritten.*
    is a bigger change than the handoff describes and should be agreed before
    it is built, not after.
 
+### Merged behind the second split
+
+- **Cut from the same base, and the base moved underneath it.** The second
+  split (v7.38.0, entry below) took `vAtlas`, the door's five leaves and the
+  four walks out of `index.html` into `carta-atlas.js` — the very file this
+  phase adds a rung to. Git merged the rung into `index.html` without a
+  conflict on those lines while the function it wires into had moved, which
+  is the quiet half of this class of merge: the loud half was six conflicted
+  files, and the half that would have shipped broken was the clean one.
+  `unreadAnswer`, `markAnswerRead`, `setAsideAnswer`, `doorAnswerLeafHTML`,
+  `answerPinsJSON` and `answerPad` are in `carta-atlas.js` now, beside the
+  door; the two rooms of CSS and the router's two stamps stayed in
+  `index.html`, where the token layer and the router already were.
+- **Renumbered 7.38.0 → 7.39.0**, the same cost the split's own entry
+  describes paying four times over: one `APP_VERSION`, five `?v=` tags and
+  five published `*_VERSION` constants. `verify-static.js` — which arrived
+  with the split — checks all eleven, so this is now caught before merge
+  rather than at a keeper's next load.
+- **`verify-ask.js` reads its Chromium through `test/browser.js`** rather
+  than the dev container's hard-coded path, and runs in CI beside the other
+  five.
+
 ### Verification
 
 - `model.test.js`: 139. `verify-door.js`: 59. `verify-v7.35.js`: 40.
@@ -136,6 +161,115 @@ Lotmark's desk. Old entries are never rewritten.*
 - The ask runs end to end against the fixture's own canned Anthropic and
   Nominatim doors, so the wait is tested as it actually runs rather than by
   driving `askSay` by hand.
+
+## 2026-08-27 — the harnesses run themselves now (CI)
+
+- **Asked for directly** after the Phase 31 PR opened against a repo with no
+  `.github/` at all: the four harnesses (139 + 59 + 40 checks, plus the new
+  12) had only ever run when somebody remembered to run them, which held fine
+  at one contributor and stops holding the moment a change lands without
+  them. `.github/workflows/tests.yml` now runs all of them on every push and
+  pull request to `main`.
+- **It is not a build step, and §1 says so in its own words rather than
+  leaving it to be inferred.** Nothing here touches what a keeper downloads:
+  no `package.json`, no lockfile, no bundler, no generated artifact, and not
+  one byte of difference to the six files on the host. The Playwright install
+  is on the runner, with `--no-save`, and is the same one `test/README.md`
+  has always told a contributor to run by hand. The law is *nothing between
+  the source and the host*; a robot running the tests you would run yourself
+  is not between them.
+- **A fifth harness, `test/verify-static.js` (19 checks, zero deps).** All six
+  files parse; `APP_VERSION`, all five `?v=` tags and all five published
+  `*_VERSION` constants agree; the boot guard covers every sibling; the
+  `<head>` and the directory agree on which siblings exist. Every one of
+  those is a failure this project has actually shipped or nearly shipped —
+  v7.31.1's stale sibling, the four-way renumber of v7.37.4–.7, and the
+  `MAP_VERSION` gap Phase 31 found. It fails cleanly on each, checked by
+  breaking each one deliberately and watching only the right check go red.
+- **The band is reported, never gated.** `verify-static.js` prints
+  `index.html` against 5,000 lines / 500 KB and raises a PR annotation when
+  over — and always exits 0. Gating would fight this project's own
+  governance: Phases 18, 20 and 29 all landed over the band by an explicit
+  founder call. What the record actually asks for is that a crossing is never
+  *silent*, and four versions crossed silently before Phase 31. This makes
+  silence impossible without making the call for anybody.
+- **One real bug found by building it, not by reading.** `verify-v7.35.js`
+  hard-coded `/opt/pw-browsers/chromium` with no override — it could only
+  ever have run in this project's dev container, and would have failed
+  outright on a runner. The other two honoured `CHROME` but defaulted to the
+  same container path. All three now resolve through `test/browser.js`.
+- **And one subtlety worth writing down.** The obvious fix — ask Playwright
+  for `chromium.executablePath()` — is wrong on its own: that call *predicts*
+  a path for the installed `playwright-core` version rather than checking a
+  browser is there. Tried here it returned a confident path to nothing
+  (`chromium-1234`, against a container holding `chromium-1194`) and the
+  launch died with "executable doesn't exist" instead of falling through. So
+  `browser.js` uses its answer only when the file really exists. Found by
+  running the CI command sequence locally before pushing it, which is the
+  only reason it isn't a red first run.
+- **No version bump, no CHANGELOG entry.** Nothing user-visible changed and
+  no app file was touched — the six files are byte-identical to the split
+  commit. Nothing parked, nothing for Lotmark's desk.
+
+---
+
+## 2026-08-27 — Phase 31, the second split (v7.38.0)
+
+- **The debt is paid.** `index.html` went into this phase at **5,956 / 5,000**
+  — 891 of that carried out of Phase 30, and four more versions' worth on top
+  (v7.37.4–.7, all small keeper-reported fixes landing in a file with no
+  headroom left to land in). It comes out at **4,853 / 346.8 KB**, inside the
+  band with real room and within two lines of where Phase 19's split left it.
+  Nothing was cut: the app total moved 9,591 → 9,689 lines, which is a move
+  plus a file header, its seam and its harness.
+- **`carta-atlas.js` — 1,196 lines / 70.6 KB.** The door and the four walks
+  down from it: `vAtlas` with its plate, leaf and risen sheet, then
+  `vCountryChapter` → `vRegionChapter` → `vProducerPage`, and `vCityChapter`.
+  It is the layer directly above `carta-map.js` — the record read against
+  geography, where the map layer is the ground itself.
+- **A cut the record had named was not taken, and that is the decision worth
+  logging.** `ARCHITECTURE.md` §1 named the room-sized views (`vJournal`,
+  `vShelf`, `vRecord`) as the obvious split. Measuring beat reading: the
+  Atlas is one contiguous 1,126-line slab under its own banner, the rooms are
+  two scattered runs that together clear the band by less, and the Atlas sits
+  on a seam Phase 19 already proved. Recorded as a change of mind in §1 and
+  in the roadmap rather than made quietly — the failure this record exists to
+  catch is a stated thing quietly stopping being true.
+- **Two bare cross-file writes became a real seam.** `save()` was clearing
+  `_cityLeadCache` and `render()` was clearing `_atlasSheetUp` by bare
+  assignment into what is now another file. That works — classic scripts
+  share one global lexical scope — and it is the opposite of a documented
+  seam, so both became calls the owning file publishes (`clearCityLead`,
+  `resetAtlasSheet`), the shape `carta-shot.js` already uses for
+  `snoozeWaitingShot`. Five voice helpers (`words`, `capFirst`, `trimNum` and
+  the two number tables) went the other way into the domain block: four files
+  call them and they were under the Atlas banner by accident.
+- **Half of every sibling's export list is documentation, and now the record
+  says so.** A `function` declaration in a classic script attaches itself to
+  `window`; a top-level `const` does not. Dropping `window.vCityChapter`
+  changes nothing; dropping `window.originOf` breaks the app. Found by
+  deliberately breaking each and watching only one fail —
+  `test/verify-split.js` holds the distinction now.
+- **A gap in the boot guard, found by extending it.** The guard's own comment
+  said it covered every sibling. It checked three of four: `carta-map.js`,
+  the largest file in the app, never had a `MAP_VERSION` to check, so it was
+  the one file a keeper could silently run a stale copy of — the v7.31.1
+  failure with no alarm on it. It has one now, and all five siblings are
+  checked. Not this phase's feature; a thing the phase could not extend the
+  guard without noticing.
+- **Verification.** `model.test.js` 139/139, untouched — nothing in the moved
+  slab was ever inside a pure block, so the harness still slices five files,
+  not six. `verify-door.js` 59/59 and `verify-v7.35.js` 40/40, both
+  unchanged. New: **`test/verify-split.js`** (12) opens all four chapter
+  screens with the app's own openers — *nothing had ever opened three of them
+  automatically*, which is precisely how a split breaks a screen quietly —
+  and asserts the published seam, both new seam calls, and that all six files
+  agree on one version at boot. A static pass over every bare call in the new
+  file found no dangling reference.
+- **Nothing parked, nothing for Lotmark's desk.** Pure debt service, and the
+  band is the founder's number again rather than an overdraft.
+
+---
 
 ## 2026-08-27 — Phase 30, the plate against a real phone (v7.37.7)
 

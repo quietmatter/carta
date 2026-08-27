@@ -16,8 +16,9 @@
      npm i playwright-core --no-save
      node test/verify-ask.js
 
-   Expects a Chromium at /opt/pw-browsers/chromium; set CHROME to override. */
+   test/browser.js finds the Chromium; set CHROME to override. */
 const {chromium}=require('playwright-core');
+const {chromePath}=require('./browser');
 const fs=require('fs'),http=require('http'),path=require('path');
 const ROOT=path.join(__dirname,'..');
 const TYPES={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.woff2':'font/woff2'};
@@ -30,7 +31,7 @@ function serve(){return new Promise(res=>{const s=http.createServer((req,rp)=>{
 (async()=>{
 const server=await serve(),port=server.address().port;
 const env=fs.readFileSync(path.join(ROOT,'test/fixtures/env.js'),'utf8').split('carta7.design.').join('carta7.');
-const browser=await chromium.launch({executablePath:process.env.CHROME||'/opt/pw-browsers/chromium',args:['--no-sandbox']});
+const browser=await chromium.launch({executablePath:chromePath(),args:['--no-sandbox']});
 const problems=[],notes=[];
 const ok=(c,l,dbg)=>{c?notes.push('  ok  '+l)
   :problems.push('FAIL: '+l+(dbg?'\n      saw: '+JSON.stringify(String(dbg).slice(0,400)):''))};

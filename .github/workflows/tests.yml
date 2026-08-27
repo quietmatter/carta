@@ -1,0 +1,77 @@
+# The harnesses, run for you.
+#
+# Carta has no build system and this does not add one: nothing here touches
+# what a keeper downloads. The app is still six static files you drop on a
+# host, with no bundler, no npm and no step between the source and the host
+# (ARCHITECTURE.md §1). This is repo machinery, and it exists because every
+# harness in this repo was only ever run by hand — which held fine at one
+# contributor, and stops holding the moment a change lands without them.
+#
+# The browser job installs Playwright. That is a CI dependency, not an app
+# one, and it is the same `npm i` that test/README.md has always told a
+# contributor to run locally.
+
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# a phase can land four versions in a day (v7.37.4-.7); no point paying for
+# a run whose commit has already been superseded on the same branch
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # seconds, no browser, no network. Everything the record says a syntax check
+  # has caught "in nearly every phase", plus the taste model.
+  static:
+    name: static + model
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # parses, one version everywhere, the boot guard covers every sibling,
+      # and index.html reported against the band (a notice, never a failure)
+      - run: node test/verify-static.js
+      # the taste model and the brief — the logic whose wrongness is invisible
+      - run: node test/model.test.js
+
+  # the real app, booted against the seeded record. Gated behind the fast job
+  # so a syntax error never pays for a browser download.
+  browser:
+    name: browser harnesses
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: install playwright + chromium
+        run: |
+          npm i playwright --no-save
+          npx playwright install --with-deps chromium
+      # no CHROME needed: test/browser.js asks playwright where it put one and
+      # falls back to the dev container's path, so the same command works here
+      # and on a laptop. Set CHROME to override either.
+      - name: the front door, all five states
+        run: node test/verify-door.js
+      - name: the ask at the front door
+        if: ${{ !cancelled() }}
+        run: node test/verify-ask.js
+      - name: the v7.35.0 fold
+        if: ${{ !cancelled() }}
+        run: node test/verify-v7.35.js
+      - name: the Phase 31 seam
+        if: ${{ !cancelled() }}
+        run: node test/verify-split.js

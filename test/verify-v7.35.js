@@ -30,7 +30,7 @@ function serve(){
   const seed=['mock/env.js','test/fixtures/env.js'].map(f=>path.join(ROOT,f)).find(fs.existsSync);
   if(!seed){console.error('no seed found: expected mock/env.js or test/fixtures/env.js');process.exit(1)}
   const env=fs.readFileSync(seed,'utf8').split('carta7.design.').join('carta7.');
-  const browser=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+  const browser=await chromium.launch({executablePath:require('./browser').chromePath(),args:['--no-sandbox']});
   const problems=[],notes=[];
 
   async function boot(firstRun){

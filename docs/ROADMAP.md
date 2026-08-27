@@ -1331,6 +1331,73 @@ whatever series it's given, so a shorter one draws a shorter line, not a
 crash or a stretch. 96/96 pure tests passing. `docs/ARCHITECTURE.md` §7
 and `docs/LOGBOOK.md`'s v7.28.3 entry have the full account.
 
+### Phase 31 — the second split (shipped — v7.38.0)
+
+**The joy it serves:** none directly, and — like Phase 19, the only other
+phase in this turn whose whole job was to pay a debt — that is the honest
+framing. The joy it protects is *a file one person can read whole*, which is
+the thing the line band was a proxy for all along.
+
+**Why now.** Phase 30 carried the debt out at 891 lines over. Four small
+keeper-reported fixes then landed on top of it in a single day (v7.37.4
+through v7.37.7 — the manifest 404, the iOS standalone bottom edge, the
+dismissal that didn't hold, the leaf on a short phone), none of which should
+have had to stop for a band, and none of which had anywhere to go but into
+the overdraft. That took it to **5,956 / 5,000**. Bytes were comfortable at
+421.7 of 500 KB, which is why this was a debt and not an emergency.
+
+**What it did.** Moved the Atlas out of `index.html` into **`carta-atlas.js`**,
+loaded from the `<head>` with a plain `<script src>` and a `?v=` tag, the
+same mechanism as the four siblings before it:
+
+- the door itself — `vAtlas`, the plate, its one leaf and the ladder's five
+  states, the sheet that pulls up under it, and the ask's own field
+- the four walks Phase 13 drew — `vCountryChapter` → `vRegionChapter` →
+  `vProducerPage`, and `vCityChapter`
+- the ground helpers all of them read the record through — the greens, the
+  road's six stations, the altitude band, the farm pins
+
+1,196 lines that are the record *read against geography* rather than the
+record. `index.html` comes back to **4,853 lines / 346.8 KB** — inside the
+band with real room, within two lines of where Phase 19 left it. Combined,
+the app is the same size it was: this phase moved lines, it didn't cut
+anything. **Not a build step:** no bundler, no npm, no lockfile, no
+transpile. Six static files, all droppable on a host.
+
+**A named cut was not taken, in the open.** `ARCHITECTURE.md` §1 had named
+the room-sized views (`vJournal`, `vShelf`, `vRecord`) as the obvious cut.
+Measuring beat reading: the Atlas is one contiguous 1,126-line slab under its
+own banner, the rooms are two scattered runs that together clear the band by
+less; and the Atlas sits directly on top of `carta-map.js`, which is Phase
+19's seam applied one storey up. §1 carries the full argument and the change
+of mind.
+
+**The one real problem, solved.** `index.html` was writing *into* the slab's
+own state from two of its hottest paths — `save()` clearing the city-lead
+memo, `render()` closing the Atlas sheet on arrival. A bare cross-file write
+to a global `let` does work, and is the opposite of a documented seam. Both
+became calls the file owns (`clearCityLead`, `resetAtlasSheet`), the same
+shape `carta-shot.js` uses for `snoozeWaitingShot`. Five voice helpers went
+the other way, into the domain block, because four files call them and they
+were only under the Atlas banner by accident.
+
+**A gap in the boot guard, found by extending it.** The guard's own comment
+claimed it checked every sibling; `carta-map.js` had never had a
+`MAP_VERSION` to check. It has one now, and all five siblings are checked.
+
+**What it didn't become.** A refactor with opinions. Nothing was rewritten,
+renamed or "improved" on the way across — the diff is a move, the seam, and
+the harness that holds it.
+
+**Done when — met:** `index.html` is back inside the band; `carta-atlas.js`
+stands beside it; all six files agree on one version at boot; the pure
+harness still slices five files and passes (139/139, untouched — nothing in
+the moved slab was ever in a pure block); `verify-door.js` (59) and
+`verify-v7.35.js` (40) both pass unchanged; and **`test/verify-split.js`**
+(12) walks all four chapter screens — which nothing had ever opened
+automatically before, and which is exactly how a split breaks a screen
+quietly — plus the published seam and both new seam calls.
+
 ### Phase 30 — the front door (shipped — v7.37.0)
 
 *From the Claude Design handoff `CARTA Front Door Redesign`. The commission:
@@ -1400,9 +1467,10 @@ the phone's own back gesture). Both found by re-auditing the merged door
 against the mockup rather than assuming the merge closed the phase; see
 `ARCHITECTURE.md` §1 and `LOGBOOK.md`'s v7.37.3 entry.
 
-**Open, carried out of this phase:** `index.html` is 891 lines over the band.
-See `ARCHITECTURE.md` §1 — it is a split, on Phase 19's own seam, and it is a
-phase of its own.
+**Open, carried out of this phase — now closed.** `index.html` left this
+phase 891 lines over the band, and four keeper-reported fixes then took it to
+956. **Phase 31 paid it**, on Phase 19's own seam and as a phase of its own,
+exactly as this note said it should be. See `ARCHITECTURE.md` §1.
 
 ### Phase 29 — ground for every listing (shipped — v7.36.0)
 
@@ -1494,7 +1562,7 @@ and a country with two contour marks may deserve a lower bar; and Los Angeles
 has no relief on file, which is the one thing that would make its plate about
 Los Angeles rather than about the sea to its west.
 
-### Phase 31 — the ask at the front door (part shipped — v7.38.0)
+### Phase 31 — the ask at the front door (part shipped — v7.39.0)
 
 *From the Claude Design handoff `Ask Carta at the Front Door`. The commission:
 move the ask off its three screens of its own and onto the door's own
@@ -1503,7 +1571,9 @@ land as a leaf, a new rung on the door's ladder. Nothing new in the design
 language: the leaf, the plate, the pull, the fact row, the chip and the ember
 are all already in the app.*
 
-**Two of the four screens shipped at v7.38.0.** The wait and the rung are
+**Two of the four screens shipped at v7.39.0**, behind the second split
+(above), which took v7.38.0 and moved the door this phase adds a rung to.
+The wait and the rung are
 decision-free redraws of what the app already holds. The composer leaf and the
 answer-on-the-plate are not — each turns out to need a founder call the
 handoff does not make, and both are held for those calls rather than guessed
@@ -1543,10 +1613,12 @@ below.
   the plate now and drops what will not fit — the rule `<carta-atlas>`
   already keeps for a country's name, and the halo the rest of the layer
   already paints its type with.
-- The boot guard checked three of the four siblings. `carta-map.js` published
-  no version to check against, so the comment saying "five files means five
-  chances" had been enforcing three for four versions. `MAP_VERSION` is
-  published and checked. See `ARCHITECTURE.md` §1.
+- The boot guard checked three of the four siblings — `carta-map.js`
+  published no version to check against, so the comment saying "five files
+  means five chances" had been enforcing three for four versions. Found here
+  and fixed on the second split's own branch at the same time, independently;
+  `MAP_VERSION` is published and checked, and the merge kept one of the two.
+  See `ARCHITECTURE.md` §1.
 
 **Held for a founder call, with the reasoning written down rather than
 guessed at.** The composer leaf needs a *read-as* line ("Read as a city,
