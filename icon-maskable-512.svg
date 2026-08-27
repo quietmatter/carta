@@ -2,10 +2,10 @@
   <title>Carta</title>
   <desc>The seal, cut by the belt. Every rule stands at a real latitude: the band is the ground between the Tropic of Cancer and the Tropic of Capricorn, where coffee grows; the graticule runs at thirty degrees.</desc>
   <rect width="512" height="512" fill="#f2eee6"></rect>
-  <circle cx="256" cy="256" r="176" fill="#241d18"></circle>
-  <path d="M85.33 213V299M170.67 102.07V409.93M256 80V432M341.33 102.07V409.93M426.67 213V299M213 85.33H299M102.07 170.67H409.93M102.07 341.33H409.93M213 426.67H299" fill="none" stroke="#f2eee6" stroke-opacity=".13" stroke-width="1.4"></path>
+  <circle cx="256" cy="256" r="150" fill="#241d18"></circle>
+  <path d="M170.67 132.64V379.36M256 106V406M341.33 132.64V379.36M132.64 170.67H379.36M132.64 341.33H379.36" fill="none" stroke="#f2eee6" stroke-opacity=".13" stroke-width="1.4"></path>
   <rect x="0" y="189.34" width="512" height="133.32" fill="#f2eee6"></rect>
-  <path d="M85.33 213V299M170.67 189.34V322.66M256 189.34V322.66M341.33 189.34V322.66M426.67 213V299" fill="none" stroke="#241d18" stroke-opacity=".12" stroke-width="1.4"></path>
+  <path d="M170.67 189.34V322.66M256 189.34V322.66M341.33 189.34V322.66" fill="none" stroke="#241d18" stroke-opacity=".12" stroke-width="1.4"></path>
   <path d="M0 256H512" fill="none" stroke="#241d18" stroke-opacity=".14" stroke-width="1.5"></path>
   <path d="M0 189.34H512M0 322.66H512" fill="none" stroke="#241d18" stroke-opacity=".3" stroke-width="2"></path>
 </svg>

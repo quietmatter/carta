@@ -52,11 +52,18 @@ function serve(){
   const ok=(cond,label,dbg)=>{if(cond)notes.push('  ok  '+label);
     else problems.push('FAIL: '+label+(dbg?'\n      saw: '+JSON.stringify(String(dbg).slice(0,900)):''))};
 
-  /* ---------- first open: rec 5's welcome ---------- */
+  /* ---------- first open ----------
+     rec 5's six-line welcome was retired at v7.37.0 with the rest of the old
+     door: six sentences on first open was the densest text in the app, on the
+     screen with the least context to hang them on. What it argued is now one
+     display line and one teaching line over an uninked belt — so this checks
+     the state, not the paragraph. What's New still never opens over it. */
   {
     const {ctx,page}=await boot(true);
     const t=await txt(page);
-    ok(/carta keeps the story of your taste/i.test(t),'rec 5 — welcome on first open');
+    ok(/nothing on the record/i.test(t),'v7.37.0 — the door states the empty record in one line',t);
+    ok(/paste the bag, or name the place you drank/i.test(t),'v7.37.0 — one teaching line, and only one',t);
+    ok(!/carta keeps the story of your taste/i.test(t),'v7.37.0 — the six-line welcome is gone',t);
     ok(!/What.s new/i.test(await sheet(page)),'rec 5 — What\'s New never over a first open');
     await ctx.close();
   }

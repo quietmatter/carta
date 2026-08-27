@@ -1,19 +1,35 @@
-# Verifying the v7.35.0 fold
+# Verifying the app in a browser
 
-`verify-v7.35.js` boots the real app — `project/index.html` and its four
-siblings — against the seeded record in `mock/env.js`, with the store keys
-remapped from `carta7.design.*` to the app's own `carta7.*`, and walks every
-flow the ten recommendations touch. It fails on any console error, any page
-error, or any assertion.
+Two harnesses boot the real app against the seeded record in
+`fixtures/env.js` (store keys remapped from `carta7.design.*` to the app's own
+`carta7.*`). Both fail on any console error, any page error, or any assertion.
 
 ```
 npm i playwright-core --no-save
-node test/verify-v7.35.js
+node test/verify-door.js       # the front door, v7.37.0 — 45 checks
+node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
 ```
 
-It expects a Chromium at `/opt/pw-browsers/chromium`; change `executablePath`
-if yours is elsewhere. Font, icon and manifest 404s are filtered — the design
-bundle carries source only, and those assets live in the app's own repo.
+Both expect a Chromium at `/opt/pw-browsers/chromium`; set `CHROME` to
+override, or edit `executablePath`.
+
+## `verify-door.js` — the front door (Phase 30)
+
+Walks all five states of the redesigned Atlas and holds the things that are
+easy to break silently:
+
+- **the ladder** — 03 outranks 04 outranks 02, and 01 is its own branch
+- **the ember budget** — exactly one element painting `#a63f2b` above the
+  fold, in every state. This is a *computed-style* count, not a source grep,
+  so it catches the fill coming back through a cascade
+- **one field, two doors** — a place opens the ask, a bag opens the door
+  prefilled
+- **the plate** reframes at its new box rather than reloading, and the
+  `clientHeight` rule holds (a `getBoundingClientRect` measurement collapses
+  it under any page transform)
+- **offline** — it asserts that *nothing at all* was fetched off-origin, which
+  is the passport's own law
+- dusk, `prefers-reduced-motion`, and 320 px
 
 ## The seed
 

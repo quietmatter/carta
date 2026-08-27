@@ -367,7 +367,256 @@
     }
   }
 
+
+  /* ============ <carta-atlas> — the passport drawn as a plate ============
+   * A sibling to <carta-belt>, on the same LANDS outlines, the same vendored
+   * equirectangular projection and the same law: a tasted country IS the mark,
+   * an untasted one is a hairline invitation. It lives in this file rather than
+   * in one of its own because it shares all of that — and because a sixth
+   * static file means a sixth cache-busting query string to keep in step with
+   * APP_VERSION, which is the v7.31.1 failure.
+   *
+   * What it adds is drafting, not decoration:
+   *   · a graticule at 30 deg / 15 deg, so the empty ocean is ruled field
+   *     rather than void — which is what made a full-bleed passport read bare;
+   *   · THE BELT, stated: the band between the tropics, tinted, ruled and
+   *     labelled. It is the reason the passport carries the countries it
+   *     carries, and no other surface in Carta says so;
+   *   · leader rules from a shape to its own name, so a label that cannot sit
+   *     inside its country stays attached to it;
+   *   · edge ticks at every graticule crossing, longer at the two tropics.
+   *
+   * Labels follow the label pattern (sans, uppercase, medium, --track-label)
+   * at the --s10 floor, per the consolidation pass. <carta-belt> sets them
+   * mixed-case at 11-13px; that is the older setting, left alone.
+   *
+   * Attributes: tasted (comma list, the keeper's own spelling), frame
+   * ("tasted" | "belt"), and graticule / ticks / band / caption, each "on".
+   */
+  const TROPIC = 23.4363;
+  const esc = s => String(s).replace(/[<&>]/g, c => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;' }[c]));
+  const n1 = v => (+v).toFixed(1);
+  const LABEL = 'font-family:var(--sans);font-weight:500;text-transform:uppercase;letter-spacing:var(--track-label)';
+  const FOOT = 'font-family:var(--sans);font-weight:500;text-transform:uppercase;letter-spacing:.14em;font-size:9px;fill:var(--ink-3)';
+
+  /* a path context that rounds to whole pixels and drops a point landing on the
+     one before it. At these sizes none of the float precision is visible, and
+     without it the context tier alone is ~100 KB of path data per plate. */
+  const roundCtx = () => {
+    let s = '', lx = null, ly = null;
+    return {
+      moveTo(a, b) { lx = Math.round(a); ly = Math.round(b); s += 'M' + lx + ' ' + ly; },
+      lineTo(a, b) {
+        const p = Math.round(a), q = Math.round(b);
+        if (p === lx && q === ly) return;
+        lx = p; ly = q; s += 'L' + p + ' ' + q;
+      },
+      closePath() { s += 'Z'; lx = ly = null; },
+      arc() { },
+      toString() { return s; },
+    };
+  };
+
+  /* the rest of the world, one tier back — decoded out of WORLD, in this file,
+     not fetched. Built once and kept: it is the same 112 shapes on every plate.
+     Because it is synchronous there is no load to subscribe to and no ordering
+     trap around the paint cache; the board's version fetched it and had one. */
+  let _ctx = null;
+  function contextFeatures() {
+    if (_ctx) return _ctx;
+    const out = [];
+    Object.keys(WORLD).forEach(k => {
+      const rings = worldRingsRaw(k);
+      if (!rings || !rings.length) return;
+      const polys = rings.map(r => [r.map(p => [p.lon, p.lat])]).filter(p => p[0].length > 2);
+      if (!polys.length) return;
+      out.push({
+        type: 'Feature', properties: { k },
+        geometry: polys.length === 1
+          ? { type: 'Polygon', coordinates: polys[0] }
+          : { type: 'MultiPolygon', coordinates: polys },
+      });
+    });
+    return (_ctx = out);
+  }
+
+  /* one plate costs a few hundred ms of synchronous projection, and the Atlas
+     repaints on every state change while several plates may share a box. Keyed
+     on everything the drawing depends on, so a box is projected once. */
+  const PLATES = {};
+
+  class Atlas extends HTMLElement {
+    static get observedAttributes() { return ['tasted', 'frame', 'graticule', 'ticks', 'caption', 'band']; }
+    connectedCallback() {
+      /* a definite height, so the SVG fills its box instead of sizing itself off
+         its own viewBox — the loop that let a page zoom collapse the plate */
+      this.style.display = 'block';
+      this.style.height = '100%';
+      keepPos(this);
+      this.paint();
+      if (window.ResizeObserver && !this._ro) {
+        this._ro = new ResizeObserver(() => { clearTimeout(this._rt); this._rt = setTimeout(() => this.paint(), 120); });
+        this._ro.observe(this);
+      }
+    }
+    disconnectedCallback() { if (this._ro) { this._ro.disconnect(); this._ro = null; } }
+    attributeChangedCallback() { this._w = null; if (this.isConnected) this.paint(); }
+
+    paint() {
+      if (!this.isConnected) return;
+      /* LANDS and WORLD are declared BELOW this IIFE, so an element upgraded at
+         define() time reaches them in the temporal dead zone and throws. The
+         exports block at the foot of the file is the readiness signal — it runs
+         last, so window.LANDS standing means the whole table layer does.
+         <carta-belt> hits the same wall and only survives it by swallowing the
+         throw and recovering on a later resize; this waits instead. */
+      if (!window.d3 || !window.LANDS || !window.WORLD) {
+        clearTimeout(this._t); this._t = setTimeout(() => this.paint(), 60); return;
+      }
+      const host = hostOf(this);
+      const d3 = window.d3;
+      /* layout pixels, never getBoundingClientRect: a rect shrinks under any
+         ancestor transform, and this measurement feeds the viewBox — so a rect
+         makes a height -> viewBox -> height loop that collapses the plate and
+         never recovers. <carta-belt> gets this right too; keep it right. */
+      const p = this.parentElement;
+      const W = Math.max(300, Math.round(this.clientWidth || (p && p.clientWidth) || 393));
+      const H = Math.max(180, Math.round(this.clientHeight || (p && p.clientHeight) || 480));
+      const sig = this.getAttribute('tasted') || '';
+      if (this._w === W && this._h === H && this._sig === sig) return;
+      this._w = W; this._h = H; this._sig = sig;
+
+      const on = (a) => (this.getAttribute(a) || 'on') !== 'off';
+      const tasted = new Set(sig.split(',').map(key).filter(Boolean));
+      const frameTasted = (this.getAttribute('frame') || 'tasted') === 'tasted';
+      const ck = [W, H, frameTasted ? 'tasted' : 'belt', sig, this.getAttribute('graticule'),
+        this.getAttribute('ticks'), this.getAttribute('band'), this.getAttribute('caption')].join('|');
+      if (PLATES[ck]) { host.innerHTML = PLATES[ck]; return; }
+
+      /* the belt: the growing world. BELT_SET is the growing countries alone, so
+         the four the record only drinks in (LAND_OFF_BELT) fall out here without
+         a second test — the passport is a record of where coffee is grown. */
+      const belt = buildWorld().filter(f => BELT_SET.has(key(f.properties.name)));
+
+      const proj = d3.geoEquirectangular();
+      const target = frameTasted ? belt.filter(f => tasted.has(key(f.properties.name))) : belt;
+      const coll = { type: 'FeatureCollection', features: target.length ? target : belt };
+      /* where the band sits in the box. A tall plate holds the subject high,
+         clear of the type laid over its lower third; a short one — a strip above
+         a leaf — sits it lower, so the drawing meets the paper. */
+      const tall = H > 520;
+      proj.fitExtent(frameTasted && target.length
+        ? (tall ? [[16, H * .22], [W - 16, H * .64]] : [[14, H * .30], [W - 14, H * .86]])
+        : [[18, 26], [W - 18, H - 26]], coll);
+      const path = d3.geoPath(proj);
+
+      /* what the plate actually shows, read back off the projection */
+      const inv = q => { try { return proj.invert(q); } catch (e) { return null; } };
+      const tl = inv([0, 0]) || [-180, 84], br = inv([W, H]) || [180, -84];
+      const lon0 = Math.max(-180, tl[0]), lon1 = Math.min(180, br[0]);
+      const lat1 = Math.min(84, tl[1]), lat0 = Math.max(-84, br[1]);
+      const X = (lon, lat) => proj([lon, lat])[0];
+      const Y = (lon, lat) => proj([lon, lat])[1];
+
+      /* ── the ruled field ─────────────────────────────────────────────── */
+      let grat = ''; const crossX = [], crossY = [];
+      const step = (lon1 - lon0) > 200 ? 30 : 15;
+      for (let lon = Math.ceil(lon0 / step) * step; lon <= lon1; lon += step) {
+        const x = X(lon, 0); if (!isFinite(x)) continue;
+        crossX.push(x);
+        grat += `<path d="M${n1(x)} 0L${n1(x)} ${H}"/>`;
+      }
+      for (let lat = Math.ceil(lat0 / 15) * 15; lat <= lat1; lat += 15) {
+        if (lat === 0) continue;
+        const y = Y(0, lat); if (!isFinite(y)) continue;
+        crossY.push(y);
+        grat += `<path d="M0 ${n1(y)}L${W} ${n1(y)}"/>`;
+      }
+
+      /* ── the belt: the band between the tropics ──────────────────────── */
+      const yC = Y(0, TROPIC), yCap = Y(0, -TROPIC), yEq = Y(0, 0);
+      let bandG = '';
+      if (on('band') && isFinite(yC) && isFinite(yCap)) {
+        bandG = `<rect x="0" y="${n1(yC)}" width="${W}" height="${n1(yCap - yC)}" style="fill:var(--ink);fill-opacity:.03"/>
+          <path d="M0 ${n1(yEq)}L${W} ${n1(yEq)}" style="fill:none;stroke:var(--ink);stroke-opacity:.16;stroke-width:.6;stroke-dasharray:1 5"/>
+          <path d="M0 ${n1(yC)}L${W} ${n1(yC)}M0 ${n1(yCap)}L${W} ${n1(yCap)}" style="fill:none;stroke:var(--ink);stroke-opacity:.3;stroke-width:.7;stroke-dasharray:4 3"/>
+          <text x="${W - 14}" y="${n1(yC - 6)}" text-anchor="end" style="${LABEL};font-size:8.5px;fill:var(--ink-3)">Cancer · 23°26′ N</text>
+          <text x="${W - 14}" y="${n1(yCap + 14)}" text-anchor="end" style="${LABEL};font-size:8.5px;fill:var(--ink-3)">Capricorn · 23°26′ S</text>`;
+      }
+
+      /* ── the world behind it, then the ground, then the mark ─────────── */
+      const wctx = roundCtx(), wdraw = d3.geoPath(proj, wctx);
+      contextFeatures().forEach(f => wdraw(f));
+      const rest = `<path d="${wctx.toString()}" style="fill:var(--ink);fill-opacity:.022;stroke:var(--ink);stroke-opacity:.13;stroke-width:.5;stroke-linejoin:round;pointer-events:none"/>`;
+
+      const items = [];
+      const gctx = roundCtx(), gdraw = d3.geoPath(proj, gctx);
+      belt.forEach(f => {
+        if (tasted.has(key(f.properties.name))) {
+          const d = path(f); if (!d) return;
+          const bb = path.bounds(f), c = path.centroid(f);
+          items.push({
+            d, bb, cx: c[0], cy: c[1], label: f.properties.name,
+            area: (bb[1][0] - bb[0][0]) * (bb[1][1] - bb[0][1]),
+          });
+        } else gdraw(f);
+      });
+      const ground = `<path d="${gctx.toString()}" style="fill:var(--ink);fill-opacity:.045;stroke:var(--ink);stroke-opacity:.22;stroke-width:.6;stroke-linejoin:round;pointer-events:none"/>`;
+
+      /* ── the names, on the label pattern, with leaders ───────────────── */
+      const size = Math.max(8.5, Math.min(10.5, W / 40));
+      const wOf = s => s.length * size * .78 + 4;
+      const hit = (a, b) => !(a.x1 + 3 < b.x0 || b.x1 + 3 < a.x0 || a.y1 + 3 < b.y0 || b.y1 + 3 < a.y0);
+      const placed = [], marks = [];
+      items.sort((a, b) => b.area - a.area).forEach(it => {
+        const { d, bb, cx, cy, label } = it;
+        const tw = wOf(label), cands = [];
+        if (tw < (bb[1][0] - bb[0][0]) - 8 && size * 1.6 < (bb[1][1] - bb[0][1]))
+          cands.push({ x: cx, y: cy + size * .35, anchor: 'middle', inside: true, x0: cx - tw / 2, x1: cx + tw / 2 });
+        [0, -1.5, 1.5, -3, 3].forEach(k => {
+          const y = cy + size * .35 + k * size;
+          cands.push({ x: bb[1][0] + 9, y, anchor: 'start', inside: false, x0: bb[1][0] + 9, x1: bb[1][0] + 9 + tw, from: bb[1][0] });
+          cands.push({ x: bb[0][0] - 9, y, anchor: 'end', inside: false, x0: bb[0][0] - 9 - tw, x1: bb[0][0] - 9, from: bb[0][0] });
+        });
+        let put = null;
+        for (const c of cands) {
+          const box = { x0: c.x0, x1: c.x1, y0: c.y - size * .85, y1: c.y + size * .3 };
+          const m = size * .6;
+          if (!isFinite(box.x0) || box.x0 < m || box.x1 > W - m || box.y0 < m || box.y1 > H - m) continue;
+          if (placed.some(q => hit(box, q))) continue;
+          put = c; placed.push(box); break;
+        }
+        const leader = put && !put.inside
+          ? `<path d="M${n1(put.from)} ${n1(cy)}L${n1(put.anchor === 'start' ? put.x - 3 : put.x + 3)} ${n1(put.y - size * .3)}" style="fill:none;stroke:var(--ink);stroke-opacity:.4;stroke-width:.6"/>`
+          : '';
+        const lstyle = put && put.inside
+          ? 'fill:var(--surface-card)'
+          : 'fill:var(--ink);paint-order:stroke;stroke:var(--surface-card);stroke-width:3px;stroke-linejoin:round';
+        marks.push(`<g><path d="${d}" style="fill:var(--ink);stroke:var(--ink);stroke-width:.8;stroke-linejoin:round"/>${leader}${put
+          ? `<text x="${n1(put.x)}" y="${n1(put.y)}" text-anchor="${put.anchor}" style="${LABEL};font-size:${size.toFixed(1)}px;${lstyle}">${esc(label)}</text>` : ''}</g>`);
+      });
+
+      /* ── the drafting edge ───────────────────────────────────────────── */
+      let ticks = '';
+      if (on('ticks')) {
+        const t = [];
+        crossX.forEach(x => { t.push(`M${n1(x)} 0L${n1(x)} 6`); t.push(`M${n1(x)} ${H}L${n1(x)} ${H - 6}`); });
+        crossY.forEach(y => { t.push(`M0 ${n1(y)}L6 ${n1(y)}`); t.push(`M${W} ${n1(y)}L${W - 6} ${n1(y)}`); });
+        [yC, yCap].forEach(y => { if (isFinite(y)) { t.push(`M0 ${n1(y)}L10 ${n1(y)}`); t.push(`M${W} ${n1(y)}L${W - 10} ${n1(y)}`); } });
+        ticks = `<path d="${t.join('')}" style="fill:none;stroke:var(--ink);stroke-opacity:.28;stroke-width:.7"/>`;
+      }
+      const caption = (this.getAttribute('caption') || 'on') !== 'off'
+        ? `<text x="14" y="${H - 12}" style="${FOOT}">Natural Earth 1:110m · equirectangular</text>` : '';
+
+      host.innerHTML = PLATES[ck] = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%">
+        ${on('graticule') ? `<g style="fill:none;stroke:var(--ink);stroke-opacity:.07;stroke-width:.5">${grat}</g>` : ''}
+        ${rest}${bandG}${ground}${marks.join('')}${ticks}${caption}
+      </svg>`;
+    }
+  }
+
   if (!window.customElements.get('carta-belt')) customElements.define('carta-belt', Belt);
+  if (!window.customElements.get('carta-atlas')) customElements.define('carta-atlas', Atlas);
   if (!window.customElements.get('carta-plot')) customElements.define('carta-plot', Plot);
   if (!window.customElements.get('carta-streets')) customElements.define('carta-streets', Streets);
 })();
@@ -543,6 +792,13 @@ function landRingsRaw(key){
   const enc=LANDS[key];
   return _landRingsCache[key]=enc?enc.split(';').map(r=>landPts(r,20)):null;
 }
+let _worldRingsCache={};
+/* the same reader as landRingsRaw, against the context table */
+function worldRingsRaw(key){
+  if(key in _worldRingsCache)return _worldRingsCache[key];
+  const enc=WORLD[key];
+  return _worldRingsCache[key]=enc?enc.split(';').map(r=>landPts(r,20)):null;
+}
 let _landTopoCache={};
 function landTopoRaw(key){
   if(key in _landTopoCache)return _landTopoCache[key];
@@ -637,6 +893,143 @@ function plateGround(city,countryKey,at,span){
  * was when it rode inside the USA entry (Phase 29 · E moves the bytes, not
  * the picture), and only a seal reads it as its own shape. */
 const LAND_OFF_BELT={denmark:1,germany:1,norway:1,japan:1};
+
+/* ==== the world behind the belt — context, never a mark ====
+ * LANDS carries the growing world and nothing else, so every other landmass
+ * was simply absent and the passport read as a map with pieces missing rather
+ * than as a chart of the belt. WORLD is the rest of Natural Earth 1:110m, cut
+ * from the same generation, through the same simplifier and the same varint,
+ * quantised to the same twentieth of a degree — 112 countries in 11.7 KB.
+ *
+ * IN THE FILE, like everything else here. The design board fetched this as
+ * countries.geo.json; the passport asks for nothing at all, by law, and must
+ * draw with the network off, so it is encoded instead.
+ *
+ * Outer rings only: the decoder has no notion of a hole, and behind the belt
+ * at 2.2% fill a lake reads as nothing. Simplified against each country's own
+ * span, so a small shape survives the frame zooming to a single tasted
+ * country while Russia does not pay for detail no one will read.
+ *
+ * The belt's own countries are NOT in here — they are filtered out at encode
+ * time, through Natural Earth's spellings mapped onto the LANDS keys, so no
+ * country is ever drawn in both tiers. Two of those spellings are easy to get
+ * backwards: Natural Earth says "East Timor" for timor leste and "Republic of
+ * the Congo" for congo, and an alias pointing the other way silently draws
+ * both of them twice. */
+const WORLD={
+"afghanistan":"wsCysBqBPeGIS2BSIgBiBIGOgDZcOOHMSYAckBWJEvBQL4BemCDGJjEZXROjBTPHdlBAOZXJRXCXNLvCLVVBhB3CV_BBjCWmBkBDadGP6BQWPGauC",
+"albania":"4Zq0BFNGPQJAJNFBNRTFEBIVODUEaGMHIBMSUCHKEKLIDEN",
+"algeria":"gPqd7H5ElDVAa5O0JC6BoEuB-BkBCe-CYIQpBkDmBWqDkB6EEmBQ2CFJ7CZVEd6BxBerDDzDPPoBjCSGyBrB",
+"antarctica":"npClwCnEZZbWbtElC6EtDmB3DlM1DpIBwEvBrFTBfqDpBkP7BqG5ByK6B2IN6RmCtBsBtHHM2BqW2DoCaPqBoH4CyMPgKmC6DlBoDkBkRTkGgBqCuBgGzB8TgF0I1CoDWiGValClCXyBPrBtBsCPgFgD4EQwF0C8FIyBmBiClB2HJ8EG-DkCmE3BoJqB6H1BiDcyPOMkB-B7BkLDmE7B6GFiJxCiMrBrCtC_DdlDpCc_BuDjBxGPtCnCgMzDoNhB9hOAwMgB8O5B2SMIUrNiBeiC_EmB4HJqFoB9DoBnHMrDoBLuB4ITyGkBDsB0BIkMkBsTHmHgBiCnByOXWShDetB8BmJnB6HMiBeiFlB2ENuBckFfiJmBoCmB3B-C0BwDqF6CwG4BYL3BX;t4BxhDyBRW9B9InBxEQ8GoDsEA;x1C14CNvB1HE0DiBkB2C6BHyBjC;_mGrjDtCFlDqBiDIyCrB;v3E77CkDA9BX9CS4BG;37D95CwDV3FA9BYmEB;tqChkDXlB1HeuII",
+"armenia":"w2BszB2BGKJOHHJWNLLkBRAbNAPWAGRALMHBPMdKEUFO",
+"austria":"oVk8BDPVAIHVfhBBTH5CMJOnBFDHrBGRIGKBIMCULGKkBBcIgBJEIFaOEOUeNkBUgBLSCSHCT",
+"azerbaijan":"m7BwzBSBIKYQUTUdUAMLhBBFfHNNJCTJBZWOULMNDvBdAcjBSMMVOIKXSKGeLWBGGTUKGMAaZ;o4B2xBMLSAAFQVbETUFOIC",
+"belarus":"sdsjCmBAsBQIWiBMDSkCWqBJEJWGmBJERHLqBhBBFmBR3BLUlBhBBNJBTzBCJKPFhESfAVLRANkBYILwB",
+"belgium":"kEmgCeDkBKaRWJDZJBFVhBSTDvBkBRAFOgBI",
+"benin":"sD6HhBDJcC8CHIAUbYGWOEISUEWYOAeXBLKXHPELfjBHZA5C",
+"bermuda":"_wCsoBABBAAEBDGAEGBAABCADAABBA",
+"bhutan":"0yD2iBQLBXhBBhBEXHjBQBIceUKeJUASL",
+"bosnia and herzegovina":"4Xi4BOAJRUNFTPDNJFVjBQNQPIRQHMTSISOJKISCiBHcCSJ",
+"botswana":"igBlXUduBrBQDMnBgBFaR5BdjBbXpBVDLfXHhBCjBQTJHTnBdbDJOEahBsBA0DoBCAuE8CQQRYQkBKWjB",
+"brunei":"4uE2FQOiBWDtBTCHNRW",
+"bulgaria":"qcq3BMRQEeF6BBUKwBKcPYDTPPbOXhBGpBLATjBDbOfLdCBaTMGGDGGMQMTSDOKK",
+"burkina faso":"xDiMZKTBNJRIFORIBYKSAMeiBGcMIUDQIsBoBmBQWGKHYCBTGRWZATwBHBbHLTDHRND1BELF3CAEzB",
+"canada":"lxD82CApB2BgBqCxCmCgCEsB0DJ0BTZnBWpBtFV9BlC5FtC7CtCRtC8BFkBjCyMtCEpC6CzC0B2BxB0CkEsCtC6CuBqBdiDcKuEDqF3BMzCiCd6D2CgEnEPXyFjCgC3BCrBtFrC9HA7FpEyHiDkBTlBbanC2DNoBsBcrB9G9CdCBiBkCiBrDFZsC5BQ5ChDlEA5JjEGyEpH2DhEFrDUReljBPzFqCP8BpDuCUgC7G8EtCjBtE4BA4L0FfoJkBmBcgDnB2BaEdyDQ4HjB2BT3BToCHuEMqBXsBUnBQaOwCG8FtB4DGgBgB-BNBlBsCmC3CqBCsBwBc8CX4BrBjBTqCH;lsDu7CgBXqEwBkCpBFZ2Dc0E3BqCIuF5BmBjBpCT2IpCxCpCvD4BzBFFVsE7CNd3EsBqDnChGmB5EoCxDRhBMae-EGoB8CvHgDlMKfOqBS5BALqBoC0BmDKbZ;z1C8nDoIdhGXyBJjHjCjHT2BDZHgBRtF1BqCPpDXlLKmCeTciEN1DgByDoBpCkBsGIlHC_E4BsPyBwNB;1uEs7CTRwEHuBUkCzBUQbqBsCAyCzCmE3BhCDMdrESlJZvDYxBgBmGQ7GIVO-CQjEK-BuB0EQ;lmCs_BZjBkEVLdcIStBPjBtBGBmBtBhBhBe3DBsC8D8BmBLlB;t9Dq8C2DDZd8BRFjBnDL_DuByCIrBawBU;nnEo_C8CJPlBpJXuCerHC8C0B-HpB5BoB8CJ;3sDyjDwBLnGtBzCGpBQgBatEeuCqB-CC4G_B;x2Eo5CpDTxDmBwCqClBYmJDyCbzEnBxBrB;r2DsgD8DLgDvBiKE0Bf1PBTqBnFiBgDO;tqDiyCqGrC3DO_CpBjCU0B4CeD;7lFyjCmBCLrBiBfpCwBOa;v0D-6C3CbZkBWkBoGArDrB;j7D8_CeRPxBtFWBgBiFO;5-C-zC3BS2BcgBLdhB;nxEihDjBrBlHR2E4B0DG;h9D8hDtGEoBMzBY6GnB;xvCm6BiCDhBTfY;r6E08BlGyCsDJ6CnC;x3Ds2ClFMgCemDpB;ziE47CjBZ9BciDB;t_Cs7C9DN3BY2FJ;_0D49C_DBuCcyBZ;53DyhD5BH1BoBwDf",
+"central african republic":"kToJgBEIKQJyBQmBeDOyBAmBUcqBuBYcpBDtBiCrBAN6C5CjCAhBNPIrBTXCLX5BK7BejBhBDbzBKtB7BFe1BmCC8BeuB",
+"chad":"kSiQEUZAAaPOQ2B0BmBa2EfkBJ-BoBWgK3EC_EjBEb1BIJV7BOCW7BtBXbpBlBTxBAENlBdpDTGMRsBpBeIS0BAVkBA0BPa",
+"croatia":"yXs5BIPOJPPRKbBhBIRBJHNKHRcdiBXOPkBPDFlBOVOlBMhBeKCTSAOZGLRLOCOcBIIOHQABMOEEQgBKsBVgBHQG",
+"cyprus":"uqB6rBCBnBRTGJQuBCEFCCGBGEEB",
+"czech republic":"mV48BRIRBfMNDVPpCoBJcyCiBKDSEULeDBLUHGKcDELeBSTLAFHJBJNfDFH",
+"djibouti":"81B8PILARXHSLNTJGJBVAAMDMckBSDMK",
+"egypt":"0rB8kBRtBVb_B0CoCvEgC3CHHCZ0BrB5OAAiJLgBKYFSOS2BCgDdwBYkBEcDKTKM-BLUKajC",
+"equatorial guinea":"8LoBHGOuBiCBAvB5BANB",
+"estonia":"seooCGYPFXODYkDQsBFqBCGHdXMjBPNhBCzBShBF",
+"falkland islands":"vsC5gCwBYiBJYQgBRLN1BLROhBRTS",
+"fiji":"--G1VIftBAmBgB;mgH_UdG4BYZd",
+"finland":"4jBq2CFb-BZlBduBtBZhBkBdPZ6BbNT7DpCvGZVWnBMKoBTkBUYkBY2D0BDS3BSNQA-BzDuBYKsBT0BCsBJmBSUe-BMyBPPb",
+"france":"wEg_BcTUEqCf6BHTZFdbBbfBTUIORKZNLKfWDDRjBVvCK5BLDZtBDtBSNHpCSPOUYIwClC-B9BQDe0BIkCJNuBmBR-CgBMgBiBIGNSAUP;-L20BLdRIJaiBeGhB",
+"french guiana":"1hCkDPPRBFMJCLLPIKSCSIQPYDcWiBqBNsBhBGPXjBLd",
+"french southern and antarctic lands":"m2C38BaNmBDAHJR9BBBUKa",
+"gabon":"8N_EjCqCXqBCMaoCoCCAwBSEYFYEGBDPMVeEKHRtBSXGfFZLRjBATUDRbDLJObdV",
+"gambia":"hVuQGSsBAIKMCQJMAOGILRHPARINHRFjBA",
+"georgia":"-zB-zBGQJcVOXGNMGE8CN2BRIHYGkBHOPYJJFUTFFVCdMJF1BFnBUpBB",
+"greece":"ohB-zBLXJFrBGxBJcXTFVAVWFJIXURPJsBdAVlBKMTZDQjBZAhBSV6BjBqBBKSUCOOGAKqBMWAOIeBgBMcNkBEAUUL;0d0sBWN8BAAFWEFL5BDCIxBIIQ",
+"greenland":"t6BqnDmKkBsOB6HdlNd0KEiBNrBXoJeuEX5JrB8CBtC3BCrBwBZhENqCVKhBpBD0BhB5CDiBdvDFyBrBjDGqDjBQfnCHvCoBObtBTgFD5V7F3DtDQfnBnC3BBpEgBnEwD7CuE8DuD5ENOwB2DJxFsBuBmBnD0C9E4BhJBzDmB6FQlIawJ2B7CcmHwBPSqPcsHf5CoB",
+"guinea":"xK0JJAJPJAHKCQPYdHDkBTgBfAJHLAJTVRfoBVMJcLGSUMBaMDOGEAOUAcJoBECNYEKLSBgBUIBejBHJANIEEDBLMLHBBNSvBRLEHDPFA",
+"guinea bissau":"9S6NTQRCHMAGLIDKWGOBKGqCBANFDENFDHALHLCRT",
+"hungary":"oUy6BOaHIWAEQiBNiBGEImBEqBQqBLKEWJCJXJrB1B3BFtBPfIrBWHOFA",
+"iceland":"jSizCJZuBZzBf1EhBjFSmBS1CUmCIBMzCIca8BG-BZ-BWyBLiCWiCD",
+"iran":"sjCwuBgCeqCE2E9BEhBZtCQFPVQ5BeFEZlBjBkBtBoBRAhBUHCR5BTNtBjFaRwBRInCZ_D2B3B8CtBGPNVUAWLAGcTexBWbmBeuBBYbMtBuCF8BcKahBqBD-BiBMLNTkBTMbiCd4BFiCU",
+"iraq":"44BgtBcLCXTNJfclByBVUdFbMAAVWTxBEdlBpCEvDwC7BcvBKPyB4CoBQyBDcWKUaSGuBFOJSGatB",
+"ireland":"3HqjCGbdjBlCX5BGiBqBVqB2CyBIVHVYAeH",
+"israel":"0sB8oBFLNGJbMDLFAJSGAPT_BZkCMOBCKSIgBGKOAEGKCCRFF",
+"italy":"wPu6B4BJDTKPfGfNDfOTmBTUhBsBfgBAIHJHgCZoBdHNVUjBGPZcPDTPBVhBPDQqBbsBlCuBdCjCsBbYLmBzBS5BZESVEJgBOMLOCMkBHWOaDKQcFSIEQYFEIoBGKN;wLwzBYbFzBRCPNNKByBJWWBUM;sT6vBNfGLHVpDoBEW2DE",
+"jordan":"usBwoBGMuBPuCsBQxBHFvCToBnBNFFNdFJNRLrBGBGUgCAQGMAY",
+"kazakhstan":"24C60BrD_B9BUXqCvBezDJrE0ClDXAzEpCoB_BTAoB3CoCuDaAgC9ERpDwCsByCqBXEeyCsBmGrBiHIKShCcmCqBbaSOwJ4BoCJOnB8CDBVqEoB-DxEUWyDN-EpC_BdX5BtCOdnCjDZkBjCXhBxHmBbfhCOjBX",
+"kosovo":"-Zy0BBHDADOHEJMIIKEGMGCOHEFIBIFGAJPCBhBH",
+"kuwait":"-7BwlBKRDJMdbAJSjBEemBaB",
+"kyrgyzstan":"24C60BKSaGiCNGYWI6BPsEBsBTFJ9BTNPzBFNXrBEhCZGJJHrCFxBMrBBEWsBFOMeD0BcvBWbJdOiBaLE",
+"latvia":"qaimCCeUYkBOgBdgBCIeiBG0BRiBBSHETOXjCVlBUVCFIlBDjCEtBL",
+"lebanon":"4sB0pBJBDFLAOgBUeSBGPVPJT",
+"lesotho":"okBlkBOLNTFLVHHLNDdeWaUQUISL",
+"liberia":"zJuFJApBUjBehBWbaKMCMkBoBUGQXBPIJKAKQKABLETHRMJMBSRF1B",
+"libya":"ySycbNVW_BQRafSRFnBkCQQGiDN2BSKAiB8BmBCgB2EjBShBoEtBmBeJeqBmByCBORiCLKNNRGRJXMfAxLtBAAP_J4EnBV",
+"lithuania":"uc-jCDKEK7BOHiBuBMkCDmBEGHWBmBTERhBLHVrBPlBAJMTG",
+"luxembourg":"yH2-BIJBRLAJEGWKC",
+"macedonia":"4Zq0BEACIuBKUAULCZHBFFVAPHZDPKFQGO",
+"mali":"lPoSUgBoBJsBOgFAKctB-K-BAsItFKRsBRAZsBEA7CVZBZ5CJPNxCAlBPrBnBjBDvBlCH1BZJFQZNvBCJYLAIYdkBnBRbOXDbkD",
+"malta":"mS6sBABHCAGIDAB;8RitBBBBCCCCB",
+"mauritania":"lPoSzB6BtBW7BFNLDUMUEmBFwCdkBIO8EAF4BKWkBCAoDiEBA8B4EhD9BAmB3KIFJb_EAFJlBDnBKTf",
+"moldova":"ohBo8BKGaEeLQBSJBNOFGPOLBDGFJBXCDEHBEHLLFNJDHSEQASXYLSNKLE",
+"mongolia":"2tD09B0F8BoGpBoBaPYoBqBgEfId6FJgClB2CF0EsB-CNvBlCKP8CMkCnB9CP9EpC_BMTZUb5BjB5GxBjFqBzFEpB8BtFqBAgC1DkCJc",
+"montenegro":"4Yk1BBIRTCLHCJORIEGGWOKGCMFGFcLLLJD",
+"morocco":"vG2sBYPiDHe7CMHHP9CXBdtBPPTnCP_BdFlCnDHLfNBRzB3BpBL3BVf5CDoB8CkBgBamCcOYqBWQkBE2CoCJyBU2BacmCiBmBiCeA",
+"namibia":"uU3jBtB8BfiEFmCjByBdoCfoBBekCOYRoFEcTiDFqDaqBL7BbPS7CPAtEnBBAnI5BXpBKXcRT",
+"netherlands":"yH8iCiBAINJjBJPXAGpBVKZSjBJdEWKiB8B2BQ",
+"new caledonia":"ovGra0BpBNJVKdSXWbcDOQAWNgBZ",
+"new zealand":"o6GltBepBAaSJGdgBNcBWOUDV5BdAJLERpB3BdPXQYiBNWrBQCOcOG4BPiBhCwCOEWVgBJKjB;o4GjzBKRcQMPNjBvBrBQTfAhBPhBhCxBdpDSHOWeyBoB4CqB6B-BGWcSIP",
+"niger":"2C-OCcvBIAUbsBCUkEYCaWaA8C6BS8H6EgCPWVcOK9BgBjBZ1EzBlBP1BQNAZaAPhBrBsBfVzBOvCVvBUnBJ1Be1BLTrCdYbL",
+"north korea":"qjFg1BGHPEdbCbpBbbFPLFVQFWRFJtBDNRRCDDRIPLBIVKMSIEBIKWDGVETMiBYsBWacULiBBFW-BQQYaX",
+"northern cyprus":"-oB-rBCAGKcBmBMbPCHDCFDFCBBDGTBFC",
+"oman":"ypCsaNZRCHJHTCfRAZPLZZAPJAPRLVEtBPrB-C4DoBawCRcCQMQASSIHEEaUASZWN2BNcjBODTrBRN;wmCsgBFHHOMOGDDP",
+"pakistan":"-9CuuBeTMdiCPnBhBnDETRc9BgBThBVAbnD7DvBErBpBaRkB1C3CAZZdKrB8BhGNOuB6BUBSTIAiBnBSjBuBkCVkDG0BSCiBWWwCMOMBYqBiBNamBAIeUQNkBYSkEa",
+"poland":"4S8_BPaEOZkBMKJUsEsBoBFEJiFDUFWrBAPXHiBnCFLRDlBfMRvBQvBAVJVOPDTWdCDMbEFJTICMdETM",
+"portugal":"pLs0BgBQKT2BEKTRLAdHFATRBQXJbMJDLPNENPJVGTFGgBDYREJQEaQOCQKYLuB",
+"qatar":"w_B-eBeKUMEMLAXHVLDLI",
+"republic of serbia":"ia44BaHCRYJMIKDJHIFJJENURPLFLEFFFfBBCKQFAPIDGNIFBFLJDEEbMRMKCGUTOKSNAQQNKHQeKYAWPEN",
+"romania":"sc87BSIyBDSJ2BScDyBzBDhBIRSHSGSFCJTJLELvBXEbQjCT3CIPDTYKIJELHXKBSZIDOVQgBGsB2BYK",
+"russia":"2lEmgDgJrB9FhCgMrBgKSgCTSZXPyBfgCPmBqBwJNbkB0BSqLZqE1ByHAiBPFdyBJ0IGmCjBwBMfaSS-LtBA_EnDNuC_BDb9GZlElC5Ba1Gb9B_BwBZF5B1BhBQRlCTNtB5BJlCtC1BwFS2BkBsByIkEgB4BtFvCfwBnDLjDjCiBX3ENEc9BGvJX5IrF4DnBmCS8BtC1B3EjIhHxBU7BrBKuDyCIuCmEhFb_BiClCMjC6D_CalEbWfxDhDtEepHlB_BmB5FKHe_DgB_B7CnGqBjG_B9EqCxDOTV9DyEpEnBCW7CENoBnCKvJ3BRNcZlCpBiCbJRhHHlGsBxCrBDdpBYrBxCqDvC_CnCsCvDxBXrC0B7GmBhEoC-BoBXQ8BQjBU8BOMkC7FoB_BmCtCJTmB4BMtC6BEepDYjB0BEyBkC2BpBSqE-C5BcQajBeaiBtBuBmBe9BaGcuEiBmKtCiBtBtBVvIQgCdG7ByCVRkBaQgDZiBKbe-CoBqCRYcrBoCwDLWVxBbgBNmJ4CeBlBX0GcuBXuBapBWUO-JlCcU5CiBJgCiEwCqDJd3BmBnBJ3BsBX9CzCsBFqDgCXYUa1BagBoBzBgBoCaJeqBVPlBqBHRckCQ8ETnBsC8HMfUuBagR2BwEyBoDd;36GozC-DMuCjBpDVPvB3GuBNcvBJDhBA-EqGlCBX;-nCs4CtHeFWyFqDJS8GuB0JM9M5C7DtCIfuChB;yzFu_BoBlC7BMX5BmBjCdYZfPmJmBqBoBvE;s1Fu-Cfd1GHvCasCkB6HX;-8D0iDnGG1E0B-FkBqF5BJjB;r_G04CzBBAagDJrBN;uc-jC7DEgCe8BhB;ghHy4CxBKyBQAZ;wzFw7C1EG4CU-BZ;sjE8hDhHPqD6B4DpB;-_B2kDtEVtDY8HB",
+"saudi arabia":"w1BuUpC-DnCoCZgDnBY9C2ETAM0BsBFuC0BnBoB4CawBJsFrDuDHKRcAQhB2BnBErBWhBYDYhCgELSbZvC3DnBzDPzChCJO1DAPMXxB",
+"senegal":"7UgRReTQSGeyBOMUDSKWAuBV0B5BIvBQJCbnBDbK9CCJFNCVFFekBAgBOSHQASIHMZFPKLBHJrBA",
+"sierra leone":"pOwIJCdQTWFOFeWSKUMAKIgBAUfBJGLANKCjBnBBLJL",
+"slovakia":"yX89BSCWNWKUDcEmBNJJHRJDpBMNBHHTFlBDDHhBFhBOBUGIgBEAEICCIKCGIMA",
+"slovenia":"oRk6BiBBUIiBCIGGAINfJDPNDCLPANIHHbCKEJQEU",
+"solomon islands":"ipGpMnBCHGCQaFOHGJ;kqG_LFHdkBHYMAQfQT;8nGtKAHjCuBGE0BbKN;-kGlJHBRIPSCGoBd;0qGjNMNbCPYgBL",
+"somalia":"m-BwO2BQB1BhDzGxCjDnElD9BvCXiBAyEuB6BYAkBc0BCgFyFAuCgBI",
+"somaliland":"m9B6LtB5BhBAhEwBPOdoBYkBMFIRSPmDOmCYWAAtC",
+"south africa":"snBxkB5BrCnDzC9BPDLhEE1DlBvBaR-BMGBgBpC6DSUYbqBJ6BYA0EiBrBGnBcEkC8BkBP6BGMgBWEYqBkBcqCe2BFezCD7BfENnBYVWEISgBAP9BlBlB",
+"south korea":"ugFowBiBtBKZAtBNVjBHfPjBDFWIeRqBeGbiBEESBOSuBEGK",
+"spain":"pLs0BCcPS4Bc0HNQNqCROIuBRuBECVlBZzBJrBjCQVVRJZdHbf3CCpBdhBQJYlBGDOUaLKKcPYSCI4BSMJU1BDJUfP",
+"sudan":"uqB6LJkBTOA8BRCbLOhBpBzBTDhBYpBjBpCKNHlBmBdFT1BZLROEuBpBgCHmBNBW8BHKc2BkBDBwFuBAAwC6OAanEkBX9BpBXnE7BpDTJLvB",
+"swaziland":"ioBthBHRVDXWAOKQEKMEUHGRCR",
+"sweden":"4bkyCnBZGZrEhCd3BkCxBlBtBnBJPhCVlBxBEVftBBLmB_BmDyByBOwBZUB2BakBmBAOQNOgEgEoBAKWsCFGaYC0DtBA9BOPjCL;mYuoCVLGLhBRAaWQcA;qV4nCXvBDOciB",
+"switzerland":"gMu7BCHFJSHUADPRHbGJPRBHGVNTAPINSTHCUcWAKSDKGiBAIKsBL",
+"syria":"wwB4pBtCrBtBQGGBSKUWQFQRCDeKQWSCWMHsBMWHgBAuBQWBuBITZVJEbPxB3CnB",
+"taiwan":"o4EweX_BRhBViBDeYoBgBeSLFX",
+"tajikistan":"44CqyBNLrBGDVsBCyBLsCGKlBMEYHGnBlCEXRfLPMEiBLCEMVKPNLVXALRNIbNLGWoBHedKKSiBBgBwB0BIHRGLQC",
+"the bahamas":"9gD2dJBJYNMIYMBOfAX;ngDohBFbHEAWRQAEgBR;nhDohBrBHDQuBCCJ",
+"tunisia":"8L8lBRoCXQAKhBYDeaWKiBHmBIUsBQcDAViBQCHTTAROJFhBZTIVUBKRQFBf7BlBERDPRJ",
+"turkey":"kuB2zB6BPwCC6CYoBTChBuBVbJG7BUfRF7BQjEbtDEBVVRNSOQ5BGZX9BDfWrBCHRbDlBWrBB1B-BUgBZSuBmB8BCSesCDwBawDMmCb;giB8yBhBVLaWeTMsCGEPkBLnCX",
+"turkmenistan":"wsCysBDiBbCtBiBrCapCDbVjBHAmCfOKcZCIiBmBJkBMpBuBfJDbLagCUaJcfiCCFWkCkB2BVEdOJ6BDSpBoCtBgDlBBXdMFNhBHHf1BRHRdFpBQ",
+"ukraine":"4nBkhCuCKaXHTgBBOX0BNeGYTyCLPfEjBnBBTLBRhEhBCX-BHHNhDdVIIUrBMuBUpCUBOlBDtBzBjBARIYmBuBB1BkCtBOpDbjCORHXUcaLS-BwBTkBoCMwGXQeiBC",
+"united arab emirates":"wgCqeGCCLgBI4BDyCuCINGfTADZIDRHARLPBPHH3DUPoBAK",
+"united kingdom":"3DqpCpBrB0CGJhBjBjBoBBoBzBaFkB7ByBHFZTLQTjBV5DJRIZRlBEbPVI8BqBkBK_BGJQqBMVWGa8BDGYZYxBIJKQSNMVTBoBTUOoBgBiBwCA;hHmkCVb1BIIWHWgBAsBX",
+"uruguay":"hoC3lBaEqBfOCoCvBYbRRMVRZtBVbIVDlBQZAZWEaIIAoBUqC",
+"uzbekistan":"kzC2uBCY_CmBnCuBRqB5BENKDe1BWjCjBGVtBAA0EmDYmDvBmBjB0DKwBdDnBUAIhB0BAKTQAQesCiBMDhBZeNcKwBVzBbtBCCezBHfvBhBCJReJIdVnB1BI",
+"vanuatu":"8wG1SGfJGHBFKAeSL;6xGxUNFLSAKaV",
+"west bank":"usBwoBAXFLRFAKMGLEKcOF",
+"western sahara":"_K8hBAWGABlChECAnDjBBJVG3B7EAHNCQ6CEEOSSM4B4BqBS0BOCMgBiBEgBFOKYA"};
+
 /* ==== /pure ==== */
 
 /* what this file hands back to index.html — the seam Phase 19 designed:
@@ -649,6 +1042,8 @@ window.landTopoRaw=landTopoRaw;
 window.landKey=landKey;
 window.landAnchor=landAnchor;
 window.LAND_OFF_BELT=LAND_OFF_BELT;
+window.WORLD=WORLD;
+window.worldRingsRaw=worldRingsRaw;
 window.sealBands=sealBands;
 window.cityKey=cityKey;
 window.cityRingsRaw=cityRingsRaw;

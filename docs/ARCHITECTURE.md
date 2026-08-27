@@ -50,6 +50,28 @@ Carta 7 is built exactly the way classic was, smaller:
   precedent for a fifth quiet one; it re-earns the argument from here, same
   as every phase before it had to.
 
+  **That re-earning is now overdue, and this is the entry that says so.**
+  `index.html` stands at **5,891 lines / 404 KB** after Phase 30 (v7.37.0,
+  the front door). It entered that phase already at **5,584** — Phases 21–29
+  carried it past 5,000 without any of them stopping to make the argument
+  the paragraph above demanded, which is precisely the "fifth quiet one" it
+  was written to forbid. Phase 30 added 307 more and is recorded here rather
+  than quietly too. **The byte ceiling is untouched and comfortable at 404 of
+  500 KB**, which is why nothing about the static-host promise is at risk and
+  why this is a debt rather than an emergency.
+
+  The band is therefore **overdrawn by 891 lines and deliberately not amended
+  a fifth time.** Phase 17 named 5,000 as the number past which *the one-file
+  law itself, not the band*, is what has come due; two phases before it named
+  the same number. Three amendments pointing at one line and a further nine
+  hundred lines walked past it is the argument making itself. The move when
+  it is taken is a split, on Phase 19's own proven seam — a fifth sibling
+  loaded from the `<head>` with a `?v=` tag, published through `window`
+  globals — and the obvious cut is the room-sized views (`vJournal`,
+  `vShelf`, `vRecord` and the screens under them), which touch the ledger and
+  the DOM but nothing in the pure block. **That is a phase of its own and it
+  is the founder's call to schedule, not a coding agent's to take mid-task.**
+
   Phase 17 itself shipped twice in one sitting, and both drafts are worth
   recording. The first spent its lines on tile-server citizenship — a live
   Leaflet map, gated to boot only while a thumbnail was actually on screen —
@@ -152,6 +174,37 @@ Carta 7 is built exactly the way classic was, smaller:
   *what the ground is* on one side of the seam and *how it is drawn* on the
   other, which is why the plate can change its mind about a disc's width
   without the map layer knowing.
+
+  **Phase 30 added a second element and a second ground table to the same
+  file, on the same seam.** `<carta-atlas>` is the passport drawn as a plate —
+  the graticule, the band between the tropics stated and labelled, leader
+  rules, edge ticks — and it is a sibling to `<carta-belt>` rather than a file
+  of its own **because it shares everything**: `LANDS`, `landRingsRaw`,
+  `buildWorld`, `BELT_SET`, the vendored projection. A sixth static file would
+  also have meant a sixth `?v=` query string to keep in step with
+  `APP_VERSION`, which is the v7.31.1 failure and is not a shape worth
+  re-earning for a component that needed none of it.
+
+  Beside it, **`WORLD`** — the rest of Natural Earth 1:110m, 112 countries in
+  11.7 KB, cut through the same simplifier and the same varint at the same
+  twentieth of a degree, read by `worldRingsRaw` (`landPts`'s own decoder,
+  given the same divisor). It is the palest tier behind the belt: context,
+  unnamed, never tappable, and it exists because without it the plate read as
+  a map with pieces missing rather than as a chart of the belt. **It is
+  encoded, not fetched** — the design board fetched `countries.geo.json`, and
+  that was right for a board and wrong for the app, which asks for nothing at
+  all. Its filter runs at encode time against the LANDS keys, so no country is
+  ever drawn in both tiers; two of Natural Earth's spellings ("East Timor" for
+  `timor leste`, "Republic of the Congo" for `congo`) are easy to point the
+  wrong way and draw twice.
+
+  One thing about `<carta-atlas>` is not incidental and is written into the
+  source: **it waits on the exports block before its first paint.** `LANDS`
+  and `WORLD` are declared *below* the element IIFE, so an element upgraded at
+  `define()` time reaches them in the temporal dead zone and throws.
+  `<carta-belt>` hits the identical wall and survives only because its
+  `paint()` swallows the throw and recovers on a later ResizeObserver pass —
+  which works, and is why nobody noticed, but leaves the first frame blank.
 
   **`carta-map.js` gained a pure block at the same phase, and the harness
   gained a fifth file.** Everything from `LAND_A` to `LAND_OFF_BELT` sits

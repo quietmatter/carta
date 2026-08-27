@@ -339,6 +339,18 @@ claims nothing the mark does not already claim.
   degree, delta-encoded — 65 countries in under nine kilobytes. This is why the
   origin frame can have ground where the chart frame cannot: it needs no
   network, no key, no tile server, and there is nothing to be offline from.
+  Since Phase 30 a **second table sits beside it on identical terms** —
+  `WORLD`, the *rest* of Natural Earth 1:110m, 112 countries in 11.7 KB
+  through the same simplifier and the same varint at the same twentieth of a
+  degree. It is the palest tier behind the coffee belt on `<carta-atlas>`:
+  context, unnamed, never tappable, and never the record. It exists because a
+  passport carrying the growing world and nothing else read as a map with
+  pieces missing rather than as a chart of the belt. It is **encoded, not
+  fetched**, for exactly the reason this paragraph gives — and its filter runs
+  at encode time against the `LANDS` keys, so no country is drawn in both
+  tiers. Natural Earth's own spellings are the trap there: it says "East
+  Timor" for `timor leste` and "Republic of the Congo" for `congo`, and an
+  alias pointing the other way silently draws both of them twice.
 - **The frame opens to hold the whole of it.** That is the reading a coarse mark
   can actually support — *where in the country*, not *what is near this point*,
   which a centroid cannot answer. It also means the origin frame does not zoom
