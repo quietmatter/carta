@@ -401,6 +401,12 @@ function setupCandidatePicked(i){
 // a shot is not a record: it is read, written into a cup, and let go of. The
 // cache is this session's, keyed by the shot's own Visualizer id.
 let _vizCache={},_vizWaiting=null,_vizChecked=false,_vizCheckedAt=0;
+/* "Not now" (below) is meant to hold for the session, not for the ~90s
+ * VIZ_RESUME_GAP a phone crosses every time it locks or the keeper glances at
+ * another app. In-memory only, on purpose — it is exactly as durable as
+ * `_vizChecked` beside it, and a real reload asks fresh, same as the comment
+ * on snoozeWaitingShot already promised ("offered again on the next open"). */
+let _snoozedShotIds=new Set();
 function cacheShot(s){if(s&&s.id!=null)_vizCache[String(s.id)]=s;return s}
 // the curve is what ensureShotCurve is guarding on, so a shot that arrived
 // with one never asks for it twice — nothing more is needed to hold that.
@@ -432,6 +438,7 @@ async function vizCheckOnOpen(){
     const head=((await callVisualizer('?page=1&items=1')).data||[])[0];
     if(!head||head.id==null)return;
     if(vizDismissed().some(x=>String(x)===String(head.id)))return;
+    if(_snoozedShotIds.has(String(head.id)))return;
     if(cupOfShot(head.id))return;
     const shot=cacheShot(Object.assign(parseVisualizerShot(await callVisualizer(`/${head.id}/download?essentials=true`)),
       {clock:head.clock,id:head.id}));
@@ -461,8 +468,16 @@ window.addEventListener('pageshow',vizCheckOnResume);
  * and the cache with it, and offers an undo. This one only puts the brew
  * down for the session — the door falls through to the bag, then to the
  * question, and the brew is offered again on the next open. Nothing is
- * written, so there is nothing to undo. */
-function snoozeWaitingShot(){_vizWaiting=null;render();}
+ * written, so there is nothing to undo.
+ *
+ * "For the session" has to survive vizCheckOnResume, or it isn't a session at
+ * all: that check re-asks Visualizer once VIZ_RESUME_GAP (90s) has passed
+ * since the last one, which is nothing on a phone — the screen locking while
+ * a cup is poured is enough. Clearing only _vizWaiting left the id itself
+ * unguarded, so the very next resume re-fetched the same shot and put the
+ * dismissed hero straight back on the door, unprompted. _snoozedShotIds
+ * holds the id against that until a real reload asks fresh. */
+function snoozeWaitingShot(){if(_vizWaiting)_snoozedShotIds.add(String(_vizWaiting.id));_vizWaiting=null;render();}
 function dismissShot(id){
   // v7.35.0, critique rec 6: this was permanent and one tap away, on a screen
   // where the tap beside it writes a cup. Everything else Carta puts away is
@@ -952,4 +967,4 @@ window.shotTempGoal=shotTempGoal;
 window.setupCandidatesFromShots=setupCandidatesFromShots;
 window.firstStr=firstStr;
 
-window.SHOT_VERSION='7.37.3';
+window.SHOT_VERSION='7.37.5';
