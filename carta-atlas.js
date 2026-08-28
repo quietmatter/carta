@@ -566,6 +566,31 @@ function doorSheetHTML(cities,countries,asks){
 }
 /* a city, at the size a row is read at — .lrow's geometry with the seal in the
    thumbnail slot. The card's sub/said/facts belong on the city's own page. */
+/* §H, the seal at row scale. A city the belt cannot place drew nothing at all
+ * here — Lisbon is a blank chip beside Los Angeles' shore, which reads as a
+ * loading failure rather than as what it is. <carta-city mode="seal"> draws the
+ * one thing the record can always defend: where your own cafés stand, in
+ * relation to each other. A city whose shore is in CITY_ARCS gets it; one whose
+ * is not shows the constellation alone — honest, and visibly a different city.
+ * It rides in the same round .seal chip the drawn plate uses, so the two are
+ * one row and not two styles. Nothing is fetched and nothing is invented: no
+ * placed café, no seal, exactly as before. */
+function citySealHTML(city){
+  const pins=placed(cityPlaces(city));
+  if(!pins.length)return '';
+  const lat=pins.map(p=>p.lat),lon=pins.map(p=>p.lon);
+  const mid={lat:(Math.min(...lat)+Math.max(...lat))/2,lon:(Math.min(...lon)+Math.max(...lon))/2};
+  const w=(Math.max(...lon)-Math.min(...lon))*111.32*Math.cos(mid.lat*Math.PI/180);
+  const h=(Math.max(...lat)-Math.min(...lat))*111.32;
+  const ids=new Set(live('cups').filter(c=>c.kind==='bar').map(c=>c.placeRef));
+  const marks=pins.map(p=>({lat:p.lat,lon:p.lon,been:ids.has(p.id)}));
+  // the constellation at about two-thirds of the chip, with a floor so a single
+  // café is a mark on ground rather than a mark on nothing
+  const span=Math.max(1.5,Math.max(w,h)/.62);
+  return `<span class="seal"><carta-city class="city" mode="seal"
+    at="${mid.lat},${mid.lon}" span="${Math.round(span*10)/10}" coast="${esc(city)}"
+    marks="${esc(JSON.stringify(marks))}"></carta-city></span>`;
+}
 function doorCityRowHTML(city){
   const places=cityPlaces(city);
   const ids=new Set(places.map(p=>p.id));
@@ -575,7 +600,7 @@ function doorCityRowHTML(city){
   const meta=[`${capFirst(words(places.length))} caf${places.length===1?'é':'és'}`,
     `${words(cups.length)} cup${cups.length===1?'':'s'}`].join(' · ');
   return `<button class="lrow doorcity" onclick="openCityChapter(${jsq(city)})">
-    ${plate?plate.html:(ground?sealHTML(ground.key,ground.at,32):'')}
+    ${plate?plate.html:(ground?sealHTML(ground.key,ground.at,32):citySealHTML(city))}
     <span class="mid"><span class="t">${esc(city)}</span><span class="m">${esc(meta)}</span></span>
     <span class="go">→</span></button>`;
 }
@@ -1290,4 +1315,4 @@ window.vCountryChapter=vCountryChapter;
 window.vProducerPage=vProducerPage;
 window.vRegionChapter=vRegionChapter;
 
-window.ATLAS_VERSION='7.41.0';
+window.ATLAS_VERSION='7.42.0';
