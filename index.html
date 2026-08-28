@@ -881,6 +881,80 @@ button.led:active{background:var(--paper-2)}
 .doorfound{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .doorfound .r{font-family:var(--sans);font-size:12.5px;color:var(--ink-3);letter-spacing:.01em;text-align:right}
 
+/* ====== the answer, and one finding (Phase 31, part two · turn 3) ======
+ * Where an answer's reasons live once the answer itself is six rows on a
+ * plate: one level down. The rows become an INDEX — every name a door — and
+ * what is about the answer rather than one café goes under the page's own
+ * pull. That is what makes the index legal: a recommendation still never
+ * travels without its reasons, it just stops carrying all of them at once.
+ * Both screens are one set of furniture — a plate, a leaf travelling between
+ * stated stops, a handle that says what is behind it — because the finding
+ * page and the composer share a geometry on purpose (140/122 and 416/398).
+ */
+.stage{position:absolute;inset:0;overflow:hidden}
+.stage .plate{position:absolute;left:0;right:0;top:0;background:var(--surface-sunk);
+  overflow:hidden;transition:height var(--mo-base) var(--mo-ease)}
+/* the headline reads UP off the plate, and steps aside when the leaf rises */
+.stage .hero{position:absolute;left:0;right:0;z-index:3;padding:0 20px 10px;
+  display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;
+  transition:opacity var(--mo-base) var(--mo-ease);
+  background:linear-gradient(to top,var(--surface-card) 0%,
+    color-mix(in srgb,var(--surface-card) 94%,transparent) 54%,
+    color-mix(in srgb,var(--surface-card) 0%,transparent) 100%)}
+.stage .hero.gone{opacity:0}
+.stage .hero .eyeb{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;color:var(--accent);font-weight:500;margin-bottom:8px}
+.stage .leaf{position:absolute;left:0;right:0;bottom:0;z-index:5;
+  background:var(--surface-card);border-top:1px solid var(--line-strong);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:top var(--mo-base) var(--mo-ease)}
+/* the leaf's scroll is the last resort, not the layout (Phase 30's rule) */
+.stage .leaf .body{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+/* the handle, and its label: a bar you might not pull is a bar that hides an
+   argument, so this one states its own cargo */
+.pullbar{width:100%;background:none;border:0;cursor:pointer;display:flex;
+  flex-direction:column;align-items:center;gap:5px;margin-top:auto;padding:8px 0 6px}
+.pullbar span.bar{width:38px;height:3px;background:var(--paper-3);display:block}
+.pullbar span.l{font-family:var(--sans);font-size:var(--s10);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+/* the bare handle OPENS a leaf rather than closing it, so it sits at the top:
+   .pullbar's own margin-top:auto is what pushes a closing handle to the foot */
+.pullbar.bare{gap:0;padding:10px 0 8px;margin-top:0}
+/* an index row: the rank, the name over its ground, what you made of it, a door */
+.idxrow{display:flex;width:100%;align-items:baseline;gap:12px;padding:6px 0;
+  border:0;border-bottom:1px solid var(--line);background:none;text-align:left;
+  color:inherit;font:inherit;cursor:pointer}
+.idxrow:active{background:var(--paper-2)}
+.idxrow .n{flex:none;width:19px;height:19px;border-radius:50%;background:none;
+  border:1px solid var(--ink);color:var(--ink);font-family:var(--sans);font-size:10px;
+  font-weight:500;display:flex;align-items:center;justify-content:center;transform:translateY(3px)}
+.idxrow .n.been{background:var(--ink);color:var(--text-on-fill);border-color:var(--ink)}
+.idxrow .mid{flex:1 1 auto;min-width:0}
+.idxrow .t{display:block;font-size:var(--s16);line-height:1.25}
+.idxrow .g{display:block;font-family:var(--sans);font-size:10.5px;line-height:1.3;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.idxrow .r{flex:none;text-align:right;font-size:var(--s13)}
+.idxrow .r.none{color:var(--text-subtle);font-style:italic}
+.idxrow .go{flex:none;font-family:var(--sans);font-size:var(--s13);color:var(--ink-3)}
+/* a near miss is a row and never a page: one sentence saying why not is the
+   whole shape it takes, and that is what the index has no room for */
+.nearrow{display:flex;align-items:baseline;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.nearrow:last-child{border-bottom:0}
+.nearrow .mid{flex:1 1 auto;min-width:0}
+.nearrow .t{display:block;font-size:var(--s16);line-height:1.3}
+.nearrow .why{display:block;font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3);margin-top:2px;text-wrap:pretty}
+.nearrow .r{flex:none;text-align:right;font-family:var(--sans);font-size:10.5px;
+  line-height:1.4;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+/* the verdict is the largest thing under the name, because it is the answer */
+.verdict{font-family:var(--serif);font-weight:600;font-size:var(--s18);line-height:1.2;
+  letter-spacing:-.015em;color:var(--ink);margin-top:12px}
+.verwhy{font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.5;
+  color:var(--ink-3);margin-top:8px;max-width:var(--measure)}
+/* the fit box: a figure the record can open is dotted and opens it; one it
+   cannot is flat, and the reader tells them apart without being told */
+.fitbox{border:1px solid var(--line);background:var(--surface-page);padding:4px 16px;margin-top:12px}
+.fitbox .r{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:8px 0;border-bottom:1px solid var(--line)}
+.fitbox .r:last-child{border-bottom:0}
+.fitbox .k{font-family:var(--sans);font-size:var(--s13);color:var(--ink-3);flex:none}
+.fitbox .v{text-align:right;font-family:var(--serif);font-size:var(--s15);color:var(--ink)}
+
 </style>
 <!-- the sibling scripts carry the version in their URL, and it must be bumped
      with APP_VERSION (v7.37.0). index.html is the navigation document and is
@@ -891,11 +965,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.39.0"></script>
-<script src="carta-plate.js?v=7.39.0"></script>
-<script src="carta-shot.js?v=7.39.0"></script>
-<script src="carta-ask.js?v=7.39.0"></script>
-<script src="carta-atlas.js?v=7.39.0"></script>
+<script src="carta-map.js?v=7.40.0"></script>
+<script src="carta-plate.js?v=7.40.0"></script>
+<script src="carta-shot.js?v=7.40.0"></script>
+<script src="carta-ask.js?v=7.40.0"></script>
+<script src="carta-atlas.js?v=7.40.0"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -1858,7 +1932,7 @@ function tasteModelMemo(){if(_tasteDirty||!_tasteCache){_tasteCache=tasteModel(D
 const TABS=[{id:'atlas',label:'Atlas'},{id:'journal',label:'Journal'},{id:'shelf',label:'Shelf'}];
 // which room a screen belongs to, so the bar keeps saying where you are
 const ROOM_OF={atlas:'atlas',country:'atlas',region:'atlas',producer:'atlas',city:'atlas',cafe:'atlas',
-  taste:'atlas',brief:'atlas',ask:'atlas',asking:'atlas',askresult:'atlas',menu:'atlas',
+  taste:'atlas',brief:'atlas',ask:'atlas',asking:'atlas',askresult:'atlas',askfind:'atlas',menu:'atlas',
   journal:'journal',cup:'journal',shot:'journal',shots:'journal',tastehome:'journal',
   shelf:'shelf',record:'shelf',setups:'shelf',setup:'shelf',brew:'shelf'};
 // the screens that stand on their own — no bar under them, one way back. Taste,
@@ -1914,7 +1988,9 @@ function openAskingScreen(){openScreen('asking')}
 // arriving at an answer plays the settle once; marking one of its findings
 // re-reads the same screen and must not write it in all over again
 let _askSettle=false;
-function openAskResultScreen(id){_askSettle=!reducedMotion();markAnswerRead(id);openScreen('askresult',id)}
+function openAskResultScreen(id){_askSettle=!reducedMotion();markAnswerRead(id);
+  resetAnsStop();   // the answer opens on its six names, never mid-pull
+  openScreen('askresult',id)}
 /* where an ask actually ends (Phase 31). It used to push the answer page up
  * the moment the last name was placed; the answer waits on the door now, as
  * rung 03b, and the keeper opens it when they are ready to read it. Nothing
@@ -1965,7 +2041,7 @@ function goBack(){
  * stack rather than guessed from where you are. */
 const ROOM_NAME={atlas:'Atlas',journal:'Journal',shelf:'Shelf'};
 const BACK_NAME={cup:'The cup',taste:'Your taste',brief:'The brief',ask:'The ask',asking:'The ask',
-  askresult:'What Carta found',record:'Your record',setups:'Your Setups',setup:'The Setup',
+  askresult:'What Carta found',askfind:'The finding',record:'Your record',setups:'Your Setups',setup:'The Setup',
   brew:'The dials',menu:'The menu',shots:'Your recent brews',shot:'The brew',tastehome:'The cup',
   shelf:'Shelf',journal:'Journal',atlas:'Atlas'};
 function navLabel(){
@@ -2005,7 +2081,7 @@ try{
 }catch(e){/* no history to trap (a file:// frame, an old webview) — the on-screen ← still works */}
 const SCREENS={atlas:vAtlas,journal:vJournal,shelf:vShelf,country:vCountryChapter,
   region:vRegionChapter,producer:vProducerPage,city:vCityChapter,cafe:vCafe,cup:vCup,
-  taste:vTaste,brief:vBrief,ask:vAsk,asking:vAsking,askresult:vAskResult,menu:vMenu,
+  taste:vTaste,brief:vBrief,ask:vAsk,asking:vAsking,askresult:vAskResult,askfind:vAskFinding,menu:vMenu,
   record:vRecord,setups:vSetups,setup:vSetup,brew:vBrew,
   shot:vShot,shots:vShots,tastehome:vTasteHome};
 let _lastScreenKey=null;
@@ -2040,12 +2116,15 @@ function render(){
   // over it — so like the city screen it takes the scroll off main
   // the wait owns its own frame now (Phase 31): a full-bleed plate with the
   // narration scrimmed over it, the same shape the door itself keeps
-  m.classList.toggle('fixed',view.kind==='city'||view.kind==='atlas'||view.kind==='asking');
+  m.classList.toggle('fixed',view.kind==='city'||view.kind==='atlas'||view.kind==='asking'
+    ||view.kind==='askresult'||view.kind==='askfind');
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=keep;
   _askSettle=false;
   if(view.kind==='city')mountCity();
   if(view.kind==='atlas')mountAtlas();
+  if(view.kind==='askresult')mountAnswer();
+  if(view.kind==='askfind')mountFinding();
   ariaPass(m);
 }
 /* what fills, says so. Every mark that carries an on-state is a toggle to a
@@ -4799,8 +4878,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.39.0';
+const APP_VERSION='7.40.0';
 const CHANGELOG=[
+  {v:'7.40.0',d:"What Carta found, read as an index. The answer used to arrive as one long column — the cafés, then the near misses, then the plan, then the wildcard — and the thing you actually asked for scrolled off the top under everything Carta added around it. It is six names on the ground now: the rank, the quarter, how far, and what you already made of it, each one a door. Tap a name and you get that café whole on its own streets — what it is best for, why, what to order, how it fits the record you keep, and your own mark on it — and pull the answer up instead and you get what belongs to the answer rather than to any one café: the move Carta would make, the ones that came close with a line saying why not, and the one that came back named and nowhere. Nothing was cut to make room. Every figure the record can defend still opens the very cups it was read from; they are one tap away now instead of all at once."},
   {v:'7.39.0',d:"The ask comes home to the front door. It used to take three full screens of its own — a page of chips to compose on, a page to wait on, and an answer page pushed up in your face the moment the last name landed. The wait is now the plate itself: the belt you asked from, reframing to the drawn city as each address is confirmed, with the narration read up out of it and the one moving thing on the screen the hairline filling at the top. And the answer no longer interrupts you. It waits on the door as a rung of its own — the name Carta argued first, what it is best for, where it is, and the page one tap below — above the shelf, because you asked for it, and under a waiting brew, because a brew expires and an answer does not. Not now puts it down for good and it stays under What Carta found. Cancel still leaves the record exactly as it was, on every path."},
   {v:'7.38.0',d:"The file, split a third time. Nothing changes on the screen — this is the debt Phase 30 recorded, paid down. index.html had reached 5,956 lines against a ceiling of 5,000 that has not moved since Phase 17, and had walked past that number in four separate versions without anyone stopping to make the argument each crossing was owed. The Atlas moves out into a file of its own, carta-atlas.js, the way the map layer did and the argument and the Visualizer read did after it: the front door itself, the plate and its leaf and the record that pulls up underneath, and the four walks down from it — a country, a region, a farm, a city's own streets. index.html is back to 4,852 lines, almost exactly where the first split left it. Six files to copy where there were five, still nothing to build and nothing to install. Carta also now notices a stale map file the way it already noticed the other four — it had been left out of that check since the day the check was written."},
   {v:'7.37.7',d:"The plate gives up the map before it gives up the door. 852 CSS px is the iPhone 15 Pro's full screen with no browser chrome at all — most keepers get less than that, in an ordinary tab or on a shorter phone, and the leaf holding Write the cup or Brew it was taking that shortfall directly: on anything under about 800px tall it turned into an internally-scrolled strip with the action pushed out of sight and no fixed clearance above the bar. The plate shrinks first now, all the way to a floor that still reads as a plate, so the leaf keeps its full designed height on any phone down to iPhone SE size before it ever needs to scroll at all."},

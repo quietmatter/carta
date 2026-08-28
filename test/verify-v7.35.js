@@ -160,11 +160,23 @@ function serve(){
   await page.evaluate(()=>{go('atlas');openCityChapter('Lisbon')});await page.waitForTimeout(900);
 {const t=await txt(page);ok(/add a café in lisbon/i.test(t),'rec 9 — a city takes a new café',t)}
 
-  // rec 10 · the ask result folds
-  await page.evaluate(()=>{go('atlas');openAskResultScreen(D.asks[0].id)});await page.waitForTimeout(400);
-  const folds=await page.evaluate(()=>[...document.querySelectorAll('details.fold>summary .l')].map(e=>e.textContent));
-  ok(folds.length>0,'rec 10 — the answer folds to its heads ('+JSON.stringify(folds)+')');
-  ok(await page.evaluate(()=>!!document.querySelector('.find')),'rec 10 — the findings stay open');
+  /* rec 10 · the answer leads with the findings, and everything else is one
+     deliberate move away behind something that states its own weight.
+     v7.35.0 met that with <details class="fold">; Phase 31 part two meets it
+     with a leaf at three stops and a LABELLED pull handle. The mechanism
+     changed and the guarantee did not, so these two checks follow it across
+     rather than being dropped — the thing rec 10 was protecting is that the
+     answer never arrives as one column with the ask buried in it. */
+  await page.evaluate(()=>{go('atlas');openAskResultScreen(D.asks[0].id)});await page.waitForTimeout(700);
+  const lead=await page.evaluate(()=>({
+    rows:document.querySelectorAll('#ansleaf .idxrow').length,
+    handle:(document.querySelector('#ansleaf .pullbar .l')||{}).textContent||'',
+    column:!!document.querySelector('#ansleaf .find')}));
+  ok(lead.rows>0&&!lead.column,'rec 10 — the answer leads with its findings, not with a column',JSON.stringify(lead));
+  ok(lead.handle.trim().length>0,'rec 10 — and the rest is behind a handle that states its own weight',JSON.stringify(lead));
+  await page.evaluate(()=>setAnsStop(2));await page.waitForTimeout(500);
+  ok(/what carta would do/i.test(await txt(page)),'rec 10 — which really opens it');
+  await page.evaluate(()=>setAnsStop(1));await page.waitForTimeout(300);
 
   // rec 10 · a reply Carta can't read fails honestly
   await page.evaluate(()=>{

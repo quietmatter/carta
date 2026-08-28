@@ -1562,7 +1562,7 @@ and a country with two contour marks may deserve a lower bar; and Los Angeles
 has no relief on file, which is the one thing that would make its plate about
 Los Angeles rather than about the sea to its west.
 
-### Phase 31 — the ask at the front door (part shipped — v7.39.0)
+### Phase 31 — the ask at the front door (parts one and two — v7.39.0, v7.40.0)
 
 *From the Claude Design handoff `Ask Carta at the Front Door`. The commission:
 move the ask off its three screens of its own and onto the door's own
@@ -1632,6 +1632,39 @@ that matters most — it has no place on it for the verdicts, the fit figures,
 the mentions, the plan or the been/booked/skip marks, which is the
 *recommendation never travels without its reasons* invariant. Each is written
 up with options in `LOGBOOK.md`.
+
+**Part two shipped at v7.40.0 — the handoff's own turn 3.** The commission
+came back with four new frames that answer the first and largest of the five
+held calls by drawing it, and drawing the recommendation that had been made:
+`3a` recasts `2a`'s six rows as an **index**, `3b` puts the answer's own
+material **under the pull**, and `3c`/`3d` give one finding its whole
+argument on its own streets. `2a` and `2c` stay in the file as the argument
+for the change and are marked *do not build*.
+
+**What makes an index legal.** Nothing was cut. *A recommendation never
+travels without its reasons* is satisfied one level down rather than all at
+once: the verdict, the why, what to order, the rotates warning, the fit
+figures and the three marks are on the finding's own page; the plan, the near
+misses and the café that came back named and nowhere are under the answer's
+pull. Every figure the record can defend still resolves through `matchFigure`
+and still opens the very cups it was read from.
+
+**The geometry is the handoff's, and reproduces itself.** `ansPlateH` =
+`max(416, top + 18)` yields the handoff's stated 416 at the resting stop and
+its stated 472 at the low one; the headline at `top − 238` lands on its
+stated 160. A finding reuses the composer's 140/122 rather than inventing a
+second geometry, exactly as the handoff asks.
+
+**Still held, and unchanged.** Three of the five calls remain open, and the
+composer (`1d`/`1i`) is untouched because turn 3 did not change it: the
+*read-as* line and where the kind chips and the free-text question go (calls
+two and five), and where `<carta-city>` lives (call three). The answer's
+plate and a finding's underlay are the app's own `<carta-plot>` in the
+meantime — the law holds and nothing is invented, but the plate is thin where
+the handoff draws grid, reach rings and quarter names, and that is now the
+argument for taking call three rather than a theory about it. The distance
+anchor (call four) is taken as recommended and stated: the mean of what the
+ask itself placed, no distance drawn at all from a single point.
 
 ## The horizon (unscheduled, revisited)
 

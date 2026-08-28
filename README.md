@@ -80,8 +80,16 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   plain-text brief, copied, with a way back to the ask. Nothing is pushed at
   you when it comes back: **the answer waits on the door**, one tap from its
   page, and **Not now** puts it down for good — it stays under *What Carta
-  found*, one pull below. What comes back settles in as **its own page, on
-  its own streets**, and it argues rather
+  found*, one pull below. What comes back is **six names on the ground, read
+  as an index**: the rank, the quarter, how far, and what you already made of
+  it — each one a door. Tap a name and that café opens **whole, on its own
+  streets**: what it is best for and why, what to order, how it fits the
+  record you keep, and your own mark on it. Pull the answer up instead and
+  you get what belongs to the answer rather than to any one café — the move
+  Carta would make, the ones that came close with a line saying why not, and
+  the one that came back named and nowhere. Nothing is hidden by this;
+  everything is one tap from where it belongs, and every figure the record
+  can defend still opens the very cups it was read from. It argues rather
   than lists: the cafés **ranked, each saying what it is best for** — the
   cleanest cup, the one worth the drive, the sleeper — with the figures off
   your own brief it was read from underneath, and what to ask for once

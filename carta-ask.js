@@ -1020,80 +1020,414 @@ function openAskFinding(findId){
   const row=document.getElementById('find_'+findId);
   if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
 }
-/* ============ what Carta found — the answer, on its own ground ============
- * Four parts, in the order you'd actually want them: how the ground lies, what
- * it found and what each one is for, what's close but isn't the pick, and what
- * it would do standing there. Every part draws only if the model filled it, so
- * an ask made before any of this existed still opens and still reads.
+/* ============ what Carta found — the answer, as an index ============
+ * (Phase 31, part two — the handoff's turn 3. It supersedes the single-column
+ * answer page Phase 14 built and the six-rows-and-nothing-else `2a` drew.)
+ *
+ * The answer used to be one column: the findings, then the near misses, then
+ * the plan, then the wildcard — and the thing actually asked for scrolled off
+ * the top under everything Carta added around it. v7.35.0 folded the tail
+ * away, which helped and did not fix it: the fold hid material rather than
+ * giving it a place.
+ *
+ * It has a place now. The six names are an INDEX on the plate — rank, ground,
+ * what you made of it, and a door — and everything else went one level down:
+ * per-café material onto the finding's own page, answer-level material under
+ * this page's own pull. That is what makes an index legal here. **A
+ * recommendation never travels without its reasons** is not relaxed by this;
+ * it is satisfied one tap away instead of all at once, and every figure the
+ * record can defend still opens the very cups it was read from.
+ *
+ * Three stops, and the content genuinely differs at each — which is why the
+ * leaf repaints as it travels rather than simply growing:
+ *   low  454  the ground, three rows, and what is left stated
+ *   rest 398  the six index rows                      (the default)
+ *   high 180  the plan, the near misses, named-and-nowhere
  */
+const ANS_STOPS=[454,398,180],ANS_OVERLAP=18,ANS_REST=1;
+/* the frame these stops were drawn against — 812 minus the 57px bar — and the
+ * least the plate is ever allowed to keep. Phase 30's rule, applied to a
+ * second pair of screens: a leaf pinned to a literal top gives the SHORTFALL
+ * of a shorter phone to the thing holding the content, not to the map. At
+ * 390x667 the resting stop's 398 left six index rows 212 pixels to live in.
+ * So the leaf keeps the height it was drawn with and the plate takes what is
+ * left, down to a floor that still reads as a plate. At the reference height
+ * this returns the handoff's own 454 / 398 / 180 exactly. */
+const ANS_REF_MAIN=812-57,ANS_TOP_FLOOR=102;
+const askMainH=()=>{const m=document.getElementById('main');return (m&&m.clientHeight)||ANS_REF_MAIN};
+function ansTop(stop,H){
+  const leafNeeded=ANS_REF_MAIN-ANS_STOPS[stop];
+  return Math.max(ANS_TOP_FLOOR,Math.min(ANS_STOPS[stop],(H||askMainH())-leafNeeded));
+}
+/* the plate always reaches 18px under the leaf and no further, so no stop
+ * leaves a band of bare paper between them and none of it is drawn where it
+ * cannot be seen. At the reference height that is the handoff's own 416 at
+ * the resting stop and its own 472 at the low one; at the high stop it is
+ * 198 rather than the handoff's 416, because the handoff's plate is
+ * <carta-city>'s ground — worth drawing under a leaf — and ours is a plot of
+ * six pins, which is worth fitting into the strip that is actually on screen.
+ * The floor keeps it a plate rather than a sliver on a very short phone. */
+const ansPlateH=stop=>Math.max(ansTop(stop)+ANS_OVERLAP,116);
+const ANS_HERO=228;   // the headline block's own height, the handoff's figure
+let _ansStop=ANS_REST;
+function toggleAnsStop(d){
+  _ansStop=Math.max(0,Math.min(ANS_STOPS.length-1,_ansStop+(d||1)));
+  mountAnswer();
+}
+/* the leaf travels and repaints in place; the plate is never remounted, so
+   the drawn ground is projected once per visit rather than once per pull */
+function mountAnswer(){
+  const leaf=document.getElementById('ansleaf');if(!leaf)return;
+  const top=ansTop(_ansStop);
+  leaf.style.top=top+'px';
+  const plate=document.getElementById('ansplate');
+  if(plate)plate.style.height=ansPlateH(_ansStop)+'px';
+  const hero=document.getElementById('anshero');
+  if(hero){
+    hero.classList.toggle('gone',_ansStop===2);
+    // the headline rides ten pixels above the leaf's own edge wherever that
+    // edge is — pinned to a literal it left a band of bare ground showing
+    // between the scrim's foot and the leaf at any stop but the resting one
+    hero.style.top=Math.max(0,top-ANS_HERO-10)+'px';
+  }
+  const a=D.asks.find(x=>x.id===(pageView&&pageView.id));
+  const body=leaf.querySelector('.body');
+  if(a&&body)body.innerHTML=ansBodyHTML(a,_ansStop);
+  const head=document.getElementById('anshead');
+  if(a&&head)head.textContent=ansHeadRight(a,_ansStop);
+}
+const ansHeadRight=(a,stop)=>stop===2
+  ? `${a.destination} · ${words(askNamed(a).length)} name${askNamed(a).length===1?'':'s'}`
+  : `Asked ${fmtAgo(a.createdAt)}`;
+/* ---- the ground an answer is measured from ----------------------------
+ * The design's rows read "Arts District · 0.9 km". The quarter is the café's
+ * own confirmed neighborhood — a real lookup said it, not the model. The
+ * distance needs a centre, and Carta defines none: an ask has a destination,
+ * not a starting point. So the centre is the mean of what the ask itself
+ * placed, and the page says that in as many words rather than naming a
+ * quarter the record cannot defend ("distance from Downtown" was the
+ * handoff's own figure and its own hardcoded table). Where fewer than two
+ * names placed there is no spread to measure and the distance is simply not
+ * drawn — the quarter still is.
+ */
+function answerAnchor(a){
+  const pins=askNamed(a).filter(f=>f.grounded&&f.lat!=null&&f.lon!=null);
+  return pins.length>1?meanPin(pins):null;
+}
+function findingKm(anchor,f){
+  if(!anchor||!f||f.lat==null||f.lon==null)return null;
+  const d=Math.hypot(KMX(f.lon,anchor.lat)-KMX(anchor.lon,anchor.lat),KMY(f.lat)-KMY(anchor.lat));
+  return isFinite(d)?d:null;
+}
+const kmLabel=d=>d==null?'':(d<10?d.toFixed(1):Math.round(d))+' km';
+/* what the record already makes of this café, if it knows it at all. The
+ * finding carries a placeRef once it has been marked; before that the gentle
+ * join's own exact match is what answers, and a near match is not enough to
+ * put a score on a row.
+ */
+function findingPlace(f){
+  if(f.placeRef)return placeById(f.placeRef)||null;
+  const m=matchNode('places',f.name);
+  return (m&&m.exact)||null;
+}
+function findingReading(f){
+  const p=findingPlace(f);
+  if(!p)return null;
+  const cups=placeCups(p.id);
+  if(!cups.length)return null;
+  const avg=avgOf(cups);
+  return {score:avg==null?null:trimNum(Math.round(avg*10)/10),n:cups.length,placeId:p.id};
+}
+const readingLabel=r=>!r?'':[r.score,r.n===1?'once':r.n===2?'twice':`${words(r.n)} times`].filter(Boolean).join(' · ');
+/* ---- the index row ---------------------------------------------------- */
+function ansRowHTML(a,f,i,anchor){
+  const r=findingReading(f);
+  const km=kmLabel(findingKm(anchor,f));
+  const ground=[f.neighborhood,km].filter(Boolean).join(' · ');
+  return `<button class="idxrow" onclick="openAskFindingScreen(${jsq(String(a.id))},${jsq(String(f.id))})">
+    <span class="n${r?' been':''}">${i+1}</span>
+    <span class="mid"><span class="t">${esc(f.name)}</span>${
+      ground?`<span class="g">${esc(ground)}</span>`:''}</span>
+    <span class="r${r?'':' none'}">${r?esc(readingLabel(r)):'unread'}</span>
+    <span class="go">→</span>
+  </button>`;
+}
+/* ---- what the pull is carrying, said on the handle -------------------- */
+function ansPullLabel(a){
+  const near=(a.mentions||[]).length;
+  const nearIds=new Set((a.mentions||[]).map(f=>f&&f.id));
+  const lost=askNamed(a).filter(f=>!f.grounded&&!nearIds.has(f.id)).length;
+  const parts=[(a.plan&&(a.plan.move||(a.plan.routes||[]).length))?'the plan':null,
+    near?`${words(near)} came close`:null,
+    (!near&&lost)?`${words(lost)} nowhere`:null].filter(Boolean);
+  return parts.length?parts.join(' · '):'the rest of the answer';
+}
+/* ---- the leaf, at each of its three stops ------------------------------ */
+function ansBodyHTML(a,stop){
+  const findings=a.findings||[],anchor=answerAnchor(a);
+  if(stop===2)return ansUnderPullHTML(a,anchor);
+  const shown=stop===0?findings.slice(0,3):findings;
+  const left=findings.length-shown.length;
+  const lost=askNamed(a).filter(f=>!f.grounded).length;
+  return `<div class="shead" style="margin-top:0;padding-bottom:8px">
+      <span class="l">What Carta found</span>
+      <span class="r">${stop===0?'the ground':'tap a name for its argument'}</span>
+    </div>
+    ${findings.length?shown.map((f,i)=>ansRowHTML(a,f,i,anchor)).join('')
+      :'<div class="empty">Carta didn’t name anything it could stand behind here.</div>'}
+    ${left?`<div class="shead over" style="margin-top:10px;padding-bottom:0">
+      <span class="l">${esc(capFirst(words(left)))} more${lost?` · ${words(lost)} unplaced`:''}</span>
+      <span class="r"><button class="qlink" style="flex:none" onclick="setAnsStop(1)">Read the answer</button></span>
+    </div>`:''}
+    <button class="pullbar" onclick="toggleAnsStop(1)" aria-label="Open the rest of the answer">
+      <span class="bar"></span><span class="l">${esc(ansPullLabel(a))}</span></button>`;
+}
+/* everything that is about the answer rather than about one café. A near miss
+ * gets one sentence saying why not and never a page — that shape is exactly
+ * what the six index rows have no room for, and is what makes them an index. */
+function ansUnderPullHTML(a,anchor){
+  const plan=a.plan||null,near=a.mentions||[];
+  // a near miss that also failed to place is ALREADY on this screen, in its own
+  // row, saying why not — listing it again under Named and nowhere reported one
+  // café to the keeper twice. Named-and-nowhere is for what the ranking named.
+  const nearIds=new Set(near.map(f=>f&&f.id));
+  const lost=askNamed(a).filter(f=>!f.grounded&&!nearIds.has(f.id));
+  const routeHTML=r=>`<div class="route"><span class="if">${esc(r.if)}</span><span class="ord">${esc((r.order||[]).join(' · '))}</span></div>`;
+  const nearRow=f=>{
+    const km=kmLabel(findingKm(anchor,f));
+    return `<div class="nearrow">
+      <span class="mid"><span class="t">${esc(f.name)}</span>${
+        f.instead?`<span class="why">${esc(f.instead)}</span>`:''}</span>
+      ${(f.neighborhood||km)?`<span class="r">${esc(f.neighborhood||'')}${
+        f.neighborhood&&km?'<br>':''}${esc(km)}</span>`:''}
+    </div>`;
+  };
+  return `<button class="pullbar bare" onclick="toggleAnsStop(-1)" aria-label="Back to the six">
+      <span class="bar"></span></button>
+    ${plan&&(plan.move||(plan.routes||[]).length)?`
+      <div class="shead" style="margin-top:0"><span class="l">What Carta would do</span></div>
+      ${plan.move?`<div class="verdict" style="margin-top:14px">${esc(plan.move)}</div>`:''}
+      ${(plan.routes||[]).length?`<div style="margin-top:10px">${plan.routes.map(routeHTML).join('')}</div>`:''}`:''}
+    ${near.length?`<div class="shead" style="margin-top:18px">
+        <span class="l">Close, but not the pick</span>
+        <span class="r">${esc(words(near.length))}, and why not</span></div>
+      ${near.map(nearRow).join('')}`:''}
+    ${lost.length?`<div class="shead" style="margin-top:16px">
+        <span class="l">Named and nowhere</span><span class="r">${esc(words(lost.length))}</span></div>
+      ${lost.map(f=>`<div class="nearrow"><span class="mid"><span class="t">${esc(f.name)}</span>
+        <span class="why">Came back with no street on it. Listed, never plotted — a row here, and no mark on the plate.</span></span></div>`).join('')}`:''}
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:auto;padding:12px 0 14px">
+      <span class="eyebrow" style="margin:0;letter-spacing:.1em">Asked ${esc(fmtAgo(a.createdAt))}</span>
+      <button class="qlink" style="flex:none;white-space:nowrap" onclick="setAnsStop(1)">Back to the six</button>
+    </div>`;
+}
+function setAnsStop(i){_ansStop=i;mountAnswer()}
+/* the stop, set WITHOUT painting — the answer opens on its six names every
+   time, and the reset has to land before the screen renders rather than
+   repainting a leaf that is still showing the ask you just left. */
+function resetAnsStop(){_ansStop=ANS_REST}
+/* the marks a plate carries: the confirmed names, filled where the record has
+   already stood in them. The grounding rule is unchanged — a name the lookup
+   could not confirm is a row under the pull and never a pin. */
+const ansPinsJSON=a=>JSON.stringify((a.findings||[]).filter(f=>f.grounded&&f.lat!=null&&f.lon!=null)
+  .map(f=>({id:f.id,name:f.name,lat:f.lat,lon:f.lon,score:findingReading(f)?1:null})));
 function vAskResult(id){
   const a=D.asks.find(x=>x.id===id);
   if(!a)return `<div class="pad" style="padding-top:26px"><div class="empty">That ask isn’t on the record.</div>
     <button class="btn btn-quiet" onclick="goBack()">Back</button></div>`;
-  const named=askNamed(a),mentions=a.mentions||[],plan=a.plan||null;
-  const wild=plan&&plan.wildcard;
-  const grounded=named.filter(f=>f.grounded);
-  const unplaced=named.length-grounded.length;
-  const pin=f=>({id:f.id,name:f.name,lat:f.lat,lon:f.lon,
-    score:(f.status==='been'||f.status==='booked')?1:null,
-    dim:f.status==='skip'||(mentions.indexOf(f)>-1&&!f.status)});
-  const pts=placed(named).map(pin);
-  const lede=[`${capFirst(words(named.length))} named, ${words(grounded.length)} placed.`,
-    unplaced?`${unplaced===1?'The other':'The others'} could not be confirmed against a real address, so ${unplaced===1?'it is':'they are'} listed and not drawn.`:''
-  ].filter(Boolean).join(' ');
-  const routeHTML=r=>`<div class="route"><span class="if">${esc(r.if)}</span><span class="ord">${esc((r.order||[]).join(' · '))}</span></div>`;
-  const n=a.findings.length;
-  /* v7.35.0, critique rec 10: the answer arrived as one column — the findings,
-     then the near misses, then the plan, then the wildcard — and the thing that
-     was actually asked for scrolled off the top under everything Carta added
-     around it. The findings stay open, because they are the answer. The rest
-     folds to a head that states its own weight, and opens in place. */
-  const fold=(label,count,body)=>`<details class="fold">
-    <summary><span class="l">${esc(label)}</span><span class="r">${esc(count)} · <span class="fold-word"></span></span></summary>
-    <div class="fold-body">${body}</div></details>`;
-  return `<div>
-    <div style="position:relative">
-      ${pts.length?streetsHTML(pts,{boxStyle:'height:280px',dot:11,plotWrap:'position:absolute;inset:0;padding:78px 60px 34px'})
-        :'<div class="mapbox" style="height:150px"></div>'}
-      <div class="fade top" style="height:110px;z-index:3"></div>
-      ${backMiniHTML('overlay','left:18px;top:18px',true)}
-      <button class="omini overlay bare" style="right:12px;top:18px" onclick="openAskScreen()">Ask again</button>
+  const named=askNamed(a),grounded=named.filter(f=>f.grounded);
+  const pins=ansPinsJSON(a),drawn=pins!=='[]';
+  const been=(a.findings||[]).filter(f=>findingReading(f)).length;
+  const n=(a.findings||[]).length;
+  const head=`${capFirst(words(n))} in the city, <em>${been?`${words(been)} already yours.`:'all of them new.'}</em>`;
+  return `<div class="stage">
+    <div class="plate mapbox passport" id="ansplate" style="height:${ansPlateH(_ansStop)}px">
+      ${drawn?`<div class="plotwrap" style="position:absolute;inset:0;padding:56px 44px 56px">
+          <carta-plot class="plot frame" fit="frame" pins="${esc(pins)}" dot="9" labels="on"></carta-plot></div>`
+        :`<carta-atlas style="position:absolute;inset:0" caption="off" frame="tasted"
+            tasted="${esc(Object.values(tastedCountryMap()).map(c=>c.label).join(','))}"></carta-atlas>`}
+      <div class="fade top" style="height:132px"></div>
     </div>
-    <div class="lift pad" style="padding-top:20px">
-      <div class="eyebrow${settleCls()}" style="margin:0 0 6px">${esc(askKindLabel(a.kind))} · asked ${esc(fmtWhen(a.createdAt))}${a.reach?' · '+esc(a.reach):''}</div>
-      <div class="display${settleCls()}" style="margin:0">${esc(a.destination)}</div>
-      ${a.read?`<div class="lede${settleCls()}" style="margin-top:8px${settleDelay(1)}">${esc(a.read)}</div>`:''}
-      <div class="m${settleCls()}" style="margin-top:${a.read?'8px':'10px'}${settleDelay(1.6)}">${esc(lede)}</div>
-      ${a.question?`<div class="note${settleCls()}" style="border:0;padding:0;margin:10px 0 0${settleDelay(2)}">You asked: ${esc(a.question)}</div>`:''}
+    <div class="overlay" style="left:20px;right:20px;top:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      ${backMiniHTML('bare','flex:none;margin-left:-4px',true)}
+      <span class="eyebrow" id="anshead" style="margin:0;padding-top:12px">${esc(ansHeadRight(a,_ansStop))}</span>
+    </div>
+    <div class="hero${_ansStop===2?' gone':''}" id="anshero" style="top:${Math.max(0,ansTop(_ansStop)-ANS_HERO-10)}px;height:${ANS_HERO}px">
+      <div class="eyeb">${esc([a.destination,a.reach,tasteFloorLabel()].filter(Boolean).join(' · '))}</div>
+      <div class="display" style="font-size:var(--s42);line-height:1.06;letter-spacing:-.025em;margin:0">${head}</div>
+    </div>
+    <div class="leaf" id="ansleaf" style="top:${ansTop(_ansStop)}px;padding:12px 20px 0">
+      <div class="body">${ansBodyHTML(a,_ansStop)}</div>
+    </div>
+  </div>`;
+}
+// the bar the ask went out on, said the way the eyebrow says everything else
+function tasteFloorLabel(){
+  const tm=tasteModelMemo();
+  return tm.bar.floor!=null?`${tm.bar.floor} or better`:'';
+}
 
-      <div class="shead${settleCls()}"${settleAt(2.3)}><span class="l">What Carta found</span><span class="r">been · booked · skip</span></div>
-      ${n?a.findings.map((f,i)=>findingRowHTML(f,i,i+3)).join('')
-        :'<div class="empty">Carta didn’t name anything it could stand behind here.</div>'}
-      ${a.findings.some(f=>(f.fit||[]).some(figBacked))?`<div class="note" style="border:0;padding:0;margin:12px 0 0">Tap an underlined figure for the cups it was read from. What isn’t underlined, the record can’t open.</div>`:''}
-
-      ${mentions.length?fold('Close, but not the pick',`${words(mentions.length)} named`,
-        mentions.map((f,i)=>mentionRowHTML(f,i+n+3)).join('')):''}
-
-      ${plan?fold('What Carta would do',[plan.move?'the move':null,plan.routes&&plan.routes.length?`${words(plan.routes.length)} route${plan.routes.length===1?'':'s'}`:null,wild?'a wildcard':null].filter(Boolean).join(' · ')||'stated',
-        `<div class="box">
-          ${plan.move?`<div class="say" style="margin-top:0">${esc(plan.move)}</div>`:''}
-          ${plan.routes&&plan.routes.length?`<div style="margin-top:${plan.move?'12px':'0'}">${plan.routes.map(routeHTML).join('')}</div>`:''}
-        </div>
-        ${wild?`<div class="find" id="find_${wild.id}" style="border-bottom:0">
-          <div class="row">
-            <span style="font-family:var(--serif);font-size:17.5px">${esc(wild.name)}</span>
-            ${groundHTML(wild)}
-          </div>
-          <div class="m" style="margin-top:3px">${whereHTML(wild)}</div>
-          ${wild.why?`<div class="say">${esc(wild.why)}</div>`:''}
-          <div class="note" style="margin-top:8px">Outside the ranking — worth knowing anyway.</div>
-          ${marksHTML(wild)}
-        </div>`:''}`):''}
-
-      ${a.findings.some(f=>f.fit&&f.fit.length)?`<button class="btn btn-quiet" style="margin-top:16px" onclick="openBriefScreen(${jsq(a.kind==='city'?a.destination:'')})">The brief these were read from</button>`:''}
-      <div class="note" style="margin-top:16px">Mark one Been or Booked and it is on file — the next time you type its name, Carta already knows it. The pin fills the moment you do.</div>
-      <button class="btn btn-quiet" style="margin-top:14px" onclick="openAskScreen()">Ask again</button>
-    </div></div>`;
+/* ============ one finding, whole ============
+ * (Phase 31, part two · `3c` at rest, `3d` read down. It is what `2c` was,
+ * carrying an argument rather than a fact box.)
+ *
+ * This is the page that makes the index legal. Every per-café thing the old
+ * single-column answer carried — the verdict, the why, what to order, the
+ * rotates warning, the fit figures and the three marks — is here, on one
+ * page, in one scroll, with no fold. The Phase 14 fold exists to prevent a
+ * wall of text; the defence here is that every part is a named block under
+ * its own section head, not that anything is hidden.
+ *
+ * Two stops, and they are the composer's own figures rather than new ones:
+ *   rest 398 over a 416 plate   the name, where, the verdict, the why
+ *   down 122 over a 140 strip   what to order, how it fits, your mark
+ */
+const FIND_STOPS=[398,122];
+const findTop=stop=>Math.max(ANS_TOP_FLOOR,Math.min(FIND_STOPS[stop],askMainH()-(ANS_REF_MAIN-FIND_STOPS[stop])));
+const findPlateH=stop=>Math.max(findTop(stop)+ANS_OVERLAP,116);
+/* the plate's own clearance at each stop, stated rather than scaled: 70/64 in
+   a 416 box leaves the pin between the header and the leaf; 24/30 in the 140
+   strip leaves it the 86px that strip actually has. A single formula for both
+   put the pin in six pixels of the strip and drew nothing. */
+const FIND_PADS=['70px 44px 64px','24px 40px 30px'],FIND_SCRIMS=[120,96];
+let _findStop=0;
+function toggleFindStop(d){
+  _findStop=Math.max(0,Math.min(1,_findStop+(d||1)));
+  mountFinding();
+}
+function mountFinding(){
+  const leaf=document.getElementById('findleaf');if(!leaf)return;
+  const top=findTop(_findStop),ph=findPlateH(_findStop);
+  leaf.style.top=top+'px';
+  const plate=document.getElementById('findplate');
+  if(plate)plate.style.height=ph+'px';
+  const fade=document.getElementById('findfade');
+  if(fade)fade.style.height=FIND_SCRIMS[_findStop]+'px';
+  const wrap=plate&&plate.querySelector('.plotwrap');
+  if(wrap)wrap.style.padding=FIND_PADS[_findStop];
+  const note=plate&&plate.querySelector('.smap-note');
+  if(note)note.style.bottom=(ph-top+8)+'px';
+  const hit=pageView&&pageView.id?askOf(pageView.id):null;
+  const body=leaf.querySelector('.body');
+  if(hit&&body)body.innerHTML=findBodyHTML(hit.a,hit.f,_findStop);
+}
+function openAskFindingScreen(askId,findId){
+  _findStop=0;
+  openScreen('askfind',findId,{askId:askId});
+}
+/* where this finding sits in the set, so opening one never loses the other
+   five — the header says "2 of 6" and the ← goes back to the stop you left */
+function findIndexOf(a,f){
+  const list=a.findings||[];
+  const i=list.findIndex(x=>x&&x.id===f.id);
+  return i<0?null:{i:i+1,n:list.length};
+}
+/* the fit box. Every figure the record can actually open is dotted and opens
+ * the cups it was read from; one it cannot resolve stays flat text. That is
+ * the honesty gate on the answer's return leg, and it is the same
+ * `matchFigure`/`.fig` pair Your taste already reads through — moved here
+ * from the old answer page rather than reinvented. */
+function findFitRowsHTML(a,f){
+  const rows=[];
+  const tm=tasteModelMemo();
+  if(tm.bar.floor!=null)rows.push(['Your bar',
+    `<button class="fig" onclick="openBarEvidence()">${esc(tm.bar.floor)} or better</button>`]);
+  const fit=(f.fit||[]).filter(Boolean);
+  if(fit.length)rows.push(['What earns your scores',fit.map(fitFigureHTML).join(' · ')]);
+  const r=findingReading(f);
+  if(r)rows.push(['Your reading here',
+    `<button class="fig" onclick="openCityChapterForPlace(${jsq(String(r.placeId))})">${esc(readingLabel(r))}</button>`]);
+  rows.push(['Position',f.grounded?'confirmed · a real address':'not confirmed · never drawn']);
+  return rows.map(x=>`<div class="r"><span class="k">${esc(x[0])}</span><span class="v">${x[1]}</span></div>`).join('');
+}
+function findBodyHTML(a,f,stop){
+  const anchor=answerAnchor(a);
+  const km=kmLabel(findingKm(anchor,f));
+  const pos=findIndexOf(a,f);
+  const meta=[f.neighborhood,km,a.reach].filter(Boolean).join(' · ');
+  if(stop===1){
+    const marks=`<div class="picks" style="margin-top:10px">${FIND_MARKS.map(m=>
+      `<button class="pick${f.status===m[0]?' on':''}" onclick="setFindStatus(${jsq(String(f.id))},'${m[0]}')">${m[1]}</button>`).join('')}</div>`;
+    return `<button class="pullbar bare" onclick="toggleFindStop(-1)" aria-label="Back up"><span class="bar"></span></button>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--line-strong)">
+        <span class="display" style="font-size:var(--s18);line-height:1.14;letter-spacing:-.02em;margin:0">${esc(f.name)}</span>
+        <span class="idxrow-g" style="flex:none;font-family:var(--sans);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)">${esc([f.neighborhood,km].filter(Boolean).join(' · '))}</span>
+      </div>
+      ${f.order?`<div class="shead" style="margin-top:14px"><span class="l">What to order</span></div>
+        <div style="font-family:var(--serif);font-size:var(--s16);line-height:1.45;margin-top:9px">${esc(f.order)}</div>`:''}
+      ${f.stale?`<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="pick mini tag">rotates</span>
+        <span style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">a menu, not a fact — Carta never asked what is on it today.</span></div>`:''}
+      <div class="shead" style="margin-top:14px"><span class="l">How it fits you</span>
+        <span class="r">tap a figure for its cups</span></div>
+      <div class="fitbox">${findFitRowsHTML(a,f)}</div>
+      <div class="shead" style="margin-top:14px"><span class="l">Your mark on it</span></div>
+      ${marks}
+      <button class="btn btn-graphite" style="min-height:48px;padding:13px 16px;margin-top:16px" onclick="logCupAtFinding(${jsq(String(f.id))})">Log a cup here</button>
+      <div class="note" style="border:0;padding:0;margin-top:9px;padding-bottom:12px">Streets are the enhancement, never the surface. Offline, the plate above is the drawn one and the pin stands where the record put it.</div>`;
+  }
+  return `<div class="display" style="font-size:var(--s34);line-height:1.08;letter-spacing:-.025em;margin:0">${esc(f.name)}</div>
+    ${meta?`<div class="eyebrow" style="margin:7px 0 0">${esc(meta)}</div>`:''}
+    <div class="shead" style="margin-top:18px"><span class="l">Best for</span></div>
+    ${f.verdict?`<div class="verdict">${esc(f.verdict)}</div>`:'<div class="verdict" style="color:var(--text-subtle);font-style:italic">Carta didn’t say what this one is for.</div>'}
+    ${f.why?`<div class="verwhy">${esc(f.why)}</div>`:''}
+    ${(()=>{const r=findingReading(f);return r?`<div style="border-top:1px solid var(--line);padding-top:12px;margin-top:16px;display:flex;justify-content:space-between;align-items:baseline;gap:14px">
+      <span style="font-family:var(--sans);font-size:var(--s13);color:var(--ink-3)">Your reading</span>
+      <button class="fig" onclick="openCityChapterForPlace(${jsq(String(r.placeId))})">${esc(readingLabel(r))}</button></div>`:''})()}
+    <button class="pullbar" onclick="toggleFindStop(1)" aria-label="Read it down">
+      <span class="bar"></span><span class="l">what to order · how it fits · your marks</span></button>`;
+}
+/* the streets over the drawn ground. `<carta-city>` is what the handoff draws
+ * underneath here; it is not built (ARCHITECTURE.md §1 — a new element is a
+ * founder call, and CITY_ARCS carries one city today), so the layer that
+ * stands when the tiles cannot be reached is the drawn plot the app already
+ * has. The law is unchanged and is the point: streets are the enhancement,
+ * the drawn ground is the surface, and neither invents a pin. */
+function vAskFinding(id,view){
+  const hit=askOf(id);
+  if(!hit)return `<div class="pad" style="padding-top:26px"><div class="empty">That finding isn’t on the record.</div>
+    <button class="btn btn-quiet" onclick="goBack()">Back</button></div>`;
+  const {a,f}=hit,pos=findIndexOf(a,f);
+  const pins=f.grounded&&f.lat!=null?JSON.stringify([{id:f.id,name:f.name,lat:f.lat,lon:f.lon}]):'[]';
+  return `<div class="stage">
+    <div class="plate mapbox passport" id="findplate" style="height:${findPlateH(_findStop)}px">
+      ${pins!=='[]'
+        ?streetsHTML([{id:f.id,name:f.name,lat:f.lat,lon:f.lon}],
+            {boxStyle:'position:absolute;inset:0',dot:10,zoom:15.4,attribLift:4,
+             // the leaf covers the plate's own foot, so the offline note and the
+             // pin both sit in the band that is actually on screen
+             noteStyle:'bottom:'+(findPlateH(_findStop)-findTop(_findStop)+8)+'px',
+             plotWrap:'position:absolute;inset:0;padding:'+FIND_PADS[_findStop]})
+        :`<carta-atlas style="position:absolute;inset:0" caption="off" frame="tasted"
+            tasted="${esc(Object.values(tastedCountryMap()).map(c=>c.label).join(','))}"></carta-atlas>`}
+      <div class="fade top" id="findfade" style="height:${FIND_SCRIMS[_findStop]}px"></div>
+    </div>
+    <div class="overlay" style="left:20px;right:20px;top:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      ${backMiniHTML('bare','flex:none;margin-left:-4px',true)}
+      ${pos?`<span class="eyebrow" style="margin:0;padding-top:12px">${esc(words(pos.i))} of ${esc(words(pos.n))}</span>`:''}
+    </div>
+    <div class="leaf" id="findleaf" style="top:${findTop(_findStop)}px;padding:16px 20px 0">
+      <div class="body">${findBodyHTML(a,f,_findStop)}</div>
+    </div>
+  </div>`;
+}
+/* the two doors a finding's own page opens back into the record: the city it
+   stands in, where its cups actually are, and the door itself prefilled with
+   the café — neither invents anything the record does not already hold. */
+function openCityChapterForPlace(placeId){
+  const p=placeById(placeId);
+  if(p&&p.city)openCityChapter(p.city);else if(p)openCafeScreen(p.id);
+}
+function logCupAtFinding(findId){
+  const hit=askOf(findId);if(!hit)return;
+  // the café has to be ON the record before a cup can name it, and marking a
+  // finding Been is already the move that puts it there (setFindStatus mints
+  // the place and keeps the placeRef). So this is that move plus the door,
+  // opened at the café it just minted — the step the door would otherwise ask
+  // for and already knows the answer to.
+  if(hit.f.status!=='been')setFindStatus(findId,'been');
+  const again=askOf(findId),ref=again&&again.f.placeRef;
+  if(ref)openDoorAt(ref);else openDoor();
 }
 
 /* ---- the seam: what index.html reads off this file (Phase 19 pattern —
@@ -1113,6 +1447,16 @@ window.sleep=sleep;
 window.tag=tag;
 window.vAsk=vAsk;
 window.vAskResult=vAskResult;
+window.vAskFinding=vAskFinding;
+window.mountAnswer=mountAnswer;
+window.mountFinding=mountFinding;
+window.toggleAnsStop=toggleAnsStop;
+window.setAnsStop=setAnsStop;
+window.resetAnsStop=resetAnsStop;
+window.toggleFindStop=toggleFindStop;
+window.openAskFindingScreen=openAskFindingScreen;
+window.openCityChapterForPlace=openCityChapterForPlace;
+window.logCupAtFinding=logCupAtFinding;
 window.vAsking=vAsking;
 window.vBrief=vBrief;
 window.vTaste=vTaste;
@@ -1125,4 +1469,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.39.0';
+window.ASK_VERSION='7.40.0';

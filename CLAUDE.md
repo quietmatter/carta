@@ -260,7 +260,8 @@ server/               Classic's sync server — dormant
   - **the places** — `vCityChapter` (streets, with the list on a sheet at
     three detents — in `carta-atlas.js`, since a city is read off the ground
     the same way a country is), `vCafe`, `vCup`, `vMenu`.
-  - **the argument** — `vTaste` → `vBrief` → `vAsk` → `vAsking` → `vAskResult`.
+  - **the argument** — `vTaste` → `vBrief` → `vAsk` → `vAsking` → `vAskResult`
+    → `vAskFinding`.
     The first four are `BARELESS`: one argument read in a sitting apiece, so
     the bar would only offer a way to lose your place — `vAsking` most of
     all, since while the ask is out there is exactly one thing to do with the
@@ -271,7 +272,14 @@ server/               Classic's sync server — dormant
     the narration read up out of a scrim, and the whole ember budget the
     rule's fill and its tip. **And the answer no longer interrupts** —
     `runAsk` ends on `askLandsOnDoor()` and the answer waits on the door as
-    rung `03b` instead of the result screen being pushed up.
+    rung `03b` instead of the result screen being pushed up. **Part two
+    (v7.40.0) made the answer an index**: `vAskResult` is a plate with a leaf
+    at three stops (`ANS_TOPS` 454/398/180 — the rows, the answer's own
+    material under the pull, the ground), and `vAskFinding` is one finding
+    whole at two (`FIND_TOPS` 398/122 — the composer's own geometry, reused).
+    Both repaint their leaf in place as it travels, because the content
+    genuinely differs per stop and the plate must not be remounted. Every
+    reason the single-column answer carried is still there, one level down.
   - **what the keeper owns** — `vRecord` (the ledger, the backup, imports,
     cards, the instrument, classic) → `vSetups` → `vSetup` (the grind history
     that is only true on one Setup, which is why it never leaves that page).
@@ -579,8 +587,8 @@ any page error, or any assertion:
 ```bash
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 82 checks
-node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
+node test/verify-ask.js        # the ask at the front door — 132 checks
+node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31 seam — 12 checks
 ```
 

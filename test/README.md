@@ -13,8 +13,8 @@ node test/model.test.js        # the taste model and the brief — 139 cases
 # the real app, in a real browser
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 82 checks
-node test/verify-v7.35.js      # the v7.35.0 fold — 40 checks
+node test/verify-ask.js        # the ask at the front door — 132 checks
+node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31 seam — 12 checks
 ```
 
@@ -103,6 +103,16 @@ Nominatim doors — the wait is tested as it actually runs, not by driving
   empty box; **an answer with nothing to stand behind** says so plainly
 - **the plot's labels** — no two overprint, a crowded name moves off its dot
   rather than stacking on it, and type over a plate carries the halo
+- **the answer as an index** (part two) — the resting stop's two figures and
+  the headline's own, one row per finding, quarter and distance off the
+  record's own confirmed lookup, the pull's three sections and the
+  de-duplication a café that is both a near miss and unplaced needs, and the
+  low stop's plate growing to meet its leaf
+- **one finding, whole** — an index row is a door, both stops, the verdict and
+  the why, the marks writing with no confirm, and a dotted figure really
+  opening the cups it was read from
+- **no distance from a single point** — the anchor is the mean of what the ask
+  itself placed, so one placed name draws a quarter and no kilometre
 - dusk, reduced motion, 390×667 and 320px
 
 ## `verify-door.js` — the front door (Phase 30)

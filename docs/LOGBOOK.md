@@ -7,6 +7,100 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — Phase 31, part two: the answer as an index (v7.40.0)
+
+- **The design answered the question it was asked.** Part one shipped the
+  wait and rung `03b` and held four screens on five founder calls, the first
+  and largest of which was *the answer page has nowhere for its reasons* —
+  frame `2a` was a headline and six rows, and today's `vAskResult` carried a
+  verdict, a travel note, a rotates warning, the why, the fit figures that
+  open the very cups they were read from, what to order, three marks, the
+  near misses and the plan. The handoff came back with a **turn 3** that
+  answers it by drawing it, and draws the recommendation that was made:
+  `3a` the six rows as an **index**, `3b` the answer's own material **under
+  the pull**, `3c`/`3d` **one finding, whole** on its own streets. `2a` and
+  `2c` stay in the file as the argument for the change and are marked *do
+  not build*.
+- **Nothing was cut to make room, which is the whole of why an index is
+  legal here.** *A recommendation never travels without its reasons* is not
+  relaxed by this: every reason moved one level down and is one tap away
+  rather than all at once. Per-café material is on the finding's own page;
+  answer-level material is under the answer's pull. The dotted figures still
+  resolve through `matchFigure` and still land on the very sheet *Your taste*
+  opens — moved, not reinvented.
+- **Three stops on the answer, two on a finding, and the content genuinely
+  differs at each** — which is why both leaves repaint in place as they
+  travel rather than simply growing. The plate is never remounted, so the
+  ground is projected once per visit rather than once per pull.
+- **The geometry is the handoff's own, and one formula reproduces it.**
+  `ansPlateH` = `max(416, top + 18)` gives 416 at the resting stop and 472 at
+  the low one — both the handoff's stated figures — and gives the high stop a
+  416 it did not state. The headline rides `top - 228 - 10`, which lands on
+  the handoff's own 160 at rest and stops leaving a band of bare ground at
+  any other stop. The finding page reuses the composer's 140/122 rather than
+  inventing a second geometry, exactly as the handoff asks.
+
+### Three bugs found by rendering it rather than by reading it
+
+- **A café that was both a near miss and unplaced was reported twice** —
+  once under *Close, but not the pick* and again under *Named and nowhere*.
+  Named-and-nowhere is for what the ranking named; a near miss already says
+  why not in its own row.
+- **`.pullbar` carries `margin-top:auto`**, which is right for a handle that
+  closes a leaf from its foot and wrong for the bare one that opens it from
+  the top — it pushed the whole of *under the pull* down the screen.
+- **The plate's clearance cannot be one formula across both stops of a
+  finding.** 70/64 in a 416 box puts the pin between the header and the
+  leaf; the same arithmetic in the 140 strip left it six pixels to draw in
+  and drew nothing. Both are stated now.
+
+### What was NOT built, and why
+
+- **`<carta-city>` is still not built**, so the answer's plate and a
+  finding's underlay are the app's own `<carta-plot>`. That is founder call
+  three and it is unchanged: the element needs a home (folding it into
+  `carta-map.js` owes no §1 argument; a seventh file does), and it still
+  carries the hardcoded Los Angeles quarter table, the weak fold where
+  `cityKey` belongs, and the row-number `data-id`. **The cost is now visible
+  rather than theoretical:** the handoff's `3b` shows a plate full of grid,
+  reach rings and quarter names where ours shows two pins on bare ground,
+  and a finding's offline underlay is a single dot in a void. Nothing is
+  wrong — the law holds, streets are the enhancement and the drawn ground is
+  the surface — but the plate is thin, and that is the argument for taking
+  the call.
+- **The composer (`1d`/`1i`) is untouched.** Turn 3 did not change it, and
+  founder calls two and five — the *read-as* line, and where the kind chips
+  and the free-text question go — are unchanged and still open.
+- **The distance anchor is taken, and stated.** Carta defines no anchor for
+  an ask, so the centre is the mean of what the ask itself placed and the
+  page never names a quarter the record cannot defend. **Where fewer than two
+  names placed there is no spread to measure and no distance is drawn** — the
+  quarter still is. The handoff's own `3a` dropped its "distance from
+  Downtown" header between turns, which is the same conclusion from the other
+  side.
+
+### Verification
+
+- `verify-static.js` 19 · `model.test.js` 139 · `verify-door.js` 59 ·
+  `verify-split.js` 12, all unchanged. **`verify-v7.35.js` 40 → 41, and two of
+  its checks moved rather than passing untouched:** rec 10's guarantee is that
+  the answer leads with its findings and everything else sits behind something
+  that states its own weight. v7.35.0 met that with `<details class="fold">`;
+  this meets it with a leaf at three stops and a labelled pull handle. The
+  mechanism changed and the guarantee did not, so the checks follow it across —
+  they now assert the index leads, the handle carries a label, and the label
+  really opens what it names. Deleting them would have been the easy read of a
+  red suite and the wrong one.
+- **`verify-ask.js` grows 82 → 132 to cover turn 3**: the resting stop's two figures
+  and the headline's own, one index row per finding, quarter and distance off
+  the record's own lookup, the pull's three sections and the de-duplication,
+  the low stop's plate growing to meet its leaf, an index row opening a
+  finding, both of a finding's stops, the marks writing with no confirm, a
+  dotted figure opening what it was read from, no distance from a single
+  point, and dusk / 390×667 / 320px on both new screens.
+- Rendered at 480×812 in paper and dusk and read against the handoff's own
+  `3a`–`3d` captures.
+
 ## 2026-08-27 — Phase 31, the ask at the front door, part one (v7.39.0)
 
 - **The commission.** Claude Design handoff `Ask Carta at the Front Door`:

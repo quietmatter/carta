@@ -420,6 +420,196 @@ async function plotFit(page){
   await ctx.close();
 }
 
+/* ---------- turn 3 · the answer as an index, and one finding whole ----------
+   The handoff's third turn is what unblocked this half of the design: the six
+   names became an index, and every reason moved one level down rather than
+   being cut. These checks are mostly about that move being real — that
+   nothing the old single-column answer carried has quietly gone missing. */
+const ansState=p=>p.evaluate(()=>{
+  const leaf=document.getElementById('ansleaf'),plate=document.getElementById('ansplate');
+  const hero=document.getElementById('anshero');
+  return {view:pageView&&pageView.kind,top:leaf&&leaf.style.top,plate:plate&&plate.style.height,
+    heroGone:hero&&hero.classList.contains('gone'),heroTop:hero&&hero.style.top,
+    leafH:leaf&&Math.round(leaf.getBoundingClientRect().height),
+    rows:document.querySelectorAll('#ansleaf .idxrow').length,
+    near:document.querySelectorAll('#ansleaf .nearrow').length,
+    overflow:leaf?leaf.querySelector('.body').scrollHeight>leaf.querySelector('.body').clientHeight+1:null,
+    text:document.getElementById('main').innerText};
+});
+const findState=p=>p.evaluate(()=>{
+  const leaf=document.getElementById('findleaf'),plate=document.getElementById('findplate');
+  return {view:pageView&&pageView.kind,top:leaf&&leaf.style.top,plate:plate&&plate.style.height,
+    leafH:leaf&&Math.round(leaf.getBoundingClientRect().height),
+    figs:document.querySelectorAll('#findleaf .fig').length,
+    marks:document.querySelectorAll('#findleaf .pick').length,
+    overflow:leaf?leaf.querySelector('.body').scrollHeight>leaf.querySelector('.body').clientHeight+1:null,
+    text:document.getElementById('main').innerText};
+});
+{
+  const {ctx,page}=await boot({});
+  await page.evaluate(()=>openAskResultScreen('ask_lx'));
+  await page.waitForTimeout(900);
+  let s=await ansState(page);
+  ok(s.view==='askresult','the answer — it opens',JSON.stringify(s));
+  ok(s.leafH===357,'the answer — the resting leaf keeps the height it was drawn with, at any viewport',JSON.stringify(s));
+  ok(Number(String(s.plate).replace('px',''))===Number(String(s.top).replace('px',''))+18,
+    'the answer — and the plate reaches exactly under it, never leaving bare ground',JSON.stringify(s));
+  ok(s.rows===3,'the answer — one index row per finding',String(s.rows));
+  ok(/tap a name for its argument/i.test(s.text),'the answer — the rows say they are doors',s.text);
+  ok(/Baixa · 0\.9 km/i.test(s.text),'the answer — quarter and distance, off the record’s own lookup',s.text);
+  ok(/8 · once/.test(s.text),'the answer — what you already made of it');
+  ok(/unread/.test(s.text),'the answer — and what you have not');
+  ok(!/undefined|NaN|\[object/.test(s.text),'the answer — nothing leaked into the copy',s.text);
+  ok((await embers(page)).length===1,'the answer — exactly one ember: the bar’s own door',
+    JSON.stringify(await embers(page)));
+
+  /* the pull, and everything that is about the answer rather than one café */
+  await page.evaluate(()=>setAnsStop(2));await page.waitForTimeout(600);
+  s=await ansState(page);
+  ok(s.leafH===575,'the pull — the high leaf keeps its own designed height',JSON.stringify(s));
+  ok(s.heroGone,'the pull — and the headline steps aside');
+  ok(/What Carta would do/i.test(s.text),'the pull — the plan',s.text);
+  ok(/Close, but not the pick/i.test(s.text),'the pull — the near misses');
+  ok(s.near>0,'the pull — each with the one sentence saying why not',String(s.near));
+  // the fixture's only unplaced café is a mention, which by design belongs in
+  // Close-but-not-the-pick. Seed a RANKED name that failed to place, so the
+  // section has something legitimate to hold and the de-dup is shown not to
+  // swallow it.
+  await page.evaluate(()=>{D.asks[0].findings.push({id:'f_lost',name:'Hey Hey',city:'Lisbon',
+    verdict:'',why:'',fit:[],grounded:false,status:null,placeRef:null,lat:null,lon:null});save();setAnsStop(2)});
+  await page.waitForTimeout(500);
+  s=await ansState(page);
+  ok(/Named and nowhere/i.test(s.text)&&/Hey Hey/.test(s.text),
+    'the pull — a ranked name that came back with no street on it',s.text);
+  const dupes=await page.evaluate(()=>{
+    const t=[...document.querySelectorAll('#ansleaf .nearrow .t')].map(x=>x.textContent.trim());
+    return t.length-new Set(t).size;
+  });
+  ok(dupes===0,'the pull — a café that is both a near miss and unplaced is listed once, not twice',String(dupes));
+  ok(!s.overflow,'the pull — it all lands inside the frame');
+
+  await page.evaluate(()=>setAnsStop(0));await page.waitForTimeout(600);
+  s=await ansState(page);
+  ok(s.leafH===301,'the ground — the low leaf keeps its own designed height',JSON.stringify(s));
+  ok(Number(String(s.plate).replace('px',''))===Number(String(s.top).replace('px',''))+18,
+    'the ground — and the plate grows to meet it',JSON.stringify(s));
+  ok(!s.heroGone,'the ground — the headline is still standing');
+  await ctx.close();
+}
+/* ---------- one finding, whole ---------- */
+{
+  const {ctx,page}=await boot({});
+  await page.evaluate(()=>openAskResultScreen('ask_lx'));await page.waitForTimeout(800);
+  await page.evaluate(()=>{document.querySelectorAll('#ansleaf .idxrow')[1].click()});
+  await page.waitForTimeout(900);
+  let f=await findState(page);
+  ok(f.view==='askfind','a finding — an index row is a door',JSON.stringify(f));
+  ok(f.leafH===357,'a finding — opens at rest, the leaf at its designed height',JSON.stringify(f));
+  ok(/Copenhagen Coffee Lab/.test(f.text),'a finding — the name',f.text);
+  ok(/the reliable second/i.test(f.text),'a finding — the verdict, the largest thing under the name',f.text);
+  ok(/Nordic-leaning/i.test(f.text),'a finding — and the why, directly under it',f.text);
+  ok(/two of three/i.test(f.text),'a finding — where it sits in the set, so the other two are not lost');
+  ok(!/two of three[\s\S]*two of three/i.test(f.text),'a finding — and it says so once, not twice');
+
+  await page.evaluate(()=>toggleFindStop(1));await page.waitForTimeout(700);
+  f=await findState(page);
+  ok(f.leafH===633,'read down — the composer’s own geometry, not a new one',JSON.stringify(f));
+  ok(/What to order/i.test(f.text),'read down — what to ask for at the counter',f.text);
+  ok(/rotates/i.test(f.text)&&/never asked what is on it today/i.test(f.text),'read down — a menu is marked as a menu, not stated as a fact');
+  ok(/How it fits you/i.test(f.text),'read down — the fit');
+  ok(f.figs>=2,'read down — and the figures the record can open are dotted doors',String(f.figs));
+  ok(/Your mark on it/i.test(f.text)&&f.marks>=3,'read down — the three marks',String(f.marks));
+  const reach=await page.evaluate(()=>{
+    const b=document.querySelector('#findleaf .body');
+    const btn=[...b.querySelectorAll('.btn')].pop();
+    return {scrolls:getComputedStyle(b).overflowY==='auto',btn:!!btn,
+      reachable:!!btn&&btn.offsetTop+btn.offsetHeight<=b.scrollHeight};
+  });
+  ok(reach.scrolls&&reach.btn&&reach.reachable,
+    'read down — one page and one scroll: the action is reachable, never clipped away',JSON.stringify(reach));
+
+  // a mark writes immediately, and the answer behind it agrees
+  await page.evaluate(()=>{[...document.querySelectorAll('#findleaf .pick')].find(b=>/booked/i.test(b.textContent)).click()});
+  await page.waitForTimeout(600);
+  ok(await page.evaluate(()=>askOf(pageView.id).f.status==='booked'),'read down — a mark writes, no confirm');
+  // and a dotted figure really opens the cups it was read from
+  await page.evaluate(()=>{document.querySelector('#findleaf .fig').click()});
+  await page.waitForTimeout(600);
+  ok(await page.evaluate(()=>!!document.getElementById('sheet').classList.contains('open')
+     ||(pageView&&pageView.kind!=='askfind')),'read down — a dotted figure opens what it was read from');
+  await ctx.close();
+}
+/* ---------- at the frame it was drawn against, the figures are exact ----------
+   Everywhere else the stops scale so the leaf keeps its designed height (the
+   check above). Here, at 812 minus the bar, they must land on the handoff's
+   own numbers to the pixel — which is what says the scaling is a fit rather
+   than a drift. */
+{
+  const {ctx,page}=await boot({ctx:{viewport:{width:480,height:869}}});
+  await page.evaluate(()=>openAskResultScreen('ask_lx'));await page.waitForTimeout(900);
+  let s=await ansState(page);
+  ok(s.top==='398px'&&s.plate==='416px','the reference frame — the resting stop is 398 over a 416 plate',JSON.stringify(s));
+  ok(s.heroTop==='160px','the reference frame — and the headline lands on its own 160',s.heroTop);
+  await page.evaluate(()=>setAnsStop(0));await page.waitForTimeout(500);
+  s=await ansState(page);
+  ok(s.top==='454px'&&s.plate==='472px','the reference frame — the low stop is 454 over a 472 plate',JSON.stringify(s));
+  await page.evaluate(()=>setAnsStop(2));await page.waitForTimeout(500);
+  ok((await ansState(page)).top==='180px','the reference frame — and the high stop is 180');
+  await page.evaluate(()=>{setAnsStop(1);document.querySelectorAll('#ansleaf .idxrow')[1].click()});
+  await page.waitForTimeout(900);
+  ok((await findState(page)).top==='398px','the reference frame — a finding opens at 398');
+  await page.evaluate(()=>toggleFindStop(1));await page.waitForTimeout(600);
+  const f=await findState(page);
+  ok(f.top==='122px'&&f.plate==='140px','the reference frame — and reads down to the composer’s 122 over 140',JSON.stringify(f));
+  await ctx.close();
+}
+
+/* ---------- the distance, and what it is measured from ----------
+   Carta defines no anchor for an ask. Rather than name a quarter the record
+   cannot defend, the centre is the mean of what the ask itself placed — and
+   where there is nothing to take a mean of, there is no distance drawn. */
+{
+  const {ctx,page}=await boot({});
+  const one=await page.evaluate(()=>{
+    D.asks[0].findings=[D.asks[0].findings[0]];D.asks[0].mentions=[];D.asks[0].plan=null;save();
+    openAskResultScreen('ask_lx');
+    return true;
+  });
+  await page.waitForTimeout(800);
+  const t=await page.evaluate(()=>document.getElementById('main').innerText);
+  ok(one&&/Baixa/i.test(t),'one name placed — the quarter still stands',t);
+  ok(!/ km/i.test(t),'one name placed — and no distance is invented from a single point',t);
+  await ctx.close();
+}
+/* ---------- dusk, reduced motion, a short phone, 320px ---------- */
+{
+  const {ctx,page}=await boot({ctx:{colorScheme:'dark'}});
+  await page.evaluate(()=>openAskResultScreen('ask_lx'));await page.waitForTimeout(800);
+  const c=await page.evaluate(()=>{const l=document.getElementById('ansleaf');
+    return {bg:getComputedStyle(l).backgroundColor,n:getComputedStyle(document.querySelector('#ansleaf .idxrow .n')).borderColor}});
+  ok(c.bg==='rgb(33, 27, 23)','dusk — the answer leaf lifts through the roles',JSON.stringify(c));
+  ok(c.n!=='rgb(36, 29, 24)','dusk — and the row numeral inverts with it',JSON.stringify(c));
+  await ctx.close();
+}
+{
+  const {ctx,page}=await boot({ctx:{viewport:{width:390,height:667}}});
+  await page.evaluate(()=>openAskResultScreen('ask_lx'));await page.waitForTimeout(800);
+  const s=await ansState(page);
+  ok(!s.overflow,'a short phone (390x667) — the index still lands inside the leaf',JSON.stringify(s));
+  await ctx.close();
+}
+{
+  const {ctx,page}=await boot({ctx:{viewport:{width:320,height:720}}});
+  await page.evaluate(()=>openAskResultScreen('ask_lx'));await page.waitForTimeout(800);
+  ok(!(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)),
+    '320px — the answer does not scroll sideways');
+  await page.evaluate(()=>{document.querySelectorAll('#ansleaf .idxrow')[0].click()});
+  await page.waitForTimeout(800);
+  ok(!(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)),
+    '320px — nor does a finding');
+  await ctx.close();
+}
+
 await browser.close();server.close();
 console.log(notes.join('\n'));
 if(problems.length){console.error('\n'+problems.join('\n'));console.error(`\n${problems.length} problem(s).`);process.exit(1)}
