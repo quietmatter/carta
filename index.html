@@ -961,11 +961,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.41.1"></script>
-<script src="carta-plate.js?v=7.41.1"></script>
-<script src="carta-shot.js?v=7.41.1"></script>
-<script src="carta-ask.js?v=7.41.1"></script>
-<script src="carta-atlas.js?v=7.41.1"></script>
+<script src="carta-map.js?v=7.41.2"></script>
+<script src="carta-plate.js?v=7.41.2"></script>
+<script src="carta-shot.js?v=7.41.2"></script>
+<script src="carta-ask.js?v=7.41.2"></script>
+<script src="carta-atlas.js?v=7.41.2"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4038,6 +4038,9 @@ function vRecord(){
       <button class="lrow" style="min-height:58px" onclick="openClassicImport()">
         <span class="mid"><span class="t" style="font-size:17px">Import from classic</span>
         <span class="m">classic’s own export — read once, safe to read again</span></span><span class="go">→</span></button>
+      <button class="lrow" style="min-height:58px" onclick="openRestoreBackup()">
+        <span class="mid"><span class="t" style="font-size:17px">Restore from a backup</span>
+        <span class="m">a file this Carta backed up — for a fresh install</span></span><span class="go">→</span></button>
 
       <div class="shead"><span class="l">Sending something out</span><span class="r">a page, not a link</span></div>
       <button class="lrow" style="min-height:58px" onclick="sharePassportCard()">
@@ -4854,6 +4857,62 @@ function applyClassicImport(){
   classicPending=null;save();closeSheet();render();
   toast('Imported from classic.');
 }
+
+/* ---- restoring Carta's own backup — the counterpart exportLedgerJSON never
+ * had. `exportLedgerJSON` writes `D` verbatim, so reading one back in is a
+ * replace, not a merge: the file already carries every id this device would
+ * otherwise mint fresh, and a real merge is exactly the resolver/adjudication
+ * machinery `docs/ARCHITECTURE.md` rules out by name. The one thing this
+ * function owes a keeper is honesty about what it's about to do — the
+ * preview states the backup's own counts, and a device that already holds a
+ * record says plainly that restoring replaces it, in the button's own words,
+ * not a dialog they have to read first. */
+let restorePending=null;
+function openRestoreBackup(){
+  restorePending=null;
+  openSheet(`<h3>Restore from a backup</h3>
+  <div class="sub">A file this Carta backed up — meant for a fresh install with nothing on it yet.</div>
+  <label class="pickzone">Choose the backup — a carta-YYYY-MM-DD.json file
+    <input type="file" accept=".json,application/json" id="restore_file" onchange="restoreFilePicked(event)"></label>
+  <div id="restore_preview"></div>
+  <div class="note">This replaces your whole record with what's in the file — nothing here merges with what's already on the device. Only restore a backup you trust.</div>`);
+}
+function restoreFilePicked(e){
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    let json;try{json=JSON.parse(String(reader.result))}catch(err){toast('Could not read that file — is it a Carta backup?');return}
+    if(!json||typeof json!=='object'||!Array.isArray(json.cups)||!Array.isArray(json.coffees)){
+      toast('That doesn\'t look like a Carta backup');return}
+    restorePending=json;
+    renderRestorePreview(json);
+  };
+  reader.onerror=()=>toast('Could not read that file');
+  reader.readAsText(f);
+}
+function renderRestorePreview(json){
+  const el=document.getElementById('restore_preview');if(!el)return;
+  const n=k=>Array.isArray(json[k])?json[k].length:0;
+  const rows=[['Cups',n('cups')],['Coffees',n('coffees')],['Places',n('places')],
+    ['Roasters',n('roasters')],['Setups',n('setups')],['Brews',n('brews')]];
+  const already=D.cups.length+D.coffees.length>0;
+  el.innerHTML=`<div style="margin-top:14px">${ledgerHTML(rows.map(r=>[r[0],String(r[1])]))}</div>
+    ${already?`<div class="note" style="margin-top:10px">This device already has ${words(D.cups.length)} cup${D.cups.length===1?'':'s'} and ${words(D.coffees.length)} coffee${D.coffees.length===1?'':'s'} on it — restoring replaces all of it with the backup above.</div>`:''}
+    <button class="btn btn-primary" style="margin-top:14px" onclick="confirmRestoreBackup()">${already?'Replace my record with this backup':'Restore my record'}</button>`;
+}
+function confirmRestoreBackup(){
+  if(!restorePending)return;
+  // written to storage and re-read through load() rather than assigned
+  // straight to D, so a backup from an older version picks up every
+  // migration load() already carries (the asks-read backfill, the blank
+  // prefs/menus/asks a very old export won't have) the same way an ordinary
+  // reload would, instead of restore quietly reimplementing that by hand.
+  try{localStorage.setItem(KEY,JSON.stringify(restorePending))}catch(e){toast('Could not save — is storage full?');return}
+  D=load();
+  restorePending=null;
+  save();closeSheet();render();
+  toast('Restored — your record is back.');
+}
 /* ============ the Atlas — moved out at Phase 31 ============
  * The door, its plate and leaf and sheet, and the four walks down from it
  * (country → region → farm, and a city's own streets) live in
@@ -4877,8 +4936,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.41.1';
+const APP_VERSION='7.41.2';
 const CHANGELOG=[
+  {v:'7.41.2',d:"Restore from a backup. exportLedgerJSON has backed up the record since Phase 8 and had no way back in — the only reason to reinstall an iOS home-screen icon is to fix its launch mode, which can only be done by deleting and re-adding it, and until now that meant losing everything with no way to recover it beyond the raw JSON file. It reads the same D a backup already writes verbatim, so restoring is a plain replace, never a merge — the record page states the backup's own counts before anything happens, and says plainly when the device already holds a record that restoring will replace."},
   {v:'7.41.1',d:"The bottom-edge fix (7.37.6) held on a reload and not on a fresh open. window.innerHeight was read once, at parse time, and a cold launch reads it a beat before iOS finishes settling the chrome and the safe area — a reload happened to always land after that settling, which is why it looked fixed. The read now repeats on resize, on pageshow (a fully-closed relaunch can be a restore rather than a fresh load), on the visual viewport's own resize, and once more after a short delay as a backstop for a settle with no event behind it at all."},
   {v:'7.41.0',d:"The ask asks in front of the map. Composing an ask took a whole screen of its own — six chips, a field, a box for anything else, the ledger and the key — with the plate you were asking about gone from under it. It composes on a leaf now, over a strip of that same plate, with the bar still there: the question is put in front of the ground it is about. And the line under the field is new and says only what the record can defend. Carta does not know what Lisbon is — nothing on your phone does, and nothing is going to ask — so the line never claims to have recognised a place. It counts: on your record, two cups and two cafés, and the ask is scoped to them. Somewhere it has never heard of, it says so and says the ask goes out on every cup instead. A country is taken at your word and answers with the coffees from there it will exclude by name. Nothing leaves the device while you type; it never did, and now the line under the field is honest about what it knows."},
   {v:'7.40.0',d:"What Carta found, read as an index. The answer used to arrive as one long column — the cafés, then the near misses, then the plan, then the wildcard — and the thing you actually asked for scrolled off the top under everything Carta added around it. It is six names on the ground now: the rank, the quarter, how far, and what you already made of it, each one a door. Tap a name and you get that café whole on its own streets — what it is best for, why, what to order, how it fits the record you keep, and your own mark on it — and pull the answer up instead and you get what belongs to the answer rather than to any one café: the move Carta would make, the ones that came close with a line saying why not, and the one that came back named and nowhere. Nothing was cut to make room. Every figure the record can defend still opens the very cups it was read from; they are one tap away now instead of all at once."},

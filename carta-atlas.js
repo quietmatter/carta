@@ -1290,4 +1290,4 @@ window.vCountryChapter=vCountryChapter;
 window.vProducerPage=vProducerPage;
 window.vRegionChapter=vRegionChapter;
 
-window.ATLAS_VERSION='7.41.1';
+window.ATLAS_VERSION='7.41.2';
