@@ -72,6 +72,22 @@ const insets=await page.evaluate(()=>{const cs=getComputedStyle(document.documen
 ok(insets[0]===SAT+'px'&&insets[1]===SAB+'px',
   `the notch is actually rendered (${insets.join(' / ')}) — otherwise nothing below means anything`,insets.join(' / '));
 
+/* body's height is max(100dvh, --app-h) rather than trusting either alone —
+   a keeper's own device found the whole bar sitting short of the true edge,
+   which only happens if --app-h (window.innerHeight, read by setAppH())
+   under-reports the real screen height on a device this harness cannot
+   reproduce that on. Neither measurement can be proven wrong from here, so
+   this proves the RECOVERY instead: force --app-h to a value shorter than
+   100dvh and confirm body still renders at the full, correct height. */
+const recovered=await page.evaluate(()=>{
+  document.documentElement.style.setProperty('--app-h','400px');
+  const h=document.body.getBoundingClientRect().height;
+  document.documentElement.style.removeProperty('--app-h');
+  return h;
+});
+ok(Math.abs(recovered-844)<=1,
+  `a short --app-h (400px) doesn't shrink body — max(100dvh, --app-h) recovers the true height (${recovered})`,recovered);
+
 /* every text node the app paints, measured as glyphs. An element may sit in a
    band (the bar's buttons paint to the edge on purpose); its text may not. */
 /* Text is measured as glyphs and then clipped to every scrolling or hidden

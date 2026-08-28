@@ -571,6 +571,8 @@ Carta 7 is built exactly the way classic was, smaller:
   layout law and the reasoning written beside it. Recorded, not absorbed.
   **v7.42.4 adds another 22** fixing two sub-pixel regressions the fix itself
   introduced (below) — 5,131 / 5,000, 372.2 KB.
+  **v7.42.5 adds 14 more** for the whole-body height fix and its harness
+  check — 5,145 / 5,000, 373.8 KB.
 
   *The device's own edges are a law, not a per-screen fix.* A home-screen
   install draws under the notch and behind the home indicator on **every**
@@ -619,6 +621,33 @@ Carta 7 is built exactly the way classic was, smaller:
   rather than the number that looked right on paper, and compensate the
   margin explicitly (`height:calc(100% + 1px)`) rather than lean on stretch
   to do it invisibly.
+
+  **v7.42.5 found the bar's own arithmetic was never the whole bug.** With
+  every pixel inside `nav.tabs` finally accounted for, the keeper's next
+  screenshot showed the *entire* bar — all four buttons together — sitting
+  short of the true screen edge, with plain paper below the whole thing. Not
+  a distribution problem inside the bar; `body`'s own height, the box
+  everything else is laid out inside of, was itself short of the real
+  screen. `body`'s height had trusted `window.innerHeight` (`--app-h`, set
+  by `setAppH()`) completely since v7.37.6, on the strength of a real,
+  cited iOS bug in `100dvh` and the reasoning that `innerHeight` reads the
+  settled height where `dvh` doesn't. Nothing had ever actually confirmed
+  `innerHeight` itself is trustworthy on every device — and `test/
+  verify-safearea.js`, for all its rigor about the bands, has exactly this
+  same blind spot: it overrides `--sat`/`--sab` as literal CSS values and
+  never touches `innerHeight`, which is always "correct" in headless
+  Chromium regardless of what the test asks the page to *believe* about its
+  own insets. Neither failure mode — a live `dvh` bug, a device where
+  `innerHeight` itself undercounts the safe area — reproduces outside a
+  real iPhone, so this could not be proven wrong from the sandbox, only
+  hedged against: `body`'s height is now `max(100dvh, var(--app-h,
+  100dvh))`, the larger of the two independent measurements rather than
+  either one trusted alone. A device where both happen to agree loses
+  nothing; a device where either one is short is covered by the other.
+  `verify-safearea.js` gained the one check its own blind spot could still
+  prove: force `--app-h` to an obviously-wrong 400px and confirm `body`
+  still renders at the true height anyway, which is the recovery mechanism
+  actually working rather than the bug simply not reproducing.
 
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
