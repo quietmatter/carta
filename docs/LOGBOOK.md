@@ -7,6 +7,60 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — restore from a backup (v7.42.1)
+
+- **Chasing the bottom-edge fix surfaced a bigger problem than the gap
+  itself.** Asked to confirm the fix on a real fully-closed relaunch, the
+  keeper sent a screenshot showing Safari's own address bar and toolbar —
+  the home-screen icon was opening as an ordinary tab, not standalone at
+  all. Launch mode is baked into a home-screen icon at the moment it's
+  created and cannot be changed in place; the only way to get a real
+  standalone launch is to delete the icon and add a fresh one. Asked to do
+  exactly that, the keeper pointed out the real blocker: **Carta had a way
+  to back a record up and no way to read one back in.** `exportLedgerJSON`
+  has written a `carta-YYYY-MM-DD.json` file since Phase 8; nothing in the
+  app has ever read one back. Deleting the old icon without a restore path
+  would have meant losing a real keeper's real record with only a raw JSON
+  file and no way to use it.
+- **Shipped:** *Restore from a backup*, beside *Import from classic* on the
+  record page. Since a backup is `D` written out verbatim, restoring is a
+  plain replace rather than a merge — no resolver, no adjudication, none of
+  the third-turn machinery `ARCHITECTURE.md` rules out by name; the same
+  file that would silently overwrite the wrong device is meant to load onto
+  a fresh install with nothing on it yet. The picked file is checked for
+  the shape a Carta backup actually has (`cups`/`coffees` arrays present)
+  before anything is offered, previewed by its own counts before the
+  keeper commits to it, and — where the device already holds a record —
+  states plainly, in the button's own words, that restoring replaces it
+  rather than burying that in a note above the button. The write itself
+  goes through `localStorage` and back through `load()` rather than
+  assigning the parsed file straight to `D`, so a backup taken on an older
+  version of Carta picks up every migration `load()` already carries (the
+  asks-read backfill chief among them) the same way an ordinary reload
+  would, instead of this path quietly reimplementing that by hand and
+  drifting from it over time.
+- **Not fixed:** whether the fresh icon actually launches standalone this
+  time. That's still open — the keeper hasn't confirmed it, and now they
+  finally have a safe way to try: back up, delete the old icon, add a new
+  one from a clean `main`, restore. If it's still opening into Safari's own
+  chrome even as a freshly-added icon, that's a real bug in the manifest or
+  the meta tags, not a stale icon — worth checking next.
+- **Verified:** all six harnesses green — `node test/verify-static.js` at
+  19/19 (all six version markers in lockstep at `7.42.1`), `node
+  test/model.test.js` at 141/141, `verify-door.js` (59), `verify-ask.js`
+  (155), `verify-v7.35.js` (41) and `verify-split.js` (12), no console or
+  page errors on any of them. The restore path itself — actually picking a
+  backup file and confirming — has no automated coverage yet; it was read
+  against the code, not run against a real file, and is worth a
+  browser-harness check the next time this file's tests are extended.
+  Renumbered `7.41.2` → `7.42.1` on merge, behind Phase 32's own
+  `7.42.0` — this branch's own contribution to `index.html` was written
+  before that phase landed on `main` and picked up its version on the way
+  through, the same as v7.41.1 did behind the manifest fix.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-28 — Phase 32: the city, drawn (v7.42.0)
 
 - **Turn 5 answers founder call three, and answers it in code.** The handoff
@@ -119,6 +173,9 @@ than a ride on this one. The static check is scoped to `cityKey` and says so.
 **Still open.** Gap 4 (the distance anchor) and gap 5 (the kind sheet) remain
 where turn 5 left them — named, with recommendations on record, and both already
 running on those recommendations as interim. `CITY_ARCS` still holds one key.
+
+---
+
 ## 2026-08-28 — the bottom-edge fix, actually held (v7.41.1)
 
 - **v7.37.6 fixed the bug on a reload and not on the launch it was written

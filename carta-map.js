@@ -1449,4 +1449,4 @@ if(window.CARTA_CITY&&!window.customElements.get('carta-city'))customElements.de
 // the guard index.html's boot checks (ARCHITECTURE.md §1). The map had none
 // until Phase 31, though the guard's own comment already claimed every sibling
 // was covered — a stale carta-map.js is exactly the failure it exists to catch.
-window.MAP_VERSION='7.42.0';
+window.MAP_VERSION='7.42.1';
