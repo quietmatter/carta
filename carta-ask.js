@@ -1181,8 +1181,26 @@ const ansHeadRight=(a,stop)=>stop===2
  * names placed there is no spread to measure and the distance is simply not
  * drawn — the quarter still is.
  */
+/* a mark carries its finding's id, which is what makes the index and the plate
+   one surface: the tap leaves as carta:pin-tap {id} and the app's own handler
+   already opens a finding by that id. A mark with no id would draw and simply
+   not be a door — the handoff's fourth fix, and none of ours lack one. */
+const ansMarks=a=>(a.findings||[]).map((f,i)=>({f,n:i+1}))
+  .filter(m=>m.f.grounded&&m.f.lat!=null&&m.f.lon!=null);
+/* The point every kilometre on this screen is counted from — and the one figure
+ * on it that had been invented. It is the mean of the ask's own confirmed
+ * FINDINGS: the very marks the plate draws, averaged. Made of nothing but the
+ * answer, so it can be stated without claiming to know where the reader is.
+ *
+ * Phase 33 narrowed it from askNamed() — findings plus mentions plus the
+ * wildcard — to the findings alone, because <carta-city> computes the same mean
+ * from `marks` and puts a cross on it. Averaged over a wider set the row's
+ * number and the plate's cross would be two different points wearing one name,
+ * and the near-misses would quietly drag the origin of every distance printed.
+ * One placed name is its own mean, which is a distance of zero from itself, so
+ * two is the floor. */
 function answerAnchor(a){
-  const pins=askNamed(a).filter(f=>f.grounded&&f.lat!=null&&f.lon!=null);
+  const pins=ansMarks(a).map(m=>m.f);
   return pins.length>1?meanPin(pins):null;
 }
 function findingKm(anchor,f){
@@ -1234,6 +1252,18 @@ function ansPullLabel(a){
   return parts.length?parts.join(' · '):'the rest of the answer';
 }
 /* ---- the leaf, at each of its three stops ------------------------------ */
+/* The head's right half names what every number in the column is counted from,
+ * taking the slot the "tap a name for its argument" hint had: the door glyph on
+ * each row and the ember chevron on the unread pick already teach the tap, and
+ * an unattributed kilometre is the more expensive silence. It counts the marks
+ * the mean was actually taken over, not the findings — an unplaced name has no
+ * say in where the middle is. With no anchor no row prints a distance, so the
+ * head must not name one either, and the hint stands instead. */
+function ansHeadHint(a,stop,anchor){
+  if(stop===0)return 'the ground';
+  if(!anchor)return 'tap a name for its argument';
+  return `km from the ${words(ansMarks(a).length)}`;
+}
 function ansBodyHTML(a,stop){
   const findings=a.findings||[],anchor=answerAnchor(a);
   if(stop===2)return ansUnderPullHTML(a,anchor);
@@ -1242,7 +1272,7 @@ function ansBodyHTML(a,stop){
   const lost=askNamed(a).filter(f=>!f.grounded).length;
   return `<div class="shead" style="margin-top:0;padding-bottom:8px">
       <span class="l">What Carta found</span>
-      <span class="r">${stop===0?'the ground':'tap a name for its argument'}</span>
+      <span class="r">${esc(ansHeadHint(a,stop,anchor))}</span>
     </div>
     ${findings.length?shown.map((f,i)=>ansRowHTML(a,f,i,anchor)).join('')
       :'<div class="empty">Carta didn’t name anything it could stand behind here.</div>'}
@@ -1350,7 +1380,7 @@ function ansFrame(a){
      be measuring your reach from the café rather than from you — which is the
      very thing the rows refuse when they print no kilometres here. No anchor,
      no rings; the shore, the grid and the mark still carry the city. */
-  const at=answerAnchor(a);
+  const at=answerAnchor(a);   // only to decide whether a reach can be drawn at all
   const rings=at?(REACH_RINGS[a.reach]||REACH_RINGS['a short drive']):[];
   /* Where the marks are allowed to land.
      The plate runs the height of the screen and both its ends are spoken for:
@@ -1376,19 +1406,22 @@ function ansFrame(a){
   // the marks' centre, moved from the middle of the box to the middle of that
   // run: a lift in pixels, turned back into degrees through the same scale
   const lift=(H/2-(hiY+loY)/2)*sp/W/111.32;
-  return {at:at||pins[0],center:{lat:mid.lat-lift,lon:mid.lon},span:sp,rings};
+  return {center:{lat:mid.lat-lift,lon:mid.lon},span:sp,rings};
 }
+/* `at` is deliberately NOT passed. The element defaults to the mean of the marks
+   it was handed, which is the same set answerAnchor() averages for the rows, so
+   the cross on the plate and the kilometre in a row cannot drift apart — and a
+   caller cannot slip a guessed origin in by omitting the attribute. What is
+   passed is what the cross IS, said on the plate beside it. */
 const ansCityHTML=(a,fr)=>`<carta-city class="city" style="position:absolute;inset:0"
-  at="${fr.at.lat},${fr.at.lon}" center="${fr.center.lat},${fr.center.lon}" span="${fr.span}"
+  center="${fr.center.lat},${fr.center.lon}" span="${fr.span}"
+  at-label="${esc(ansAnchorLabel(a))}"
   coast="${esc(a.destination||'')}" rings="${fr.rings.length?fr.rings.join(','):'off'}"
   reserve-top="${ANS_HEAD_CLEAR}" reserve-bottom="${ANS_RESERVE_LOW}" scale="off"
   marks="${esc(ansMarksJSON(a))}"></carta-city>`;
-/* a mark carries its finding's id, which is what makes the index and the plate
-   one surface: the tap leaves as carta:pin-tap {id} and the app's own handler
-   already opens a finding by that id. A mark with no id would draw and simply
-   not be a door — the handoff's fourth fix, and none of ours lack one. */
-const ansMarks=a=>(a.findings||[]).map((f,i)=>({f,n:i+1}))
-  .filter(m=>m.f.grounded&&m.f.lat!=null&&m.f.lon!=null);
+// the handoff's "middle of the six", counted rather than spelled: the mean is
+// taken over the marks, so the label says how many made it.
+const ansAnchorLabel=a=>{const n=ansMarks(a).length;return n>1?`middle of the ${words(n)}`:''};
 /* the numeral is the ROW's number, not the mark's own position in the drawn
    set: an unplaced finding still takes a row, so counting the marks instead
    would print 2 on the café the index calls 3 the moment one name in the
@@ -1505,17 +1538,20 @@ function findFitRowsHTML(a,f){
   return rows.map(x=>`<div class="r"><span class="k">${esc(x[0])}</span><span class="v">${x[1]}</span></div>`).join('');
 }
 function findBodyHTML(a,f,stop){
-  const anchor=answerAnchor(a);
-  const km=kmLabel(findingKm(anchor,f));
   const pos=findIndexOf(a,f);
-  const meta=[f.neighborhood,km,a.reach].filter(Boolean).join(' · ');
+  /* no kilometres on a leaf. A distance means something in a column of six read
+     against one stated point; alone under a café's name it is a figure with
+     nothing to be compared to, and the point it was counted from is two screens
+     away. The quarter is the café's own confirmed neighbourhood and the reach is
+     the keeper's own setting — both true standing here. */
+  const meta=[f.neighborhood,a.reach].filter(Boolean).join(' · ');
   if(stop===1){
     const marks=`<div class="picks" style="margin-top:10px">${FIND_MARKS.map(m=>
       `<button class="pick${f.status===m[0]?' on':''}" onclick="setFindStatus(${jsq(String(f.id))},'${m[0]}')">${m[1]}</button>`).join('')}</div>`;
     return `<button class="pullbar bare" onclick="toggleFindStop(-1)" aria-label="Back up"><span class="bar"></span></button>
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--line-strong)">
         <span class="display" style="font-size:var(--s18);line-height:1.14;letter-spacing:-.02em;margin:0">${esc(f.name)}</span>
-        <span class="idxrow-g" style="flex:none;font-family:var(--sans);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)">${esc([f.neighborhood,km].filter(Boolean).join(' · '))}</span>
+        <span class="idxrow-g" style="flex:none;font-family:var(--sans);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)">${esc(f.neighborhood||'')}</span>
       </div>
       ${f.order?`<div class="shead" style="margin-top:14px"><span class="l">What to order</span></div>
         <div style="font-family:var(--serif);font-size:var(--s16);line-height:1.45;margin-top:9px">${esc(f.order)}</div>`:''}
@@ -1549,10 +1585,14 @@ function findBodyHTML(a,f,stop){
  * and 1 km, the grid on. Nothing here is derived because nothing here varies:
  * a finding is one point, and one point has no spread to fit. */
 const FIND_SPAN=3,FIND_RINGS='0.4,1';
-const findCityHTML=f=>`<carta-city class="city" style="position:absolute;inset:0"
+/* the café's own coordinate is the anchor here — a point the finding carries, so
+   it needs no mean and no label: the cross is under the mark. The numeral is the
+   row's, so the plate a finding stands on and the index it came from say the
+   same number. */
+const findCityHTML=(f,n)=>`<carta-city class="city" style="position:absolute;inset:0"
   at="${f.lat},${f.lon}" span="${FIND_SPAN}" coast="${esc(f.city||'')}"
   rings="${FIND_RINGS}" grid="on" scale="off"
-  marks="${esc(JSON.stringify([{id:f.id,lat:f.lat,lon:f.lon,been:!!findingReading(f)}]))}"></carta-city>`;
+  marks="${esc(JSON.stringify([{id:f.id,n:n||null,lat:f.lat,lon:f.lon,been:!!findingReading(f)}]))}"></carta-city>`;
 function vAskFinding(id,view){
   const hit=askOf(id);
   if(!hit)return `<div class="pad" style="padding-top:26px"><div class="empty">That finding isn’t on the record.</div>
@@ -1568,7 +1608,7 @@ function vAskFinding(id,view){
              // pin both sit in the band that is actually on screen
              noteStyle:'bottom:'+(findPlateH(_findStop)-findTop(_findStop)+8)+'px',
              plotWrap:'position:absolute;inset:0;padding:'+FIND_PADS[_findStop],
-             floorHTML:findCityHTML(f)})
+             floorHTML:findCityHTML(f,pos&&pos.i)})
         :`<carta-atlas style="position:absolute;inset:0" caption="off" frame="tasted"
             tasted="${esc(Object.values(tastedCountryMap()).map(c=>c.label).join(','))}"></carta-atlas>`}
       <div class="fade top" id="findfade" style="height:${FIND_SCRIMS[_findStop]}px"></div>
@@ -1645,4 +1685,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.42.3';
+window.ASK_VERSION='7.43.0';

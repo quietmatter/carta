@@ -714,7 +714,12 @@
        placed is listed and never plotted — the ask's own rule.
 
    Attributes
-     at      "lat,lon"          the anchor the reach is measured from (required)
+     at      "lat,lon" | "mean" the point the reach is measured from. "mean" is
+                                the default: the mean of `marks`, computed here
+                                rather than passed in, so a caller cannot slip a
+                                guess in by omission. No point and no marks means
+                                no anchor, and then the reach does not draw.
+     at-label text              what the cross is, drawn beside it
      center  "lat,lon"          the frame's own centre (default: the anchor)
      span    km across the box  (default 26)
      coast   city key into CITY_ARCS / CITY_RINGS  (default: none)
@@ -745,7 +750,7 @@
 
   class City extends HTMLElement {
     static get observedAttributes() {
-      return ['at', 'center', 'span', 'coast', 'marks', 'places', 'rings', 'grid', 'scale', 'names', 'mode', 'reserve-top', 'reserve-bottom'];
+      return ['at', 'at-label', 'center', 'span', 'coast', 'marks', 'places', 'rings', 'grid', 'scale', 'names', 'mode', 'reserve-top', 'reserve-bottom'];
     }
     connectedCallback() {
       this.style.display = 'block';
@@ -779,15 +784,37 @@
       this._sig = sig;
 
       const seal = (this.getAttribute('mode') || 'plate') === 'seal';
-      const atA = (this.getAttribute('at') || '34.052,-118.243').split(',').map(Number);
-      const at = { lat: atA[0], lon: atA[1] };
+      const span = num(this.getAttribute('span'), seal ? 34 : 26);
+      const marks = json(this.getAttribute('marks'), []).filter(m => isFinite(m.lat) && isFinite(m.lon));
+
+      /* ── the anchor ─────────────────────────────────────────────────────
+         Every kilometre a caller prints beside this plate is counted from
+         here, so where `here` comes from is the whole honesty of the figure.
+         `at="mean"` — the default — is the mean of the marks: an anchor made
+         of nothing but the answer's own confirmed findings, which can be
+         stated without claiming to know where the reader is standing. It is
+         computed HERE rather than passed in, so a caller cannot substitute a
+         guess by omitting the attribute; and there is no coordinate default,
+         because the one this file used to carry (downtown Los Angeles) was
+         exactly such a guess, invented and then measured from.
+         No point and no marks: no anchor. The reach then has no centre and
+         does not draw — the grid, the scale and the marks still do. */
+      const atAttr = (this.getAttribute('at') || 'mean').trim();
+      let at = null;
+      if (atAttr && atAttr !== 'mean') {
+        const p = atAttr.split(',').map(Number);
+        if (isFinite(p[0]) && isFinite(p[1])) at = { lat: p[0], lon: p[1] };
+      }
+      if (!at && marks.length)
+        at = { lat: marks.reduce((t, m) => t + m.lat, 0) / marks.length,
+               lon: marks.reduce((t, m) => t + m.lon, 0) / marks.length };
+
       /* the anchor and the frame are two different things: the reach is measured
          from where the ask stands, but a plate of Los Angeles that leaves the
          coast out of frame is not a plate of Los Angeles. */
-      const ctA = (this.getAttribute('center') || this.getAttribute('at') || '34.052,-118.243').split(',').map(Number);
-      const mid = { lat: isFinite(ctA[0]) ? ctA[0] : at.lat, lon: isFinite(ctA[1]) ? ctA[1] : at.lon };
-      const span = num(this.getAttribute('span'), seal ? 34 : 26);
-      const marks = json(this.getAttribute('marks'), []).filter(m => isFinite(m.lat) && isFinite(m.lon));
+      const ctA = (this.getAttribute('center') || '').split(',').map(Number);
+      const mid = isFinite(ctA[0]) && isFinite(ctA[1]) ? { lat: ctA[0], lon: ctA[1] } : at;
+      if (!mid) { hostOf(this).innerHTML = ''; return; }   // nothing to project against
       const coastKey = window.cityKey ? cityKey(this.getAttribute('coast') || '') : '';
       const places = seal ? [] : (json(this.getAttribute('places'), null) || []);
       const ringsAttr = this.getAttribute('rings');
@@ -803,7 +830,11 @@
       const s = W / span;
       const X = (lon) => W / 2 + (lon - mid.lon) * kmLon * s;
       const Y = (lat) => H / 2 - (lat - mid.lat) * kmLat * s;
-      const cx = X(at.lon), cy = Y(at.lat);
+      /* the anchor in pixels — and where there is none, the frame's own middle,
+         because the grid and the sea's landward test still need a point to key
+         off. Nothing is LABELLED from it: only the reach claims a centre, and
+         the reach is what stops drawing. */
+      const cx = at ? X(at.lon) : W / 2, cy = at ? Y(at.lat) : H / 2;
       const inBox = (x, y, m) => x >= -(m || 0) && x <= W + (m || 0) && y >= -(m || 0) && y <= H + (m || 0);
 
       const uid = this._uid || (this._uid = 'cc' + (++_uid));
@@ -894,8 +925,10 @@
       if (rTop > 0) placed.push({ x0: -99, x1: W + 99, y0: -99, y1: rTop });
       if (rBot > 0) placed.push({ x0: -99, x1: W + 99, y0: H - rBot, y1: H + 99 });
 
-      /* ── the reach ─────────────────────────────────────────────────────── */
-      if (rings.length) {
+      /* ── the reach ───────────────────────────────────────────────────────
+         Only ever drawn from a real anchor: a ring with no centre to be
+         measured from is a distance claim with nothing behind it. */
+      if (rings.length && at) {
         const g = [];
         rings.forEach((km, i) => {
           const r = km * s;
@@ -912,6 +945,25 @@
           }
         });
         g.push(`<path d="M${n1(cx - 5)} ${n1(cy)}L${n1(cx + 5)} ${n1(cy)}M${n1(cx)} ${n1(cy - 5)}L${n1(cx)} ${n1(cy + 5)}" style="fill:none;stroke:var(--ca-ring, var(--ink));stroke-opacity:.45;stroke-width:1"/>`);
+        /* what the cross IS, said on the plate. Every kilometre the caller
+           prints beside this drawing is counted from this point, and a bare
+           cross does not say so. Ring ink, ring size, and the same collision
+           pass as everything else — dropped rather than stacked, because a
+           label over a mark costs more than the label is worth. */
+        const alRaw = (this.getAttribute('at-label') || '').trim();
+        if (alRaw) {
+          const fs = 8.5, tw = alRaw.length * fs * .72 + 4;
+          const spots = [[cx - 10, cy + 3, 'end', cx - 10 - tw], [cx + 10, cy + 3, 'start', cx + 10],
+                         [cx, cy - 12, 'middle', cx - tw / 2], [cx, cy + 18, 'middle', cx - tw / 2]];
+          for (const sp of spots) {
+            const box = { x0: sp[3], x1: sp[3] + tw, y0: sp[1] - fs * .9, y1: sp[1] + fs * .3 };
+            if (box.x0 < 8 || box.x1 > W - 8 || box.y0 < 8 || box.y1 > H - 8) continue;
+            if (placed.some(z => hit(box, z))) continue;
+            placed.push(box);
+            g.push(`<text x="${n1(sp[0])}" y="${n1(sp[1])}" text-anchor="${sp[2]}" style="${CITY_LABEL};font-size:${fs}px;fill:var(--ca-ring-ink, var(--ink-3));paint-order:stroke;stroke:var(--ca-halo, var(--surface-card));stroke-width:3px;stroke-linejoin:round">${cesc(alRaw)}</text>`);
+            break;
+          }
+        }
         L.push(g.join(''));
       }
 
@@ -1449,4 +1501,4 @@ if(window.CARTA_CITY&&!window.customElements.get('carta-city'))customElements.de
 // the guard index.html's boot checks (ARCHITECTURE.md §1). The map had none
 // until Phase 31, though the guard's own comment already claimed every sibling
 // was covered — a stale carta-map.js is exactly the failure it exists to catch.
-window.MAP_VERSION='7.42.3';
+window.MAP_VERSION='7.43.0';

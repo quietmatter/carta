@@ -1743,6 +1743,53 @@ gap 4 (the distance anchor) and gap 5 (the kind sheet). `CITY_ARCS` still holds
 one key, and grows one per city the record has cups in, cut by
 `docs/MAPPING.md`'s generator and never hand-drawn.
 
+### Phase 33 — the distance anchor (shipped — v7.43.0)
+
+*Turn 6. One new section, §B4, superseding a number on every screen that carries
+one.*
+
+**Founder call four, answered.** The handoff states the gap in its own words:
+every kilometre had been counted from downtown Los Angeles, a point the record
+never held. *"The arithmetic was right and the origin was invented."* The rule
+that replaces it: the anchor is the **mean pin of the ask's own confirmed
+findings** — the marks already on the plate, averaged. Made of nothing but the
+answer.
+
+**Half of it had already shipped** and this phase says so rather than claiming
+the whole: turn 3 took the same recommendation off the record, and the rows have
+counted from a mean pin since v7.40.0. Turn 6 adds where the mean is computed,
+what it says out loud, and one narrowing.
+
+- **The narrowing.** `answerAnchor()` averaged findings *plus* mentions *plus*
+  the wildcard, while the plate draws findings alone. Once the element computes
+  its own mean and draws a **cross** on it, those are two different points
+  wearing one name. It is the findings now — the set the plate draws.
+- **`at="mean"` is the element's default and there is no coordinate default.**
+  The mean is computed inside `<carta-city>`, so a caller cannot substitute a
+  guess by omission; the answer plate passes no `at` at all. The old fallback was
+  the invented downtown coordinate itself. **No point and no marks → no anchor,
+  and the reach does not draw**; grid, scale and marks still do.
+- **`at-label`** writes what the cross is, in ring ink, through the same
+  collision pass — counted rather than spelled (*middle of the three*).
+- **The column head names it once**, taking the hint's slot: `km from the three`.
+  Where there is no anchor, no row prints a distance and the head does not name
+  one.
+- **A leaf drops the number** and anchors its own plate on the café's own
+  coordinate.
+
+**Two found by doing rather than reading.** A live `km` reference survived in the
+read-down eyebrow (`node --check` cannot see it, and there is no global of that
+name, so it would have thrown on every read-down); and `ansMarks` sat below
+`answerAnchor` as a `const` in TDZ — the same argument Phase 32 heard one file
+over, so it moved above its readers.
+
+**The check recomputes rather than pins a literal**: the harness reads the
+plate's own `marks`, takes the mean itself, and requires every printed row to
+match. Verified by widening the anchor back and watching it go red.
+
+**Gap 5 is the only one of the five left**, undesigned by the handoff's own
+statement and running on its interim wiring.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner

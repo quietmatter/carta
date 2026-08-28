@@ -363,8 +363,11 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 /* a ruled section head — the label, and what the section amounts to */
 .shead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
   border-bottom:1px solid var(--line);padding-bottom:8px;margin:24px 0 2px}
-.shead .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:500}
-.shead .r{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;color:var(--ink-3);text-align:right}
+/* a two-part head must never wrap: the left half is the section and the right
+   half says what its numbers are counted from, and either one broken over two
+   lines reads as two heads. At 440px of gutter-inset width neither needs to. */
+.shead .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:500;white-space:nowrap;flex:0 1 auto;min-width:0}
+.shead .r{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;color:var(--ink-3);text-align:right;white-space:nowrap;flex:0 0 auto}
 /* over a list of cards the rule is redundant — every card already draws its own
    edge, and two hairlines 8px apart read as a mistake rather than a system */
 .shead.over{border-bottom:0;padding:0 4px 10px;margin:28px 0 0}
@@ -990,11 +993,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.42.3"></script>
-<script src="carta-plate.js?v=7.42.3"></script>
-<script src="carta-shot.js?v=7.42.3"></script>
-<script src="carta-ask.js?v=7.42.3"></script>
-<script src="carta-atlas.js?v=7.42.3"></script>
+<script src="carta-map.js?v=7.43.0"></script>
+<script src="carta-plate.js?v=7.43.0"></script>
+<script src="carta-shot.js?v=7.43.0"></script>
+<script src="carta-ask.js?v=7.43.0"></script>
+<script src="carta-atlas.js?v=7.43.0"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4969,8 +4972,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.42.3';
+const APP_VERSION='7.43.0';
 const CHANGELOG=[
+  {v:'7.43.0',d:"Every distance on an answer, counted from somewhere real. The kilometres beside the cafés Carta found were measured from the middle of the city — a point you never gave it and it had no way to know. Carta has no address for you and does not ask for one, so it now counts from the only place it can honestly stand: the middle of the names in the answer itself. The plate says so on the ground, beside the small cross those distances are measured from, and the column head names it once — “km from the six”. The numbers moved, and one of them moved a long way: the café that read as nearest is third-furthest, and the one the plan tells you to start at turns out to be the closest to the middle of its own answer. A café's own page carries no kilometre now. A distance is worth reading down a column against one stated point; alone under a name, with that point two screens away, it is a number with nothing to be compared to — so the page states the quarter and the reach, and its map is centred on the café itself."},
   {v:'7.42.3',d:"The device's own edges, held once instead of a header at a time. A home-screen install draws under the notch and behind the home indicator on every screen, and Carta had been meeting that one surface at a time — three fixes, three versions, each correcting the screen that had been looked at. Every room's header sat under the clock, text scrolled up under it on the chapters, and the bar's ember block stopped short of the bottom edge with paper showing under it. A scrolling screen now begins below the notch as a rule, so its own overflow clips the band and nothing can be drawn into it at any scroll position; the bar's allowance moved into the buttons, so each one paints to the edge and only its label steps up clear of the indicator; and a screen with the bar hidden carries the allowance itself. The full-bleed map still bleeds, which was always the point of it."},
   {v:'7.42.2',d:"The wordmark, out from under the status bar. Confirming the standalone fix finally worked turned up the next thing it made visible: the passport's own \"Carta\" and a city's own header sit on an overlay positioned in fixed pixels from the top of a full-bleed plate, with no allowance for the notch or Dynamic Island a real standalone launch draws behind. Both now clear it the same way the toast already did, and the city header's own map padding and fade move down with it — a header that clears the status bar but then draws its text over the map it sits on would just be the same bug moved fourteen pixels down."},
   {v:'7.42.1',d:"Restore from a backup. exportLedgerJSON has backed up the record since Phase 8 and had no way back in — the only reason to reinstall an iOS home-screen icon is to fix its launch mode, which can only be done by deleting and re-adding it, and until now that meant losing everything with no way to recover it beyond the raw JSON file. It reads the same D a backup already writes verbatim, so restoring is a plain replace, never a merge — the record page states the backup's own counts before anything happens, and says plainly when the device already holds a record that restoring will replace."},

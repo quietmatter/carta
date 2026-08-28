@@ -88,7 +88,14 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   page, and **Not now** puts it down for good — it stays under *What Carta
   found*, one pull below. What comes back is **six names on the ground, read
   as an index**: the rank, the quarter, how far, and what you already made of
-  it — each one a door. The ground under it is **the city itself**, drawn: its
+  it — each one a door. **Every one of those distances is counted from the middle
+  of the answer itself** — the average of the places Carta found and could
+  place. It has no address for you and does not ask for one, so it counts from
+  the only point it can honestly stand on, marks that point on the map with a
+  small cross, and names it once at the head of the column. A café's own page
+  carries no kilometre: a distance is worth reading down a column against one
+  stated point, and alone under a name it has nothing to be compared to. The
+  ground under it all is **the city itself**, drawn: its
   coastline where Carta has one on file, a kilometre grid, and the reach you
   asked for drawn as rings, so *a short drive* is a distance on the page
   rather than a phrase. The numeral on a café is its row's number, and tapping

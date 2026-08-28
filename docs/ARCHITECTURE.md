@@ -556,6 +556,17 @@ Carta 7 is built exactly the way classic was, smaller:
   a genuinely dead rule (`.rowlink .row-main`, zero users in any of the six
   files), not by shaving prose.
 
+  **And it crossed again four releases running, on no feature at all.** Phase 33
+  arrived on a `main` already at **5,109 / 5,000**: v7.42.1, .2 and .3 are a
+  backup restore and two iOS chrome fixes, none of them a surface, all of them in
+  `index.html`. Phase 33 itself adds one changelog line and three lines of CSS,
+  ending at **5,113**. The reading this section asked for at Phase 32 — *does the
+  file cross on ordinary small fixes?* — now has four consecutive answers, and
+  they are all yes. **This is no longer a debt to record; it is the third split
+  falling due**, and the candidate has been named twice: the room-sized views
+  (`vJournal`, `vShelf`, `vRecord` and the screens under them). It is the
+  founder's call, as every prior one was, and it is the top open item.
+
   **It ends the phase at 5,013 all the same, and not because of this phase.**
   v7.41.1 — a twelve-line `setAppH` timing fix with a changelog line — landed on
   `main` while this was being built and took **`main` itself to 5,013 / 5,000**.
@@ -1053,6 +1064,10 @@ map layer        <carta-belt> · <carta-plot> · <carta-streets> · <carta-city>
                  grid, the reach in rings, numbered marks keyed to the answer's
                  rows. Defined at the FOOT of the file, after its tables (§1).
                  mode="seal" is the same plate at row scale, shore and marks.
+                 at="mean" (the default) is the mean of `marks`, computed in the
+                 element so no caller can pass a guessed origin by omission; it
+                 carries NO coordinate default, and with no point and no marks
+                 the reach simply does not draw. at-label says what the cross is.
                  belt: topo="on" (LAND_TOPO's contours) + marks="[…]" (the
                  regions, on their farms' ground); streets: terrain="on"
                  (the §7 tile row) + names="on" (a pin whose name is the point).

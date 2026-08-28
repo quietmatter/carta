@@ -13,7 +13,7 @@ node test/model.test.js        # the taste model and the brief — 141 cases
 # the real app, in a real browser
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 170 checks
+node test/verify-ask.js        # the ask at the front door — 177 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32 seam — 16 checks
 node test/verify-safearea.js   # the notch and the indicator — 15 checks
@@ -93,7 +93,17 @@ The Atlas moved into `carta-atlas.js`, and `<carta-city>` was folded into
   does; that is parked, and `verify-static.js` says so where it holds the
   line for `cityKey`.)
 
-## `verify-ask.js` — the ask at the front door (Phases 31 and 32)
+## `verify-ask.js` — the ask at the front door (Phases 31, 32 and 33)
+
+**Phase 33 added the anchor.** The distance beside a café is only as honest as
+the point it is counted from, so the check **recomputes** rather than pinning a
+string: it reads the plate's own `marks` attribute, takes the mean itself, and
+requires every printed row to match — the row and the cross have to keep
+agreeing, and editing a literal cannot launder a drifted origin. Verified by
+widening the anchor back to `askNamed()` and watching it go red. Beside it: the
+answer passes **no** `at` (the element takes the mean, so no caller can slip a
+guess in by omission), `at-label` is drawn on the plate, and a finding's leaf
+carries no kilometre at all.
 
 **Phase 32 added the plate.** The answer and one finding now stand on
 `<carta-city>`, and the checks are written against what could go quietly wrong
