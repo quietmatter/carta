@@ -29,6 +29,11 @@ Carta 7 is built exactly the way classic was, smaller:
   same size it was — the debt was paid by moving lines, not cutting them.
   **`carta-plate.js` is the third**, added at v7.31.0 for the same reason and
   by the same mechanism; the argument for it is at the foot of this section.
+  **The count is seven as of Phase 35** — `carta-rooms.js`, taken on the
+  founder's call once the band had crossed on seven straight releases that added
+  no surface. The law was never the number: it is *no bundler, no npm, nothing
+  between the source and the host*, and seven files you drop on a static host
+  keeps it exactly as five did.
 
   *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
   Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
@@ -556,6 +561,66 @@ Carta 7 is built exactly the way classic was, smaller:
   a genuinely dead rule (`.rowlink .row-main`, zero users in any of the six
   files), not by shaving prose.
 
+  ### Phase 35 — the third split, and the seventh file
+
+  **Taken on the founder's call**, put to them as the top open item and answered
+  in three words: *take the split.* The reading §1 had been keeping since Phase
+  32 is what it was answered on, and by the time it was taken it had **seven
+  consecutive releases** behind it — v7.42.1 through v7.42.5, then v7.43.0 and
+  v7.44.0 — of which the crossings were a backup restore and six iOS chrome
+  fixes. **Not one of them added a surface.** A band that only ever moves on
+  maintenance has stopped measuring what it was set to measure, and that is the
+  condition this section names for a split rather than an amendment.
+
+  *The cut §1 named first, and Phase 31 declined.* This section has carried the
+  room-sized views as the obvious candidate since Phase 30, and Phase 31 then
+  took the Atlas instead — with its reasons written down in the open, not
+  quietly. Both of those reasons are spent, and it is worth saying why rather
+  than treating the earlier note as simply superseded:
+
+  - **"The Atlas is one contiguous slab and the rooms are not."** True then;
+    false now. The rooms are a single unbroken run of **861 lines** under their
+    own banners, from `/* ==== views ==== */` through the dials, and the phases
+    since have only tightened it.
+  - **"The Atlas is the layer above `carta-map.js`, a seam that already
+    exists."** Also true, and it bought a cheap first split. The rooms' seam is
+    the ordinary one every sibling now has, and there are six siblings to model
+    it on rather than one.
+
+  *What moved, and what did not.* `carta-rooms.js` (**917 lines / 60.6 KB**)
+  holds the record read as itself: the Journal and a cup's own screen, a café,
+  the shelf, the keeper's whole record with its backup and its credentials, a
+  Setup and its grind history, and the dials a brew is written on. It holds
+  **nothing that draws geography** (that is `carta-atlas.js`, one storey up from
+  `carta-map.js`) and **nothing that argues** (that is `carta-ask.js`). The
+  forms that *write* the ledger — the café cup, the setup form, the dial-in loop
+  — stayed, deliberately: they are writers, not rooms, and folding them in would
+  have made a bigger file out of a less coherent idea.
+
+  `index.html` comes back to **4,298 lines / 320.3 KB** — inside the band with
+  **702 lines and 180 KB of headroom**, the most it has had since Phase 15. The
+  app total is unchanged but for the file's header and its seam: a move, not a
+  cut.
+
+  *The seam, and the one thing it had to fix rather than move.* Thirteen names
+  publish on `window`, and as ever roughly half of that list is documentation —
+  a `function` declaration in a classic script attaches itself. The half that is
+  load-bearing is **`clearCupNos()`**. `save()` was nulling this slab's own
+  `_cupNoCache` **directly, across the file boundary**: it works, because classic
+  scripts share one global lexical scope, and it is the opposite of a documented
+  seam. It is a call now, owned by the file that owns the state — the same shape
+  `clearCityLead()` took at Phase 31, found the same way, by measuring the slab's
+  outward references rather than reading them.
+
+  *And the check that had to come with it.* Phase 31's own note says a split
+  breaks a screen **quietly**, and that it does so to whichever screen nothing
+  opens. When the rooms moved, **four of the eight** — a café, the Setups list,
+  a Setup, and the dials — were opened by no harness in the repo. All eight are
+  walked now in `verify-split.js`, each the way the app opens it. Breaking one
+  on purpose proved two things: the walk catches it, and the walk **crashed the
+  run** rather than reporting it, so the first broken room would have left every
+  room after it unchecked. `walk()` reports and continues now.
+
   **And it crossed again four releases running, on no feature at all.** Phase 33
   arrived on a `main` already at **5,109 / 5,000**: v7.42.1 through .3 are a
   backup restore and two iOS chrome fixes, none of them a surface, all of them in
@@ -671,7 +736,7 @@ Carta 7 is built exactly the way classic was, smaller:
   `.github/workflows/tests.yml` runs all five harnesses on every push and
   pull request to `main`. It adds nothing to what a keeper downloads: no
   `package.json`, no lockfile, no bundler, no generated artifact, and not one
-  byte of difference to the six files served from the host. What it installs
+  byte of difference to the seven files served from the host. What it installs
   — Playwright, on the runner, with `--no-save` — is the same install
   `test/README.md` has always told a contributor to run by hand, and it is a
   *test* dependency, which this project has had since the first browser
@@ -721,7 +786,7 @@ carta-ask.js          the argument and its channel, split out at v7.34.0 (§1)
 carta-atlas.js        the door and the four walks, split out at Phase 31 (§1)
 CLAUDE.md             the working guide to those files (Carta 7)
 test/model.test.js    the pure-block harness (§9)
-test/verify-static.js the six files parse and agree (§1) — no browser
+test/verify-static.js the seven files parse and agree (§1) — no browser
 test/verify-door.js   the front door in a real browser (Phase 30)
 test/verify-v7.35.js  the v7.35.0 fold in a real browser
 test/verify-split.js  the Phase 31 seam in a real browser

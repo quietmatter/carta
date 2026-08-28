@@ -59,8 +59,8 @@ await page.evaluate(()=>{try{closeSheet()}catch(e){}});
    mismatch here is the v7.31.1 failure — a cached sibling beside a fresh
    document — caught before it can be swallowed by a catch somewhere. */
 const vers=await page.evaluate(()=>[APP_VERSION,window.MAP_VERSION,window.PLATE_VERSION,
-  window.SHOT_VERSION,window.ASK_VERSION,window.ATLAS_VERSION]);
-ok(vers.every(v=>v&&v===vers[0]),`the version guard — all six files agree (${vers[0]})`,vers.join(' | '));
+  window.SHOT_VERSION,window.ASK_VERSION,window.ATLAS_VERSION,window.ROOMS_VERSION]);
+ok(vers.every(v=>v&&v===vers[0]),`the version guard — all seven files agree (${vers[0]})`,vers.join(' | '));
 
 /* the published seam at the foot of carta-atlas.js. The const arrows in here
    (originOf, growerOf, regionOf, cityPlaces, placeCups, placeAvg, avgOf) are
@@ -74,11 +74,47 @@ const SEAM=['askFromHome','asktrustHTML','avgOf','cityLead','cityPlaces','clearC
 const absent=await page.evaluate(n=>n.filter(k=>typeof window[k]==='undefined'),SEAM);
 ok(!absent.length,`the seam — all ${SEAM.length} exports are on window`,absent.join(', '));
 
+/* ---- Phase 35 · the rooms, moved into carta-rooms.js ----
+   The reason this block exists is written into Phase 31's own note above: a
+   split breaks a screen QUIETLY, and it does it to whichever screen nothing
+   opens. When the rooms moved, four of the eight — a café, the Setups list, a
+   Setup, and the dials — were opened by no harness in the repo. They are
+   opened here, each one the way the app opens it, and each asserted to paint
+   its own record rather than its empty state. */
+const ROOMS_SEAM=['clearCupNos','exportLedgerJSON','maybeAutoExport','openBrewFlow',
+  'openWhatsNew','vBrew','vCafe','vCup','vJournal','vRecord','vSetup','vSetups','vShelf'];
+const roomsAbsent=await page.evaluate(n=>n.filter(k=>typeof window[k]==='undefined'),ROOMS_SEAM);
+ok(!roomsAbsent.length,`the rooms' seam — all ${ROOMS_SEAM.length} exports are on window`,roomsAbsent.join(', '));
+
+/* the one bare cross-file WRITE the cut turned into a call. index.html's save()
+   was nulling this file's own _cupNoCache directly; if that ever silently stops
+   clearing, a cup's number goes stale the moment another is written. */
+const nos=await page.evaluate(()=>{
+  const c=live('cups')[0]; if(!c)return {skip:true};
+  const before=cupNo(c);
+  D.cups.push({id:'zz_probe',createdAt:'2000-01-01T00:00:00.000Z',at:'2000-01-01T00:00:00.000Z',kind:'home',score:5});
+  save();
+  const after=cupNo(c);
+  D.cups=D.cups.filter(x=>x.id!=='zz_probe');save();
+  return {before,after};
+});
+ok(!nos.skip&&nos.after===nos.before+1,
+  'save() → clearCupNos() — the cup numbering is rebuilt across the seam, not left stale',JSON.stringify(nos));
+
 const txt=()=>page.evaluate(()=>document.getElementById('main').innerText);
 async function walk(js,label,expect){
-  await page.evaluate(js);await page.waitForTimeout(450);
+  /* a screen that throws must be ONE red line, not the end of the run. Without
+     this the first broken room aborts the walk and every room after it goes
+     unchecked — which is the same quiet gap this block was added to close,
+     one level up. Found by breaking a moved screen on purpose. */
+  try{await page.evaluate(js)}
+  catch(e){ok(false,label,'threw on open: '+e.message);return}
+  await page.waitForTimeout(450);
   const t=await txt();
-  ok(t&&t.length>40&&(!expect||t.includes(expect)),label,t);
+  /* case-insensitive on purpose: innerText returns what CSS text-transform
+     actually renders, so a label the source writes as "Cups" reads back as
+     "CUPS". Matching case here has produced a false red twice in this repo. */
+  ok(t&&t.length>40&&(!expect||t.toLowerCase().includes(expect.toLowerCase())),label,t);
 }
 // the four walks Phase 13 drew, each opened the way the app opens it
 await walk(()=>openCountryChapter('Ethiopia'),'the road down from Ethiopia','Ethiopia');
@@ -86,6 +122,18 @@ await walk(()=>openRegionChapter('Ethiopia','Gedeb'),'a region — Gedeb, scoped
 await walk(()=>openProducerPage('Ethiopia','Worka Sakaro','Gedeb'),'a farm — the Worka Sakaro ledger','Worka Sakaro');
 await walk(()=>openCityChapter('Lisbon'),'a city — Lisbon and its streets','Lisbon');
 await walk(()=>go('atlas'),'back out to the Atlas');
+
+/* the eight rooms, every one of them, opened the way the app opens them. The
+   four the repo already walked are here too — the point is the whole slab. */
+await walk(()=>go('journal'),'the Journal — the record, newest first','Every cup');
+await walk(()=>go('shelf'),'the shelf — the coffees you have got');
+await walk(()=>openScreen('record'),'the record — the whole of it','Cups');
+await walk(()=>{const c=live('cups')[0];openCupDetail(c.id)},'a cup — its own screen');
+await walk(()=>{const p=live('places')[0];openCafeScreen(p.id)},'a café — its streets and your cups there');
+await walk(()=>openScreen('setups'),'the Setups list');
+await walk(()=>{const s=live('setups')[0];openSetupScreen(s.id)},'a Setup — where a grind number is true');
+await walk(()=>{const c=live('coffees').find(x=>x.home)||live('coffees')[0];openBrewFlow(c.id)},'the dials — a brew is not an errand');
+await walk(()=>go('atlas'),'and back out again');
 
 // the sheet under the plate, and the reset that arrives with a fresh screen
 await page.evaluate(()=>toggleAtlasSheet());await page.waitForTimeout(500);

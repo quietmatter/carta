@@ -1822,6 +1822,41 @@ exactly as `Done` does.
 **All five gaps are now settled.** The remaining open items are the app's own:
 `CITY_ARCS` holds one key, `landKey()` is parked, and the third split is due.
 
+### Phase 35 — the third split (shipped — v7.45.0)
+
+*Taken on the founder's call — put as the top open item, answered in three
+words: “take the split.”*
+
+**Why now.** The band had crossed on **seven consecutive releases that added no
+surface at all** — a backup restore and six iOS chrome fixes (v7.42.1–.5,
+v7.43.0, v7.44.0). A band that only moves on maintenance has stopped measuring
+what it was set to measure, which is the condition `ARCHITECTURE.md` §1 names for
+a split rather than another amendment.
+
+**The cut §1 named first and Phase 31 declined**, with both of that phase's
+reasons now spent: the rooms *are* one contiguous run (861 lines), and the seam
+they need is the ordinary one six siblings already model.
+
+**`carta-rooms.js` (917 lines)** holds the record read as itself — the Journal
+and a cup, a café, the shelf, the whole record with its backup and credentials,
+a Setup and its grind history, and the dials. Not geography (`carta-atlas.js`),
+not argument (`carta-ask.js`), and **not the forms that write the ledger**: those
+are writers, not rooms, and folding them in would have made a bigger file out of
+a less coherent idea.
+
+**`index.html` comes back to 4,298 lines / 320.3 KB** — inside the band with 702
+lines of headroom, the most since Phase 15.
+
+**One bare cross-file write became a call.** `save()` was nulling the slab's own
+`_cupNoCache` directly; it is `clearCupNos()` now, the same shape
+`clearCityLead()` took at Phase 31, and found the same way — by measuring the
+slab's outward references rather than reading them.
+
+**Four of the eight rooms were opened by no harness in the repo.** All eight are
+walked now. Breaking one on purpose proved the walk catches it *and* that it
+crashed the run rather than reporting — which would have left every room after
+the broken one unchecked. `walk()` reports and continues.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner

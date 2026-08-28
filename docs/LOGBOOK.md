@@ -7,6 +7,54 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — Phase 35: the third split (v7.45.0)
+
+- **Taken on the founder's call.** Put as the top open item at the end of the
+  handoff and answered in three words — *take the split*. The reading it was
+  answered on is the one §1 had been keeping since Phase 32, and by the time it
+  was taken it had **seven consecutive releases** behind it whose crossings were
+  a backup restore and six iOS chrome fixes. **Not one added a surface.** A band
+  that only ever moves on maintenance has stopped measuring what it was set to
+  measure.
+- **This is the cut §1 named first and Phase 31 declined**, and both of that
+  phase's reasons are spent rather than superseded: the rooms are one unbroken
+  861-line run now, and the seam they need is the ordinary one six siblings
+  already model. Worth saying out loud, because a note that just goes quiet
+  reads as having been wrong; it wasn't, it was right at the time.
+- **`carta-rooms.js` (917 lines / 60.6 KB)** — the record read as itself. What
+  it deliberately does **not** hold: geography (`carta-atlas.js`), argument
+  (`carta-ask.js`), and **the forms that write the ledger**. The forms were the
+  tempting extra 699 lines; they are writers, not rooms, and taking them would
+  have bought a bigger file at the price of a coherent idea.
+- **`index.html` at 4,298 / 5,000 lines, 320.3 KB** — 702 lines and 180 KB of
+  headroom, the most since Phase 15. A move, not a cut: the app total is
+  unchanged but for the header and the seam.
+- **One bare cross-file write became a call.** `save()` was nulling this slab's
+  own `_cupNoCache` from across the boundary — it works, classic scripts share
+  one global scope, and it is the opposite of a documented seam. `clearCupNos()`
+  now, owned by the file that owns the state, exactly the shape
+  `clearCityLead()` took at Phase 31. **Found by measuring the slab's outward
+  references, not by reading it** — which is how Phase 31 found its two.
+- **The check the split actually needed.** Phase 31's own note says a split
+  breaks a screen *quietly*, and does it to whichever screen nothing opens.
+  Measured: **four of the eight rooms** — a café, the Setups list, a Setup, the
+  dials — were opened by **no harness in the repo**. All eight are walked now.
+- **Breaking one on purpose taught two things, not one.** The walk caught it —
+  and it **crashed the run** instead of reporting, which would have left every
+  room after the broken one silently unchecked. That is the same quiet gap the
+  block was written to close, one level up in the harness itself. `walk()`
+  catches, reports one red line, and carries on.
+- **Two false reds while writing that walk**, both mine and both familiar: the
+  Journal does not contain the word "Journal" (that is the tab label, outside
+  `#main`), and `innerText` returns what `text-transform` renders, so `Cups`
+  reads back as `CUPS`. The matcher is case-insensitive now, with the reason in
+  a comment — this repo has produced that same false red three times.
+
+**Still open.** `CITY_ARCS` holds one key. `landKey()` is parked. Nothing else —
+the design commission closed at Phase 34 and the band debt closed here.
+
+---
+
 ## 2026-08-28 — Phase 34: the kind and the question (v7.44.0)
 
 - **Turn 7 answers founder call five — the last of them.** All five gaps the
