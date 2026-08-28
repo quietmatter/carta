@@ -99,7 +99,20 @@ html,body{height:100%}
 html{background:var(--surface-page)}
 body{
   background:var(--surface-card);color:var(--ink);font-family:var(--serif);font-size:16px;line-height:1.5;
-  max-width:480px;margin:0 auto;height:100vh;height:100dvh;height:var(--app-h,100dvh);
+  /* height is the LARGER of two independent measurements, not one trusted
+     over the other. 100dvh has a live iOS regression (Apple Developer
+     Forums, thread 803987) that leaves a gap at the bottom in standalone;
+     window.innerHeight (--app-h, set by setAppH() below) was the fix for
+     that, on the theory that it reads the real settled height where dvh
+     doesn't. It might not, on every device — nothing here has confirmed
+     that measurement is trustworthy either, only that it happened to read
+     correctly at v7.37.6's own reference. If either one comes up short of
+     the device's true height, max() reads the other instead of compounding
+     whichever is wrong; the failure mode of both agreeing on a correct
+     number is indistinguishable from either being right alone, so this
+     costs nothing when both are fine. */
+  max-width:480px;margin:0 auto;height:100vh;height:100dvh;
+  height:max(100dvh,var(--app-h,100dvh));
   display:flex;flex-direction:column;overflow:hidden;position:relative;
 }
 /* Phase 26: the leaf was ruled twice — the sheet's own edge and the margin it
@@ -1011,11 +1024,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.42.4"></script>
-<script src="carta-plate.js?v=7.42.4"></script>
-<script src="carta-shot.js?v=7.42.4"></script>
-<script src="carta-ask.js?v=7.42.4"></script>
-<script src="carta-atlas.js?v=7.42.4"></script>
+<script src="carta-map.js?v=7.42.5"></script>
+<script src="carta-plate.js?v=7.42.5"></script>
+<script src="carta-shot.js?v=7.42.5"></script>
+<script src="carta-ask.js?v=7.42.5"></script>
+<script src="carta-atlas.js?v=7.42.5"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4990,8 +5003,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.42.4';
+const APP_VERSION='7.42.5';
 const CHANGELOG=[
+  {v:'7.42.5',d:"The whole bar, not just its own arithmetic. Fixing the last pixel inside the bar surfaced a bigger gap under the entire thing — the app's own full-screen height, not any one element in it, was coming up short of the real screen on a standalone launch. window.innerHeight was trusted as the fix for a known iOS bug in 100dvh (Apple's own forums, thread 803987), on the theory that it reads the real settled height where dvh doesn't; nothing had ever confirmed that trust holds on every device, and this thread's own test never could, since neither failure mode reproduces outside a real iPhone. The app's own height is the larger of the two now, not either one alone — whichever comes up short on a given device, the other one covers for it."},
   {v:'7.42.4',d:"The bar, actually flush this time. v7.42.3 stated an explicit height for the bar so no engine had to compute it, and stated the wrong number: 56, when the real one a real iPhone had been reaching for all along was 57 — the plate's own room, drawn one pixel taller than the reference, drifted by exactly that pixel behind it and two harness checks caught it before it shipped. A second sub-pixel gap turned up the same way: a child's height:100% doesn't know about its own negative margin the way the stretch it replaced did, so the three plain tabs landed a pixel short of the door beside them. Both are held to the pixel now, not read off a computation either engine might resolve differently."},
   {v:'7.42.3',d:"The device's own edges, held once instead of a header at a time. A home-screen install draws under the notch and behind the home indicator on every screen, and Carta had been meeting that one surface at a time — three fixes, three versions, each correcting the screen that had been looked at. Every room's header sat under the clock, text scrolled up under it on the chapters, and the bar's ember block stopped short of the bottom edge with paper showing under it. A scrolling screen now begins below the notch as a rule, so its own overflow clips the band and nothing can be drawn into it at any scroll position; the bar's allowance moved into the buttons, so each one paints to the edge and only its label steps up clear of the indicator; and a screen with the bar hidden carries the allowance itself. The full-bleed map still bleeds, which was always the point of it."},
   {v:'7.42.2',d:"The wordmark, out from under the status bar. Confirming the standalone fix finally worked turned up the next thing it made visible: the passport's own \"Carta\" and a city's own header sit on an overlay positioned in fixed pixels from the top of a full-bleed plate, with no allowance for the notch or Dynamic Island a real standalone launch draws behind. Both now clear it the same way the toast already did, and the city header's own map padding and fade move down with it — a header that clears the status bar but then draws its text over the map it sits on would just be the same bug moved fourteen pixels down."},

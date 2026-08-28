@@ -495,7 +495,7 @@ function plateScrub(e){
  * copy it expects. A mismatch means a cached sibling (see index.html's <head>)
  * and is worth saying out loud — at v7.31.1 the same mismatch was silent and
  * looked to the keeper like their Visualizer account had stopped working. */
-window.PLATE_VERSION='7.42.4';
+window.PLATE_VERSION='7.42.5';
 window.shotCurve=shotCurve;
 window.shotPours=shotPours;
 window.shotPreinfusion=shotPreinfusion;

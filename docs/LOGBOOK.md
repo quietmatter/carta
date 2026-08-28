@@ -7,6 +7,70 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — the whole bar, not just its arithmetic (v7.42.5)
+
+- **Fixing the last pixel inside the bar surfaced a bigger gap under all of
+  it.** Asked for a fresh screenshot and the device model this time, rather
+  than guessing a fifth CSS number blind — the keeper confirmed a real
+  Face ID iPhone (a genuine nonzero home indicator, ruling out "there's
+  nothing to allow for here") and sent a screenshot: the *entire* bar, all
+  four buttons together, sitting above the true screen edge with plain
+  paper below it. Not a distribution problem inside `nav.tabs` this time —
+  `body`'s own height, the box everything else lays out inside of, was
+  itself short of the real screen.
+- **The live site was checked and confirmed fresh** (`last-modified`/`age`
+  headers on `carta.quiet-matter.com/index.html` matched the just-merged
+  v7.42.4) before touching anything — this thread has been burned by stale
+  `max-age=600` caching before, and ruling it out first meant the gap was
+  real and not a rerun of that.
+- **The root cause was `body`'s trust in one measurement.** `height:
+  var(--app-h, 100dvh)` has trusted `window.innerHeight` completely since
+  v7.37.6, on the strength of a real, cited iOS bug in `100dvh` (Apple's
+  own developer forums) and the reasoning that `innerHeight` reads the
+  settled height where `dvh` doesn't. Nothing had ever confirmed
+  `innerHeight` itself holds up on every device — and it couldn't be
+  confirmed from the sandbox: `test/verify-safearea.js`, added at v7.42.3
+  specifically to stop shipping this class of bug unverified, has exactly
+  this blind spot too. It overrides `--sat`/`--sab` as literal CSS values
+  and never touches `innerHeight`, which reads correctly in headless
+  Chromium no matter what the test tells the page to believe about its own
+  insets. A live `dvh` bug and a device where `innerHeight` itself
+  undercounts the safe area are both real possibilities and neither
+  reproduces outside a real iPhone — this could be hedged against, not
+  proven from here.
+- **Shipped:** `body`'s height is `max(100dvh, var(--app-h, 100dvh))` — the
+  larger of two independent measurements, not either one trusted alone. A
+  device where both happen to read the same true height loses nothing; a
+  device where either one comes up short is covered by the other, whichever
+  it turns out to be.
+- **`verify-safearea.js` gained the one check its own blind spot could still
+  prove.** It can't tell you whether `innerHeight` is short on a real
+  iPhone, but it CAN force `--app-h` to an obviously-wrong `400px` and
+  confirm `body` still renders at the true height anyway — proving the
+  recovery mechanism actually works, not merely that the bug doesn't
+  reproduce in Chromium. Verified by failing: reverted to the old
+  single-source height, the same forced-400px probe renders body at exactly
+  400px.
+- **A note on process, for next time:** this is the point in the thread
+  where guessing a fifth CSS value blind would have cost another
+  round-trip for nothing. Asking for the screenshot and the device model
+  first — instead of pattern-matching "bottom bar bug" onto the same fix
+  shape a fourth time — is what turned up that this was a different bug
+  (whole-body height) wearing the same symptom (a gap at the bottom) as the
+  last three.
+- **Verified:** all seven harnesses green — `node test/verify-static.js` at
+  20/20, `node test/model.test.js` at 141/141, `verify-door.js` (59),
+  `verify-ask.js` (170), `verify-v7.35.js` (41), `verify-split.js` (16),
+  `verify-safearea.js` (16, the new recovery check included).
+  `APP_VERSION` and all five siblings renumbered to `7.42.5` in lockstep.
+- **Not resolved:** whether `innerHeight` or `100dvh` was the actual culprit
+  on the keeper's device. `max()` makes the answer not matter for now; if a
+  fourth bottom-edge report ever comes in after this, that question is
+  where to start rather than a sixth CSS number.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-28 — the bar, actually flush (v7.42.4)
 
 - **The fix that held once still shipped a pixel wrong.** The keeper's very
