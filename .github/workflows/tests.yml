@@ -75,3 +75,6 @@ jobs:
       - name: the Phase 31 seam
         if: ${{ !cancelled() }}
         run: node test/verify-split.js
+      - name: the device's own edges
+        if: ${{ !cancelled() }}
+        run: node test/verify-safearea.js

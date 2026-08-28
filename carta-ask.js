@@ -668,7 +668,7 @@ function vAsk(){
       <carta-atlas style="position:absolute;inset:0" caption="off"
         frame="${first||!tasted?'belt':'tasted'}" tasted="${first?'':esc(tasted)}"></carta-atlas>
       <div class="fade top" style="height:96px"></div>
-      <div class="overlay" style="left:20px;right:20px;top:22px">
+      <div class="overlay" style="left:20px;right:20px;top:calc(22px + var(--sat))">
         <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
       </div>
     </div>
@@ -887,7 +887,7 @@ function vAsking(){
   return `<div class="askwait think">
     <div class="plate mapbox passport" id="think_map">${askPlateHTML()}</div>
     <div class="fade top" style="height:150px"></div>
-    <div class="overlay" style="left:20px;right:20px;top:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+    <div class="overlay" style="left:20px;right:20px;top:calc(22px + var(--sat));display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
       <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
       <button class="omini" style="flex:none" onclick="cancelAsk()">Cancel</button>
     </div>
@@ -1412,7 +1412,7 @@ function vAskResult(id){
             tasted="${esc(Object.values(tastedCountryMap()).map(c=>c.label).join(','))}"></carta-atlas>`}
       <div class="fade top" style="height:132px"></div>
     </div>
-    <div class="overlay" style="left:20px;right:20px;top:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+    <div class="overlay" style="left:20px;right:20px;top:calc(22px + var(--sat));display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
       ${backMiniHTML('bare','flex:none;margin-left:-4px',true)}
       <span class="eyebrow" id="anshead" style="margin:0;padding-top:12px">${esc(ansHeadRight(a,_ansStop))}</span>
     </div>
@@ -1573,7 +1573,7 @@ function vAskFinding(id,view){
             tasted="${esc(Object.values(tastedCountryMap()).map(c=>c.label).join(','))}"></carta-atlas>`}
       <div class="fade top" id="findfade" style="height:${FIND_SCRIMS[_findStop]}px"></div>
     </div>
-    <div class="overlay" style="left:20px;right:20px;top:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+    <div class="overlay" style="left:20px;right:20px;top:calc(22px + var(--sat));display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
       ${backMiniHTML('bare','flex:none;margin-left:-4px',true)}
       ${pos?`<span class="eyebrow" style="margin:0;padding-top:12px">${esc(words(pos.i))} of ${esc(words(pos.n))}</span>`:''}
     </div>
@@ -1645,4 +1645,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.42.2';
+window.ASK_VERSION='7.42.3';
