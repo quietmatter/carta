@@ -397,8 +397,11 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 /* a ruled section head — the label, and what the section amounts to */
 .shead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
   border-bottom:1px solid var(--line);padding-bottom:8px;margin:24px 0 2px}
-.shead .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:500}
-.shead .r{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;color:var(--ink-3);text-align:right}
+/* a two-part head must never wrap: the left half is the section and the right
+   half says what its numbers are counted from, and either one broken over two
+   lines reads as two heads. At 440px of gutter-inset width neither needs to. */
+.shead .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:500;white-space:nowrap;flex:0 1 auto;min-width:0}
+.shead .r{font-family:var(--sans);font-size:var(--s11);letter-spacing:.06em;color:var(--ink-3);text-align:right;white-space:nowrap;flex:0 0 auto}
 /* over a list of cards the rule is redundant — every card already draws its own
    edge, and two hairlines 8px apart read as a mistake rather than a system */
 .shead.over{border-bottom:0;padding:0 4px 10px;margin:28px 0 0}
@@ -1024,11 +1027,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.42.5"></script>
-<script src="carta-plate.js?v=7.42.5"></script>
-<script src="carta-shot.js?v=7.42.5"></script>
-<script src="carta-ask.js?v=7.42.5"></script>
-<script src="carta-atlas.js?v=7.42.5"></script>
+<script src="carta-map.js?v=7.43.0"></script>
+<script src="carta-plate.js?v=7.43.0"></script>
+<script src="carta-shot.js?v=7.43.0"></script>
+<script src="carta-ask.js?v=7.43.0"></script>
+<script src="carta-atlas.js?v=7.43.0"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -5003,8 +5006,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.42.5';
+const APP_VERSION='7.43.0';
 const CHANGELOG=[
+  {v:'7.43.0',d:"Every distance on an answer, counted from somewhere real. The kilometres beside the cafés Carta found were measured from the middle of the city — a point you never gave it and it had no way to know. Carta has no address for you and does not ask for one, so it now counts from the only place it can honestly stand: the middle of the names in the answer itself. The plate says so on the ground, beside the small cross those distances are measured from, and the column head names it once — “km from the six”. The numbers moved, and one of them moved a long way: the café that read as nearest is third-furthest, and the one the plan tells you to start at turns out to be the closest to the middle of its own answer. A café's own page carries no kilometre now. A distance is worth reading down a column against one stated point; alone under a name, with that point two screens away, it is a number with nothing to be compared to — so the page states the quarter and the reach, and its map is centred on the café itself."},
   {v:'7.42.5',d:"The whole bar, not just its own arithmetic. Fixing the last pixel inside the bar surfaced a bigger gap under the entire thing — the app's own full-screen height, not any one element in it, was coming up short of the real screen on a standalone launch. window.innerHeight was trusted as the fix for a known iOS bug in 100dvh (Apple's own forums, thread 803987), on the theory that it reads the real settled height where dvh doesn't; nothing had ever confirmed that trust holds on every device, and this thread's own test never could, since neither failure mode reproduces outside a real iPhone. The app's own height is the larger of the two now, not either one alone — whichever comes up short on a given device, the other one covers for it."},
   {v:'7.42.4',d:"The bar, actually flush this time. v7.42.3 stated an explicit height for the bar so no engine had to compute it, and stated the wrong number: 56, when the real one a real iPhone had been reaching for all along was 57 — the plate's own room, drawn one pixel taller than the reference, drifted by exactly that pixel behind it and two harness checks caught it before it shipped. A second sub-pixel gap turned up the same way: a child's height:100% doesn't know about its own negative margin the way the stretch it replaced did, so the three plain tabs landed a pixel short of the door beside them. Both are held to the pixel now, not read off a computation either engine might resolve differently."},
   {v:'7.42.3',d:"The device's own edges, held once instead of a header at a time. A home-screen install draws under the notch and behind the home indicator on every screen, and Carta had been meeting that one surface at a time — three fixes, three versions, each correcting the screen that had been looked at. Every room's header sat under the clock, text scrolled up under it on the chapters, and the bar's ember block stopped short of the bottom edge with paper showing under it. A scrolling screen now begins below the notch as a rule, so its own overflow clips the band and nothing can be drawn into it at any scroll position; the bar's allowance moved into the buttons, so each one paints to the edge and only its label steps up clear of the indicator; and a screen with the bar hidden carries the allowance itself. The full-bleed map still bleeds, which was always the point of it."},

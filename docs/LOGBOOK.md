@@ -7,6 +7,92 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — Phase 33: the distance anchor (v7.43.0)
+
+- **Turn 6 answers founder call four, the last one the design was going to
+  answer.** No new screens again — one new section, §B4, and it supersedes a
+  number on every screen that carries one. The gap in the handoff's own words:
+  every kilometre had been counted from `at="34.048,-118.246"`, downtown Los
+  Angeles. *"The arithmetic was right and the origin was invented."*
+- **The rule: the anchor is the mean pin of the ask's own confirmed findings** —
+  the marks already on the plate, averaged. Made of nothing but the answer, so it
+  can be stated without claiming to know where the reader is standing. Carta has
+  no address for the keeper, nothing on an ask names a starting point, and there
+  is no permission to assume one.
+- **Half of this was already shipped**, and that is worth being precise about
+  rather than claiming the whole thing as new: turn 3 took the same
+  recommendation off the record and the rows have been counting from a mean pin
+  since v7.40.0. What turn 6 adds is where that mean is computed, what it says
+  out loud, and one narrowing that turned out to matter.
+- **The narrowing.** `answerAnchor()` averaged `askNamed()` — findings *plus*
+  mentions *plus* the wildcard — while the plate draws only the findings. Once
+  `<carta-city>` computes its own mean from `marks` and puts a **cross** on it,
+  those two are visibly different points wearing one name, and the near-misses
+  would quietly drag the origin of every distance printed. It is the findings
+  now, which is the set the plate draws. Every number on the fixture moved
+  (0.9 → 0.8, 0.5 → 0.6, 0.7 → 0.8).
+- **`at="mean"` is the element's default, and there is no coordinate default any
+  more.** The mean is computed *inside* `<carta-city>` from `marks`, so a caller
+  cannot substitute a guess by omitting the attribute — and the app now passes no
+  `at` at all on the answer plate. The old fallback was the invented downtown
+  coordinate itself, sitting in the file as a default; it is gone. **No point and
+  no marks means no anchor, and then the reach does not draw** — the grid, the
+  scale and the marks still do.
+- **`at-label` writes what the cross is** onto the plate, in ring ink at ring
+  size, through the same collision pass as every other label — dropped rather
+  than stacked. Counted rather than spelled: *middle of the three* on a
+  three-finding answer, because the mean is taken over the marks that made it.
+- **The column head names it once**, taking the slot the *tap a name for its
+  argument* hint had: `What Carta found` · `km from the three`. The handoff's
+  argument for the trade is that the door glyph on every row and the ember
+  chevron on the unread pick already teach the tap, and an unattributed kilometre
+  is the more expensive silence. Where there is no anchor no row prints a
+  distance, so the head does not name one either and the hint stands instead.
+- **A leaf drops the number.** A distance is worth reading down a column of six
+  against one stated point; alone under a café's name, with that point two
+  screens away, it is a figure with nothing to be compared to. The leaf states
+  the quarter and the reach, and its own plate anchors on the café's own
+  coordinate — a point the finding carries, so it needs no mean and nothing to
+  label.
+- **Two things found by doing it rather than reading it:**
+  - **A live `km` reference survived** in the read-down eyebrow after the leaf's
+    `km` was removed. `node --check` cannot see it — it is a valid identifier at
+    parse time — and there is no global of that name, so it would have thrown on
+    every read-down. Found by grepping the call sites rather than trusting the
+    parse. (§G's own text had already dropped it: the eyebrow is the quarter
+    alone.)
+  - **`ansMarks` was below `answerAnchor`**, a `const` arrow in TDZ from its new
+    reader's position. It works, because nothing calls `answerAnchor` during
+    load — which is exactly the argument Phase 32 heard about `<carta-city>` and
+    the tables, one file over. Moved above its readers rather than left resting
+    on when it happens to be called.
+- **The check that matters is the one that recomputes.** Asserting the string
+  `0.8 km` only pins today's arithmetic; anyone can update a literal. So the
+  harness reads the plate's own `marks` attribute, takes the mean itself, and
+  requires every printed row to match it — the row and the cross have to keep
+  agreeing. **Verified by widening the anchor back to `askNamed()` and watching
+  it go red**, the same way Phase 32's scrim check was.
+- **A finding's plate gained its row numeral** (`6c` draws it), so the plate a
+  finding stands on and the index it came from say the same number.
+
+**Merged with `main` twice while this was built.** v7.42.4 and v7.42.5 landed
+between the commit and the push — two more iOS chrome fixes, a **seventh
+harness** (`verify-safearea.js`) and its CI step. Their code is kept whole and
+all seven suites were re-run on the merged tree, not on either side alone. Two
+stale figures came in with them and are corrected here rather than left: the
+harness count in `CLAUDE.md` still read *six*, and `verify-safearea.js` was
+documented at 15 checks while running 16.
+
+**The band, again, and louder.** `main` arrived at **5,109 / 5,000** — three more
+small fixes (v7.42.1–.3) since Phase 32, none of them a feature, all of them
+landing in `index.html`. This phase adds one changelog line and three lines of
+CSS to it; after merging v7.42.4 and .5 on top, the file ends at **5,149**. It
+has now crossed on six consecutive releases that added no surface at all. That is no longer a debt to record; it is
+the split falling due, and §1 names the candidate.
+
+**Still open.** Gap 5 (the kind sheet) is the only one of the five left, and it
+is undesigned by the handoff's own statement, running on its interim wiring.
+`CITY_ARCS` still holds one key. `landKey()` is still parked.
 ## 2026-08-28 — the whole bar, not just its arithmetic (v7.42.5)
 
 - **Fixing the last pixel inside the bar surfaced a bigger gap under all of

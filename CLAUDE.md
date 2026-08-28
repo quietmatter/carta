@@ -91,7 +91,7 @@ test/model.test.js    The pure-block harness (zero deps, plain Node)
 test/verify-static.js The six files parse and agree — zero deps, no browser
 test/verify-*.js      Five browser harnesses — the front door, the ask at the front door, the v7.35 fold, the Phase 31 seam, the device's own edges
 test/browser.js       Where the Chromium is, for those four
-.github/workflows/    CI — all six harnesses on every push and PR to main
+.github/workflows/    CI — all seven harnesses on every push and PR to main
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
 classic/README.md     Classic's own user documentation
@@ -197,7 +197,13 @@ server/               Classic's sync server — dormant
     bindings below it, so an upgrade in the closure throws on first paint and
     draws an empty `<svg>` that only recovers on a resize. The class is handed
     out as `window.CARTA_CITY` and the export block defines it; `test/verify-
-    split.js` holds that as a behaviour rather than a shape.
+    split.js` holds that as a behaviour rather than a shape. **`at="mean"` is
+    the default and there is no coordinate default** (Phase 33): the anchor the
+    reach is measured from is the mean of `marks`, computed inside the element
+    so a caller cannot substitute a guess by omitting the attribute. No point
+    and no marks means no anchor, and then the reach does not draw — the grid,
+    the scale and the marks still do. `at-label` says what the cross is, in
+    ring ink through the same collision pass.
   - Beside them, `d3-array` + `d3-geo` **vendored verbatim** — the projection
     the passport needs. See the invariants; this is an amendment, not a habit.
   - Below them, **the ground itself** — `LANDS` (seventy keys, 7,745 b) and
@@ -282,7 +288,14 @@ server/               Classic's sync server — dormant
     can state one city's figures and production cannot — and the reach is the
     keeper's own setting drawn to scale (`REACH_RINGS`), never a measurement.
     **No anchor, no rings**, for the same reason the rows print no kilometres
-    from a single point.
+    from a single point. **Phase 33 made the anchor honest end to end**:
+    `answerAnchor` is the mean of the findings the plate actually draws (not
+    `askNamed`, which would let the near-misses drag the origin), the plate
+    passes no `at` and lets the element take that same mean, `at-label` names
+    the cross, and the column head says `km from the <n>`. A finding's own leaf
+    carries **no kilometre at all** — a distance read against a point two
+    screens away has nothing to be compared to — and anchors its plate on the
+    café's own coordinate.
     The first four are `BARELESS`: one argument read in a sitting apiece, so
     the bar would only offer a way to lose your place — `vAsking` most of
     all, since while the ask is out there is exactly one thing to do with the
@@ -618,10 +631,10 @@ any page error, or any assertion:
 ```bash
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 170 checks
+node test/verify-ask.js        # the ask at the front door — 177 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32 seam — 16 checks
-node test/verify-safearea.js   # the notch and the indicator — 15 checks
+node test/verify-safearea.js   # the notch and the indicator — 16 checks
 ```
 
 `test/browser.js` finds a Chromium for all five (`CHROME`, then playwright's

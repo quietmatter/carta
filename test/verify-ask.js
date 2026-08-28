@@ -455,8 +455,40 @@ const findState=p=>p.evaluate(()=>{
   ok(Number(String(s.plate).replace('px',''))===Number(String(s.top).replace('px',''))+18,
     'the answer — and the plate reaches exactly under it, never leaving bare ground',JSON.stringify(s));
   ok(s.rows===3,'the answer — one index row per finding',String(s.rows));
-  ok(/tap a name for its argument/i.test(s.text),'the answer — the rows say they are doors',s.text);
-  ok(/Baixa · 0\.9 km/i.test(s.text),'the answer — quarter and distance, off the record’s own lookup',s.text);
+  /* Phase 33 took the "tap a name for its argument" hint out of the head — the
+     head now names what the column's kilometres are counted from, and the tap is
+     taught by the glyph on every row. So the check moves to the glyph rather
+     than being dropped: the rows must still SAY they are doors. */
+  const doors=await page.evaluate(()=>[...document.querySelectorAll('#ansleaf .idxrow')]
+    .map(r=>{const g=r.querySelector('.go');return g?g.textContent.trim():''}));
+  ok(doors.length===3&&doors.every(g=>g==='→'),'the answer — the rows say they are doors',JSON.stringify(doors));
+  ok(/km from the three/i.test(s.text),'the answer — and the head says what the kilometres are counted from',s.text);
+  ok(/Baixa · 0\.8 km/i.test(s.text),'the answer — quarter and distance, off the record’s own lookup',s.text);
+  /* …and the number is not merely present, it is counted from the mean of the
+     marks the plate itself draws. This is the whole of gap 4: an origin made of
+     nothing but the answer. Recomputed here from the plate's own `marks`
+     attribute, so editing the literal above cannot launder a drifted anchor —
+     the row and the cross have to keep agreeing. */
+  const agree=await page.evaluate(()=>{
+    const c=document.querySelector('#ansplate carta-city');
+    const marks=JSON.parse(c.getAttribute('marks')||'[]');
+    if(marks.length<2)return {skip:true};
+    const at={lat:marks.reduce((t,m)=>t+m.lat,0)/marks.length,
+              lon:marks.reduce((t,m)=>t+m.lon,0)/marks.length};
+    const out=[];
+    document.querySelectorAll('#ansleaf .idxrow').forEach(r=>{
+      const name=r.querySelector('.t').textContent.trim();
+      const m=marks.find(x=>x.name===name);if(!m)return;
+      const d=Math.hypot(KMX(m.lon,at.lat)-KMX(at.lon,at.lat),KMY(m.lat)-KMY(at.lat));
+      const want=(d<10?d.toFixed(1):Math.round(d))+' km';
+      const got=(r.querySelector('.g')||{textContent:''}).textContent.trim();
+      out.push({name,want,got,ok:got.toLowerCase().endsWith(want.toLowerCase())});
+    });
+    return {out};
+  });
+  ok(!agree.skip&&agree.out.length===3&&agree.out.every(x=>x.ok),
+    'the answer — every kilometre is counted from the mean of the marks the plate draws',
+    JSON.stringify(agree));
   ok(/8 · once/.test(s.text),'the answer — what you already made of it');
   ok(/unread/.test(s.text),'the answer — and what you have not');
   ok(!/undefined|NaN|\[object/.test(s.text),'the answer — nothing leaked into the copy',s.text);
@@ -695,6 +727,37 @@ const findState=p=>p.evaluate(()=>{
   ok(fin&&fin.painted,'a finding stands on the same element, at street scale',JSON.stringify(fin));
   ok(fin&&fin.span==='3'&&fin.rings==='0.4,1','with the handoff\'s own figures — nothing derived, because nothing varies',JSON.stringify(fin));
   ok(fin&&fin.marks===1,'and exactly one mark: this finding, not the set',JSON.stringify(fin));
+
+  /* ---- Phase 33 · the anchor says what it is, and a leaf drops the number ---- */
+  const lbl=await page.evaluate(()=>{
+    const c=document.querySelector('#findplate carta-city');
+    return {atLabel:c?c.getAttribute('at-label'):null,at:c?c.getAttribute('at'):null};
+  });
+  ok(!lbl.atLabel&&/,/.test(lbl.at||''),
+    'a finding anchors on the café\'s own coordinate — no mean, so nothing to label',JSON.stringify(lbl));
+  const leaf=await page.evaluate(()=>{const l=document.getElementById('findleaf');return l?l.innerText:''});
+  ok(leaf&&!/\d\s*km/i.test(leaf),
+    'and the leaf carries no kilometre: a distance alone under a name has nothing to be compared to',leaf);
+  await ctx.close();
+}
+
+/* ---- Phase 33 · the cross on the answer's plate says what it is ---- */
+{
+  const {ctx,page}=await boot({});
+  await page.evaluate(()=>openAskResultScreen('ask_lx'));
+  await page.waitForTimeout(1000);
+  const anch=await page.evaluate(()=>{
+    const c=document.querySelector('#ansplate carta-city');
+    const svg=c.querySelector('svg');
+    return {at:c.getAttribute('at'),label:c.getAttribute('at-label'),
+      drawn:[...svg.querySelectorAll('text')].map(t=>t.textContent)};
+  });
+  /* `at` is deliberately absent: the element takes the mean of the marks itself,
+     so no caller can substitute a guessed origin by leaving the attribute off. */
+  ok(anch.at===null,'the answer passes no anchor — the element takes the mean of its own marks',JSON.stringify(anch));
+  ok(anch.label==='middle of the three','and names what that point is, counted rather than spelled',JSON.stringify(anch));
+  ok(anch.drawn.some(t=>/middle of the three/i.test(t)),
+    'and it is drawn on the plate, beside the cross the distances are measured from',JSON.stringify(anch.drawn));
   await ctx.close();
 }
 
