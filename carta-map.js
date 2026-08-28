@@ -22,7 +22,9 @@
  *                  file already carries, fitted to the box. No fetch, no tile.
  *  <carta-streets> a city or a single café: Leaflet + OpenStreetMap, inked to Carta.
  *  <carta-plot>    the drawn plot — a handful of points fit to a box, offline, no tiles.
- * All three live in light DOM so the page's own tokens (var(--ink) …) resolve.
+ *  <carta-city>    the city an ask lands on: the CITY_ARCS shore in this file, a
+ *                  kilometre grid, the reach in rings, numbered marks. No tile.
+ * All four live in light DOM so the page's own tokens (var(--ink) …) resolve.
  * Taps leave as bubbling events: carta:country-tap {name} · carta:pin-tap {id}.
  */
 (() => {
@@ -692,10 +694,315 @@
     }
   }
 
+/* ============================================================================
+   <carta-city> — the city, drawn (Phase 29 · #146, folded in here).
+
+   The surface an ask lands on. The fourth element in this file, beside the
+   CITY_ARCS table it reads, on the same law: real geometry, no freehand. The coastline is CITY_ARCS out of
+   carta-map.js — the same 0.005° table the seal already reads, in the file, no
+   tile and nothing to be offline from. Everything else on the plate is drafting
+   rather than decoration:
+
+     · the reach — 1/3/8 km rings off the ask's own anchor, so "on foot" and
+       "worth driving for" are a distance on the page rather than a chip;
+     · a kilometre grid, so the ground between two cafés is measured, not empty;
+     · the quarters, only where a caller hands over coordinates it actually
+       has — a finding's own confirmed neighbourhood is a name, and a name
+       belongs to the row rather than to invented ground;
+     · numbered marks, keyed to the rows underneath. A café the record has
+       stood in is filled; one the ask only found is hollow. What cannot be
+       placed is listed and never plotted — the ask's own rule.
+
+   Attributes
+     at      "lat,lon"          the anchor the reach is measured from (required)
+     center  "lat,lon"          the frame's own centre (default: the anchor)
+     span    km across the box  (default 26)
+     coast   city key into CITY_ARCS / CITY_RINGS  (default: none)
+     marks   JSON [{n,name,lat,lon,been}]
+     places  JSON [{name,lat,lon}] — real coordinates only; omit and none draw
+     rings   "1,3,8" km, or "off"
+     grid    "on"|"off"     scale "on"|"off"     names "on"|"off" (mark names)
+     mode    "plate" | "seal"
+   Taps leave as carta:pin-tap {id}, the same event the rest of the layer sends.
+   ========================================================================== */
+  const CITY_LABEL = 'font-family:var(--sans);font-weight:500;text-transform:uppercase;letter-spacing:.16em';
+  const cesc = s => String(s == null ? '' : s).replace(/[<&>]/g, c => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;' }[c]));
+
+  /* no quarter table. The 13 Los Angeles neighbourhoods that used to live here
+     were coordinates nobody on the record had written — invented data, in a file
+     whose whole law is real geometry. A quarter is a finding's own confirmed
+     neighbourhood, so it belongs to the row and the finding's eyebrow, where it
+     is already said twice. `places` stays for a caller that has real
+     coordinates to hand; given none, the plate draws none.
+     The city key comes from cityKey() — the app's own normaliser, ‘okina and
+     diacritics and all — rather than a lowercase-and-trim that keys Līhu‘e
+     as something CITY_ARCS has never heard of. */
+
+  const num = (v, d) => { const n = parseFloat(v); return isFinite(n) ? n : d; };
+  const json = (s, d) => { try { const v = JSON.parse(s); return v || d; } catch (e) { return d; } };
+
+  let _uid = 0;
+
+  class City extends HTMLElement {
+    static get observedAttributes() {
+      return ['at', 'center', 'span', 'coast', 'marks', 'places', 'rings', 'grid', 'scale', 'names', 'mode', 'reserve-top', 'reserve-bottom'];
+    }
+    connectedCallback() {
+      this.style.display = 'block';
+      this.style.height = '100%';
+      keepPos(this);
+      this.paint();
+      if (window.ResizeObserver && !this._ro) {
+        this._ro = new ResizeObserver(() => { clearTimeout(this._rt); this._rt = setTimeout(() => this.paint(true), 120); });
+        this._ro.observe(this);
+      }
+    }
+    disconnectedCallback() { if (this._ro) { this._ro.disconnect(); this._ro = null; } }
+    attributeChangedCallback() { if (this.isConnected) this.paint(true); }
+
+    paint(force) {
+      if (!this.isConnected) return;
+      /* the coast table lives in carta-map.js, which is loaded as its own
+         script; wait for it rather than drawing a city with no shore. The
+         rest of the plate does not depend on it, so a table that never
+         arrives still leaves a ruled field with the marks standing on it. */
+      if ((!window.cityArcsRaw || !window.plateGround) && !this._waited) {
+        clearTimeout(this._t);
+        this._t = setTimeout(() => { this._tries = (this._tries || 0) + 1; if (this._tries > 40) this._waited = true; this.paint(true); }, 60);
+        return;
+      }
+      const p = this.parentElement;
+      const W = Math.max(80, Math.round(this.clientWidth || (p && p.clientWidth) || 480));
+      const H = Math.max(60, Math.round(this.clientHeight || (p && p.clientHeight) || 416));
+      const sig = [W, H].concat(City.observedAttributes.map(a => this.getAttribute(a) || '')).join('|');
+      if (!force && this._sig === sig) return;
+      this._sig = sig;
+
+      const seal = (this.getAttribute('mode') || 'plate') === 'seal';
+      const atA = (this.getAttribute('at') || '34.052,-118.243').split(',').map(Number);
+      const at = { lat: atA[0], lon: atA[1] };
+      /* the anchor and the frame are two different things: the reach is measured
+         from where the ask stands, but a plate of Los Angeles that leaves the
+         coast out of frame is not a plate of Los Angeles. */
+      const ctA = (this.getAttribute('center') || this.getAttribute('at') || '34.052,-118.243').split(',').map(Number);
+      const mid = { lat: isFinite(ctA[0]) ? ctA[0] : at.lat, lon: isFinite(ctA[1]) ? ctA[1] : at.lon };
+      const span = num(this.getAttribute('span'), seal ? 34 : 26);
+      const marks = json(this.getAttribute('marks'), []).filter(m => isFinite(m.lat) && isFinite(m.lon));
+      const coastKey = window.cityKey ? cityKey(this.getAttribute('coast') || '') : '';
+      const places = seal ? [] : (json(this.getAttribute('places'), null) || []);
+      const ringsAttr = this.getAttribute('rings');
+      const rings = seal || ringsAttr === 'off' ? []
+        : (ringsAttr || '1,3,8').split(',').map(Number).filter(v => v > 0);
+      const wantGrid = !seal && this.getAttribute('grid') !== 'off';
+      const wantScale = !seal && this.getAttribute('scale') !== 'off';
+      const wantNames = this.getAttribute('names') === 'on';
+
+      /* one local equirectangular, in kilometres — the same projection the
+         drawn plot uses, so a plate and a seal of the same city agree. */
+      const kmLon = 111.32 * Math.cos(mid.lat * Math.PI / 180), kmLat = 111.32;
+      const s = W / span;
+      const X = (lon) => W / 2 + (lon - mid.lon) * kmLon * s;
+      const Y = (lat) => H / 2 - (lat - mid.lat) * kmLat * s;
+      const cx = X(at.lon), cy = Y(at.lat);
+      const inBox = (x, y, m) => x >= -(m || 0) && x <= W + (m || 0) && y >= -(m || 0) && y <= H + (m || 0);
+
+      const uid = this._uid || (this._uid = 'cc' + (++_uid));
+      const L = [];   // layers, back to front
+
+      /* ── the sea ────────────────────────────────────────────────────────
+         An open coast has no inside, so the water is closed against the box
+         instead of against itself: the arc, then straight out along its own
+         seaward normal. The city's anchor decides which side that is — it is
+         inland by definition — so nothing here is hand-placed per city. */
+      let arcPts = null;
+      if (coastKey && window.cityArcsRaw) {
+        /* a table that is present but still initialising must postpone the
+           paint, never lose it — the retry chain above is the whole recovery. */
+        let arcs = [];
+        try { arcs = window.cityArcsRaw(coastKey) || []; }
+        catch (e) { clearTimeout(this._t); this._t = setTimeout(() => this.paint(true), 60); return; }
+        /* an arc is kept when a SEGMENT of it crosses the frame, not when a
+           vertex lands inside it: a shoreline simplified to half a degree can
+           run clean through a city plate without putting a single point in it,
+           and the corner of coast is the whole reason the plate reads as this
+           city rather than any other. */
+        let best = null;
+        arcs.forEach(a => {
+          const pts = a.map(q => ({ x: X(q.lon), y: Y(q.lat) }));
+          let cross = 0;
+          for (let i = 1; i < pts.length; i++) {
+            const p0 = pts[i - 1], p1 = pts[i];
+            if (Math.min(p0.x, p1.x) > W + 8 || Math.max(p0.x, p1.x) < -8) continue;
+            if (Math.min(p0.y, p1.y) > H + 8 || Math.max(p0.y, p1.y) < -8) continue;
+            cross++;
+          }
+          if (cross && (!best || cross > best.cross)) best = { pts, cross };
+        });
+        if (best) arcPts = best.pts;
+      }
+      if (arcPts && arcPts.length > 1) {
+        const a = arcPts[0], b = arcPts[arcPts.length - 1];
+        let nx = -(b.y - a.y), ny = (b.x - a.x);
+        const len = Math.hypot(nx, ny) || 1; nx /= len; ny /= len;
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        if ((cx - mx) * nx + (cy - my) * ny > 0) { nx = -nx; ny = -ny; }   // away from the city
+        const far = (W + H) * 2;
+        const line = arcPts.map((q, i) => (i ? 'L' : 'M') + n1(q.x) + ' ' + n1(q.y)).join('');
+        const water = line
+          + 'L' + n1(b.x + nx * far) + ' ' + n1(b.y + ny * far)
+          + 'L' + n1(a.x + nx * far) + ' ' + n1(a.y + ny * far) + 'Z';
+        L.push(`<clipPath id="${uid}-box"><rect x="0" y="0" width="${W}" height="${H}"/></clipPath>`);
+        L.push(`<g clip-path="url(#${uid}-box)">
+          <path d="${water}" style="fill:var(--ca-sea, var(--ink));fill-opacity:${seal ? .07 : .05};stroke:none"/>
+          <path d="${line}" style="fill:none;stroke:var(--ca-coast, var(--ink));stroke-opacity:${seal ? .55 : .42};stroke-width:${seal ? 1 : 1.4};stroke-linejoin:round;stroke-linecap:round"/>
+        </g>`);
+        this._water = { line, nx, ny, far, a, b };
+      }
+
+      /* ── the kilometre grid ────────────────────────────────────────────── */
+      if (wantGrid) {
+        const step = span <= 8 ? 1 : span <= 16 ? 2 : span <= 40 ? 5 : 10;
+        const d = [];
+        const kx = step * kmLon / kmLat;   /* a step of ground, not of degree */
+        for (let k = -Math.ceil(span / step) - 2; k <= Math.ceil(span / step) + 2; k++) {
+          const x = cx + k * step * s, y = cy + k * step * s;
+          if (x >= 0 && x <= W) d.push(`M${n1(x)} 0L${n1(x)} ${H}`);
+          if (y >= 0 && y <= H) d.push(`M0 ${n1(y)}L${W} ${n1(y)}`);
+        }
+        L.push(`<path d="${d.join('')}" style="fill:none;stroke:var(--ca-grid, var(--ink));stroke-opacity:.07;stroke-width:.5"/>`);
+        void kx;
+      }
+
+      /* every piece of type on the plate is registered as it lands, and the
+         marks and the drafting edge are registered first — a label may be
+         dropped, a mark or a scale never moves for one. */
+      const placed = [];
+      const hit = (a, b) => !(a.x1 + 3 < b.x0 || b.x1 + 3 < a.x0 || a.y1 + 3 < b.y0 || b.y1 + 3 < a.y0);
+      const R = seal ? 3.4 : 9;
+      marks.forEach(m => {
+        const x = X(m.lon), y = Y(m.lat);
+        placed.push({ x0: x - R - 2, x1: x + R + 2, y0: y - R - 2, y1: y + R + 2 });
+      });
+      if (wantScale) {
+        placed.push({ x0: 10, x1: 10 + (span <= 8 ? 1 : span <= 20 ? 2 : span <= 44 ? 5 : 10) * s + 12, y0: H - 40, y1: H });
+        placed.push({ x0: W - 40, x1: W, y0: H - 40, y1: H });
+      }
+      /* the chrome the leaf lays over the plate — a header row, a headline. Type
+         is never placed under it; a mark still stands where it stands. */
+      const rTop = num(this.getAttribute('reserve-top'), 0);
+      const rBot = num(this.getAttribute('reserve-bottom'), 0);
+      if (rTop > 0) placed.push({ x0: -99, x1: W + 99, y0: -99, y1: rTop });
+      if (rBot > 0) placed.push({ x0: -99, x1: W + 99, y0: H - rBot, y1: H + 99 });
+
+      /* ── the reach ─────────────────────────────────────────────────────── */
+      if (rings.length) {
+        const g = [];
+        rings.forEach((km, i) => {
+          const r = km * s;
+          if (r < 24 || r > Math.hypot(W, H)) return;
+          g.push(`<circle cx="${n1(cx)}" cy="${n1(cy)}" r="${n1(r)}" style="fill:none;stroke:var(--ca-ring, var(--ink));stroke-opacity:${(.2 - i * .03).toFixed(2)};stroke-width:.8;stroke-dasharray:3 4"/>`);
+          for (const a of [-Math.PI / 4, -Math.PI * .75, Math.PI / 4, Math.PI * .75]) {
+            const lx = cx + Math.cos(a) * r, ly = cy + Math.sin(a) * r;
+            const tw = 30, box = { x0: lx + 5, x1: lx + 5 + tw, y0: ly - 12, y1: ly + 2 };
+            if (box.x0 < 8 || box.x1 > W - 8 || box.y0 < 8 || box.y1 > H - 8) continue;
+            if (placed.some(z => hit(box, z))) continue;
+            placed.push(box);
+            g.push(`<text x="${n1(lx + 6)}" y="${n1(ly - 3)}" style="${CITY_LABEL};font-size:8.5px;fill:var(--ca-ring-ink, var(--ink-3));paint-order:stroke;stroke:var(--ca-halo, var(--surface-card));stroke-width:3px;stroke-linejoin:round">${km} km</text>`);
+            break;
+          }
+        });
+        g.push(`<path d="M${n1(cx - 5)} ${n1(cy)}L${n1(cx + 5)} ${n1(cy)}M${n1(cx)} ${n1(cy - 5)}L${n1(cx)} ${n1(cy + 5)}" style="fill:none;stroke:var(--ca-ring, var(--ink));stroke-opacity:.45;stroke-width:1"/>`);
+        L.push(g.join(''));
+      }
+
+      if (places.length) {
+        const size = Math.max(8.5, Math.min(10, W / 46));
+        const pl = [];
+        places.forEach(q => {
+          const x = X(q.lon), y = Y(q.lat);
+          if (!inBox(x, y, -6)) return;
+          const tw = String(q.name).length * size * .74 + 4;
+          const spots = [[x, y - 7, 'middle', x - tw / 2], [x + 8, y + size * .34, 'start', x + 8],
+                         [x - 8, y + size * .34, 'end', x - 8 - tw], [x, y + size + 8, 'middle', x - tw / 2]];
+          let put = null;
+          for (const sp of spots) {
+            const box = { x0: sp[3], x1: sp[3] + tw, y0: sp[1] - size * .85, y1: sp[1] + size * .3 };
+            if (box.x0 < 6 || box.x1 > W - 6 || box.y0 < 6 || box.y1 > H - 6) continue;
+            if (placed.some(z => hit(box, z))) continue;
+            placed.push(box); put = sp; break;
+          }
+          if (!put) return;
+          pl.push(`<path d="M${n1(x - 2.5)} ${n1(y)}L${n1(x + 2.5)} ${n1(y)}M${n1(x)} ${n1(y - 2.5)}L${n1(x)} ${n1(y + 2.5)}" style="fill:none;stroke:var(--ca-place, var(--ink-3));stroke-opacity:.5;stroke-width:.8"/>
+            <text x="${n1(put[0])}" y="${n1(put[1])}" text-anchor="${put[2]}" style="${CITY_LABEL};font-size:${size.toFixed(1)}px;fill:var(--ca-place, var(--ink-3));paint-order:stroke;stroke:var(--ca-halo, var(--surface-card));stroke-width:3.2px;stroke-linejoin:round">${cesc(q.name)}</text>`);
+        });
+        L.push(pl.join(''));
+      }
+
+      const mk = [];
+      marks.forEach(m => {
+        const x = X(m.lon), y = Y(m.lat);
+        if (!inBox(x, y, R + 4)) return;
+        const been = m.been !== false;
+        /* a mark's own name goes through the same placement the quarters do,
+           and is dropped rather than stacked — the row underneath names it. */
+        let label = '';
+        if (wantNames && m.name) {
+          const fs = 10.5, tw = String(m.name).length * fs * .56 + 4;
+          const spots = [[x, y + R + 15, 'middle', x - tw / 2], [x, y - R - 8, 'middle', x - tw / 2],
+                         [x + R + 9, y + 4, 'start', x + R + 9], [x - R - 9, y + 4, 'end', x - R - 9 - tw]];
+          for (const sp of spots) {
+            const box = { x0: sp[3], x1: sp[3] + tw, y0: sp[1] - fs * .85, y1: sp[1] + fs * .3 };
+            if (box.x0 < 5 || box.x1 > W - 5 || box.y0 < 5 || box.y1 > H - 5) continue;
+            if (placed.some(z => hit(box, z))) continue;
+            placed.push(box);
+            label = `<text x="${n1(sp[0])}" y="${n1(sp[1])}" text-anchor="${sp[2]}" style="font-family:var(--sans);font-weight:500;font-size:${fs}px;letter-spacing:.02em;fill:var(--ca-mark-ink, var(--ink));paint-order:stroke;stroke:var(--ca-halo, var(--surface-card));stroke-width:3.4px;stroke-linejoin:round">${cesc(m.name)}</text>`;
+            break;
+          }
+        }
+        /* the row number is a position in a list, not an identity: the list
+           re-sorts and the tap then opens a different finding. A mark is a door
+           only where the finding gave it an id — the others still draw, and
+           simply are not tappable. */
+        const mid = m.id != null && m.id !== '' ? String(m.id) : null;
+        mk.push(`<g${mid ? ` data-id="${cesc(mid)}" style="cursor:pointer"` : ''}>
+          <circle cx="${n1(x)}" cy="${n1(y)}" r="${R}" style="${been
+            ? 'fill:var(--ca-dot, var(--ink));stroke:var(--ca-halo, var(--surface-card));stroke-width:1.6'
+            : 'fill:var(--ca-halo, var(--surface-card));stroke:var(--ca-dot, var(--ink));stroke-width:1.5'}"/>
+          ${!seal && m.n != null ? `<text x="${n1(x)}" y="${n1(y + 3.4)}" text-anchor="middle" style="font-family:var(--sans);font-weight:500;font-size:10px;letter-spacing:0;fill:${been ? 'var(--ca-halo, var(--surface-card))' : 'var(--ca-dot, var(--ink))'};pointer-events:none">${cesc(m.n)}</text>` : ''}
+          ${label}</g>`);
+      });
+      L.push(mk.join(''));
+
+      /* ── the drafting edge: a scale, a north, one line of provenance ───── */
+      if (wantScale) {
+        const nice = span <= 8 ? 1 : span <= 20 ? 2 : span <= 44 ? 5 : 10;
+        const bw = nice * s, x0 = 16, y0 = H - 20;
+        L.push(`<g>
+          <path d="M${n1(x0)} ${n1(y0)}L${n1(x0 + bw)} ${n1(y0)}M${n1(x0)} ${n1(y0 - 4)}L${n1(x0)} ${n1(y0 + 4)}M${n1(x0 + bw)} ${n1(y0 - 4)}L${n1(x0 + bw)} ${n1(y0 + 4)}M${n1(x0 + bw / 2)} ${n1(y0 - 2.5)}L${n1(x0 + bw / 2)} ${n1(y0 + 2.5)}" style="fill:none;stroke:var(--ca-edge, var(--ink-3));stroke-opacity:.7;stroke-width:.9"/>
+          <text x="${n1(x0)}" y="${n1(y0 + 15)}" style="${CITY_LABEL};font-size:8.5px;fill:var(--ca-edge, var(--ink-3))">${nice} km</text>
+          <path d="M${n1(W - 22)} ${n1(H - 34)}L${n1(W - 22)} ${n1(H - 16)}M${n1(W - 22)} ${n1(H - 34)}L${n1(W - 25)} ${n1(H - 28)}M${n1(W - 22)} ${n1(H - 34)}L${n1(W - 19)} ${n1(H - 28)}" style="fill:none;stroke:var(--ca-edge, var(--ink-3));stroke-opacity:.7;stroke-width:.9"/>
+          <text x="${n1(W - 22)}" y="${n1(H - 7)}" text-anchor="middle" style="${CITY_LABEL};font-size:8.5px;fill:var(--ca-edge, var(--ink-3))">N</text>
+        </g>`);
+      }
+
+      const host = hostOf(this);
+      host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%">${L.join('')}</svg>`;
+      host.querySelectorAll('g[data-id]').forEach(g => g.addEventListener('click', () => {
+        this.dispatchEvent(new CustomEvent('carta:pin-tap', { detail: { id: g.dataset.id }, bubbles: true, composed: true }));
+      }));
+    }
+  }
+
   if (!window.customElements.get('carta-belt')) customElements.define('carta-belt', Belt);
   if (!window.customElements.get('carta-atlas')) customElements.define('carta-atlas', Atlas);
   if (!window.customElements.get('carta-plot')) customElements.define('carta-plot', Plot);
   if (!window.customElements.get('carta-streets')) customElements.define('carta-streets', Streets);
+  /* NOT defined here. The other three elements only read LANDS/WORLD, which they
+     wait for; the city plate reads cityArcsRaw, whose caches are `let` further
+     down this same file — reachable by hoisting but still in TDZ, so an upgrade
+     that happens here throws on first paint instead of deferring. The class goes
+     out, and the foot of the file (where the tables are exported) defines it. */
+  window.CARTA_CITY = City;
 })();
 
 /* ============ the passport's ground — the world frame ============
@@ -922,8 +1229,14 @@ const CITY_RINGS={"lihue":'rp-B81IuBDWpBL7BtBjB_DuBQgCmDgB'};
 const CITY_ARCS={"los angeles":'z6tBi-M3BmC9DgD_E6CdX9BOKoBlCyC9CRnF6BXwBvD8B'};
 const CITY_Q=200;
 // an ‘okina is a letter in Hawaiian, not a separator, so it comes out before
-// fold() turns it into a space — otherwise Līhu‘e keys as "lihu e"
-function cityKey(name){return fold(String(name||'').replace(/[‘’'ʻʼ`´]/g,''))}
+// the fold turns it into a space — otherwise Līhu‘e keys as "lihu e"
+/* the fold is written out here rather than called. The map's own fold() is
+   inside the elements' closure, so this — top level — was resolving against
+   index.html's global instead: a sibling reaching back into the host for its
+   own normaliser, which is the wrong direction and is why the model harness
+   has to slice this file first. <carta-city> reads it on a cold paint, and a
+   plate that keys Līhu‘e wrong draws the wrong shore in silence. */
+function cityKey(name){return String(name||'').replace(/[‘’'ʻʼ`´]/g,'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim()}
 let _cityRingsCache={},_cityArcsCache={};
 function cityRingsRaw(city){
   const k=cityKey(city);if(k in _cityRingsCache)return _cityRingsCache[k];
@@ -1127,8 +1440,13 @@ window.cityRingsRaw=cityRingsRaw;
 window.cityArcsRaw=cityArcsRaw;
 window.cityWindow=cityWindow;
 window.plateGround=plateGround;
+/* the fourth element, defined last and deliberately: by here CITY_ARCS, cityKey
+   and the caches above are all initialised, so the first upgrade paints a shore
+   rather than throwing on a table that exists but cannot yet be touched. The
+   other three are defined inside the closure because they only wait on LANDS. */
+if(window.CARTA_CITY&&!window.customElements.get('carta-city'))customElements.define('carta-city',window.CARTA_CITY);
 
 // the guard index.html's boot checks (ARCHITECTURE.md §1). The map had none
 // until Phase 31, though the guard's own comment already claimed every sibling
 // was covered — a stale carta-map.js is exactly the failure it exists to catch.
-window.MAP_VERSION='7.41.2';
+window.MAP_VERSION='7.42.1';

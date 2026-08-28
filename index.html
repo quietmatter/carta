@@ -136,7 +136,6 @@ h2:first-child{margin-top:2px}
 .m{font-family:var(--sans);font-size:12.5px;color:var(--ink-3);letter-spacing:.01em;line-height:1.5}
 .rowlink .m{font-size:var(--s11);letter-spacing:.02em}
 .rowlink .go{flex:none;color:var(--ink-3);font-family:var(--sans);font-size:var(--s11)}
-.rowlink .row-main{display:flex;align-items:center;gap:10px;min-width:0}
 .btnrow{display:flex;gap:8px;align-items:stretch}
 .btnrow .btn,.btnrow .btn+.btn{margin-top:0;flex:1}
 
@@ -304,7 +303,7 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
   --ca-topo:var(--surface-card);--ca-rmk:var(--surface-card)}
 /* the drawn plot — offline, no tiles, the identity the streets hand back to */
 .plot{--ca-dot:var(--ink);--ca-dim:var(--ink-3);display:block;width:100%}
-.plot.frame{height:100%}
+.plot.frame{height:100%}.city{--ca-halo:var(--surface-sunk);display:block;width:100%;height:100%}
 /* the type a map is read through, and the fade that lets it be read at all */
 .fade{position:absolute;left:0;right:0;pointer-events:none;z-index:2}
 .fade.top{top:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--surface-card) 92%,transparent) 8%,color-mix(in srgb,var(--surface-card) 0%,transparent) 100%)}
@@ -961,11 +960,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.41.2"></script>
-<script src="carta-plate.js?v=7.41.2"></script>
-<script src="carta-shot.js?v=7.41.2"></script>
-<script src="carta-ask.js?v=7.41.2"></script>
-<script src="carta-atlas.js?v=7.41.2"></script>
+<script src="carta-map.js?v=7.42.1"></script>
+<script src="carta-plate.js?v=7.42.1"></script>
+<script src="carta-shot.js?v=7.42.1"></script>
+<script src="carta-ask.js?v=7.42.1"></script>
+<script src="carta-atlas.js?v=7.42.1"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4290,12 +4289,12 @@ function streetsHTML(list,o){
   const pts=placed(list);
   if(!pts.length)return o.emptyHTML||'';
   const pins=pinsAttr(pts,o.scoreOf);
-  // the drawn plot is drawn FIRST and always (ARCHITECTURE.md §7, MAPPING.md's
+  // the drawn ground is drawn FIRST and always (ARCHITECTURE.md §7, MAPPING.md's
   // own law one scale down): the streets are laid over it, and a surface that
   // can't reach them steps aside rather than leaving a grey rectangle. fit="frame"
   // is what keeps every point inside the box — the plot scales into the frame
-  // rather than sizing the frame to itself.
-  const floor=`<div class="plotwrap" style="${o.plotWrap||'position:absolute;inset:0;padding:42px 34px'}">
+  // rather than sizing the frame to itself. floorHTML swaps a richer ground in.
+  const floor=o.floorHTML||`<div class="plotwrap" style="${o.plotWrap||'position:absolute;inset:0;padding:42px 34px'}">
       <carta-plot class="plot frame" fit="frame" pins="${pins}" dot="${o.dot||7}" labels="${o.labels||'off'}"></carta-plot>
     </div>`;
   const layer=o.terrain?'Terrain':'Streets';
@@ -4936,9 +4935,10 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.41.2';
+const APP_VERSION='7.42.1';
 const CHANGELOG=[
-  {v:'7.41.2',d:"Restore from a backup. exportLedgerJSON has backed up the record since Phase 8 and had no way back in — the only reason to reinstall an iOS home-screen icon is to fix its launch mode, which can only be done by deleting and re-adding it, and until now that meant losing everything with no way to recover it beyond the raw JSON file. It reads the same D a backup already writes verbatim, so restoring is a plain replace, never a merge — the record page states the backup's own counts before anything happens, and says plainly when the device already holds a record that restoring will replace."},
+  {v:'7.42.1',d:"Restore from a backup. exportLedgerJSON has backed up the record since Phase 8 and had no way back in — the only reason to reinstall an iOS home-screen icon is to fix its launch mode, which can only be done by deleting and re-adding it, and until now that meant losing everything with no way to recover it beyond the raw JSON file. It reads the same D a backup already writes verbatim, so restoring is a plain replace, never a merge — the record page states the backup's own counts before anything happens, and says plainly when the device already holds a record that restoring will replace."},
+  {v:'7.42.0',d:"The answer stands on its city. The plate under an answer was six dots fitted to a box — it drew where your cafés were and nothing about where that is. It is the city now: the coastline where Carta has one on file, a kilometre grid, and your reach drawn as rings, so “a short drive” is a distance on the page rather than a phrase. Each café is numbered to match its row, and tapping the numeral opens the same argument the row opens — the map and the list are one surface. A finding stands on its own three kilometres the same way, under the streets when they load and alone when they don’t. Carta holds one coastline today, so most cities draw a ruled field with no shore. That is the truth about what is on file, not a map that failed to load, and the reach and the grid are the plate’s argument either way. Nothing new is fetched, and nothing is drawn that wasn’t confirmed."},
   {v:'7.41.1',d:"The bottom-edge fix (7.37.6) held on a reload and not on a fresh open. window.innerHeight was read once, at parse time, and a cold launch reads it a beat before iOS finishes settling the chrome and the safe area — a reload happened to always land after that settling, which is why it looked fixed. The read now repeats on resize, on pageshow (a fully-closed relaunch can be a restore rather than a fresh load), on the visual viewport's own resize, and once more after a short delay as a backstop for a settle with no event behind it at all."},
   {v:'7.41.0',d:"The ask asks in front of the map. Composing an ask took a whole screen of its own — six chips, a field, a box for anything else, the ledger and the key — with the plate you were asking about gone from under it. It composes on a leaf now, over a strip of that same plate, with the bar still there: the question is put in front of the ground it is about. And the line under the field is new and says only what the record can defend. Carta does not know what Lisbon is — nothing on your phone does, and nothing is going to ask — so the line never claims to have recognised a place. It counts: on your record, two cups and two cafés, and the ask is scoped to them. Somewhere it has never heard of, it says so and says the ask goes out on every cup instead. A country is taken at your word and answers with the coffees from there it will exclude by name. Nothing leaves the device while you type; it never did, and now the line under the field is honest about what it knows."},
   {v:'7.40.0',d:"What Carta found, read as an index. The answer used to arrive as one long column — the cafés, then the near misses, then the plan, then the wildcard — and the thing you actually asked for scrolled off the top under everything Carta added around it. It is six names on the ground now: the rank, the quarter, how far, and what you already made of it, each one a door. Tap a name and you get that café whole on its own streets — what it is best for, why, what to order, how it fits the record you keep, and your own mark on it — and pull the answer up instead and you get what belongs to the answer rather than to any one café: the move Carta would make, the ones that came close with a line saying why not, and the one that came back named and nowhere. Nothing was cut to make room. Every figure the record can defend still opens the very cups it was read from; they are one tap away now instead of all at once."},

@@ -7,15 +7,15 @@ assertion, and the browser four also fail on any console error or page error.
 
 ```
 # no browser, no network, seconds
-node test/verify-static.js     # the six files parse and agree — 19 checks
+node test/verify-static.js     # the six files parse and agree — 20 checks
 node test/model.test.js        # the taste model and the brief — 141 cases
 
 # the real app, in a real browser
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 155 checks
+node test/verify-ask.js        # the ask at the front door — 170 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
-node test/verify-split.js      # the Phase 31 seam — 12 checks
+node test/verify-split.js      # the Phase 31/32 seam — 16 checks
 ```
 
 **All six run in CI** on every push and pull request to `main`
@@ -57,9 +57,10 @@ really exists.
   landed over it deliberately), so this never fails the build — it only makes
   a *silent* crossing impossible, which is the thing §1 actually asks for
 
-## `verify-split.js` — the seam (Phase 31)
+## `verify-split.js` — the seam (Phases 31 and 32)
 
-The Atlas moved into `carta-atlas.js`. This walks what moved:
+The Atlas moved into `carta-atlas.js`, and `<carta-city>` was folded into
+`carta-map.js`. This walks what moved:
 
 - **the four walks** — country, region, producer, city — each opened through
   the app's own opener and asserted to paint its own record, not its empty
@@ -78,7 +79,34 @@ The Atlas moved into `carta-atlas.js`. This walks what moved:
 - **the version guard** — all six files agree, the check that makes a
   forgotten `?v=` tag loud (`ARCHITECTURE.md` §1)
 
-## `verify-ask.js` — the ask at the front door (Phase 31)
+- **the fourth element, and where it is defined** (Phase 32) — `<carta-city>`
+  is published as `window.CARTA_CITY` and defined in `carta-map.js`'s export
+  block rather than in its elements closure, because it reads tables that sit
+  *below* it in the same file. Defined in the closure it upgrades while those
+  caches are in TDZ, throws on first paint and draws an empty `<svg>` that
+  only recovers on a resize. The check is a behaviour, not a shape: a cold
+  element attached at runtime must paint on its **first** paint.
+- **`cityKey()` normalises inside its own file** — it used to call
+  `index.html`'s global `fold()`, which resolves but is the wrong direction
+  and is why `model.test.js` has to slice the map first. (`landKey()` still
+  does; that is parked, and `verify-static.js` says so where it holds the
+  line for `cityKey`.)
+
+## `verify-ask.js` — the ask at the front door (Phases 31 and 32)
+
+**Phase 32 added the plate.** The answer and one finding now stand on
+`<carta-city>`, and the checks are written against what could go quietly wrong
+rather than against "it rendered": every mark carries its **row's** number
+(numbering by position in the drawn set prints 2 on the café the index calls 3
+the moment a name in the middle cannot be placed); as many marks as the answer
+could ground and not one more; every mark a door with its finding's id; and
+**every mark above the solid half of the headline**, because a mark under a
+scrim that has reached the card colour is a row with no mark. That last one
+first shipped with the gradient stop read from the wrong end — it passed on the
+very frame that prompted it. It was fixed by neutralising the code fix and
+confirming the check went red. There is also a check that a city the belt cannot
+place draws its own cafés in *Your cities* rather than a blank chip.
+
 
 Runs the ask **end to end** against the fixture's own canned Anthropic and
 Nominatim doors — the wait is tested as it actually runs, not by driving

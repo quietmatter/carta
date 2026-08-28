@@ -7,7 +7,7 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
-## 2026-08-28 — restore from a backup (v7.41.2)
+## 2026-08-28 — restore from a backup (v7.42.1)
 
 - **Chasing the bottom-edge fix surfaced a bigger problem than the gap
   itself.** Asked to confirm the fix on a real fully-closed relaunch, the
@@ -46,14 +46,133 @@ Lotmark's desk. Old entries are never rewritten.*
   chrome even as a freshly-added icon, that's a real bug in the manifest or
   the meta tags, not a stale icon — worth checking next.
 - **Verified:** all six harnesses green — `node test/verify-static.js` at
-  19/19 (all six version markers in lockstep at `7.41.2`), `node
+  19/19 (all six version markers in lockstep at `7.42.1`), `node
   test/model.test.js` at 141/141, `verify-door.js` (59), `verify-ask.js`
   (155), `verify-v7.35.js` (41) and `verify-split.js` (12), no console or
   page errors on any of them. The restore path itself — actually picking a
   backup file and confirming — has no automated coverage yet; it was read
   against the code, not run against a real file, and is worth a
   browser-harness check the next time this file's tests are extended.
+  Renumbered `7.41.2` → `7.42.1` on merge, behind Phase 32's own
+  `7.42.0` — this branch's own contribution to `index.html` was written
+  before that phase landed on `main` and picked up its version on the way
+  through, the same as v7.41.1 did behind the manifest fix.
 - **For Lotmark's desk:** nothing new this entry.
+
+---
+
+## 2026-08-28 — Phase 32: the city, drawn (v7.42.0)
+
+- **Turn 5 answers founder call three, and answers it in code.** The handoff
+  came back with no new screens and no new sections — `1a`–`4b` are unchanged.
+  What it brought is `carta-map.js` itself, with **`<carta-city>` folded in as
+  that file's fourth custom element**, and the instruction to diff it in. The
+  seventh file the call was weighing was never needed: the element lives beside
+  the `CITY_ARCS` table it reads, so there is no load order to get wrong and no
+  §1 argument owed. `carta-city.js` is gone from the bundle; it never shipped.
+- **The bundle's copy is built on an older base**, without Phase 31's
+  `fit="frame"` measurement or its `ResizeObserver`, so this was a port rather
+  than a copy: the class and its define spliced into the repo's own file, the
+  header comment updated to four elements, everything else left alone.
+- **Where it is defined is the whole trick.** The other three elements wait on
+  `LANDS`/`WORLD` at the head of the file; the plate reads `cityArcsRaw`, whose
+  caches are `let` further *down* the same file — hoisted, so reachable, but in
+  TDZ, so touching them throws rather than deferring. The class goes out as
+  `window.CARTA_CITY` and `customElements.define` runs in the export block at
+  the foot, after the tables. `verify-split.js` now holds that: a cold
+  `<carta-city>` must paint on its first paint, not on a later resize.
+- **Three inventions came out with it**, all of them the handoff's own call and
+  all of them things flagged when the gap was opened: the thirteen hardcoded Los
+  Angeles neighbourhoods (coordinates nobody on the record had written, in a
+  file whose only law is real geometry) are **deleted and not replaced by an
+  averaged stand-in** — a quarter is a finding's own confirmed neighbourhood,
+  which is a name, and it is already said twice in words; `cityKey()` replaces a
+  lowercase-and-trim that keyed Līhu‘e as something `CITY_ARCS` has never heard
+  of; and `data-id` no longer falls back to the row number, so a mark is a door
+  only where the finding gave it an id.
+- **The answer and the finding now stand on it**, which is what turns 3 and 4
+  had drawn against a documented stand-in (`<carta-plot fit="frame">`, with the
+  founder call named in the comment). The grounding law is untouched: the marks
+  are the same confirmed findings the plot took, and a name the lookup could not
+  place is a row under the pull and never a pin.
+- **The frame is derived, because a mockup states one city's figures.** `at` is
+  the ask's own anchor (the mean of its confirmed pins — gap 4's recommendation,
+  already what the rows measure from); `center` and `span` come from the marks'
+  own extent; `coast` is the destination as typed, and `cityKey()` decides
+  whether the table has heard of it. **The reach is drawn as rings, from a
+  reach→km ladder** — the keeper's own setting said back on the ground, the same
+  honesty the read-as line keeps. Carta does not know how far "a short drive"
+  is for you; it knows what you set.
+- **Two things the rendering caught, both of them ours and not the handoff's:**
+  - **No anchor, no rings.** With one placed name `answerAnchor` is null — a
+    ring centred on that single café would be measuring your reach *from the
+    café*, which is the very thing the rows already refuse when they print no
+    kilometres. The harness check that guarded the rows now guards the plate
+    too, and was scoped to the leaf so the plate's own scale bar (a ruler, not
+    a claim) stops tripping it.
+  - **A mark under 94% of a scrim is no mark.** The handoff spreads its marks
+    across the whole plate and reads them through both scrims — faint at the
+    edges is the intended look — but its Los Angeles marks happen to sit high,
+    and ours fell 51% into the headline, where the scrim has reached the card
+    colour. A row whose mark cannot be seen breaks the one law this screen has:
+    a café the record can place is a mark **and** a row. Fitting the marks into
+    the clear paper between the two scrims was tried and abandoned — it is 28px
+    on the handoff's own frame, it blew the span up and threw the city away.
+    The rule that shipped is a **depth limit**, not a clear band.
+- **The first version of that check had no teeth.** The scrim is `to top`, so
+  its 54% stop is 46% down from the headline's own top; reading it from the
+  wrong end put the line 18px too low and the check passed on the very frame
+  that prompted it. Caught by neutralising the fix and confirming the check went
+  red. **A check that has never failed on the bug it was written for has not
+  been verified** — it has only been observed to pass.
+- **§H shipped too, and closed a blank nobody had logged.** *Your cities* drew
+  **nothing at all** for a city the belt cannot place: Lisbon was an empty chip
+  beside Los Angeles' shore, which reads as a map that failed to load rather
+  than as a fact about the record. `<carta-city mode="seal">` now draws the one
+  thing the record can always defend — where your own cafés stand in relation to
+  each other — in the same round `.seal` chip the drawn plate uses, so the list
+  is one style and not two. A city with no placed café still draws nothing,
+  exactly as before.
+- **Deviation from the handoff, recorded.** `2d` draws all three rows through
+  the new element in a 56px square; the app keeps its existing Phase 29 seal
+  where one already draws, and reaches for `<carta-city>` only where the row was
+  blank. The Phase 29 seal reads the same tables and already ships; replacing a
+  working surface to match a mockup's chrome is churn, and the blank was the
+  whole of what `2d` adds in substance.
+- **`scale="off"` on the answer plate.** The element draws its scale bar and
+  north at `H-20`, and the plate's foot is *always* under the leaf — 18px of lap
+  at every stop, by construction. A ruler you cannot read is worse than none,
+  and the reach rings already carry the distance. The finding plate does the
+  same.
+- **The band held at 5,000/5,000 with no shaving.** Every line of this phase
+  went into `carta-map.js` (+318) and `carta-ask.js`; `index.html`'s only growth
+  was the changelog entry, which is now the file's one remaining growth vector
+  at the band — worth watching, and named in `ARCHITECTURE.md` §1. It was paid
+  for by one genuinely dead rule (`.rowlink .row-main`, zero users anywhere),
+  verified dead by reference and by checking nothing builds the class name
+  dynamically — which is what `tp1`/`tp2`/`tp3` turned out to do, and why they
+  stayed.
+
+**The band, after the merge.** `main` moved while this phase was being built:
+v7.41.1 (the `setAppH` timing fix) landed twelve lines of code and one changelog
+line into `index.html`, taking **main itself to 5,013 / 5,000**. Merging it in
+brings this branch to the same 5,013 — *this phase's own contribution to
+`index.html` is still zero net lines*. The crossing is recorded here rather than
+absorbed by shaving someone else's fix to fit: `verify-static.js` prints it on
+every run, which is what §1 actually asks for. It is worth naming that the file
+now crosses on ordinary small fixes with no feature behind them at all, which is
+the signal the next split is coming due rather than the next amendment.
+
+**Parked.** `landKey()` reaches across the same seam `cityKey()` just left — it
+calls `index.html`'s global `fold()` from `carta-map.js`'s top level. It
+resolves today and always has, but it is the wrong direction and it is why the
+model harness has to slice the map first. Not changed here: the two folds differ
+on digits and `landKey` is in the tested block, so it wants its own pass rather
+than a ride on this one. The static check is scoped to `cityKey` and says so.
+
+**Still open.** Gap 4 (the distance anchor) and gap 5 (the kind sheet) remain
+where turn 5 left them — named, with recommendations on record, and both already
+running on those recommendations as interim. `CITY_ARCS` still holds one key.
 
 ---
 

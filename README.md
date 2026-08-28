@@ -88,7 +88,14 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   page, and **Not now** puts it down for good — it stays under *What Carta
   found*, one pull below. What comes back is **six names on the ground, read
   as an index**: the rank, the quarter, how far, and what you already made of
-  it — each one a door. Tap a name and that café opens **whole, on its own
+  it — each one a door. The ground under it is **the city itself**, drawn: its
+  coastline where Carta has one on file, a kilometre grid, and the reach you
+  asked for drawn as rings, so *a short drive* is a distance on the page
+  rather than a phrase. The numeral on a café is its row's number, and tapping
+  it opens the same argument the row opens — the map and the list are one
+  surface. Carta holds one coastline today, so most cities draw a ruled field
+  with no shore; that is the truth about what is on file, not a map that
+  failed to load, and nothing about it is fetched. Tap a name and that café opens **whole, on its own
   streets**: what it is best for and why, what to order, how it fits the
   record you keep, and your own mark on it. Pull the answer up instead and
   you get what belongs to the answer rather than to any one café — the move
@@ -292,10 +299,13 @@ Six static files — `index.html` with all CSS and JS inline, and five siblings
 beside it (`carta-map.js`, `carta-plate.js`, `carta-shot.js`, `carta-ask.js`,
 `carta-atlas.js`),
 self-contained, zero dependencies, zero build. `carta-map.js` is the map
-layer: the passport's outlines and highland contours, the drawn-plot and
-street surfaces, and the projection they need (d3-array + d3-geo, the two
-modules it actually uses, vendored verbatim), loaded from `index.html`'s own
-`<head>` — so the map works with the network switched off. Drop all six
+layer: the passport's outlines and highland contours, the drawn-plot, street
+and drawn-city surfaces, and the projection they need (d3-array + d3-geo, the
+two modules it actually uses, vendored verbatim), loaded from `index.html`'s
+own `<head>` — so the map works with the network switched off. The city an
+answer stands on is drawn from a coastline table in that same file: its
+shore, a kilometre grid and your stated reach in rings, with nothing
+fetched. Drop all six
 files on any static host; there's still nothing to build. Everything lives in this
 browser's `localStorage`
 (`carta7.v1`). No account, no server — the ask is the one deliberate,
@@ -342,7 +352,7 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 | Path | Purpose |
 |---|---|
 | `index.html` | Carta 7 — the current app. |
-| `carta-map.js` | Carta 7's map layer — the passport, its contours, and the street/drawn-plot surfaces. |
+| `carta-map.js` | Carta 7's map layer — the passport, its contours, the street and drawn-plot surfaces, and the drawn city an answer stands on. |
 | `carta-plate.js` | The plate — a brew's own curve drawn, both arms (espresso and pour-over). |
 | `carta-shot.js` | The Visualizer read — the account, the calls, and a shot's own screens. |
 | `carta-ask.js` | The argument — your taste, the brief, the ask, and the one keyed channel out. |

@@ -82,7 +82,7 @@ commission Phase 12 built.
 
 ```
 index.html            Carta 7 — the app, inline <style> and <script>
-carta-map.js          Carta 7's map layer, split out at Phase 19 (loaded from index.html's <head>)
+carta-map.js          Carta 7's map layer — four elements since Phase 32 (loaded from index.html's <head>)
 carta-plate.js        The plate — a brew's curve, both arms, split out at v7.31.0 (same <head>)
 carta-shot.js         The Visualizer read — account, calls, pickers, a shot's four screens (v7.34.0)
 carta-ask.js          The argument — vTaste→vBrief→vAsk→vAsking→vAskResult, and the keyed channel (v7.34.0)
@@ -154,7 +154,7 @@ server/               Classic's sync server — dormant
   breathing ember tip, and `.settle` for an answer that writes itself in
   rather than arriving flat). All still, correctly, under
   `prefers-reduced-motion`.
-- **the map layer** — three light-DOM custom elements, split out at Phase 19
+- **the map layer** — four light-DOM custom elements, split out at Phase 19
   into `carta-map.js` (loaded from `index.html`'s `<head>`, before the app's
   own script, which reads its published `LANDS`/decoders as plain globals —
   see `ARCHITECTURE.md` §1 for the seam). Light DOM so page tokens
@@ -184,6 +184,20 @@ server/               Classic's sync server — dormant
     labels a pin where the name is the point. **`labels` is not that option**
     — the city already passes it for the drawn plot, and its street pins stay
     unlabelled.
+  - `<carta-city>` — **the city an ask lands on** (Phase 32, the fourth
+    element). The `CITY_ARCS` shore where the table has one, a kilometre grid,
+    the reach in rings off the ask's own anchor, and numbered marks keyed to
+    the answer's index rows. **No tile, no fetch, nothing to be offline from.**
+    `mode="seal"` is the same plate at row scale — the shore and the marks,
+    grid and reach and every name dropped. A mark is a door only where it
+    carries an `id`; `places` takes real coordinates only and there is **no
+    built-in quarter table** (the thirteen invented LA neighbourhoods came out
+    when it was folded in). **It is defined at the FOOT of the file, not in the
+    elements closure** — it reads `cityArcsRaw`, whose caches are `let`
+    bindings below it, so an upgrade in the closure throws on first paint and
+    draws an empty `<svg>` that only recovers on a resize. The class is handed
+    out as `window.CARTA_CITY` and the export block defines it; `test/verify-
+    split.js` holds that as a behaviour rather than a shape.
   - Beside them, `d3-array` + `d3-geo` **vendored verbatim** — the projection
     the passport needs. See the invariants; this is an amendment, not a habit.
   - Below them, **the ground itself** — `LANDS` (seventy keys, 7,745 b) and
@@ -261,7 +275,14 @@ server/               Classic's sync server — dormant
     three detents — in `carta-atlas.js`, since a city is read off the ground
     the same way a country is), `vCafe`, `vCup`, `vMenu`.
   - **the argument** — `vTaste` → `vBrief` → `vAsk` → `vAsking` → `vAskResult`
-    → `vAskFinding`.
+    → `vAskFinding`. **Phase 32 put the answer and the finding on the drawn
+    city** (`ansFrame`/`ansCityHTML`, `findCityHTML`): the plate is
+    `<carta-city>` rather than `<carta-plot>`, its marks numbered to the index
+    rows and each one a door to its finding. The frame is *derived* — a mockup
+    can state one city's figures and production cannot — and the reach is the
+    keeper's own setting drawn to scale (`REACH_RINGS`), never a measurement.
+    **No anchor, no rings**, for the same reason the rows print no kilometres
+    from a single point.
     The first four are `BARELESS`: one argument read in a sitting apiece, so
     the bar would only offer a way to lose your place — `vAsking` most of
     all, since while the ask is out there is exactly one thing to do with the
@@ -579,7 +600,7 @@ this harness at all.)
 run first:
 
 ```bash
-node test/verify-static.js     # the six files parse and agree — 19 checks
+node test/verify-static.js     # the six files parse and agree — 20 checks
 ```
 
 All six parse; `APP_VERSION`, all five `?v=` tags and all five published
@@ -597,9 +618,9 @@ any page error, or any assertion:
 ```bash
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 155 checks
+node test/verify-ask.js        # the ask at the front door — 170 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
-node test/verify-split.js      # the Phase 31 seam — 12 checks
+node test/verify-split.js      # the Phase 31/32 seam — 16 checks
 ```
 
 `test/browser.js` finds a Chromium for all four (`CHROME`, then playwright's
