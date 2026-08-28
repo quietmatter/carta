@@ -7,6 +7,52 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — the wordmark, out from under the status bar (v7.42.2)
+
+- **Confirming the standalone fix finally worked turned up the next thing it
+  made visible.** With a genuinely fresh icon (delete, re-add, restore from
+  the new backup path) the keeper got a real chrome-less standalone launch
+  for the first time in this whole thread — no Safari address bar, no
+  toolbar, the bottom-edge gap gone — and a new, different overlap: the
+  passport's own "Carta" wordmark sitting under the status bar's clock and
+  icons instead of below them, on both the front door and a city's own
+  streets screen.
+- **Same root cause as the class of bug this whole thread has been chasing,
+  different edge.** `doorHeadHTML()` and `vCityChapter()`'s own header both
+  position an `.overlay` at a fixed pixel `top` inside a full-bleed plate
+  that draws edge to edge under `viewport-fit=cover` — exactly the surface a
+  real standalone launch draws behind the notch or Dynamic Island. `.toast`
+  already carried `calc(14px + env(safe-area-inset-top))` for the same
+  reason; neither header did.
+- **Shipped:** both headers now clear the status bar the same way `.toast`
+  does. The city header needed more than its own position moved — its
+  street plot's own top padding and its offline note were both a fixed
+  92px/82px tuned to clear an 18px-positioned header, and the top fade
+  behind it was sized to that same assumption. Moving the header down
+  without moving those three would have cleared the status bar and then
+  drawn the header's own text over the map underneath it — the same bug,
+  moved fourteen pixels down rather than fixed. All three now carry the
+  same `env(safe-area-inset-top)` term the header does. The passport's own
+  fade was checked and left alone — its wordmark is a single short line and
+  there's nothing under it with a hard top boundary the way the city's plot
+  has, so the existing margin already covers it.
+- **Not touched:** the passport's own top fade height, for the reason above,
+  and every other screen's header — the rest of the app's screens scroll
+  inside `main`'s ordinary flow rather than drawing full-bleed behind the
+  status bar, so this class of bug is specific to the two full-bleed plates
+  that draw an overlay directly on `main.fixed`.
+- **Verified:** all six harnesses green — `node test/verify-static.js` at
+  20/20, `node test/model.test.js` at 141/141, `verify-door.js` (59),
+  `verify-ask.js` (170), `verify-v7.35.js` (41), `verify-split.js` (16), no
+  console or page errors. None of the six currently render either header at
+  a nonzero `env(safe-area-inset-top)` (headless Chromium reports zero), so
+  this fix — like the two before it in this thread — is read against the
+  code and needs the keeper's own device to confirm the wordmark actually
+  clears the clock now.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-28 — restore from a backup (v7.42.1)
 
 - **Chasing the bottom-edge fix surfaced a bigger problem than the gap

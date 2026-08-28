@@ -960,11 +960,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.42.1"></script>
-<script src="carta-plate.js?v=7.42.1"></script>
-<script src="carta-shot.js?v=7.42.1"></script>
-<script src="carta-ask.js?v=7.42.1"></script>
-<script src="carta-atlas.js?v=7.42.1"></script>
+<script src="carta-map.js?v=7.42.2"></script>
+<script src="carta-plate.js?v=7.42.2"></script>
+<script src="carta-shot.js?v=7.42.2"></script>
+<script src="carta-ask.js?v=7.42.2"></script>
+<script src="carta-atlas.js?v=7.42.2"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4935,8 +4935,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.42.1';
+const APP_VERSION='7.42.2';
 const CHANGELOG=[
+  {v:'7.42.2',d:"The wordmark, out from under the status bar. Confirming the standalone fix finally worked turned up the next thing it made visible: the passport's own \"Carta\" and a city's own header sit on an overlay positioned in fixed pixels from the top of a full-bleed plate, with no allowance for the notch or Dynamic Island a real standalone launch draws behind. Both now clear it the same way the toast already did, and the city header's own map padding and fade move down with it — a header that clears the status bar but then draws its text over the map it sits on would just be the same bug moved fourteen pixels down."},
   {v:'7.42.1',d:"Restore from a backup. exportLedgerJSON has backed up the record since Phase 8 and had no way back in — the only reason to reinstall an iOS home-screen icon is to fix its launch mode, which can only be done by deleting and re-adding it, and until now that meant losing everything with no way to recover it beyond the raw JSON file. It reads the same D a backup already writes verbatim, so restoring is a plain replace, never a merge — the record page states the backup's own counts before anything happens, and says plainly when the device already holds a record that restoring will replace."},
   {v:'7.42.0',d:"The answer stands on its city. The plate under an answer was six dots fitted to a box — it drew where your cafés were and nothing about where that is. It is the city now: the coastline where Carta has one on file, a kilometre grid, and your reach drawn as rings, so “a short drive” is a distance on the page rather than a phrase. Each café is numbered to match its row, and tapping the numeral opens the same argument the row opens — the map and the list are one surface. A finding stands on its own three kilometres the same way, under the streets when they load and alone when they don’t. Carta holds one coastline today, so most cities draw a ruled field with no shore. That is the truth about what is on file, not a map that failed to load, and the reach and the grid are the plate’s argument either way. Nothing new is fetched, and nothing is drawn that wasn’t confirmed."},
   {v:'7.41.1',d:"The bottom-edge fix (7.37.6) held on a reload and not on a fresh open. window.innerHeight was read once, at parse time, and a cold launch reads it a beat before iOS finishes settling the chrome and the safe area — a reload happened to always land after that settling, which is why it looked fixed. The read now repeats on resize, on pageshow (a fully-closed relaunch can be a restore rather than a fresh load), on the visual viewport's own resize, and once more after a short delay as a backstop for a settle with no event behind it at all."},
