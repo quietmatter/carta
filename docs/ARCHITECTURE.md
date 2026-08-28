@@ -804,6 +804,15 @@ worth stating out loud:
    any ask writes the flag with it: an ask can never reach the disk unread
    while the flag is still absent from it.
 
+**Phase 31 part three (v7.41.0) added one reading, not a field.**
+`tasteModel()`'s inner `scope()` now returns `n` beside `had` and
+`knownRoasters` — the **cup** count inside the scope, which is not the coffee
+count `had` carries: three cups of one coffee is `n:3, had:1`. The composer's
+read-as line needs cups ("two cups, two cafés"), and reading `had.length` for
+it would have quietly under-counted every returning keeper, who is exactly the
+reader that line is written for. Additive; nothing else reads it, and
+`model.test.js` holds the distinction.
+
 **Phase 31 part two added no field at all**, which is worth saying because the
 screen it built looks like it should have. The answer-as-an-index reads
 `verdict`, `why`, `order`, `stale`, `fit[]` and `status` — every one of them a

@@ -8,12 +8,12 @@ assertion, and the browser four also fail on any console error or page error.
 ```
 # no browser, no network, seconds
 node test/verify-static.js     # the six files parse and agree — 19 checks
-node test/model.test.js        # the taste model and the brief — 139 cases
+node test/model.test.js        # the taste model and the brief — 141 cases
 
 # the real app, in a real browser
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 132 checks
+node test/verify-ask.js        # the ask at the front door — 155 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31 seam — 12 checks
 ```
@@ -113,6 +113,14 @@ Nominatim doors — the wait is tested as it actually runs, not by driving
   opening the cups it was read from
 - **no distance from a single point** — the anchor is the mean of what the ask
   itself placed, so one placed name draws a quarter and no kilometre
+- **the composer's read-as line** (part three) — all six states with their exact
+  copy, the words "read as" proven absent from every one of them, and **typing a
+  name performing no request at all, on or off device**. State 3 (a café on the
+  record with nothing scored in it) is seeded, because the fixture cannot reach
+  it and it is the state most likely to print "zero cups" by accident
+- **the composer on a leaf** — the bar stays, and all six ask kinds plus the
+  free-text question are reachable behind *read it as*, so the interim surface
+  loses no capability
 - dusk, reduced motion, 390×667 and 320px
 
 ## `verify-door.js` — the front door (Phase 30)

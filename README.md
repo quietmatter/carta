@@ -69,7 +69,13 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   second way); the key lives on this device and nowhere else. Before it
   sends, the composer states what's actually going out as a ledger — the
   bar, your scores, what's excluded by name, the scope — with a door onto
-  the brief's exact text for anyone who wants to read all of it. The wait
+  the brief's exact text for anyone who wants to read all of it. It composes
+  **on a leaf over the map it's about**, not on a screen of its own, and the
+  line under the field says only what your record can defend: *on your
+  record, two cups and two cafés — the ask is scoped to them*. Carta doesn't
+  know what Lisbon is, and doesn't guess: somewhere it hasn't heard of, it
+  says so, and says the ask goes out on every cup instead. **Nothing leaves
+  the device while you type.** The wait
   is **the plate itself** — the same map the door opens on, narrating your
   own record's figures, then the call, then reframing from the world to the
   city as each name's address is confirmed and its pin lands; **Cancel** is a

@@ -1562,7 +1562,7 @@ and a country with two contour marks may deserve a lower bar; and Los Angeles
 has no relief on file, which is the one thing that would make its plate about
 Los Angeles rather than about the sea to its west.
 
-### Phase 31 — the ask at the front door (parts one and two — v7.39.0, v7.40.0)
+### Phase 31 — the ask at the front door (parts one to three — v7.39.0, v7.40.0, v7.41.0)
 
 *From the Claude Design handoff `Ask Carta at the Front Door`. The commission:
 move the ask off its three screens of its own and onto the door's own
@@ -1665,6 +1665,31 @@ the handoff draws grid, reach rings and quarter names, and that is now the
 argument for taking call three rather than a theory about it. The distance
 anchor (call four) is taken as recommended and stated: the mean of what the
 ask itself placed, no distance drawn at all from a single point.
+
+**Part three shipped at v7.41.0 — turn 4, and it is one line.** The handoff came
+back with no new screens and one new section, §B2, replacing a single line of §B.
+Turn 1 had drawn "Read as a city, nothing on the record there yet"; turn 4 says
+that line *was* the gap. **Nothing on the device knows what "Lisbon" is** —
+`askScopeOf` matches a city only where `knownCities()` already names it, and takes
+a country at the keeper's own word — so the kind is only ever the keeper's own
+setting said back, "asked as a city", never "read as a city". The line counts what
+the record has and never reports what a name *is*.
+
+The composer moved onto its leaf at the same time (§B, `1d`/`1i`): a 140px strip
+of the door's own plate with the leaf over it, and `ask` left `BARELESS` because
+the bar stays. Six read-as states ship, two of them earned by the record's own
+shapes — a city can be on the record with a café and no scored cup, and a country
+scope matches the *coffee's origin* rather than where the cup was drunk, so it
+must never say "cups read there".
+
+**Gap 5 is closed by instruction rather than by design.** Turn 4 states that the
+kind sheet is not designed in this bundle and says to wire *read it as* to the
+shipping chip group in place. That is what shipped, marked interim: the six kinds
+and the free-text question are one tap from the leaf, so nothing reachable before
+stopped being reachable.
+
+**One call is left: `<carta-city>`.** Unchanged — it needs a home, and `CITY_ARCS`
+still holds one key.
 
 ## The horizon (unscheduled, revisited)
 
