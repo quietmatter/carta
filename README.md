@@ -310,9 +310,9 @@ long as you want it.
 
 ## The stack
 
-Six static files — `index.html` with all CSS and JS inline, and five siblings
+Seven static files — `index.html` with all CSS and JS inline, and six siblings
 beside it (`carta-map.js`, `carta-plate.js`, `carta-shot.js`, `carta-ask.js`,
-`carta-atlas.js`),
+`carta-atlas.js`, `carta-rooms.js`),
 self-contained, zero dependencies, zero build. `carta-map.js` is the map
 layer: the passport's outlines and highland contours, the drawn-plot, street
 and drawn-city surfaces, and the projection they need (d3-array + d3-geo, the
@@ -320,7 +320,7 @@ two modules it actually uses, vendored verbatim), loaded from `index.html`'s
 own `<head>` — so the map works with the network switched off. The city an
 answer stands on is drawn from a coastline table in that same file: its
 shore, a kilometre grid and your stated reach in rings, with nothing
-fetched. Drop all six
+fetched. Drop all seven
 files on any static host; there's still nothing to build. Everything lives in this
 browser's `localStorage`
 (`carta7.v1`). No account, no server — the ask is the one deliberate,
@@ -367,6 +367,7 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 | Path | Purpose |
 |---|---|
 | `index.html` | Carta 7 — the current app. |
+| `carta-rooms.js` | The rooms — the Journal, a cup, a café, the shelf, your record, a Setup, the dials. |
 | `carta-map.js` | Carta 7's map layer — the passport, its contours, the street and drawn-plot surfaces, and the drawn city an answer stands on. |
 | `carta-plate.js` | The plate — a brew's own curve drawn, both arms (espresso and pour-over). |
 | `carta-shot.js` | The Visualizer read — the account, the calls, and a shot's own screens. |
@@ -377,7 +378,7 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 | `manifest.json`, `icon-*.svg`, `favicon.svg` | PWA metadata and the mark — the seal cut by the belt, at every size and both masks. |
 | `server/` | The optional sync server — dormant in 7.0, kept for the record. |
 | `test/model.test.js` | Zero-dep test for the taste model + the brief. |
-| `test/verify-static.js` | Zero-dep check that the six files parse and agree on one version. |
+| `test/verify-static.js` | Zero-dep check that the seven files parse and agree on one version. |
 | `test/verify-door.js`, `test/verify-v7.35.js`, `test/verify-split.js` | Browser harnesses — they boot the real app against a seeded record and walk its flows. |
 | `.github/workflows/tests.yml` | CI — runs all five harnesses on every push and PR. Not a build step: nothing it does changes the files you'd drop on a host. |
 | `docs/` | The design record: the pivot, the roadmap, the architecture, the voice standard, and classic's own design history. |

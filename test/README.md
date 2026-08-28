@@ -7,7 +7,7 @@ assertion, and the browser five also fail on any console error or page error.
 
 ```
 # no browser, no network, seconds
-node test/verify-static.js     # the six files parse and agree — 20 checks
+node test/verify-static.js     # the seven files parse and agree — 23 checks
 node test/model.test.js        # the taste model and the brief — 141 cases
 
 # the real app, in a real browser
@@ -15,7 +15,7 @@ npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
 node test/verify-ask.js        # the ask at the front door — 189 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
-node test/verify-split.js      # the Phase 31/32 seam — 16 checks
+node test/verify-split.js      # the Phase 31/32/35 seams — 27 checks
 node test/verify-safearea.js   # the notch and the indicator — 16 checks
 ```
 
@@ -38,7 +38,7 @@ confident path to nothing, and the launch dies with "executable doesn't
 exist" instead of falling through. So its answer is used only when the file
 really exists.
 
-## `verify-static.js` — the six files, without a browser
+## `verify-static.js` — the seven files, without a browser
 
 - **everything parses** — CLAUDE.md's own advice is that a syntax check has
   caught something in nearly every phase; this runs it over all six rather
@@ -58,7 +58,20 @@ really exists.
   landed over it deliberately), so this never fails the build — it only makes
   a *silent* crossing impossible, which is the thing §1 actually asks for
 
-## `verify-split.js` — the seam (Phases 31 and 32)
+## `verify-split.js` — the seam (Phases 31, 32 and 35)
+
+**Phase 35 moved the rooms out**, and the block for it exists because of Phase
+31's own warning one paragraph down: a split breaks a screen *quietly*, and it
+does it to whichever screen nothing opens. When the rooms moved, **four of the
+eight** — a café, the Setups list, a Setup and the dials — were opened by no
+harness in the repo. All eight are walked now, each the way the app opens it,
+plus the thirteen-name seam and a probe that `save()` really does clear the cup
+numbering across the boundary (it used to null the cache with a bare cross-file
+write; it is `clearCupNos()` now).
+
+Breaking a moved screen on purpose proved the walk catches it — **and that it
+crashed the run rather than reporting**, which would have left every room after
+the broken one unchecked. `walk()` catches, reports one red line, and continues.
 
 The Atlas moved into `carta-atlas.js`, and `<carta-city>` was folded into
 `carta-map.js`. This walks what moved:
@@ -77,7 +90,7 @@ The Atlas moved into `carta-atlas.js`, and `<carta-city>` was folded into
 - **the two seam calls** — `render()` → `resetAtlasSheet()` and `save()` →
   `clearCityLead()`, which replaced two bare cross-file writes into the
   moved file's own `let` bindings
-- **the version guard** — all six files agree, the check that makes a
+- **the version guard** — all seven files agree, the check that makes a
   forgotten `?v=` tag loud (`ARCHITECTURE.md` §1)
 
 - **the fourth element, and where it is defined** (Phase 32) — `<carta-city>`

@@ -31,7 +31,7 @@ four sibling scripts beside it, no build step, no accounts, no server.
 came before it, Carta 6.18.x, is frozen whole at `classic/index.html`. They
 are two different apps in one repo, and the distinction matters constantly:
 
-1. **Carta 7** (`index.html`, ~4,850 lines, plus five siblings loaded from
+1. **Carta 7** (`index.html`, ~4,300 lines, plus six siblings loaded from
    its `<head>`: `carta-map.js` (Phase 19), `carta-plate.js` (v7.31.0),
    `carta-shot.js` and `carta-ask.js` (both v7.34.0), `carta-atlas.js`
    (Phase 31)) — the product. Every phase of `docs/ROADMAP.md` ships here.
@@ -87,8 +87,9 @@ carta-plate.js        The plate — a brew's curve, both arms, split out at v7.3
 carta-shot.js         The Visualizer read — account, calls, pickers, a shot's four screens (v7.34.0)
 carta-ask.js          The argument — vTaste→vBrief→vAsk→vAsking→vAskResult, and the keyed channel (v7.34.0)
 carta-atlas.js        The Atlas — the door, and the four walks down from it, split out at Phase 31 (same <head>)
+carta-rooms.js        The rooms — the Journal, a cup, a café, the shelf, the record, a Setup, the dials (Phase 35)
 test/model.test.js    The pure-block harness (zero deps, plain Node)
-test/verify-static.js The six files parse and agree — zero deps, no browser
+test/verify-static.js The seven files parse and agree — zero deps, no browser
 test/verify-*.js      Five browser harnesses — the front door, the ask at the front door, the v7.35 fold, the Phase 31 seam, the device's own edges
 test/browser.js       Where the Chromium is, for those four
 .github/workflows/    CI — all seven harnesses on every push and PR to main
@@ -113,7 +114,7 @@ server/               Classic's sync server — dormant
 - **Everything is inline.** Edit the `<style>` and `<script>` blocks in place.
   No external `<script src>` / `<link>` to CDNs at load time — the whole point
   is a handful of files you can drop on a static host with nothing in between.
-  The five siblings are plain local `<script src>` tags in the `<head>`, each
+  The six siblings are plain local `<script src>` tags in the `<head>`, each
   carrying `?v=<APP_VERSION>`; that is the only exception and it is not one
   you extend without amending `ARCHITECTURE.md` §1.
 - The JS is **terse, dense, single-quote style** — many one-line helpers,
@@ -485,8 +486,8 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 ### Invariants to preserve
 
-- **Six files, no build.** Vanilla JS, inline everything, nothing fetched at
-  load beyond the five siblings themselves. **Their `<script
+- **Seven files, no build.** Vanilla JS, inline everything, nothing fetched at
+  load beyond the six siblings themselves. **Their `<script
   src>` tags carry `?v=<APP_VERSION>` and that must be bumped with it** — a
   sibling script is an ordinary cached subresource while `index.html` is the
   revalidated navigation document, so without it a keeper can run a new
@@ -622,7 +623,7 @@ this harness at all.)
 run first:
 
 ```bash
-node test/verify-static.js     # the six files parse and agree — 20 checks
+node test/verify-static.js     # the seven files parse and agree — 23 checks
 ```
 
 All six parse; `APP_VERSION`, all five `?v=` tags and all five published
@@ -642,7 +643,7 @@ npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
 node test/verify-ask.js        # the ask at the front door — 189 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
-node test/verify-split.js      # the Phase 31/32 seam — 16 checks
+node test/verify-split.js      # the Phase 31/32/35 seams — 27 checks
 node test/verify-safearea.js   # the notch and the indicator — 16 checks
 ```
 
@@ -650,7 +651,7 @@ node test/verify-safearea.js   # the notch and the indicator — 16 checks
 own install if it is really on disk, then the dev container's path).
 `test/README.md` says what each one holds. `verify-split.js` is the one to
 extend if you move code across a file boundary: it walks the four chapter
-screens, checks the published `window` seam, and checks that all six files
+screens, checks the published `window` seam, and checks that all seven files
 agree on one version at boot. `verify-safearea.js` is the one to extend if
 you add a screen: it renders a real notch and home indicator (the app names
 both insets as `--sat`/`--sab` so a harness can override what `env()` will
