@@ -514,6 +514,58 @@ Carta 7 is built exactly the way classic was, smaller:
   recorded is closed.** The next phase to cross 5,000 re-earns its argument
   from here, exactly as this one had to.
 
+  *Phase 32: a fourth element, and no seventh file.* The city plate the ask's
+  handoff had been drawing against since turn 2 arrived as production code — as
+  `carta-map.js`'s **fourth custom element**, not as a file of its own. The
+  founder call this section was holding open ("`carta-map.js` owes no §1
+  argument; a seventh file does") is therefore answered without spending one:
+  the element sits beside the `CITY_ARCS`/`CITY_RINGS` tables it reads, so
+  there is no cross-file load order to get wrong, and the count stays at six.
+  `carta-map.js` moves **1,134 → 1,452 lines / 151.7 → 168.2 KB**; `index.html`
+  does not move at all.
+
+  **Where it is defined is a law, not a detail.** The other three elements are
+  defined inside the elements closure because they only wait on `LANDS`/`WORLD`
+  at the head of the file. The city plate reads `cityArcsRaw`, whose caches are
+  `let` bindings *below* it — hoisted, so reachable, but in TDZ, so an upgrade
+  that happens in the closure **throws on first paint instead of deferring**,
+  and the element draws an empty `<svg>` that only recovers on a resize. So the
+  class is handed out as `window.CARTA_CITY` and `customElements.define` runs in
+  the export block at the foot, after the tables. `test/verify-split.js` holds
+  it as a behaviour rather than a shape: a cold `<carta-city>` attached at
+  runtime must paint on its *first* paint.
+
+  *And one seam repaid.* `cityKey()` is top level in `carta-map.js` and was
+  calling `fold()` — which is not the map's own `fold` (that one is inside the
+  closure) but **`index.html`'s global**. It resolves, because `index.html`
+  declares `fold()` at top level and `cityKey` only ever runs later, and it is
+  why the model harness has to slice the map first. It is still the wrong
+  direction: a sibling borrowing its normaliser from the document that loads
+  it, now read by an element on a cold paint. `cityKey()` carries its own fold
+  as of this phase, and `verify-static.js` holds that. **`landKey()` still
+  reaches the same way** — parked, not fixed: the two folds differ on digits and
+  `landKey` is inside the tested block, so it wants its own pass rather than a
+  ride on this one. The check is scoped to `cityKey` and says so.
+
+  *The band, and its one remaining growth vector.* `index.html` finished this
+  phase at **5,000 / 5,000 lines, 360.5 KB** — every line of the work went into
+  the two siblings. Its only growth was the mandatory `CHANGELOG` entry, which
+  costs one line per release wherever the code lands. That is now the file's
+  sole structural growth at the band and is worth naming: a phase that adds no
+  code to `index.html` still pushes it over. This one was paid for by removing
+  a genuinely dead rule (`.rowlink .row-main`, zero users in any of the six
+  files), not by shaving prose.
+
+  **It ends the phase at 5,013 all the same, and not because of this phase.**
+  v7.41.1 — a twelve-line `setAppH` timing fix with a changelog line — landed on
+  `main` while this was being built and took **`main` itself to 5,013 / 5,000**.
+  The merge brings that here unchanged. Recorded rather than absorbed: shaving
+  another change to fit this one is how a band stops meaning anything. The
+  reading that matters is that the file now crosses on **ordinary small fixes
+  with no feature behind them**, which is the signal that the next split is due
+  rather than the next amendment — and the third split has a candidate already
+  named above (the room-sized views, `vJournal`/`vShelf`/`vRecord`).
+
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
@@ -965,9 +1017,14 @@ plate layer      carta-plate.js (v7.31.0) — the brew's own curve, both arms.
                  water added in pulses, the cup lagging, the pours as bands
                  and the waits drawn by being left empty, argued by drawdown.
                  Pure geometry + string-templating renderers; no D, no DOM.
-map layer        <carta-belt> · <carta-plot> · <carta-streets>, three light-DOM
-                 custom elements above the app's own script, with d3-array +
-                 d3-geo vendored beside them (§1). Leaflet injected at runtime.
+map layer        <carta-belt> · <carta-plot> · <carta-streets> · <carta-city>,
+                 four light-DOM custom elements above the app's own script,
+                 with d3-array + d3-geo vendored beside them (§1). Leaflet
+                 injected at runtime; the city plate fetches nothing at all.
+                 city: the CITY_ARCS shore where the table has one, a kilometre
+                 grid, the reach in rings, numbered marks keyed to the answer's
+                 rows. Defined at the FOOT of the file, after its tables (§1).
+                 mode="seal" is the same plate at row scale, shore and marks.
                  belt: topo="on" (LAND_TOPO's contours) + marks="[…]" (the
                  regions, on their farms' ground); streets: terrain="on"
                  (the §7 tile row) + names="on" (a pin whose name is the point).
@@ -1031,7 +1088,7 @@ pass over the board will meet the same disagreement.
 | Touch | When | Degrades to |
 |---|---|---|
 | Geocode (Nominatim) | placing a café; grounding an ask's answer; reading a pasted map link's real address (Phase 16) | typed city, drawn plot |
-| Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry |
+| Leaflet + tiles (unpkg, OpenStreetMap) | a street surface mounts | the drawn plot, one line, Retry — and under one finding (Phase 32) the drawn **city**, which is the same law one grade richer: the ground is the surface, the streets are the enhancement |
 | Leaflet + **terrain tiles** (OpenTopoMap, CC-BY-SA) | a region or a farm surface mounts (Phase 18) | the drawn plot, one line, Retry |
 | **The ask** (BYO-key, `api.anthropic.com`) | the keeper taps "Ask" or "Read it for me" | **the brief, copied** |
 | **Search for more** (BYO-key, same `api.anthropic.com` row, Anthropic's server-side web-search tool) | the keeper taps "Search for more" on one coffee (Phase 22) | the field stays blank, typed in by hand |

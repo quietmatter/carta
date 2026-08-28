@@ -1691,6 +1691,58 @@ stopped being reachable.
 **One call is left: `<carta-city>`.** Unchanged — it needs a home, and `CITY_ARCS`
 still holds one key.
 
+### Phase 32 — the city, drawn (shipped — v7.42.0)
+
+*Turn 5 of the same handoff. No new screens and no new sections: what it brought
+is `carta-map.js` itself, with `<carta-city>` folded in, and the instruction to
+diff it in.*
+
+**Founder call three is answered, and answered in code.** The call was framed as
+"a home for the element, and a seventh file is an `ARCHITECTURE.md` §1 argument".
+Turn 5 dissolves it: the element becomes `carta-map.js`'s **fourth custom
+element**, beside the `CITY_ARCS`/`CITY_RINGS` tables it reads. No seventh file,
+no load order to get wrong, no argument owed — and the three inventions the call
+had flagged all came out in the same pass:
+
+1. **the thirteen hardcoded Los Angeles quarters** — coordinates nobody on the
+   record had written, deleted and *not* replaced by an averaged stand-in. A
+   quarter is a finding's own confirmed neighbourhood: a name, already said
+   twice in words. `places` stays for a caller with real coordinates.
+2. **`cityKey()` in place of a lowercase-and-trim** that keyed Līhu‘e as
+   something the table has never heard of.
+3. **`data-id` no longer falls back to the row number** — a mark is a door only
+   where the finding gave it an id.
+
+**Where it is defined is the phase's one real law.** The plate reads the tables
+at the *foot* of its own file, so defining it in the elements closure upgrades it
+while the caches are still in TDZ: it throws on first paint and draws an empty
+`<svg>` that only recovers on a resize. The class goes out as
+`window.CARTA_CITY`; the export block defines it. `verify-split.js` holds that as
+a behaviour — a cold element must paint on its *first* paint.
+
+**The answer and the finding moved onto it**, which is what parts two and three
+had drawn against a documented stand-in. Two corrections were ours, both found by
+rendering rather than by reading:
+
+- **no anchor, no rings** — one placed name is its own mean, so a ring centred on
+  it measures your reach *from the café*, which is what the rows already refuse.
+- **a mark under 94% of a scrim is no mark** — ours fell 51% into the headline.
+  Fitting the marks into the clear paper between the two scrims was tried and
+  abandoned (28px on the handoff's own frame); a **depth limit** shipped instead.
+
+**§H shipped and closed a blank nobody had logged**: *Your cities* drew nothing
+at all for a city the belt cannot place. It draws the record's own cafés now.
+
+**Deviation, recorded.** `2d` draws all three rows through the new element; the
+app keeps its Phase 29 seal where one already draws and reaches for
+`<carta-city>` only where the row was blank. Replacing a working surface to match
+a mockup's chrome is churn; the blank was the substance.
+
+**Two calls stay open, both running on their own recommendations as interim**:
+gap 4 (the distance anchor) and gap 5 (the kind sheet). `CITY_ARCS` still holds
+one key, and grows one per city the record has cups in, cut by
+`docs/MAPPING.md`'s generator and never hand-drawn.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner

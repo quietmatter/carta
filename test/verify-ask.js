@@ -578,7 +578,16 @@ const findState=p=>p.evaluate(()=>{
   await page.waitForTimeout(800);
   const t=await page.evaluate(()=>document.getElementById('main').innerText);
   ok(one&&/Baixa/i.test(t),'one name placed — the quarter still stands',t);
-  ok(!/ km/i.test(t),'one name placed — and no distance is invented from a single point',t);
+  /* scoped to the leaf on purpose. The plate carries a scale bar, which is the
+     drawing's own ruler and says km whatever the record holds; the rows are
+     where a distance would be a claim about where you are. */
+  const leaf=await page.evaluate(()=>{const l=document.getElementById('ansleaf');return l?l.innerText:''});
+  ok(!/ km/i.test(leaf),'one name placed — and no distance is invented from a single point',leaf);
+  /* and the reach itself is withheld for the same reason: a ring centred on the
+     one café would measure your reach from the café rather than from you. */
+  const rings=await page.evaluate(()=>{const c=document.querySelector('#ansplate carta-city');
+    return c?c.getAttribute('rings'):'(no plate)'});
+  ok(rings==='off','one name placed — and the reach is not drawn from it either','rings='+rings);
   await ctx.close();
 }
 /* ---------- dusk, reduced motion, a short phone, 320px ---------- */
@@ -607,6 +616,101 @@ const findState=p=>p.evaluate(()=>{
   await page.waitForTimeout(800);
   ok(!(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)),
     '320px — nor does a finding');
+  await ctx.close();
+}
+
+/* ---------- turn 5 · the plate is the city ----------
+   <carta-city> replaced the drawn plot under an answer and under one finding.
+   What matters is not that it renders but that it stays honest and stays in
+   step with the index: every row that can be placed has a mark, the numeral on
+   the mark is the ROW's number rather than the mark's own position, the mark is
+   a door, and nothing is drawn that the grounding did not confirm. */
+{
+  const {ctx,page}=await boot({});
+  await page.evaluate(()=>openAskResultScreen('ask_lx'));
+  await page.waitForTimeout(1000);
+  const plate=await page.evaluate(()=>{
+    const c=document.querySelector('#ansplate carta-city');
+    if(!c)return {none:true,plot:!!document.querySelector('#ansplate carta-plot')};
+    const svg=c.querySelector('svg');
+    return {span:c.getAttribute('span'),rings:c.getAttribute('rings'),coast:c.getAttribute('coast'),
+      marks:JSON.parse(c.getAttribute('marks')||'[]'),
+      painted:!!svg&&svg.children.length>0,
+      doors:[...c.querySelectorAll('g[data-id]')].map(g=>g.dataset.id)};
+  });
+  ok(!plate.none,'the answer stands on <carta-city>, not the drawn plot',JSON.stringify(plate));
+  ok(plate.painted,'and it painted — the class is defined after the tables, so a cold load draws',JSON.stringify(plate));
+  ok(plate.coast==='Lisbon','the coast is asked for by name; CITY_ARCS decides whether it answers',plate.coast);
+
+  /* the numbering law. A finding the lookup could not place still takes a row,
+     so a mark numbered by its own position in the drawn set would print 2 on
+     the café the index calls 3 the moment one name in the middle is unplaced. */
+  const rows=await page.evaluate(()=>[...document.querySelectorAll('#ansleaf .idxrow')]
+    .map(r=>({n:r.querySelector('.n').textContent.trim(),name:r.querySelector('.t').textContent.trim()})));
+  const placedNames=await page.evaluate(()=>(D.asks.find(a=>a.id==='ask_lx').findings||[])
+    .filter(f=>f.grounded&&f.lat!=null).map(f=>f.name));
+  const agree=plate.marks.every(m=>{const r=rows.find(x=>x.name===m.name);return r&&r.n===String(m.n)});
+  ok(agree,'every mark carries its ROW\'s number, not its own place in the drawn set',
+    JSON.stringify({marks:plate.marks.map(m=>[m.n,m.name]),rows:rows.map(r=>[r.n,r.name])}));
+  ok(plate.marks.length===placedNames.length,
+    'placed is a mark AND a row — as many marks as the answer could ground',
+    JSON.stringify({marks:plate.marks.length,placed:placedNames.length}));
+  ok(plate.marks.every(m=>placedNames.includes(m.name)),
+    'and nothing is drawn that the lookup did not confirm',JSON.stringify(plate.marks.map(m=>m.name)));
+  ok(plate.doors.length===plate.marks.length&&plate.doors.every(Boolean),
+    'a mark is a door: every one carries its finding id',JSON.stringify(plate.doors));
+
+  /* the bug the render caught: a mark centred in the box lands under a scrim
+     that is 94% opaque by its own 54% stop, and a row whose mark cannot be seen
+     is a row with no mark. Every mark has to sit in the part of the plate that
+     is actually read — above the solid half of the headline. */
+  const band=await page.evaluate(()=>{
+    const c=document.querySelector('#ansplate carta-city'),hero=document.getElementById('anshero');
+    const cb=c.getBoundingClientRect(),hb=hero.getBoundingClientRect();
+    /* the scrim is `to top`, so its 54% stop is measured UP from the foot: it
+       reaches 94% of the card colour at 46% DOWN from the headline's own top,
+       and everything below that line is paper. Reading the stop from the wrong
+       end put this line 18px too low and the check passed on the very frame
+       that prompted it. */
+    const solid=hb.top+hb.height*0.46;
+    return [...c.querySelectorAll('g[data-id] circle')].map(z=>{
+      const b=z.getBoundingClientRect();return {y:Math.round(b.top+b.height/2-cb.top),solid:Math.round(solid-cb.top)};
+    });
+  });
+  ok(band.length>0&&band.every(m=>m.y<m.solid),
+    'every mark sits above the solid half of the headline — none is drawn where it cannot be read',
+    JSON.stringify(band));
+
+  /* the finding's own ground, under the streets. The streets are unreachable in
+     the harness, which is the case the law is written for: the drawn ground
+     stands on its own and the note says why. */
+  await page.evaluate(()=>{document.querySelectorAll('#ansleaf .idxrow')[0].click()});
+  await page.waitForTimeout(900);
+  const fin=await page.evaluate(()=>{
+    const c=document.querySelector('#findplate carta-city');
+    if(!c)return null;const svg=c.querySelector('svg');
+    return {span:c.getAttribute('span'),rings:c.getAttribute('rings'),
+      marks:JSON.parse(c.getAttribute('marks')||'[]').length,painted:!!svg&&svg.children.length>0};
+  });
+  ok(fin&&fin.painted,'a finding stands on the same element, at street scale',JSON.stringify(fin));
+  ok(fin&&fin.span==='3'&&fin.rings==='0.4,1','with the handoff\'s own figures — nothing derived, because nothing varies',JSON.stringify(fin));
+  ok(fin&&fin.marks===1,'and exactly one mark: this finding, not the set',JSON.stringify(fin));
+  await ctx.close();
+}
+
+/* ---------- turn 5 · the seal, at row scale ----------
+   A city the belt cannot place drew NOTHING in Your cities — a blank chip
+   beside a drawn one, which reads as a failure rather than as a fact. */
+{
+  const {ctx,page}=await boot({});
+  const seals=await page.evaluate(()=>[...document.querySelectorAll('.doorcity')].map(r=>{
+    const city=r.querySelector('carta-city'),svg=r.querySelector('.seal svg,svg');
+    return {name:r.querySelector('.t').textContent.trim(),
+      drawn:!!svg&&svg.children.length>0,viaCity:!!city};
+  }));
+  ok(seals.length>1,'Your cities lists more than one city, so the two seals are read side by side',JSON.stringify(seals));
+  ok(seals.every(s=>s.drawn),'every city row draws something — no blank chip',JSON.stringify(seals));
+  ok(seals.some(s=>s.viaCity),'and the one the belt cannot place draws its own cafés instead',JSON.stringify(seals));
   await ctx.close();
 }
 

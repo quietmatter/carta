@@ -1144,6 +1144,15 @@ function mountAnswer(){
   leaf.style.top=top+'px';
   const plate=document.getElementById('ansplate');
   if(plate)plate.style.height=ansPlateH(_ansStop)+'px';
+  /* §F: at the low stop the marks carry their own names. There is plate enough
+     for them there and not at the other two, and the element drops a label it
+     cannot place rather than stacking it. This is an attribute change, so the
+     plate repaints in place — it is not remounted, and the ground is already
+     re-projecting on every stop anyway, since the element centres on its own
+     box and the box is what the stop changes. */
+  const city=plate&&plate.querySelector('carta-city');
+  if(city){const on=_ansStop===0;
+    if(on)city.setAttribute('names','on');else city.removeAttribute('names');}
   const hero=document.getElementById('anshero');
   if(hero){
     hero.classList.toggle('gone',_ansStop===2);
@@ -1288,24 +1297,117 @@ function setAnsStop(i){_ansStop=i;mountAnswer()}
    time, and the reset has to land before the screen renders rather than
    repainting a leaf that is still showing the ask you just left. */
 function resetAnsStop(){_ansStop=ANS_REST}
-/* the marks a plate carries: the confirmed names, filled where the record has
-   already stood in them. The grounding rule is unchanged — a name the lookup
-   could not confirm is a row under the pull and never a pin. */
-const ansPinsJSON=a=>JSON.stringify((a.findings||[]).filter(f=>f.grounded&&f.lat!=null&&f.lon!=null)
-  .map(f=>({id:f.id,name:f.name,lat:f.lat,lon:f.lon,score:findingReading(f)?1:null})));
+/* ---- the plate, as ground ---------------------------------------------
+ * Phase 32. <carta-city> replaces the drawn plot under the answer and under
+ * one finding — the element the handoff always drew here, unbuilt until the
+ * fold that put it in carta-map.js. The marks it takes are the same confirmed
+ * findings the plot took, so the grounding law is untouched: a name the lookup
+ * could not place is a row under the pull and never a pin.
+ *
+ * The handoff states one city's figures (Los Angeles at span 40, its centre
+ * pulled seaward). Production cannot read those off a mockup, so the frame is
+ * derived from the answer itself and every number below says what it is:
+ *
+ *   at      the ask's own anchor — the mean of its confirmed pins, which is
+ *           already what the index rows measure their kilometres from
+ *   center  the marks' own bounding box, so every confirmed name is in frame
+ *   span    that box at about 45% of the width, which leaves the rings and the
+ *           scale bar room to be read. Height is weighed at 1:1 rather than
+ *           the plate's own ratio, because the plate is shorter at the low stop
+ *   coast   the destination as typed. cityKey() decides whether CITY_ARCS has
+ *           heard of it; one key today, so most cities draw a coastless field.
+ *           That is the stated coverage, not a failure — the grid and the reach
+ *           are the plate's argument and the headline names the city.
+ */
+const REACH_RINGS={'on foot':[1,2,4],'a short drive':[1,3,8],'worth driving for':[2,6,15]};
+const ANS_LONE_SPAN=3,ANS_HEAD_CLEAR=54;   // the header row the plate is read under
+// the scrim's own readable start, and how far into the headline a mark may fall
+const ANS_MARK_HIGH=40,ANS_MARK_DEPTH=.3;
+/* Type is held out of the headline, but only the part of it that is actually
+   opaque: the scrim reaches var(--surface-card) at 94% by its own 54% stop, so
+   everything below that is dead paper and everything above it still reads.
+   Reserving the whole 228px block instead left the ring labels nowhere legal to
+   sit and silently dropped every one of them — a reach drawn with no distance
+   on it, which is the figure without its number. Measured up from the plate's
+   foot: the leaf's lap, then the solid half of the headline. */
+const ANS_SCRIM_SOLID=.54;
+const ANS_RESERVE_LOW=Math.round(ANS_HERO*ANS_SCRIM_SOLID)+ANS_OVERLAP+10;
+const askMainW=()=>{const m=document.getElementById('main');return (m&&m.clientWidth)||480};
+/* the reach drawn to scale. It is the keeper's own setting said back on the
+   ground — the same honesty the read-as line keeps: Carta does not know how far
+   "a short drive" is for you, it knows what you set, and the ring is that word
+   given a distance rather than a measurement of anything. */
+function ansFrame(a){
+  const marks=ansMarks(a);
+  if(!marks.length)return null;
+  const pins=marks.map(m=>m.f);
+  const lat=pins.map(p=>p.lat),lon=pins.map(p=>p.lon);
+  const mid={lat:(Math.min(...lat)+Math.max(...lat))/2,lon:(Math.min(...lon)+Math.max(...lon))/2};
+  const w=(Math.max(...lon)-Math.min(...lon))*111.32*Math.cos(mid.lat*Math.PI/180);
+  const h=(Math.max(...lat)-Math.min(...lat))*111.32;
+  /* the reach is drawn only where there is an anchor to draw it from. One
+     placed name is its own mean, and a ring centred on that single café would
+     be measuring your reach from the café rather than from you — which is the
+     very thing the rows refuse when they print no kilometres here. No anchor,
+     no rings; the shore, the grid and the mark still carry the city. */
+  const at=answerAnchor(a);
+  const rings=at?(REACH_RINGS[a.reach]||REACH_RINGS['a short drive']):[];
+  /* Where the marks are allowed to land.
+     The plate runs the height of the screen and both its ends are spoken for:
+     a top scrim under the header row, and the headline block above the leaf.
+     The handoff spreads its marks across all of it and reads them through
+     those scrims — faint at the edges is the intended look, and fitting the
+     marks into the sliver of clear paper between the two (28px on the
+     handoff's own frame) would blow the span up and throw the city away.
+     What is NOT intended is a mark that cannot be seen at all: ours fell 51%
+     into the headline, where the scrim is 94% opaque, and a row whose mark is
+     invisible breaks the one law this screen has — a café the record can
+     place is a mark AND a row. So the rule is a depth limit, not a clear band:
+     no mark deeper than the top third of the headline, none above the scrim's
+     own readable start, and the span grows only if the spread cannot fit
+     between those two. Read off the live column at the resting stop and then
+     left alone — the band travels with the leaf, and ground that slides under
+     a drag is worse than ground framed for the stop the screen opens at. */
+  const W=askMainW(),H=ansPlateH(ANS_REST);
+  const hiY=ANS_MARK_HIGH,loY=Math.max(hiY+72,ansTop(ANS_REST)-ANS_HERO-10+ANS_HERO*ANS_MARK_DEPTH);
+  let span=Math.max(rings.length?rings[1]*2.2:ANS_LONE_SPAN,w/.8);
+  if(h>0)span=Math.max(span,h*W/((loY-hiY)*.9));
+  const sp=Math.min(400,Math.round(span*10)/10);
+  // the marks' centre, moved from the middle of the box to the middle of that
+  // run: a lift in pixels, turned back into degrees through the same scale
+  const lift=(H/2-(hiY+loY)/2)*sp/W/111.32;
+  return {at:at||pins[0],center:{lat:mid.lat-lift,lon:mid.lon},span:sp,rings};
+}
+const ansCityHTML=(a,fr)=>`<carta-city class="city" style="position:absolute;inset:0"
+  at="${fr.at.lat},${fr.at.lon}" center="${fr.center.lat},${fr.center.lon}" span="${fr.span}"
+  coast="${esc(a.destination||'')}" rings="${fr.rings.length?fr.rings.join(','):'off'}"
+  reserve-top="${ANS_HEAD_CLEAR}" reserve-bottom="${ANS_RESERVE_LOW}" scale="off"
+  marks="${esc(ansMarksJSON(a))}"></carta-city>`;
+/* a mark carries its finding's id, which is what makes the index and the plate
+   one surface: the tap leaves as carta:pin-tap {id} and the app's own handler
+   already opens a finding by that id. A mark with no id would draw and simply
+   not be a door — the handoff's fourth fix, and none of ours lack one. */
+const ansMarks=a=>(a.findings||[]).map((f,i)=>({f,n:i+1}))
+  .filter(m=>m.f.grounded&&m.f.lat!=null&&m.f.lon!=null);
+/* the numeral is the ROW's number, not the mark's own position in the drawn
+   set: an unplaced finding still takes a row, so counting the marks instead
+   would print 2 on the café the index calls 3 the moment one name in the
+   middle cannot be placed. Mentions are not marks at all — they live under
+   the pull, and the plate carries only what the index carries. */
+const ansMarksJSON=a=>JSON.stringify(ansMarks(a)
+  .map(m=>({id:m.f.id,n:m.n,name:m.f.name,lat:m.f.lat,lon:m.f.lon,been:!!findingReading(m.f)})));
 function vAskResult(id){
   const a=D.asks.find(x=>x.id===id);
   if(!a)return `<div class="pad" style="padding-top:26px"><div class="empty">That ask isn’t on the record.</div>
     <button class="btn btn-quiet" onclick="goBack()">Back</button></div>`;
   const named=askNamed(a),grounded=named.filter(f=>f.grounded);
-  const pins=ansPinsJSON(a),drawn=pins!=='[]';
+  const fr=ansFrame(a);
   const been=(a.findings||[]).filter(f=>findingReading(f)).length;
   const n=(a.findings||[]).length;
   const head=`${capFirst(words(n))} in the city, <em>${been?`${words(been)} already yours.`:'all of them new.'}</em>`;
   return `<div class="stage">
     <div class="plate mapbox passport" id="ansplate" style="height:${ansPlateH(_ansStop)}px">
-      ${drawn?`<div class="plotwrap" style="position:absolute;inset:0;padding:56px 44px 56px">
-          <carta-plot class="plot frame" fit="frame" pins="${esc(pins)}" dot="9" labels="on"></carta-plot></div>`
+      ${fr?ansCityHTML(a,fr)
         :`<carta-atlas style="position:absolute;inset:0" caption="off" frame="tasted"
             tasted="${esc(Object.values(tastedCountryMap()).map(c=>c.label).join(','))}"></carta-atlas>`}
       <div class="fade top" style="height:132px"></div>
@@ -1439,12 +1541,18 @@ function findBodyHTML(a,f,stop){
     <button class="pullbar" onclick="toggleFindStop(1)" aria-label="Read it down">
       <span class="bar"></span><span class="l">what to order · how it fits · your marks</span></button>`;
 }
-/* the streets over the drawn ground. `<carta-city>` is what the handoff draws
- * underneath here; it is not built (ARCHITECTURE.md §1 — a new element is a
- * founder call, and CITY_ARCS carries one city today), so the layer that
- * stands when the tiles cannot be reached is the drawn plot the app already
- * has. The law is unchanged and is the point: streets are the enhancement,
- * the drawn ground is the surface, and neither invents a pin. */
+/* the streets over the drawn ground — and since Phase 32 the ground is
+ * <carta-city>, which is what the handoff always drew underneath here. The
+ * law is unchanged and is still the point: streets are the enhancement, the
+ * drawn ground is the surface, and neither invents a pin. One café at street
+ * scale, so the frame is the handoff's own — 3 km across, its reach in 400 m
+ * and 1 km, the grid on. Nothing here is derived because nothing here varies:
+ * a finding is one point, and one point has no spread to fit. */
+const FIND_SPAN=3,FIND_RINGS='0.4,1';
+const findCityHTML=f=>`<carta-city class="city" style="position:absolute;inset:0"
+  at="${f.lat},${f.lon}" span="${FIND_SPAN}" coast="${esc(f.city||'')}"
+  rings="${FIND_RINGS}" grid="on" scale="off"
+  marks="${esc(JSON.stringify([{id:f.id,lat:f.lat,lon:f.lon,been:!!findingReading(f)}]))}"></carta-city>`;
 function vAskFinding(id,view){
   const hit=askOf(id);
   if(!hit)return `<div class="pad" style="padding-top:26px"><div class="empty">That finding isn’t on the record.</div>
@@ -1459,7 +1567,8 @@ function vAskFinding(id,view){
              // the leaf covers the plate's own foot, so the offline note and the
              // pin both sit in the band that is actually on screen
              noteStyle:'bottom:'+(findPlateH(_findStop)-findTop(_findStop)+8)+'px',
-             plotWrap:'position:absolute;inset:0;padding:'+FIND_PADS[_findStop]})
+             plotWrap:'position:absolute;inset:0;padding:'+FIND_PADS[_findStop],
+             floorHTML:findCityHTML(f)})
         :`<carta-atlas style="position:absolute;inset:0" caption="off" frame="tasted"
             tasted="${esc(Object.values(tastedCountryMap()).map(c=>c.label).join(','))}"></carta-atlas>`}
       <div class="fade top" id="findfade" style="height:${FIND_SCRIMS[_findStop]}px"></div>
@@ -1536,4 +1645,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.41.1';
+window.ASK_VERSION='7.42.0';

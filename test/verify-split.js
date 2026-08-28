@@ -105,6 +105,37 @@ ok(await page.evaluate(()=>coffeeCardHTML(live('coffees')[0].id).length>500),
 ok(await page.evaluate(()=>{cityLead('Lisbon');save();return typeof cityLead('Lisbon')!=='undefined'}),
   'save() → clearCityLead() — the memo is dropped and rebuilt across the seam');
 
+/* ---- Phase 32 · the fourth element, and where it is defined ----
+   <carta-city> is the one element in carta-map.js that reads the tables at the
+   FOOT of its own file rather than LANDS at the head. Defined in the elements
+   closure like the other three it would upgrade while _cityArcsCache is still
+   in its temporal dead zone and throw on first paint — drawing an empty <svg>
+   that only recovers on a resize. So the class goes out as window.CARTA_CITY
+   and is defined in the export block, after the tables. These checks are the
+   ones that would notice if it were ever moved back. */
+ok(await page.evaluate(()=>!!window.CARTA_CITY&&!!customElements.get('carta-city')),
+  '<carta-city> is published and defined');
+ok(await page.evaluate(()=>customElements.get('carta-city')===window.CARTA_CITY),
+  'and the definition is the class the closure handed out');
+/* the cold-paint guarantee, stated as the thing it protects: a fresh element
+   attached now must draw on its first paint, not on a later resize. */
+ok(await page.evaluate(async()=>{
+  const box=document.createElement('div');
+  box.style.cssText='position:fixed;left:-9999px;top:0;width:320px;height:240px';
+  const c=document.createElement('carta-city');
+  c.setAttribute('at','34.052,-118.243');c.setAttribute('coast','Los Angeles');
+  c.setAttribute('marks','[{"id":"z1","n":1,"lat":34.05,"lon":-118.24}]');
+  box.appendChild(c);document.body.appendChild(box);
+  await new Promise(r=>setTimeout(r,300));
+  const svg=c.querySelector('svg'),n=svg?svg.children.length:0;
+  box.remove();return n>0;
+}),'a cold <carta-city> paints on its first paint, not on a resize');
+/* cityKey() no longer reaches across the seam for index.html's fold(): the
+   sibling owns its own normaliser, which is what lets the element key a shore
+   before the app's own script has run. */
+ok(await page.evaluate(()=>cityKey('Līhu‘e')==='lihue'&&cityKey('Los Angeles')==='los angeles'),
+  'cityKey normalises inside carta-map.js, not through the host');
+
 await browser.close();server.close();
 console.log(notes.join('\n'));
 if(problems.length){console.log('\n'+problems.join('\n'));console.log(`\n${problems.length} PROBLEM(S)`);process.exit(1)}
