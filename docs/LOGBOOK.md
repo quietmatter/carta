@@ -7,6 +7,54 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — the bottom-edge fix, actually held (v7.41.1)
+
+- **v7.37.6 fixed the bug on a reload and not on the launch it was written
+  for.** The keeper confirmed exactly that split: force-close and reopen
+  from the home screen and the gap was still there; a plain page reload,
+  no code involved, cleared it. That is the tell for a timing race, not a
+  wrong formula — `setAppH()` read `window.innerHeight` once, synchronously,
+  at parse time, and a cold standalone launch reads it a beat before iOS
+  finishes settling the chrome and the safe area. A reload happens to
+  always land after that settling has already happened once, which is
+  exactly why it looked fixed under the one test that's easy to run
+  (reload in Safari) and wasn't under the one that matters (a real
+  fully-closed relaunch).
+- **Shipped:** the read now repeats on every signal the viewport might
+  have just changed rather than firing once — `resize`, `pageshow` (a
+  fully-closed-and-reopened launch can be a bfcache restore, which never
+  fires `load` again), the Visual Viewport API's own `resize` event (iOS
+  fires this more reliably than window's for a chrome change), plus one
+  delayed re-check as a backstop for a settle with no event behind it at
+  all.
+- **Renumbered on the way in:** this branch was started before Phase 31's
+  own `7.37.7` (a different, already-shipped fix — the plate giving up the
+  map before the door on a short screen) and collided with it on version
+  number alone; restarting off the now-current `main` puts this at
+  `7.41.1`, one past Phase 31's `7.41.0`, with `APP_VERSION` and every
+  sibling — `carta-map.js`, `carta-plate.js`, `carta-shot.js`,
+  `carta-ask.js`, and the newly split `carta-atlas.js` — in lockstep.
+  Phase 31's own entry below already checked this fix against
+  `atlasMainH()` and found no conflict: `--app-h` sets `body`'s height,
+  `atlasMainH()` reads `main.clientHeight` off it, and the plate follows
+  the corrected height rather than fighting it.
+- **A note on how this was found:** two rounds of "here's a screenshot, it's
+  still broken" from the keeper, each with just enough new information
+  (first: identical after the first fix, meaning the fix had zero effect;
+  second: fixed by reload but not by a real relaunch) to actually
+  distinguish "the diagnosis was wrong" from "the diagnosis was right but
+  the fix was timed wrong." Worth keeping in mind next time a fix reads
+  clean in the sandbox and the keeper says it isn't: ask what's different
+  about their reproduction rather than reaching for a second theory.
+- **Verified:** `node test/model.test.js` at 139/139; all five sibling
+  version constants and `<script src>` query strings confirmed in lockstep
+  at `7.41.1`; the inline script and all four siblings parse. The fix
+  itself still needs the keeper's own fully-closed relaunch to confirm
+  closed — noted rather than claimed, same as v7.37.6 was.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-28 — Phase 31, part three: the composer, and a line that only counts (v7.41.0)
 
 - **Turn 4 answers founder call two, and corrects its own turn-1 drawing.**
