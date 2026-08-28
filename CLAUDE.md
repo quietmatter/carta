@@ -314,6 +314,15 @@ server/               Classic's sync server — dormant
     Both repaint their leaf in place as it travels, because the content
     genuinely differs per stop and the plate must not be remounted. Every
     reason the single-column answer carried is still there, one level down.
+    **Phase 34 (v7.44.0) gave `read it as` the sheet it always named** —
+    `openAskKindSheet`/`askKindSaysHTML`/`pickAskKindInSheet`, the six kinds and
+    the free-text question, both of which turn 1 had quietly removed and turn 4
+    wired inline as a recorded interim. The one new thing is the **consequence
+    line**: what the pick changes (the field, and whether the reach rides along),
+    **never** the scope, which is the leaf's own line. A written question echoes
+    back on the leaf (`askEchoHTML`) and is repainted there *behind* the sheet as
+    it is typed, so a swipe dismissal keeps it. A chip repaints the sheet in
+    place — `render()` paints `#main` and the sheet is its own element.
     **Part three (v7.41.0) moved the composer onto a leaf too** — a 140px
     strip of the door's plate, `ask` out of `BARELESS`, and one read-as line
     under the field (`askReadAsParts`, six states) that **counts what the
@@ -631,7 +640,7 @@ any page error, or any assertion:
 ```bash
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 177 checks
+node test/verify-ask.js        # the ask at the front door — 189 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32 seam — 16 checks
 node test/verify-safearea.js   # the notch and the indicator — 16 checks

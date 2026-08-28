@@ -858,11 +858,68 @@ const findState=p=>p.evaluate(()=>{
   ok(/Ask Carta/i.test(c.text),'the composer — the action');
   ok(c.kinds===0&&!c.question,'the composer — the kinds and the question are behind "read it as", not on the leaf');
 
-  await page.evaluate(()=>toggleAskKind());await page.waitForTimeout(500);
-  const o=await page.evaluate(()=>({kinds:document.querySelectorAll('.askkind .pick').length,
-    question:!!document.getElementById('ask_question')}));
+  /* Phase 34 moved the kinds and the question out of the interim inline panel
+     and into the sheet the button always named. The check follows them rather
+     than being dropped: what it guards is that neither capability was lost. */
+  await page.evaluate(()=>openAskKindSheet());await page.waitForTimeout(500);
+  const o=await page.evaluate(()=>({kinds:document.querySelectorAll('#sheet .picks .pick').length,
+    question:!!document.querySelector('#sheet #ask_question'),
+    open:document.getElementById('sheet').classList.contains('open'),
+    says:(document.getElementById('ask_says')||{innerText:''}).innerText,
+    panel:document.querySelectorAll('.askkind').length,
+    text:document.getElementById('sheet').innerText}));
+  ok(o.open&&o.panel===0,'read it as — opens the sheet it always named, not a panel on the leaf',JSON.stringify(o));
   ok(o.kinds===6,'read it as — all six kinds are reachable, so none was silently dropped',JSON.stringify(o));
   ok(o.question,'read it as — and so is the free-text question');
+  ok(/It goes out word for word/i.test(o.text),'read it as — and the sheet says where the question ends up',o.text);
+  /* the consequence line is the one new thing, and its rule is that it says what
+     the PICK changes and never restates scope — the leaf's own line does that,
+     and two lines on one screen must not say the same sentence twice. */
+  ok(/^A city — the field takes a name/.test(o.says.trim()),
+    'read it as — the consequence line says what the pick changes',o.says);
+  ok(!/scope/i.test(o.says),'read it as — and never restates the scope the leaf line already carries',o.says);
+  const other=await page.evaluate(()=>{pickAskKindInSheet('route');
+    return {says:document.getElementById('ask_says').innerText,
+      on:[...document.querySelectorAll('#sheet .pick.on')].map(b=>b.textContent)}});
+  ok(other.on.length===1&&other.on[0]==='A route','read it as — a chip repaints the sheet in place, not just the leaf behind it',JSON.stringify(other));
+  ok(/leaves the composer/i.test(other.says),
+    'read it as — and a kind with no centre says the reach leaves the composer',other.says);
+  await ctx.close();
+}
+
+/* ---- Phase 34 · the written question, echoed on the leaf (`7c`) ----
+   The composer's whole argument is that nothing leaves the device unseen. A
+   sentence held behind a button would be the one thing that did. */
+{
+  const {ctx,page}=await boot({});
+  await page.evaluate(()=>{askDraft.dest='Lisbon';askDraft.kind='city';askDraft.question='';openAskScreen()});
+  await page.waitForTimeout(700);
+  const before=await page.evaluate(()=>({echo:document.getElementById('ask_echo').innerText.trim(),
+    lab:document.getElementById('ask_reachlab').style.marginTop}));
+  ok(before.echo===''&&before.lab==='22px','no question written — no echo, and the reach label keeps its 22',JSON.stringify(before));
+  await page.evaluate(()=>openAskKindSheet());await page.waitForTimeout(400);
+  /* typed through the field's own oninput: it must update the draft AND the
+     echo behind the sheet without a render(), because a render under a thumb
+     loses the caret — and because a swipe-dismiss must not lose the sentence. */
+  await page.evaluate(()=>{const t=document.getElementById('ask_question');
+    t.value='Three days in Baixa, mostly on foot';t.dispatchEvent(new Event('input',{bubbles:true}))});
+  await page.waitForTimeout(300);
+  const live=await page.evaluate(()=>({draft:askDraft.question,
+    echo:document.getElementById('ask_echo').innerText,
+    lab:document.getElementById('ask_reachlab').style.marginTop}));
+  ok(live.draft==='Three days in Baixa, mostly on foot','the question is on the draft as it is typed',JSON.stringify(live));
+  ok(/Three days in Baixa/.test(live.echo)&&/change/.test(live.echo),
+    'and the echo is already right behind the sheet, so a swipe cannot lose it',JSON.stringify(live));
+  ok(live.lab==='18px','and the reach label tightens to 18 with the echo present',JSON.stringify(live));
+  await page.evaluate(()=>closeAskKindSheet());await page.waitForTimeout(600);
+  const after=await page.evaluate(()=>({echo:document.getElementById('ask_echo').innerText,
+    open:document.getElementById('sheet').classList.contains('open'),
+    /* built the way runAsk builds it — same five arguments, same order — so
+       this asserts the app's own path rather than a call invented here. */
+    brief:askPromptText(briefPlainText(tasteModelMemo()),askScopeOf(askDraft.kind,askDraft.dest).kind,
+      (askDraft.dest||'').trim(),(askDraft.question||'').trim(),askReach())}));
+  ok(!after.open&&/Three days in Baixa/.test(after.echo),'Done closes the sheet and the leaf keeps the sentence',JSON.stringify(after));
+  ok(/Three days in Baixa/.test(after.brief),'and it really does go out, word for word, in the brief',after.brief.slice(-300));
   await ctx.close();
 }
 {

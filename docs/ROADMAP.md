@@ -1790,6 +1790,38 @@ match. Verified by widening the anchor back and watching it go red.
 **Gap 5 is the only one of the five left**, undesigned by the handoff's own
 statement and running on its interim wiring.
 
+### Phase 34 — the kind and the question (shipped — v7.44.0)
+
+*Turn 7, and the last of the five founder calls.*
+
+**Gap 5, and it was a removal nobody had noticed.** Turn 1 replaced the
+composer's six *"what kind of ask"* chips with one derived sentence and dropped
+the free-text question with them. Both are live capability: `ASK_KINDS` has six
+entries and **four are not places**, and `askPromptText` appends `question` to
+the brief verbatim. A route and a friend's taste had nowhere to be chosen. Turn 4
+shipped the interim the handoff asked for and recorded it as interim; this is
+the sheet it was waiting for.
+
+**Almost nothing is redrawn** — the chips are the shipping group moved, the
+question keeps its label, marker and placeholder word for word. The one new
+thing is the **consequence line**: what the pick changes, the field and the
+reach, and never the scope.
+
+**A disagreement inside the handoff, resolved and recorded.** §B5 states the
+rule — the line never restates scope, because the leaf's own line does that and
+*"both lines on one screen must not say the same sentence twice"* — and its
+table obeys it. Its own `7a` capture does not: that frame reads *"every cup you
+have written there is the scope"*, the leaf line verbatim. The table shipped.
+
+**The echo carries the argument.** A written question shows back on the leaf in
+the keeper's own words, with a `change` beside it. Nothing in Carta leaves the
+device unseen; a sentence behind a button would have been the one thing that did.
+It is repainted *behind* the sheet as it is typed, so a swipe dismissal keeps it
+exactly as `Done` does.
+
+**All five gaps are now settled.** The remaining open items are the app's own:
+`CITY_ARCS` holds one key, `landKey()` is parked, and the third split is due.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner
