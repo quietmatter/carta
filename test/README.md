@@ -1,9 +1,9 @@
 # Verifying the app
 
-Six harnesses. Two need nothing but Node; four boot the real app in a
+Seven harnesses. Two need nothing but Node; five boot the real app in a
 browser against the seeded record in `fixtures/env.js` (store keys remapped
 from `carta7.design.*` to the app's own `carta7.*`). All of them fail on any
-assertion, and the browser four also fail on any console error or page error.
+assertion, and the browser five also fail on any console error or page error.
 
 ```
 # no browser, no network, seconds
@@ -16,11 +16,12 @@ node test/verify-door.js       # the front door, all five states — 59 checks
 node test/verify-ask.js        # the ask at the front door — 170 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32 seam — 16 checks
+node test/verify-safearea.js   # the notch and the indicator — 15 checks
 ```
 
-**All six run in CI** on every push and pull request to `main`
+**All seven run in CI** on every push and pull request to `main`
 (`.github/workflows/tests.yml`). The static pair runs first and the browser
-four are gated behind it, so a syntax error never pays for a browser
+five are gated behind it, so a syntax error never pays for a browser
 download.
 
 ## Finding a browser

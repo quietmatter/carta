@@ -7,6 +7,65 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — the device's own edges, held once (v7.42.3)
+
+- **The fourth report on the same bug, and the one that says the approach was
+  wrong.** The keeper came back with four screenshots: the Atlas correct, and
+  the Shelf, the Journal and the ask composer all still drawing their headers
+  under the clock, with the bar's ember block stopping short of the bottom
+  edge on every screen. v7.37.6, v7.41.1 and v7.42.2 had each fixed the one
+  surface that had been looked at. Three rounds of that is not bad luck; it
+  is what a cross-cutting layout law gets when it is treated as a per-header
+  bug.
+- **Why it kept escaping.** `env(safe-area-inset-*)` reads 0 in headless
+  Chromium and **cannot be overridden**, so every harness "passed" on a frame
+  with no notch in it. Each fix shipped with a `[ ]` in its own test plan
+  saying only the keeper's device could confirm it — and each time the
+  keeper's device found the next instance. The insets are now named once as
+  `--sat`/`--sab` on `:root`, valued from `env()`, and read through `var()`
+  everywhere. A var CAN be overridden, which is the whole point: the harness
+  sets them and the app lays itself out as it would on a phone.
+- **Shipped, and the shape of it matters.** The top is a *margin* on
+  `main:not(.fixed)`, not padding. Padding sits inside the scrollport, so
+  content scrolls straight through it and up under the clock — which is
+  exactly what the chapter screens were doing, and what padding would have
+  "fixed" while leaving. Moving main's box means main's own overflow does the
+  clipping: nothing can be drawn into the band at any scroll position, and a
+  sticky `.shdr` stops at the right line with no arithmetic of its own (the
+  first attempt at this entry put the inset in `.shdr`'s padding, which works
+  for a header and does nothing for the four screens that have none — the
+  generic harness is what caught that). `main.fixed` keeps its margin at zero
+  and bleeds under the status bar as designed. The bottom allowance moved off
+  `nav.tabs`' padding and into the buttons', so each paints to the true edge
+  and only its label steps up clear of the indicator; a BARELESS screen, with
+  no bar beneath it, carries the allowance itself via `main.bare`.
+- **`test/verify-safearea.js`, the seventh harness.** It renders a real
+  Dynamic Island (59/34 CSS px), walks the three rooms, the four walks, the
+  record, the taste, the composer and a cup, and fails on **any** text drawn
+  into either band — measured as the glyph range rather than the element box
+  (so a bar button may reach the edge while its label may not), clipped to
+  every scrolling ancestor (so a row merely scrolled past the fold is not
+  mistaken for one under the indicator), and occlusion-tested with
+  `elementFromPoint` (so a row hidden behind a sticky header is correctly
+  ignored). It is deliberately generic rather than a list of the headers
+  already known to be wrong: a screen nobody thought to look at fails here.
+  It found two the audit had not — the chapter screens' own back button, and
+  body text scrolling up under the clock on the country and region chapters.
+- **The check was verified by failing.** Per this file's own rule from Phase
+  32 — a check that has never failed on the bug it was written for has only
+  been observed to pass — the fix was neutralised twice: with the top rule
+  reverted, 8 of 15 fail; with the bar's allowance put back on the nav, the
+  bar check reports `810 of 844`, which is the keeper's gap to the pixel.
+- **The band, recorded rather than absorbed.** `index.html` was already 74
+  lines over at 5,074; this adds 35 (the rule, the harness's reason written
+  into the comment beside it) for **5,109 / 5,000**. Noted here as §1 asks,
+  not paid for by shaving something else. Phase 32's note that the file now
+  crosses on ordinary small fixes with no feature behind them stands, and
+  this is another one.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-28 — the wordmark, out from under the status bar (v7.42.2)
 
 - **Confirming the standalone fix finally worked turned up the next thing it

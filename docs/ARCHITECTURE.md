@@ -566,6 +566,34 @@ Carta 7 is built exactly the way classic was, smaller:
   rather than the next amendment — and the third split has a candidate already
   named above (the room-sized views, `vJournal`/`vShelf`/`vRecord`).
 
+  **v7.42.3 takes it to 5,109 / 5,000** (370.0 KB — bytes still comfortable at
+  74 %), and makes the same point a fourth time: 35 lines, no feature, a
+  layout law and the reasoning written beside it. Recorded, not absorbed.
+
+  *The device's own edges are a law, not a per-screen fix.* A home-screen
+  install draws under the notch and behind the home indicator on **every**
+  surface. Carta met that one header at a time three times over (v7.37.6,
+  v7.41.1, v7.42.2) and the keeper found the next instance each time, so it
+  is written here now:
+
+  - The two insets are named once — `:root{--sat;--sab}`, valued from
+    `env()` — and **everything reads the custom property, never `env()` at
+    the point of use**. This is not style: `env()` cannot be overridden, so a
+    call site that uses it directly is a call site no harness can render or
+    assert. A var can be, and `test/verify-safearea.js` does.
+  - A scrolling screen (`main:not(.fixed)`) begins below the notch by
+    **margin**, not padding. Padding is inside the scrollport and content
+    scrolls straight through it; a margin moves main's box, so main's own
+    overflow clips the band at every scroll position and a sticky `.shdr`
+    needs no arithmetic of its own.
+  - A full-bleed screen (`main.fixed`) keeps its margin at zero and bleeds
+    under the status bar on purpose. **Its own overlay headers carry the
+    inset themselves** — that is the one place a call site still adds it.
+  - The bottom allowance belongs to the bar's **buttons**, not the bar: on
+    the bar it sat outside every button's box and the door's ember block
+    stopped short of the edge. A BARELESS screen has no bar beneath it and
+    carries the allowance itself (`main.bare`).
+
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single

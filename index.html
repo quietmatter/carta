@@ -84,6 +84,16 @@ html[data-theme="dusk"]{
   --signal:var(--ca-ember-dusk); --signal-ink:var(--ca-night-900);
   --line-2:var(--ca-night-700); --paper-3:var(--ca-night-600);
 }
+/* the device's own edges, named once. Every safe-area allowance in Carta reads
+   these rather than calling env() at the point of use, for two reasons: a
+   standalone launch draws under the notch and the home indicator on EVERY
+   screen, so this is a layout law and not a per-header fix (it was patched
+   three times as the latter, at 7.37.6, 7.41.1 and 7.42.2, each time fixing
+   the one surface that had been looked at); and env() cannot be overridden,
+   so a var() indirection is the only way a harness can render the inset and
+   assert against it. test/verify-safearea.js sets these and checks the
+   result. */
+:root{--sat:env(safe-area-inset-top);--sab:env(safe-area-inset-bottom)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 html{background:var(--surface-page)}
@@ -106,6 +116,20 @@ main{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:
    it — takes the scroll off main and manages it inside itself */
 main.fixed{overflow:hidden}
 main.fixed>*{position:absolute;inset:0}
+/* A scrolling screen begins below the notch, and it is a MARGIN rather than
+   padding on purpose: padding is inside the scrollport, so content scrolls
+   straight through it and up under the clock — which is exactly what a keeper
+   saw on every room. Moving main's box instead means main's own overflow does
+   the clipping, so nothing can be drawn into the band at any scroll position,
+   sticky headers stop at the right line with no arithmetic of their own, and
+   the strip above shows body's paper. A full-bleed screen (main.fixed) keeps
+   its margin at zero and bleeds under the status bar as designed; its own
+   overlay headers carry the inset themselves.
+   A screen the bar is hidden under (BARELESS) also reaches the bottom edge, so
+   a scrolling one pads its last row clear of the home indicator — padding is
+   right here, since the ask is only that the end of the scroll can clear it. */
+main:not(.fixed){margin-top:var(--sat)}
+main.bare:not(.fixed){padding-bottom:var(--sab)}
 .pad{padding:0 20px 26px}
 
 h2{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);text-transform:uppercase;
@@ -235,11 +259,17 @@ details.more[open] summary{margin-bottom:10px}
 /* the bar sits above the leaf's inner rule (body::before, z-index 35) — a
    hairline running across the door's ember block reads as a mistake, not a
    margin */
+/* the home-indicator allowance is the BUTTONS' bottom padding, not the bar's.
+   As the bar's own padding it sat outside every button's box, so the door's
+   ember block stopped short of the screen edge and the paper behind it read as
+   a gap under the bar on every screen. Carried by the buttons, each one paints
+   to the edge and only its label steps up clear of the indicator. */
 nav.tabs{flex:none;background:var(--surface-card);display:flex;align-items:stretch;z-index:36;
-  padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line)}
-nav.tabs button{flex:1;appearance:none;-webkit-appearance:none;background:none;padding:12px 4px 14px;
+  border-top:1px solid var(--line)}
+nav.tabs button{flex:1;appearance:none;-webkit-appearance:none;background:none;
+  padding:12px 4px calc(14px + var(--sab));
   color:var(--ink-3);font-family:var(--sans);font-size:11.5px;
-  letter-spacing:var(--track-label);text-transform:uppercase;font-weight:500;min-height:56px;
+  letter-spacing:var(--track-label);text-transform:uppercase;font-weight:500;min-height:calc(56px + var(--sab));
   border:none;border-top:2px solid transparent;margin-top:-1px}
 nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 /* the door is the one ember in the bar — a persistent block, not a fourth room.
@@ -263,7 +293,7 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 .sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;
   background:var(--paper);border-radius:0;border-top:1px solid var(--line-strong);z-index:50;
   max-height:92vh;max-height:92dvh;overflow-y:auto;overflow-x:hidden;display:none;
-  padding:8px 18px calc(22px + env(safe-area-inset-bottom));transition:transform var(--mo-base) var(--mo-ease)}
+  padding:8px 18px calc(22px + var(--sab));transition:transform var(--mo-base) var(--mo-ease)}
 .sheet.open{display:block}
 .sheet .grab{height:26px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
 .sheet .grab::before{content:"";width:34px;height:3px;background:var(--ink-3);border-radius:2px;transition:background .15s,width .15s}
@@ -280,7 +310,7 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 .kv .v{font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
 .kv .v.score,.rowlink .go.score,.score{color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
 
-.toast{position:fixed;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+.toast{position:fixed;top:calc(14px + var(--sat));left:50%;transform:translateX(-50%);
   background:var(--ink);color:var(--paper);padding:9px 18px;border-radius:var(--chipr);font-family:var(--sans);font-size:13px;
   z-index:99;opacity:0;transition:opacity .2s;pointer-events:none;
   max-width:calc(100% - 28px);white-space:normal;text-align:center;line-height:1.45}
@@ -838,7 +868,7 @@ button.led:active{background:var(--paper-2)}
  */
 .askwait{position:absolute;inset:0;overflow:hidden}
 .askwait .plate{position:absolute;inset:0;background:var(--surface-sunk);overflow:hidden}
-.askwait .prog{position:absolute;z-index:4;left:20px;right:20px;top:78px}
+.askwait .prog{position:absolute;z-index:4;left:20px;right:20px;top:calc(78px + var(--sat))}
 .askwait .prog .meta{display:flex;justify-content:space-between;gap:12px;margin-top:9px}
 .askwait .prog .meta .l{font-family:var(--sans);font-size:var(--s11);letter-spacing:var(--track-label);
   text-transform:uppercase;color:var(--ink-3);font-weight:500}
@@ -846,7 +876,7 @@ button.led:active{background:var(--paper-2)}
 /* the narration reads UP out of the plate, so the scrim is the paper and the
    lines are what is written on it. Read through, never tapped — the one thing
    in it that is a control hands its own taps back, the way .fadeleaf does. */
-.askwait .narr{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:0 20px 18px;
+.askwait .narr{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:0 20px calc(18px + var(--sab));
   display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;
   transition:height var(--mo-base) var(--mo-ease);
   background:linear-gradient(to top,var(--surface-card) 0%,
@@ -960,11 +990,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.42.2"></script>
-<script src="carta-plate.js?v=7.42.2"></script>
-<script src="carta-shot.js?v=7.42.2"></script>
-<script src="carta-ask.js?v=7.42.2"></script>
-<script src="carta-atlas.js?v=7.42.2"></script>
+<script src="carta-map.js?v=7.42.3"></script>
+<script src="carta-plate.js?v=7.42.3"></script>
+<script src="carta-shot.js?v=7.42.3"></script>
+<script src="carta-ask.js?v=7.42.3"></script>
+<script src="carta-atlas.js?v=7.42.3"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -2116,6 +2146,10 @@ function render(){
   // narration scrimmed over it, the same shape the door itself keeps
   m.classList.toggle('fixed',view.kind==='city'||view.kind==='atlas'||view.kind==='asking'
     ||view.kind==='askresult'||view.kind==='askfind'||view.kind==='ask');
+  // with the bar hidden there is nothing under main carrying the home
+  // indicator's allowance, so main carries it itself — otherwise the last row
+  // of a bareless screen (a cup, the brief, a shot) ends under the indicator
+  m.classList.toggle('bare',bare);
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=keep;
   _askSettle=false;
@@ -4935,8 +4969,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.42.2';
+const APP_VERSION='7.42.3';
 const CHANGELOG=[
+  {v:'7.42.3',d:"The device's own edges, held once instead of a header at a time. A home-screen install draws under the notch and behind the home indicator on every screen, and Carta had been meeting that one surface at a time — three fixes, three versions, each correcting the screen that had been looked at. Every room's header sat under the clock, text scrolled up under it on the chapters, and the bar's ember block stopped short of the bottom edge with paper showing under it. A scrolling screen now begins below the notch as a rule, so its own overflow clips the band and nothing can be drawn into it at any scroll position; the bar's allowance moved into the buttons, so each one paints to the edge and only its label steps up clear of the indicator; and a screen with the bar hidden carries the allowance itself. The full-bleed map still bleeds, which was always the point of it."},
   {v:'7.42.2',d:"The wordmark, out from under the status bar. Confirming the standalone fix finally worked turned up the next thing it made visible: the passport's own \"Carta\" and a city's own header sit on an overlay positioned in fixed pixels from the top of a full-bleed plate, with no allowance for the notch or Dynamic Island a real standalone launch draws behind. Both now clear it the same way the toast already did, and the city header's own map padding and fade move down with it — a header that clears the status bar but then draws its text over the map it sits on would just be the same bug moved fourteen pixels down."},
   {v:'7.42.1',d:"Restore from a backup. exportLedgerJSON has backed up the record since Phase 8 and had no way back in — the only reason to reinstall an iOS home-screen icon is to fix its launch mode, which can only be done by deleting and re-adding it, and until now that meant losing everything with no way to recover it beyond the raw JSON file. It reads the same D a backup already writes verbatim, so restoring is a plain replace, never a merge — the record page states the backup's own counts before anything happens, and says plainly when the device already holds a record that restoring will replace."},
   {v:'7.42.0',d:"The answer stands on its city. The plate under an answer was six dots fitted to a box — it drew where your cafés were and nothing about where that is. It is the city now: the coastline where Carta has one on file, a kilometre grid, and your reach drawn as rings, so “a short drive” is a distance on the page rather than a phrase. Each café is numbered to match its row, and tapping the numeral opens the same argument the row opens — the map and the list are one surface. A finding stands on its own three kilometres the same way, under the streets when they load and alone when they don’t. Carta holds one coastline today, so most cities draw a ruled field with no shore. That is the truth about what is on file, not a map that failed to load, and the reach and the grid are the plate’s argument either way. Nothing new is fetched, and nothing is drawn that wasn’t confirmed."},

@@ -363,7 +363,7 @@ function doorFieldHTML(){
    no taste to argue from yet — and while the record is up, which has taken the
    screen. */
 function doorHeadHTML(taste){
-  return `<div class="overlay" style="left:20px;right:20px;top:calc(22px + env(safe-area-inset-top));display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+  return `<div class="overlay" style="left:20px;right:20px;top:calc(22px + var(--sat));display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
     <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
     ${taste?'<button class="omini bare" onclick="openTaste()">Your taste →</button>':''}
   </div>`;
@@ -1245,15 +1245,15 @@ function vCityChapter(city){
   const map=streetsHTML(places,{boxStyle:'position:absolute;inset:0',scoreOf:p=>placeAvg(p.id),
     // a plot scaled into the band above the sheet gets small — the dot grows to
     // meet it, since a mark you can't see isn't a mark. Both offsets carry the
-    // same env(safe-area-inset-top) the header below adds, so the map still
+    // same --sat the header below adds, so the map still
     // clears the header's own lower edge rather than drawing under it.
-    labels:'on',dot:16,noteStyle:'top:calc(82px + env(safe-area-inset-top));bottom:auto',
-    plotWrap:'position:absolute;left:0;right:0;top:0;bottom:43%;padding:calc(92px + env(safe-area-inset-top)) 34px 14px',
+    labels:'on',dot:16,noteStyle:'top:calc(82px + var(--sat));bottom:auto',
+    plotWrap:'position:absolute;left:0;right:0;top:0;bottom:43%;padding:calc(92px + var(--sat)) 34px 14px',
     emptyHTML:'<div class="mapbox" style="position:absolute;inset:0"></div>'});
   return `<div class="cityroot">
     ${map}
-    <div class="fade top" style="height:calc(130px + env(safe-area-inset-top));z-index:3"></div>
-    <div class="overlay" style="left:18px;right:18px;top:calc(18px + env(safe-area-inset-top));display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+    <div class="fade top" style="height:calc(130px + var(--sat));z-index:3"></div>
+    <div class="overlay" style="left:18px;right:18px;top:calc(18px + var(--sat));display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
       ${backMiniHTML('','',true)}
       <div style="text-align:right">
         <div class="eyebrow" style="margin:0">A city</div>
@@ -1317,4 +1317,4 @@ window.vCountryChapter=vCountryChapter;
 window.vProducerPage=vProducerPage;
 window.vRegionChapter=vRegionChapter;
 
-window.ATLAS_VERSION='7.42.2';
+window.ATLAS_VERSION='7.42.3';
