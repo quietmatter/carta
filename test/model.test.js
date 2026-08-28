@@ -133,6 +133,23 @@ scoped = tm.scope('country', 'ethiopia');
 assert.deepEqual(new Set(scoped.had), new Set(["Sey's — Gedeb", "Sey's — Yirg"]));
 ok('scope(country) reads every cup on a coffee from that country, home cups included');
 
+/* ---- scope().n — the CUP count, which is not the coffee count (v7.41.0)
+   The composer's read-as line says "nine cups, two cafés"; `had` is a Set of
+   coffee labels, so a keeper who drank one coffee three times has n:3, had:1.
+   Reading `had.length` for that line would have quietly under-counted every
+   returning keeper — which is exactly the reader this line is written for. */
+scoped = tm.scope('city', 'Portland');
+assert.ok(scoped.n >= scoped.had.length, 'n counts cups, so it is never below the coffee count');
+assert.equal(scoped.n, ledger().cups.filter(c => {
+  if (c.kind !== 'bar') return false;
+  const p = ledger().places.find(x => x.id === c.placeRef);
+  return !!(p && p.city && p.city.toLowerCase() === 'portland');
+}).length, 'n is exactly the cups the scope selected');
+ok('scope().n counts cups, distinct from had which counts coffees');
+
+assert.equal(tm.scope('city', 'Nowhere').n, 0, 'an unknown city scopes to no cups');
+ok('scope().n is 0 for a city the record does not name, never undefined');
+
 // ---- an empty ledger never fakes a reading ----
 tm = M.tasteModel({ coffees: [], places: [], cups: [] });
 assert.equal(tm.bar.floor, null);

@@ -7,6 +7,94 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — Phase 31, part three: the composer, and a line that only counts (v7.41.0)
+
+- **Turn 4 answers founder call two, and corrects its own turn-1 drawing.**
+  The handoff came back with no new screens — `1a`–`3d` are unchanged — and
+  one new section, §B2, replacing a single line of §B. Turn 1 drew "Read as a
+  city, nothing on the record there yet". Turn 4 says that line was the gap:
+  **nothing on the device knows what "Lisbon" is**, `askScopeOf` matches a
+  city only where `knownCities()` already names it, and takes a country at
+  the keeper's own word. So the kind is only ever the keeper's own *setting*
+  said back — "asked as a city" — never "read as a city". The line reports
+  what the record has, counted, and never what a name is.
+- **Which is the same ruling the ledger under it already followed**, and the
+  same one the recommendation had reached from the other side: derive from the
+  record alone, never claim a lookup. The composer's one promise is that
+  nothing leaves the device until *Ask Carta* is tapped; a line claiming to
+  have recognised a place would have been the thing that broke it. There is a
+  check that typing a name performs no request at all.
+- **Six states, each with its own condition and copy**, and two of them exist
+  because the record's own shapes make them reachable:
+  - **state 3** — `knownCities()` is built from *places*, not cups, so a café
+    can be on the record with nothing scored in it. It states the count it has
+    and names the one it lacks rather than printing "zero cups". The fixture
+    cannot produce this state, so the harness seeds it.
+  - **the country trap** — `tasteModel().scope('country', …)` matches on the
+    *coffee's origin*, not on where the cup was drunk. A country ask therefore
+    never says "cups read there"; it says *coffees from there, excluded by
+    name*, which is exactly what that scope contributes to the brief.
+  - **state 4 covers `neighborhood` and `route` always** — `askScopeOf` has no
+    branch for either, so neither ever resolves to a scope even where the
+    record names the city it sits in. Current behaviour, stated rather than
+    papered over.
+- **The composer moved onto a leaf** (§B, `1d`/`1i`): a 140px strip of the
+  door's own plate and a leaf over it, with the bar staying. `ask` left
+  `BARELESS` — it is not a walk you can lose your place in, it is a question
+  asked in front of the ground it is about.
+- **One additive change inside the tested pure block.** `tasteModel()`'s inner
+  `scope()` now also returns `n`, the cup count in the scope — distinct from
+  `had`, which counts coffees (three cups of one coffee is `n:3, had:1`).
+  Nothing else reads it; `model.test.js` gains a case for the distinction.
+
+### Gap 5, and what was done about it
+
+Turn 4 says plainly that the kind sheet — the six kinds and the free-text
+question — **is not designed in this bundle**, and instructs: wire *read it
+as* to the shipping chip group in place until it is. That is what shipped: a
+disclosure on the leaf itself carrying both. It is **not the designed
+surface**, and it is recorded as interim here rather than presented as
+finished. What it does guarantee is that nothing reachable today stopped
+being reachable — all six kinds and the question are one tap from the leaf,
+and the harness checks exactly that.
+
+### Two things turn 3 left behind, found while making room
+
+- **Dead code.** `findingRowHTML` and `mentionRowHTML` — the single-column
+  answer page's row builders — survived the index that replaced them, along
+  with the four helpers only they called and, in `index.html`, `details.fold`
+  (zero users anywhere), `.find`, `.find .rk` and `.ground`. Verified dead by
+  reference before cutting, not assumed. That is where the room for this
+  phase came from, rather than from another pass of shaving comments.
+- **A behaviour silently lost.** `_askSettle` had no live reader after turn 3,
+  which means the answer stopped arriving *written* and started arriving
+  pasted. The mechanic was intact; the new index rows simply never used it.
+  They do now, staggered the way the old findings were.
+- **And one rule where there were three.** `stopTop()` is now the single
+  scaling function every leaf on these screens travels through — the answer's
+  three stops, a finding's two, and the composer's one — so none of them can
+  be pinned to an 812-pixel literal again. That trap has now been walked into
+  three times (Phase 30, part two, and the composer here).
+
+### Still open
+
+**Founder call three, `<carta-city>`, alone.** Calls two and five are closed —
+two by turn 4's own design, five by turn 4's own interim instruction. The
+drawn city plate is still not built, still needs a home (`carta-map.js` owes
+no §1 argument; a seventh file does), and `CITY_ARCS` still holds one key.
+
+### Verification
+
+- `verify-static.js` 19 · `verify-door.js` 59 · `verify-split.js` 12 ·
+  `verify-v7.35.js` 41, unchanged. `model.test.js` 139 → 141, the two cases
+  holding `scope().n` apart from `had.length`.
+- **`verify-ask.js`** grows 132 → 155: all six read-as states with their exact
+  copy, the words "read as" proven absent from every one of them, **typing a
+  name performing no request at all**, state 3 seeded because the fixture
+  cannot reach it, the composer's leaf and bar, all six kinds and the question
+  reachable behind *read it as*, the reference frame's own 122 over 140, and
+  320px.
+
 ## 2026-08-28 — Phase 31, part two: the answer as an index (v7.40.0)
 
 - **The design answered the question it was asked.** Part one shipped the

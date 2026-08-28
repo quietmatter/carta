@@ -561,45 +561,150 @@ function openAskBrief(){
   const scope=askScopeOf(askDraft.kind,askDraft.dest);
   openBriefScreen(scope.kind==='city'?scope.id:'');
 }
+/* ---- the read-as line (turn 4, §B2) ------------------------------------
+ * One line, two clauses, one separator:
+ *   *what the record has for this name* — *what the ask will be scoped to* · read it as
+ *
+ * **The kind is never a finding.** Nothing on this device knows whether
+ * "Lisbon" is a city, which country it is in, or where it is on the ground —
+ * and nothing is going to ask. `askScopeOf` matches a city only where
+ * `knownCities()` already names it, and takes a country at the keeper's own
+ * word. So the kind is only ever said back as the keeper's own SETTING —
+ * "asked as a city" — never "read as a city". Turn 1 drew the second thing;
+ * this is the correction, and it matters because the composer's one promise
+ * is that nothing leaves the device until *Ask Carta* is tapped. A line that
+ * claimed to have recognised a place would be the thing that broke it.
+ *
+ * Counted, never estimated: every figure below is read off cups and cafés
+ * already written down, and the line never names the place except where the
+ * name came off one of them.
+ */
+const ASK_KIND_PHRASE={city:'a city',neighborhood:'a neighborhood',
+  near:'a point to start from',country:'a country',route:'a route',
+  friend:"a friend's taste"};
+const PLACE_KINDS=new Set(['city','neighborhood','near','country','route']);
+const pl=(n,one,many)=>`${words(n)} ${n===1?one:many}`;
+function askReadAsParts(){
+  const kind=askDraft.kind,dest=(askDraft.dest||'').trim();
+  if(!dest)return ['Nothing named','the ask reads every cup on the record'];
+  if(!PLACE_KINDS.has(kind))
+    return ['Not a place','every cup on the record goes out, read against your words'];
+  const scope=askScopeOf(kind,dest);
+  const s=scope.kind?tasteModelMemo().scope(scope.kind,scope.id):null;
+  if(scope.kind==='city'){
+    const cafes=cityPlaces(scope.id).length;
+    return s.n
+      ?[`On your record: ${pl(s.n,'cup','cups')}, ${pl(cafes,'café','cafés')}`,
+        'the ask is scoped to them']
+      /* knownCities() is built from PLACES, not cups: a café can be on the
+         record with nothing scored in it. State the count there is, and name
+         the one there isn't, rather than printing "zero cups". */
+      :[`${capFirst(pl(cafes,'café','cafés'))} on your record, no cup scored yet`,
+        `the ask is scoped to ${cafes===1?'it':'them'}`];
+  }
+  /* the country trap: tasteModel's country scope matches on the COFFEE's
+     origin, not on where the cup was drunk, so a country ask must never say
+     "cups read there". It says what is true — and what the country scope
+     actually contributes to the brief. */
+  if(scope.kind==='country')
+    return ['A country, at your word',
+      s.had.length?`${pl(s.had.length,'coffee','coffees')} from there, excluded by name`
+                  :'nothing from there on your record yet'];
+  /* neighborhood and route land here ALWAYS — askScopeOf has no branch for
+     either, so they never resolve to a scope even where the record names the
+     city they sit in. Current behaviour, stated rather than papered over. */
+  return [`No cup read in ${dest}`,
+    `asked as ${ASK_KIND_PHRASE[kind]||'you set it'}, scoped to every cup instead`];
+}
+function askReadAsHTML(){
+  const p=askReadAsParts();
+  return `<span class="h">${esc(p[0])}</span> — ${esc(p[1])} · `
+    +`<button class="b" onclick="toggleAskKind()">read it as</button>`;
+}
+// the line follows the field as it is typed, without re-reading the screen —
+// the same reason the ledger beside it repaints in place: a full render()
+// under a thumb loses the tap
+function paintAskReadAs(){
+  const el=document.getElementById('ask_readas');
+  if(el)el.innerHTML=askReadAsHTML();
+}
+/* `read it as` opens the kind sheet — the six kinds and the free-text
+ * question. That sheet is gap 5 and is NOT designed in this bundle, so the
+ * handoff's own instruction is to wire this to the shipping chip group in
+ * place until it is. That is what this does: a disclosure on the leaf itself,
+ * carrying both the kinds and the question, so nothing that is reachable
+ * today stops being reachable. It is not the designed surface and is marked
+ * as such in the logbook. */
+let _askKindOpen=false;
+function closeAskKind(){_askKindOpen=false}
+function toggleAskKind(){captureAskDraft();_askKindOpen=!_askKindOpen;render()}
+function askKindPanelHTML(){
+  if(!_askKindOpen)return '';
+  return `<div class="askkind">
+    <div class="eyebrow" style="margin:0 0 9px">What kind of ask</div>
+    <div class="picks">
+      ${ASK_KINDS.map(k=>`<button class="pick${askDraft.kind===k[0]?' on':''}" onclick="pickAskKind('${k[0]}')">${esc(k[1])}</button>`).join('')}
+    </div>
+    <label class="f" style="margin-top:14px"><span class="l">Anything else <span class="opt">optional</span></span>
+      <textarea id="ask_question" style="min-height:56px" placeholder="Three days in Baixa and Alfama, mostly on foot…">${esc(askDraft.question)}</textarea></label>
+  </div>`;
+}
+/* ---- the composer, on a leaf (§B; empty-record variant `1i`) -----------
+ * The ask composed on a full screen of its own: six chips, a field, a
+ * textarea, a ledger and a key box, with the plate it was asked from gone.
+ * It composes on the door's own furniture now — a 140px strip of the same
+ * plate, and a leaf over it — so the question is asked in front of the map
+ * it is about, and the bar stays under it because this is not a place you
+ * can lose your way out of.
+ */
+const ASK_LEAF_TOP=122;   // the handoff's own figure; 140 = this + the overlap
 function vAsk(){
   const key=askKey();
-  return `<div>
-    <div class="pad" style="padding-top:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:26px">
-        ${backMiniHTML('bare','flex:none;margin-left:-4px')}
-        <span class="eyebrow" style="margin:0">Sent with your brief</span>
+  const first=!live('cups').length&&!live('coffees').length;
+  const tasted=Object.values(tastedCountryMap()).map(c=>c.label).join(',');
+  const reach=REACH_KINDS.has(askDraft.kind);
+  return `<div class="stage askstage">
+    <div class="plate mapbox passport" style="height:${stopTop(ASK_LEAF_TOP)+ANS_OVERLAP}px">
+      <carta-atlas style="position:absolute;inset:0" caption="off"
+        frame="${first||!tasted?'belt':'tasted'}" tasted="${first?'':esc(tasted)}"></carta-atlas>
+      <div class="fade top" style="height:96px"></div>
+      <div class="overlay" style="left:20px;right:20px;top:22px">
+        <div style="font-family:var(--serif);font-size:var(--s15);letter-spacing:.2em;text-transform:uppercase;font-weight:600">Carta</div>
       </div>
-      <div class="eyebrow" style="color:var(--accent);margin-bottom:10px">Ask Carta</div>
-      <input type="text" id="ask_dest" value="${esc(askDraft.dest)}" aria-label="Where"
-        oninput="askDraft.dest=this.value;paintAskLedger()"
-        placeholder="${askDraft.kind==='friend'?'She likes what I like, but darker':askDraft.kind==='near'?'Huntington Park':'Lisbon'}"
-        style="width:100%;font-family:var(--serif);font-weight:600;font-size:1.875rem;letter-spacing:-.02em;line-height:1.12;padding:2px 0 12px;border:0;border-bottom:1px solid var(--ink-3)">
-
-      <div class="eyebrow" style="margin:24px 0 9px">What kind of ask</div>
-      <div class="picks">
-        ${ASK_KINDS.map(k=>`<button class="pick${askDraft.kind===k[0]?' on':''}" onclick="pickAskKind('${k[0]}')">${esc(k[1])}</button>`).join('')}
+    </div>
+    <div class="leaf" id="askleaf" style="top:${stopTop(ASK_LEAF_TOP)}px;padding:16px 20px 0">
+      <div class="body">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+          <span class="eyebrow" style="margin:0">The ask</span>
+          <button class="qlink" style="flex:none" onclick="goBack()">Not now</button>
+        </div>
+        <input type="text" id="ask_dest" value="${esc(askDraft.dest)}" aria-label="Where"
+          oninput="askDraft.dest=this.value;paintAskReadAs();paintAskLedger()"
+          placeholder="${askDraft.kind==='friend'?'She likes what I like, but darker':askDraft.kind==='near'?'Huntington Park':'Lisbon'}"
+          style="width:100%;font-family:var(--serif);font-weight:600;font-size:1.875rem;letter-spacing:-.02em;line-height:1.12;padding:6px 0 12px;border:0;border-bottom:1px solid var(--ink-3);background:transparent;color:var(--ink)">
+        <div class="ra" id="ask_readas">${askReadAsHTML()}</div>
+        ${askKindPanelHTML()}
+        ${reach?`<div class="eyebrow" style="margin:22px 0 9px">How far you’ll go</div>
+        <div class="picks">
+          ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach('${jsq(r)}')">${esc(r)}</button>`).join('')}
+        </div>`:''}
+        <div class="shead" style="margin:24px 0 0;padding-bottom:8px">
+          <span class="l">What goes out with this</span><span class="r">tap to read it in full</span></div>
+        <button class="led" id="ask_led" style="margin-top:14px" onclick="openAskBrief()">${askLedgerRowsHTML()}</button>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:14px">
+          <span style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">${
+            key?'Your key is on this device, and nowhere else.':'No key on this device yet.'}</span>
+          <button class="qlink" style="flex:none" onclick="openAskKey()">${key?'Change it':'Set one'}</button>
+        </div>
+        <button class="btn btn-graphite" style="min-height:52px;padding:15px 16px;margin-top:16px" onclick="runAsk()">Ask Carta →</button>
+        <div style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3);margin-top:10px;padding-bottom:16px">${
+          first?'Nothing scored yet, so the ask goes out on what you notice alone. No key, or the call fails, and you get the same brief to copy.'
+               :'The one thing in Carta that calls out, and only when you tap it.'}</div>
       </div>
-
-      ${REACH_KINDS.has(askDraft.kind)?`<div class="eyebrow" style="margin:22px 0 9px">How far you'll go</div>
-      <div class="picks">
-        ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach('${jsq(r)}')">${esc(r)}</button>`).join('')}
-      </div>`:''}
-
-      <label class="f" style="margin-top:24px"><span class="l">Anything else <span class="opt">optional</span></span>
-        <textarea id="ask_question" style="min-height:64px" placeholder="Three days in Baixa and Alfama, mostly on foot…">${esc(askDraft.question)}</textarea></label>
-
-      <div class="shead" style="margin-top:8px"><span class="l">What goes out with this</span><span class="r">tap to read it in full</span></div>
-      <button class="led" id="ask_led" style="margin-top:14px" onclick="openAskBrief()">${askLedgerRowsHTML()}</button>
-
-      <div class="box" style="margin-top:14px;padding:14px 16px;display:flex;align-items:baseline;justify-content:space-between;gap:12px">
-        <span style="font-family:var(--serif);font-size:15.5px;color:var(--ink-2)">${key?'Your key is on this device':'No key on this device yet'}</span>
-        <button class="text-action" style="flex:none;background:none;border:0;font-family:var(--sans);font-size:12px;cursor:pointer" onclick="openAskKey()">${key?'Change it':'Set one'}</button>
-      </div>
-      ${asktrustHTML()}
-      <button class="btn btn-primary" style="margin-top:16px;min-height:54px" onclick="runAsk()">Ask Carta</button>
-      <div class="note" style="margin-top:18px">The only thing in Carta that calls out, and only when you tap it. No key, or the call fails, and you get the same brief to copy.</div>
-    </div></div>`;
+    </div>
+  </div>`;
 }
+
 // the one door — content is either a plain prompt string (the ask) or a
 // content-block array carrying an image plus a prompt (the menu's OCR). The
 // ceiling is the caller's: an OCR is a list of lines, an ask is an argument,
@@ -926,22 +1031,14 @@ async function runAsk(){
     if(pageView&&pageView.kind==='asking')render();else toast(msg);
   }
 }
-/* a finding, set as an entry rather than a card: where it sits in the model's
- * own order, what it is best FOR, where it is, the figures off the brief it was
- * argued from, what to ask for at the counter, and the three marks that put it
- * on your own record. What could not be confirmed says so plainly and is never
- * drawn on the map (the grounding rule, non-negotiable).
- *
- * The number is the order the model argued, not a score Carta computed — plain
- * ink, never the ember. The ember is the 1–9 you gave a cup, and nothing here
- * has been drunk yet.
+/* the marks a finding can carry, and the chip that states a rotating menu.
+ * FIND_MARKS and `tag` outlive the single-column answer page they were written
+ * for — the finding's own page reads both (Phase 31 part two). What went with
+ * that page were its row builders: findingRowHTML, mentionRowHTML and the four
+ * helpers only they used. Verified dead before cutting, not assumed.
  */
 const FIND_MARKS=[['been','Been'],['booked','Booked'],['skip','Skip']];
 const tag=(text,lead)=>`<span class="pick mini tag${lead?' lead':''}">${esc(text)}</span>`;
-const marksHTML=f=>`<div class="picks" style="margin-top:12px">
-  ${FIND_MARKS.map(m=>`<button class="pick mini${f.status===m[0]?' on':''}" onclick="setFindStatus('${f.id}','${m[0]}')">${m[1]}</button>`).join('')}
-</div>`;
-const groundHTML=f=>`<span class="ground${f.grounded?'':' no'}">${f.grounded?'placed':'not confirmed'}</span>`;
 // the thin ledger-coupled wrapper over the pure matchFigure, the same way
 // matchNode wraps matchNodes: a figure the record can open becomes the app's
 // own .fig and lands on the very sheet Your taste opens; one it can't stays
@@ -953,49 +1050,11 @@ function fitFigureHTML(s){
   const call=m.kind==='anchor'?`openAnchorEvidence(${jsq(m.value)})`:`openVectorEvidence('${m.kind}',${jsq(m.value)})`;
   return `<button class="fig" onclick="${call}">${esc(s)}</button>`;
 }
-// a model that answers "Compton, Compton" is answering honestly — the area and
-// the city are the same place. Saying it twice is Carta's bug, not the model's.
-const whereHTML=f=>esc([f.neighborhood,f.city].filter(Boolean)
-  .filter((v,i,a)=>a.findIndex(x=>fold(x)===fold(v))===i).join(', ')||'no address could be confirmed');
 /* the settle — an answer arrives written, not pasted. Each row is held back a
- * beat longer than the one above it, so the list reads in the order it was
- * argued instead of landing as a wall. Played once, on arrival: marking a
- * finding re-reads this screen and must not write the whole page in again.
- * Under reduced motion nothing is delayed and nothing moves. */
+ * beat longer than the one above it, so the index reads in the order it was
+ * argued instead of landing as a wall. Played once, on arrival. */
 const settleCls=()=>_askSettle?' settle':'';
 const settleAt=i=>_askSettle?` style="animation-delay:${(0.12*i).toFixed(2)}s"`:'';
-// the same delay, for an element that already carries a style attribute
-const settleDelay=i=>_askSettle?`;animation-delay:${(0.12*i).toFixed(2)}s`:'';
-// i is the rank the model argued; `order` is only where the row falls in the
-// settle, so a mention can go on counting after the last finding
-function findingRowHTML(f,i,order){
-  const chips=[f.verdict?tag(f.verdict,true):'',f.travel?tag(f.travel):'',f.stale?tag('program rotates'):''].filter(Boolean).join('');
-  return `<div class="find${settleCls()}" id="find_${f.id}"${settleAt(order==null?i:order)}>
-    <div class="row">
-      <span style="font-family:var(--serif);font-size:17.5px"><span class="rk">${i+1}</span>${esc(f.name)}</span>
-      ${groundHTML(f)}
-    </div>
-    <div class="m" style="margin-top:3px">${whereHTML(f)}</div>
-    ${chips?`<div class="picks" style="margin-top:9px">${chips}</div>`:''}
-    ${f.why?`<div class="say">${esc(f.why)}</div>`:''}
-    ${(f.fit&&f.fit.length)?`<div class="m" style="margin-top:6px">${f.fit.map(fitFigureHTML).join(' · ')}</div>`:''}
-    ${f.order?`<div class="m" style="margin-top:6px"><span class="k">Ask for</span> ${esc(f.order)}</div>`:''}
-    ${marksHTML(f)}
-  </div>`;
-}
-// a place named only so you know it isn't the pick — the same row, one rung
-// quieter, and markable all the same: talked out of is not the same as unwanted
-function mentionRowHTML(f,i){
-  return `<div class="find${settleCls()}" id="find_${f.id}"${settleAt(i)}>
-    <div class="row">
-      <span style="font-family:var(--serif);font-size:16px;color:var(--ink-2)">${esc(f.name)}</span>
-      ${groundHTML(f)}
-    </div>
-    <div class="m" style="margin-top:3px">${whereHTML(f)}</div>
-    ${f.instead?`<div class="say">${esc(f.instead)}</div>`:''}
-    ${marksHTML(f)}
-  </div>`;
-}
 // every café an ask named, in one list — the marks, the pins and the taps all
 // read through this, so a mention and the wildcard are as markable as a finding
 function askNamed(a){
@@ -1055,10 +1114,13 @@ const ANS_STOPS=[454,398,180],ANS_OVERLAP=18,ANS_REST=1;
  * this returns the handoff's own 454 / 398 / 180 exactly. */
 const ANS_REF_MAIN=812-57,ANS_TOP_FLOOR=102;
 const askMainH=()=>{const m=document.getElementById('main');return (m&&m.clientHeight)||ANS_REF_MAIN};
-function ansTop(stop,H){
-  const leafNeeded=ANS_REF_MAIN-ANS_STOPS[stop];
-  return Math.max(ANS_TOP_FLOOR,Math.min(ANS_STOPS[stop],(H||askMainH())-leafNeeded));
+/* one stop, scaled: the leaf keeps the height it was drawn with and the plate
+   takes the shortfall, down to a floor. Every leaf on these three screens
+   travels through here, so none of them can be pinned to an 812 literal. */
+function stopTop(designed,H){
+  return Math.max(ANS_TOP_FLOOR,Math.min(designed,(H||askMainH())-(ANS_REF_MAIN-designed)));
 }
+const ansTop=(stop,H)=>stopTop(ANS_STOPS[stop],H);
 /* the plate always reaches 18px under the leaf and no further, so no stop
  * leaves a band of bare paper between them and none of it is drawn where it
  * cannot be seen. At the reference height that is the handoff's own 416 at
@@ -1144,7 +1206,7 @@ function ansRowHTML(a,f,i,anchor){
   const r=findingReading(f);
   const km=kmLabel(findingKm(anchor,f));
   const ground=[f.neighborhood,km].filter(Boolean).join(' · ');
-  return `<button class="idxrow" onclick="openAskFindingScreen(${jsq(String(a.id))},${jsq(String(f.id))})">
+  return `<button class="idxrow${settleCls()}"${settleAt(i)} onclick="openAskFindingScreen(${jsq(String(a.id))},${jsq(String(f.id))})">
     <span class="n${r?' been':''}">${i+1}</span>
     <span class="mid"><span class="t">${esc(f.name)}</span>${
       ground?`<span class="g">${esc(ground)}</span>`:''}</span>
@@ -1283,7 +1345,7 @@ function tasteFloorLabel(){
  *   down 122 over a 140 strip   what to order, how it fits, your mark
  */
 const FIND_STOPS=[398,122];
-const findTop=stop=>Math.max(ANS_TOP_FLOOR,Math.min(FIND_STOPS[stop],askMainH()-(ANS_REF_MAIN-FIND_STOPS[stop])));
+const findTop=stop=>stopTop(FIND_STOPS[stop]);
 const findPlateH=stop=>Math.max(findTop(stop)+ANS_OVERLAP,116);
 /* the plate's own clearance at each stop, stated rather than scaled: 70/64 in
    a 416 box leaves the pin between the header and the leaf; 24/30 in the 140
@@ -1446,6 +1508,11 @@ window.openAskKey=openAskKey;
 window.sleep=sleep;
 window.tag=tag;
 window.vAsk=vAsk;
+window.askReadAsHTML=askReadAsHTML;
+window.askReadAsParts=askReadAsParts;
+window.paintAskReadAs=paintAskReadAs;
+window.toggleAskKind=toggleAskKind;
+window.closeAskKind=closeAskKind;
 window.vAskResult=vAskResult;
 window.vAskFinding=vAskFinding;
 window.mountAnswer=mountAnswer;
@@ -1469,4 +1536,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.40.0';
+window.ASK_VERSION='7.41.0';

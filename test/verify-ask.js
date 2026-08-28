@@ -610,6 +610,112 @@ const findState=p=>p.evaluate(()=>{
   await ctx.close();
 }
 
+/* ---------- turn 4 · the composer's read-as line ----------
+   The line's whole point is that it is COUNTED, never inferred: nothing on the
+   device knows what "Lisbon" is, so the kind is only ever the keeper's own
+   setting said back — "asked as a city" — and never "read as a city". These
+   checks walk all six states and then prove the promise: composing performs no
+   network call of any kind. */
+{
+  const {ctx,page}=await boot({});
+  const fetched=[];
+  page.on('request',r=>fetched.push(r.url()));
+  await page.evaluate(()=>{askDraft.dest='';askDraft.kind='city';openAskScreen()});
+  await page.waitForTimeout(700);
+  const st=await page.evaluate(()=>{
+    const set=(k,d)=>{askDraft.kind=k;askDraft.dest=d;return askReadAsParts()};
+    return {empty:set('city',''),known:set('city','Lisbon'),unknown:set('city','Porto'),
+      hood:set('neighborhood','Baixa'),country:set('country','Ethiopia'),
+      none:set('country','Peru'),friend:set('friend','likes what I like')};
+  });
+  ok(/^Nothing named$/.test(st.empty[0])&&/every cup on the record/.test(st.empty[1]),
+    'read-as 1 — nothing named',JSON.stringify(st.empty));
+  ok(/^On your record: two cups, two cafés$/.test(st.known[0])&&/scoped to them/.test(st.known[1]),
+    'read-as 2 — a city the record names, counted',JSON.stringify(st.known));
+  ok(/^No cup read in Porto$/.test(st.unknown[0])&&/asked as a city/.test(st.unknown[1]),
+    'read-as 4 — a city it does not: ASKED as, never READ as',JSON.stringify(st.unknown));
+  ok(/asked as a neighborhood/.test(st.hood[1]),
+    'read-as 4 — a neighborhood always lands here: askScopeOf has no branch for it',JSON.stringify(st.hood));
+  ok(/^A country, at your word$/.test(st.country[0])&&/coffees from there, excluded by name/.test(st.country[1]),
+    'read-as 5 — a country says COFFEES from there, never cups read there',JSON.stringify(st.country));
+  ok(/nothing from there on your record yet/.test(st.none[1]),
+    'read-as 5 — and says so plainly where the record is silent',JSON.stringify(st.none));
+  ok(/^Not a place$/.test(st.friend[0]),'read-as 6 — a friend is not a place',JSON.stringify(st.friend));
+  // the whole line must never claim a lookup happened
+  const all=Object.values(st).map(x=>x.join(' ')).join(' | ');
+  ok(!/read as/i.test(all),'read-as — the words "read as" never appear: the kind is a setting, not a finding',all);
+  ok(!/\b(probably|looks like|appears)\b/i.test(all),'read-as — nothing is estimated');
+
+  // the promise: composing sends nothing
+  const before=fetched.length;
+  await page.evaluate(()=>{askDraft.dest='Reykjavík';paintAskReadAs();paintAskLedger()});
+  await page.waitForTimeout(1200);
+  const offsiteNow=fetched.slice(before).filter(u=>!/^http:\/\/127\.0\.0\.1/.test(u));
+  ok(offsiteNow.length===0,'read-as — typing a name performs no lookup, on or off device',JSON.stringify(offsiteNow));
+  await ctx.close();
+}
+/* state 3 — a city on the record with a café but nothing scored in it.
+   knownCities() is built from PLACES, so this state is reachable and the
+   fixture cannot produce it; it is seeded here rather than left untested. */
+{
+  const {ctx,page}=await boot({});
+  const line=await page.evaluate(()=>{
+    D.places.push({id:'p_new',createdAt:new Date().toISOString(),name:'Kaffi',city:'Reykjavík',aka:[]});
+    save();askDraft.kind='city';askDraft.dest='Reykjavík';
+    return askReadAsParts();
+  });
+  ok(/^One café on your record, no cup scored yet$/.test(line[0]),
+    'read-as 3 — a café on the record with nothing scored says the count it has',JSON.stringify(line));
+  ok(/scoped to it$/.test(line[1]),'read-as 3 — and scopes to it, singular',JSON.stringify(line));
+  ok(!/zero/i.test(line.join(' ')),'read-as 3 — never prints "zero cups"',JSON.stringify(line));
+  await ctx.close();
+}
+/* the composer, on a leaf */
+{
+  const {ctx,page}=await boot({});
+  await page.evaluate(()=>{askDraft.dest='Lisbon';askDraft.kind='city';openAskScreen()});
+  await page.waitForTimeout(800);
+  const c=await page.evaluate(()=>{
+    const leaf=document.getElementById('askleaf'),plate=document.querySelector('.askstage .plate');
+    return {bar:!document.getElementById('tabs').hidden,
+      top:leaf&&leaf.style.top,plate:plate&&plate.style.height,
+      leafH:leaf&&Math.round(leaf.getBoundingClientRect().height),
+      kinds:document.querySelectorAll('.askkind .pick').length,
+      question:!!document.getElementById('ask_question'),
+      text:document.getElementById('main').innerText};
+  });
+  ok(c.bar,'the composer — the bar stays: it is a leaf now, not a screen of its own');
+  ok(/The ask/i.test(c.text)&&/Not now/i.test(c.text),'the composer — its label and its way out',c.text);
+  ok(/How far you’ll go/i.test(c.text),'the composer — the reach chips');
+  ok(/What goes out with this/i.test(c.text)&&/The bar/i.test(c.text),'the composer — the ledger, before anything leaves');
+  ok(/Ask Carta/i.test(c.text),'the composer — the action');
+  ok(c.kinds===0&&!c.question,'the composer — the kinds and the question are behind "read it as", not on the leaf');
+
+  await page.evaluate(()=>toggleAskKind());await page.waitForTimeout(500);
+  const o=await page.evaluate(()=>({kinds:document.querySelectorAll('.askkind .pick').length,
+    question:!!document.getElementById('ask_question')}));
+  ok(o.kinds===6,'read it as — all six kinds are reachable, so none was silently dropped',JSON.stringify(o));
+  ok(o.question,'read it as — and so is the free-text question');
+  await ctx.close();
+}
+{
+  const {ctx,page}=await boot({ctx:{viewport:{width:480,height:869}}});
+  await page.evaluate(()=>{askDraft.dest='Lisbon';openAskScreen()});await page.waitForTimeout(800);
+  const c=await page.evaluate(()=>{
+    const leaf=document.getElementById('askleaf'),plate=document.querySelector('.askstage .plate');
+    return {top:leaf&&leaf.style.top,plate:plate&&plate.style.height};
+  });
+  ok(c.top==='122px'&&c.plate==='140px','the reference frame — the composer is 122 over a 140 strip',JSON.stringify(c));
+  await ctx.close();
+}
+{
+  const {ctx,page}=await boot({ctx:{viewport:{width:320,height:720}}});
+  await page.evaluate(()=>{askDraft.dest='Lisbon';openAskScreen()});await page.waitForTimeout(800);
+  ok(!(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)),
+    '320px — the composer does not scroll sideways');
+  await ctx.close();
+}
+
 await browser.close();server.close();
 console.log(notes.join('\n'));
 if(problems.length){console.error('\n'+problems.join('\n'));console.error(`\n${problems.length} problem(s).`);process.exit(1)}
