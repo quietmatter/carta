@@ -804,6 +804,16 @@ worth stating out loud:
    any ask writes the flag with it: an ask can never reach the disk unread
    while the flag is still absent from it.
 
+**Phase 31 part two added no field at all**, which is worth saying because the
+screen it built looks like it should have. The answer-as-an-index reads
+`verdict`, `why`, `order`, `stale`, `fit[]` and `status` — every one of them a
+Phase 14 field that the single-column answer page was already carrying and
+that the redesign simply gave a better place to be read. The distance on an
+index row is derived at draw time from the findings' own confirmed
+coordinates and is never stored: an ask has a destination, not a starting
+point, so the centre is the mean of what that ask placed, and where fewer
+than two names placed no distance is drawn at all.
+
 **Phase 14 widened it and broke nothing:** every field it
 added is optional, so an ask stored under the Phase 7 shape still opens and
 still reads — the screen draws a part only where the model filled it. The
