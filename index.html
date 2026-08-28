@@ -263,20 +263,41 @@ details.more[open] summary{margin-bottom:10px}
    As the bar's own padding it sat outside every button's box, so the door's
    ember block stopped short of the screen edge and the paper behind it read as
    a gap under the bar on every screen. Carried by the buttons, each one paints
-   to the edge and only its label steps up clear of the indicator. */
+   to the edge and only its label steps up clear of the indicator.
+
+   nav.tabs states its own height explicitly rather than leaving it to
+   align-items:stretch measuring the tallest child, because the door button is
+   ALSO display:flex (it centers its own icon+label) while the other three are
+   plain buttons — two different intrinsic-sizing algorithms feeding one
+   stretch pass, and a real iPhone resolved that pass differently than
+   Chromium did: the door reached the edge and the plain three did not, which
+   is exactly the gap this rule exists to close. An explicit height plus a
+   matching height on every child leaves nothing for either engine to
+   compute — there is only one number, read the same way everywhere. The
+   number is 57, not 56: that is what the old intrinsic-stretch computation
+   actually resolved to (confirmed against the pre-fix render), one pixel more
+   than the buttons' own content asks for, because a stretched item with a
+   negative margin needs the container one pixel taller to keep its margin
+   box — not its border box — flush with the container's own edge. */
 nav.tabs{flex:none;background:var(--surface-card);display:flex;align-items:stretch;z-index:36;
-  border-top:1px solid var(--line)}
-nav.tabs button{flex:1;appearance:none;-webkit-appearance:none;background:none;
+  height:calc(57px + var(--sab));border-top:1px solid var(--line)}
+/* height:calc(100% + 1px), not 100%: the -1px margin below is a pre-existing
+   hack that pulls the button's 2px "on" top-border flush with the bar's own
+   1px hairline, and align-items:stretch used to absorb that by filling to the
+   margin edge rather than the border edge. A percentage height doesn't know
+   about the item's own margin, so it left the true bottom edge 1px short —
+   caught by the harness holding every button's own bottom to the pixel. */
+nav.tabs button{flex:1;height:calc(100% + 1px);appearance:none;-webkit-appearance:none;background:none;
   padding:12px 4px calc(14px + var(--sab));
   color:var(--ink-3);font-family:var(--sans);font-size:11.5px;
-  letter-spacing:var(--track-label);text-transform:uppercase;font-weight:500;min-height:calc(56px + var(--sab));
+  letter-spacing:var(--track-label);text-transform:uppercase;font-weight:500;
   border:none;border-top:2px solid transparent;margin-top:-1px}
 nav.tabs button.on{color:var(--ink);border-top-color:var(--ink)}
 /* the door is the one ember in the bar — a persistent block, not a fourth room.
    Put to the founder at the v7.30.0 QC pass (the design board draws all four
    items in one rhythm) and kept: the door is the app's one standing invitation
    to log a cup, and that is live enough to hold the accent. */
-nav.tabs button.door{flex:none;width:118px;background:var(--accent);color:var(--accent-ink);
+nav.tabs button.door{flex:none;width:118px;height:100%;background:var(--accent);color:var(--accent-ink);
   border:0;margin-top:0;display:flex;align-items:center;justify-content:center;gap:6px;letter-spacing:.1em}
 nav.tabs button.door:active{filter:brightness(.9)}
 nav.tabs[hidden]{display:none}
@@ -990,11 +1011,11 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.42.3"></script>
-<script src="carta-plate.js?v=7.42.3"></script>
-<script src="carta-shot.js?v=7.42.3"></script>
-<script src="carta-ask.js?v=7.42.3"></script>
-<script src="carta-atlas.js?v=7.42.3"></script>
+<script src="carta-map.js?v=7.42.4"></script>
+<script src="carta-plate.js?v=7.42.4"></script>
+<script src="carta-shot.js?v=7.42.4"></script>
+<script src="carta-ask.js?v=7.42.4"></script>
+<script src="carta-atlas.js?v=7.42.4"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4969,8 +4990,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.42.3';
+const APP_VERSION='7.42.4';
 const CHANGELOG=[
+  {v:'7.42.4',d:"The bar, actually flush this time. v7.42.3 stated an explicit height for the bar so no engine had to compute it, and stated the wrong number: 56, when the real one a real iPhone had been reaching for all along was 57 — the plate's own room, drawn one pixel taller than the reference, drifted by exactly that pixel behind it and two harness checks caught it before it shipped. A second sub-pixel gap turned up the same way: a child's height:100% doesn't know about its own negative margin the way the stretch it replaced did, so the three plain tabs landed a pixel short of the door beside them. Both are held to the pixel now, not read off a computation either engine might resolve differently."},
   {v:'7.42.3',d:"The device's own edges, held once instead of a header at a time. A home-screen install draws under the notch and behind the home indicator on every screen, and Carta had been meeting that one surface at a time — three fixes, three versions, each correcting the screen that had been looked at. Every room's header sat under the clock, text scrolled up under it on the chapters, and the bar's ember block stopped short of the bottom edge with paper showing under it. A scrolling screen now begins below the notch as a rule, so its own overflow clips the band and nothing can be drawn into it at any scroll position; the bar's allowance moved into the buttons, so each one paints to the edge and only its label steps up clear of the indicator; and a screen with the bar hidden carries the allowance itself. The full-bleed map still bleeds, which was always the point of it."},
   {v:'7.42.2',d:"The wordmark, out from under the status bar. Confirming the standalone fix finally worked turned up the next thing it made visible: the passport's own \"Carta\" and a city's own header sit on an overlay positioned in fixed pixels from the top of a full-bleed plate, with no allowance for the notch or Dynamic Island a real standalone launch draws behind. Both now clear it the same way the toast already did, and the city header's own map padding and fade move down with it — a header that clears the status bar but then draws its text over the map it sits on would just be the same bug moved fourteen pixels down."},
   {v:'7.42.1',d:"Restore from a backup. exportLedgerJSON has backed up the record since Phase 8 and had no way back in — the only reason to reinstall an iOS home-screen icon is to fix its launch mode, which can only be done by deleting and re-adding it, and until now that meant losing everything with no way to recover it beyond the raw JSON file. It reads the same D a backup already writes verbatim, so restoring is a plain replace, never a merge — the record page states the backup's own counts before anything happens, and says plainly when the device already holds a record that restoring will replace."},

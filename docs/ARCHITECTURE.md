@@ -569,6 +569,8 @@ Carta 7 is built exactly the way classic was, smaller:
   **v7.42.3 takes it to 5,109 / 5,000** (370.0 KB — bytes still comfortable at
   74 %), and makes the same point a fourth time: 35 lines, no feature, a
   layout law and the reasoning written beside it. Recorded, not absorbed.
+  **v7.42.4 adds another 22** fixing two sub-pixel regressions the fix itself
+  introduced (below) — 5,131 / 5,000, 372.2 KB.
 
   *The device's own edges are a law, not a per-screen fix.* A home-screen
   install draws under the notch and behind the home indicator on **every**
@@ -593,6 +595,30 @@ Carta 7 is built exactly the way classic was, smaller:
     the bar it sat outside every button's box and the door's ember block
     stopped short of the edge. A BARELESS screen has no bar beneath it and
     carries the allowance itself (`main.bare`).
+
+  **v7.42.4 held the pixel, not just the principle.** The keeper's very next
+  screenshot showed the door reaching the true edge and the other three tabs
+  a pixel short of it — the fix had shipped with `nav.tabs` an explicit
+  `height:56px`, chosen without measuring what the height it was replacing
+  actually resolved to. Two things were wrong at once, both real only under
+  `align-items:stretch`'s own arithmetic, which an explicit height and a flat
+  `height:100%` throw away rather than reproduce: the true resting height was
+  **57px**, one more than the plain tabs' own `min-height` asks for, because
+  a stretched item with a `margin-top:-1px` (a pre-existing hack keeping the
+  "on" tab's 2px top border flush with the bar's 1px hairline) needs the
+  container a pixel taller to keep its *margin* box, not its border box,
+  flush with the container's edge; and `height:100%` on the tabs ignores that
+  same margin, landing them a pixel short of a container sized correctly.
+  Both are arithmetic a percentage or a flat number cannot recover on its
+  own — `test/verify-door.js`'s existing plate-height assertions caught the
+  first (a 1px main.clientHeight drift that had never been given a reason to
+  move) and `verify-safearea.js`'s bar check caught the second by holding
+  every tab's own bottom edge to the pixel rather than trusting the
+  container. The fix: state the number the old computation actually
+  produced (57, confirmed by rendering the pre-fix CSS and reading it back)
+  rather than the number that looked right on paper, and compensate the
+  margin explicitly (`height:calc(100% + 1px)`) rather than lean on stretch
+  to do it invisibly.
 
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`

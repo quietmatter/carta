@@ -7,6 +7,58 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — the bar, actually flush (v7.42.4)
+
+- **The fix that held once still shipped a pixel wrong.** The keeper's very
+  next screenshot after v7.42.3: the door reaching the true bottom edge, the
+  other three tabs a pixel short of it. Two sub-pixel regressions, both from
+  the same instinct — replace `align-items:stretch`'s implicit arithmetic
+  with explicit numbers — landing on numbers that were plausible rather than
+  measured.
+- **The bar's own height was wrong by one pixel.** `nav.tabs{height:56px}`
+  was chosen because the plain tabs' own `min-height` said 56 — but the old,
+  intrinsic-plus-stretch computation it replaced actually resolved to 57,
+  confirmed by rendering the pre-fix CSS and reading `nav.tabs`'s own
+  `getBoundingClientRect()` back. The extra pixel comes from a pre-existing
+  hack: the tabs carry `margin-top:-1px` to keep the "on" tab's 2px top
+  border flush with the bar's own 1px hairline, and a stretched item with a
+  negative margin needs its container one pixel taller to keep the item's
+  *margin* box — not its border box — flush with the container's edge.
+  `test/verify-door.js`'s existing plate-height assertions (03 and 04) caught
+  this: `main.clientHeight` drifted by the same pixel with nothing in that
+  phase's own work to explain it, and both asserted a design literal they had
+  no reason to move.
+- **`height:100%` doesn't know about a margin either.** Having fixed the
+  container to the right number, the plain tabs — sized `height:100%` —
+  still landed a pixel short of it, for the identical reason in reverse:
+  `100%` measures the parent's content box and ignores the item's own
+  margin, where `stretch` used to absorb it automatically. `height:calc(100%
+  + 1px)` restores the compensation explicitly. The door has no such margin
+  and needed nothing.
+- **Both were caught before a second round-trip to the keeper's phone** —
+  `verify-door.js`'s 03/04 assertions on the first, `verify-safearea.js`'s
+  bar check (holding every tab's own bottom edge to the pixel, not just the
+  container's) on the second, once it was deliberately broken to confirm the
+  check actually has teeth. That confirms the harness added in v7.42.3 is
+  doing its job: this class of regression is now a red CI run, not a fourth
+  screenshot.
+- **The lesson, stated plainly for next time:** replacing an engine's
+  implicit layout arithmetic with an explicit number is only safe once the
+  implicit number has actually been measured — "what the CSS obviously
+  means" and "what the browser's stretch algorithm actually resolves it to"
+  are not guaranteed to be the same number, and the gap between them is
+  exactly one pixel, which is invisible in a diff and only shows up on a
+  real screen.
+- **Verified:** all seven harnesses green — `node test/verify-static.js` at
+  20/20, `node test/model.test.js` at 141/141, `verify-door.js` (59, 03/04
+  passing again), `verify-ask.js` (170), `verify-v7.35.js` (41),
+  `verify-split.js` (16), `verify-safearea.js` (15, bar bottoms confirmed
+  844/844/844/844 of 844). `APP_VERSION` and all five siblings renumbered to
+  `7.42.4` in lockstep.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-28 — the device's own edges, held once (v7.42.3)
 
 - **The fourth report on the same bug, and the one that says the approach was
