@@ -556,6 +556,16 @@ Carta 7 is built exactly the way classic was, smaller:
   a genuinely dead rule (`.rowlink .row-main`, zero users in any of the six
   files), not by shaving prose.
 
+  **It ends the phase at 5,013 all the same, and not because of this phase.**
+  v7.41.1 — a twelve-line `setAppH` timing fix with a changelog line — landed on
+  `main` while this was being built and took **`main` itself to 5,013 / 5,000**.
+  The merge brings that here unchanged. Recorded rather than absorbed: shaving
+  another change to fit this one is how a band stops meaning anything. The
+  reading that matters is that the file now crosses on **ordinary small fixes
+  with no feature behind them**, which is the signal that the next split is due
+  rather than the next amendment — and the third split has a candidate already
+  named above (the room-sized views, `vJournal`/`vShelf`/`vRecord`).
+
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`
   discipline. No bundler, no framework, no npm for the app — the single
