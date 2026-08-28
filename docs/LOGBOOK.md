@@ -7,6 +7,71 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-28 — Phase 34: the kind and the question (v7.44.0)
+
+- **Turn 7 answers founder call five — the last of them.** All five gaps the
+  handoff opened against the shipping version are now settled, and the design
+  side of the commission is complete.
+- **The gap was a removal nobody had noticed.** Turn 1 replaced the composer's
+  six *"what kind of ask"* chips with one derived sentence and dropped the
+  free-text question with them. Both are **live capability, not decoration**:
+  `ASK_KINDS` has six entries and **four of them are not places** (`near`,
+  `country`, `route`, `friend`), and `askPromptText` appends `question` to the
+  brief verbatim. A route and a friend's taste had nowhere to be chosen.
+- **Turn 4 shipped the interim the handoff asked for** — the button wired to
+  the shipping chip group, inline on the leaf, recorded as interim rather than
+  presented as finished. This is the sheet it was waiting for, and the interim
+  panel (`.askkind`) is gone with it.
+- **Almost nothing is redrawn.** The chips are the same `.picks`/`.pick` group
+  moved; the question keeps its shipping label, its `optional` marker and its
+  placeholder word for word. The one new thing is **the consequence line**.
+- **The consequence line, and a disagreement inside the handoff.** §B5 states
+  the rule plainly: the line says what the *pick* changes — the field and the
+  reach — and **never restates scope**, because that is the leaf's own line one
+  screen up, and *"both lines on one screen must not say the same sentence
+  twice."* Its table obeys that rule. **Its own `7a` capture does not** — that
+  frame reads *"every cup you have written there is the scope"*, which is the
+  leaf line verbatim. The table shipped, on the grounds that it is the half of
+  the handoff that states the rule *and* keeps it. Recorded here rather than
+  resolved silently.
+- **The reach rides only on `REACH_KINDS`**, which the composer already knew:
+  for `country`, `route` and `friend` the chips leave the leaf, and the line
+  now says so — *"How far you'll go leaves the composer"* — rather than letting
+  them vanish unexplained.
+- **The echo is the part that carries the argument.** A written question shows
+  back on the leaf in the keeper's own words, in quotes, with a `change` beside
+  it. The composer's whole claim is that nothing leaves the device unseen; a
+  sentence held behind a button would have been the one thing that did.
+- **Three things the wiring had to get right, none of them visible:**
+  - **A chip repaints the sheet in place.** `render()` paints `#main`, and the
+    sheet is its own element — going through `render()` alone would have left
+    the sheet showing the old selection and the old consequence line while the
+    leaf behind it moved on.
+  - **The question field must not re-render.** It writes the draft and repaints
+    the echo only. A `render()` under a thumb loses the caret, which is the same
+    lesson the coffee form's autosave learned.
+  - **The echo is repainted behind the sheet as it is typed**, so a *swipe*
+    dismissal keeps the sentence exactly as `Done` does. `closeSheet()` wipes
+    the sheet's innerHTML, and nothing was going to run on that path.
+- **`.askkind` came out, and paid for the changelog line**: verified dead across
+  all six files before cutting. `index.html` ends **exactly where it started**,
+  5,149 — the dead rule bought the entry — and everything else went into
+  `carta-ask.js`.
+- **One test called a function it had not read.** The new brief check invented
+  `askPromptText(model, draft)`; the real signature is five positional
+  arguments. The code was right and the check was wrong — rewritten to mirror
+  `runAsk`'s own call, argument for argument, so it asserts the app's path
+  rather than one made up beside it.
+
+**The band.** `main` was at **5,149 / 5,000** on arrival and this phase leaves
+`index.html` at **5,149** — net zero, and still 149 over. The reading is unchanged and now has a seventh release behind it: the file
+crosses on maintenance, not on features. The third split is the open item.
+
+**Still open, and now the only ones.** `CITY_ARCS` holds one key. `landKey()` is
+parked. The third split is the founder's call.
+
+---
+
 ## 2026-08-28 — Phase 33: the distance anchor (v7.43.0)
 
 - **Turn 6 answers founder call four, the last one the design was going to

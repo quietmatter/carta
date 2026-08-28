@@ -619,7 +619,7 @@ function askReadAsParts(){
 function askReadAsHTML(){
   const p=askReadAsParts();
   return `<span class="h">${esc(p[0])}</span> — ${esc(p[1])} · `
-    +`<button class="b" onclick="toggleAskKind()">read it as</button>`;
+    +`<button class="b" onclick="openAskKindSheet()">read it as</button>`;
 }
 // the line follows the field as it is typed, without re-reading the screen —
 // the same reason the ledger beside it repaints in place: a full render()
@@ -628,26 +628,89 @@ function paintAskReadAs(){
   const el=document.getElementById('ask_readas');
   if(el)el.innerHTML=askReadAsHTML();
 }
-/* `read it as` opens the kind sheet — the six kinds and the free-text
- * question. That sheet is gap 5 and is NOT designed in this bundle, so the
- * handoff's own instruction is to wire this to the shipping chip group in
- * place until it is. That is what this does: a disclosure on the leaf itself,
- * carrying both the kinds and the question, so nothing that is reachable
- * today stops being reachable. It is not the designed surface and is marked
- * as such in the logbook. */
+/* ---- `read it as` — the kind and the question (§B5, `7a`/`7b`/`7c`) ------
+ * Gap 5, and the last of the five. Turn 1 replaced the composer's six "what
+ * kind of ask" chips with one derived sentence and dropped the free-text
+ * question with them — but both are live capability, not decoration:
+ * ASK_KINDS has six entries and FOUR of them are not places, and
+ * askPromptText appends `question` to the brief verbatim. Turn 4 wired the
+ * button to the shipping chip group in place, as the handoff asked, and
+ * recorded it as interim. This is the sheet it was waiting for.
+ *
+ * Nothing here is redrawn: the chips are the same `.picks`/`.pick` group, the
+ * question keeps its shipping label, `optional` marker and placeholder word
+ * for word. The one new thing is the consequence line.
+ */
 let _askKindOpen=false;
 function closeAskKind(){_askKindOpen=false}
-function toggleAskKind(){captureAskDraft();_askKindOpen=!_askKindOpen;render()}
-function askKindPanelHTML(){
-  if(!_askKindOpen)return '';
-  return `<div class="askkind">
-    <div class="eyebrow" style="margin:0 0 9px">What kind of ask</div>
-    <div class="picks">
-      ${ASK_KINDS.map(k=>`<button class="pick${askDraft.kind===k[0]?' on':''}" onclick="pickAskKind('${k[0]}')">${esc(k[1])}</button>`).join('')}
-    </div>
-    <label class="f" style="margin-top:14px"><span class="l">Anything else <span class="opt">optional</span></span>
-      <textarea id="ask_question" style="min-height:56px" placeholder="Three days in Baixa and Alfama, mostly on foot…">${esc(askDraft.question)}</textarea></label>
-  </div>`;
+/* The consequence line says what the PICK changes — the field and the reach —
+ * and never restates the scope, which is the leaf's own line one screen up.
+ * Two lines on one screen saying the same sentence twice is the failure this
+ * rule exists to prevent, and it is why the handoff's own `7a` capture is not
+ * what ships: that frame reads "every cup you have written there is the
+ * scope", which is the leaf line verbatim. §B5's table is followed instead —
+ * it is the half of the handoff that states the rule AND obeys it.
+ */
+const ASK_KIND_SAYS={
+  city:'the field takes a name',
+  neighborhood:'the same reading, drawn tighter',
+  near:'the field takes a start, not a scope',
+  country:'taken at your word',
+  route:'the field takes a road, not a centre',
+  friend:'the field takes a sentence instead of a name'};
+function askKindSaysHTML(k){
+  const name=(ASK_KINDS.find(x=>x[0]===k)||[,''])[1];
+  const rides=REACH_KINDS.has(k)
+    ?`and <em>How far you’ll go</em> rides with ${k==='city'?'the ask':'it'}`
+    :'and <em>How far you’ll go</em> leaves the composer';
+  return `<span style="color:var(--ink-2)">${esc(name)}</span> — ${esc(ASK_KIND_SAYS[k]||'')}, ${rides}`;
+}
+function askKindSheetHTML(){
+  return `<h3>Read it as</h3>
+    <p class="sub" style="max-width:40ch">Nothing here knows what a name is. This is your setting, and it is what goes out.</p>
+    <div class="eyebrow" style="margin:18px 0 9px">What kind of ask</div>
+    <div class="picks">${ASK_KINDS.map(k=>
+      `<button class="pick${askDraft.kind===k[0]?' on':''}" onclick="pickAskKindInSheet('${k[0]}')">${esc(k[1])}</button>`).join('')}</div>
+    <div id="ask_says" style="font-family:var(--sans);font-size:12.5px;line-height:1.45;color:var(--ink-3);margin-top:12px">${askKindSaysHTML(askDraft.kind)}</div>
+    <label class="f" style="margin-top:18px"><span class="l">Anything else <span class="opt">optional</span></span>
+      <textarea id="ask_question" style="min-height:64px;padding:9px 0;border:0;border-bottom:1px solid var(--ink-3);border-radius:0;background:transparent;font-family:var(--serif);font-size:16px;resize:none"
+        oninput="askDraft.question=this.value;paintAskEcho()"
+        placeholder="Three days in Baixa and Alfama, mostly on foot…">${esc(askDraft.question)}</textarea></label>
+    <div style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3);margin-top:10px;padding-top:12px;border-top:1px solid var(--line)">It goes out word for word, at the end of your brief.</div>
+    <button class="btn btn-graphite" style="min-height:52px;padding:15px 16px;margin-top:16px" onclick="closeAskKindSheet()">Done</button>`;
+}
+function openAskKindSheet(){captureAskDraft();_askKindOpen=true;openSheet(askKindSheetHTML())}
+/* a chip repaints the sheet in place rather than through render(): render()
+   paints #main, and the sheet is its own element — it would keep the old
+   selection and the old consequence line while the leaf behind it moved on.
+   The leaf is repainted too, because the kind decides whether the reach
+   chips are on it at all. */
+function pickAskKindInSheet(k){
+  askDraft.kind=k;
+  const says=document.getElementById('ask_says');
+  if(says)says.innerHTML=askKindSaysHTML(k);
+  document.querySelectorAll('#sheet .picks .pick').forEach(b=>
+    b.classList.toggle('on',/'([a-z]+)'/.test(b.getAttribute('onclick')||'')&&RegExp.$1===k));
+  render();
+}
+function closeAskKindSheet(){captureAskDraft();_askKindOpen=false;closeSheet();render()}
+// kept for the router: arriving at the composer fresh closes any stale state
+function toggleAskKind(){openAskKindSheet()}
+/* the question, echoed on the leaf (`7c`). The composer's whole argument is
+   that nothing leaves the device unseen; a sentence held behind a button
+   would be the one thing that did. */
+const askEchoHTML=()=>{
+  const q=(askDraft.question||'').trim();
+  return q?`<div class="qecho" style="display:flex;gap:8px;align-items:baseline;margin-top:9px;min-width:0">
+    <span style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">“${esc(q)}”</span>
+    <button class="b" style="flex:none" onclick="openAskKindSheet()">change</button></div>`:'';
+};
+const ASK_REACH_LAB=()=>((askDraft.question||'').trim()?18:22);
+function paintAskEcho(){
+  const el=document.getElementById('ask_echo');
+  if(el)el.innerHTML=askEchoHTML();
+  const lab=document.getElementById('ask_reachlab');
+  if(lab)lab.style.marginTop=ASK_REACH_LAB()+'px';
 }
 /* ---- the composer, on a leaf (§B; empty-record variant `1i`) -----------
  * The ask composed on a full screen of its own: six chips, a field, a
@@ -683,8 +746,8 @@ function vAsk(){
           placeholder="${askDraft.kind==='friend'?'She likes what I like, but darker':askDraft.kind==='near'?'Huntington Park':'Lisbon'}"
           style="width:100%;font-family:var(--serif);font-weight:600;font-size:1.875rem;letter-spacing:-.02em;line-height:1.12;padding:6px 0 12px;border:0;border-bottom:1px solid var(--ink-3);background:transparent;color:var(--ink)">
         <div class="ra" id="ask_readas">${askReadAsHTML()}</div>
-        ${askKindPanelHTML()}
-        ${reach?`<div class="eyebrow" style="margin:22px 0 9px">How far you’ll go</div>
+        <div id="ask_echo">${askEchoHTML()}</div>
+        ${reach?`<div class="eyebrow" id="ask_reachlab" style="margin:${ASK_REACH_LAB()}px 0 9px">How far you’ll go</div>
         <div class="picks">
           ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach('${jsq(r)}')">${esc(r)}</button>`).join('')}
         </div>`:''}
@@ -1662,6 +1725,10 @@ window.askReadAsParts=askReadAsParts;
 window.paintAskReadAs=paintAskReadAs;
 window.toggleAskKind=toggleAskKind;
 window.closeAskKind=closeAskKind;
+window.openAskKindSheet=openAskKindSheet;
+window.pickAskKindInSheet=pickAskKindInSheet;
+window.closeAskKindSheet=closeAskKindSheet;
+window.paintAskEcho=paintAskEcho;
 window.vAskResult=vAskResult;
 window.vAskFinding=vAskFinding;
 window.mountAnswer=mountAnswer;
@@ -1685,4 +1752,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.43.0';
+window.ASK_VERSION='7.44.0';

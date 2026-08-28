@@ -72,7 +72,15 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   the brief's exact text for anyone who wants to read all of it. It composes
   **on a leaf over the map it's about**, not on a screen of its own, and the
   line under the field says only what your record can defend: *on your
-  record, two cups and two cafés — the ask is scoped to them*. Carta doesn't
+  record, two cups and two cafés — the ask is scoped to them*. Behind that line,
+  **read it as** opens the kinds — a city, a neighborhood, a point to start
+  from, a country, a route, a friend's taste — and a box for anything else the
+  ask should know. Picking one says what it changes in a line: what the field
+  will take, and whether *how far you'll go* still rides along (it doesn't for a
+  route, which has no centre to be a distance from). Anything you write is shown
+  back on the composer in your own words, with a way to change it — it goes out
+  word for word at the end of your brief, and nothing in Carta leaves the device
+  unseen. Carta doesn't
   know what Lisbon is, and doesn't guess: somewhere it hasn't heard of, it
   says so, and says the ask goes out on every cup instead. **Nothing leaves
   the device while you type.** The wait

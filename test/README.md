@@ -13,7 +13,7 @@ node test/model.test.js        # the taste model and the brief — 141 cases
 # the real app, in a real browser
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 177 checks
+node test/verify-ask.js        # the ask at the front door — 189 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32 seam — 16 checks
 node test/verify-safearea.js   # the notch and the indicator — 16 checks
@@ -93,7 +93,17 @@ The Atlas moved into `carta-atlas.js`, and `<carta-city>` was folded into
   does; that is parked, and `verify-static.js` says so where it holds the
   line for `cityKey`.)
 
-## `verify-ask.js` — the ask at the front door (Phases 31, 32 and 33)
+## `verify-ask.js` — the ask at the front door (Phases 31–34)
+
+**Phase 34 added the kind sheet.** The checks follow the two capabilities out of
+the interim inline panel and into the sheet rather than being dropped: all six
+kinds reachable, the free-text question present, the consequence line saying what
+the pick changes and **never** restating scope, a chip repainting the sheet in
+place, and the written question surviving a swipe because the echo is painted
+behind the sheet as it is typed. One of them asserts the sentence really reaches
+the prompt, built with `runAsk`'s own five arguments — the first draft of that
+check invented a two-argument `askPromptText` that does not exist, and the code
+was right where the check was wrong.
 
 **Phase 33 added the anchor.** The distance beside a café is only as honest as
 the point it is counted from, so the check **recomputes** rather than pinning a
