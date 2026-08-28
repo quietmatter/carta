@@ -91,7 +91,7 @@ test/model.test.js    The pure-block harness (zero deps, plain Node)
 test/verify-static.js The six files parse and agree — zero deps, no browser
 test/verify-*.js      Five browser harnesses — the front door, the ask at the front door, the v7.35 fold, the Phase 31 seam, the device's own edges
 test/browser.js       Where the Chromium is, for those four
-.github/workflows/    CI — all six harnesses on every push and PR to main
+.github/workflows/    CI — all seven harnesses on every push and PR to main
 classic/index.html    Carta 6.18.x, frozen whole
 classic/CLAUDE.md     The third turn's architecture map, kept for the record
 classic/README.md     Classic's own user documentation
@@ -634,7 +634,7 @@ node test/verify-door.js       # the front door, all five states — 59 checks
 node test/verify-ask.js        # the ask at the front door — 177 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32 seam — 16 checks
-node test/verify-safearea.js   # the notch and the indicator — 15 checks
+node test/verify-safearea.js   # the notch and the indicator — 16 checks
 ```
 
 `test/browser.js` finds a Chromium for all five (`CHROME`, then playwright's

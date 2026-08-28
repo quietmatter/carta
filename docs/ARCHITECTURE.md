@@ -557,12 +557,13 @@ Carta 7 is built exactly the way classic was, smaller:
   files), not by shaving prose.
 
   **And it crossed again four releases running, on no feature at all.** Phase 33
-  arrived on a `main` already at **5,109 / 5,000**: v7.42.1, .2 and .3 are a
+  arrived on a `main` already at **5,109 / 5,000**: v7.42.1 through .3 are a
   backup restore and two iOS chrome fixes, none of them a surface, all of them in
-  `index.html`. Phase 33 itself adds one changelog line and three lines of CSS,
-  ending at **5,113**. The reading this section asked for at Phase 32 — *does the
-  file cross on ordinary small fixes?* — now has four consecutive answers, and
-  they are all yes. **This is no longer a debt to record; it is the third split
+  `index.html`. Phase 33 itself adds one changelog line and three lines of CSS;
+  v7.42.4 and .5 then landed mid-phase and merged on top, ending it at
+  **5,149**. The reading this section asked for at Phase 32 — *does the file
+  cross on ordinary small fixes?* — now has six consecutive answers, and they
+  are all yes. **This is no longer a debt to record; it is the third split
   falling due**, and the candidate has been named twice: the room-sized views
   (`vJournal`, `vShelf`, `vRecord` and the screens under them). It is the
   founder's call, as every prior one was, and it is the top open item.
@@ -580,6 +581,10 @@ Carta 7 is built exactly the way classic was, smaller:
   **v7.42.3 takes it to 5,109 / 5,000** (370.0 KB — bytes still comfortable at
   74 %), and makes the same point a fourth time: 35 lines, no feature, a
   layout law and the reasoning written beside it. Recorded, not absorbed.
+  **v7.42.4 adds another 22** fixing two sub-pixel regressions the fix itself
+  introduced (below) — 5,131 / 5,000, 372.2 KB.
+  **v7.42.5 adds 14 more** for the whole-body height fix and its harness
+  check — 5,145 / 5,000, 373.8 KB.
 
   *The device's own edges are a law, not a per-screen fix.* A home-screen
   install draws under the notch and behind the home indicator on **every**
@@ -604,6 +609,57 @@ Carta 7 is built exactly the way classic was, smaller:
     the bar it sat outside every button's box and the door's ember block
     stopped short of the edge. A BARELESS screen has no bar beneath it and
     carries the allowance itself (`main.bare`).
+
+  **v7.42.4 held the pixel, not just the principle.** The keeper's very next
+  screenshot showed the door reaching the true edge and the other three tabs
+  a pixel short of it — the fix had shipped with `nav.tabs` an explicit
+  `height:56px`, chosen without measuring what the height it was replacing
+  actually resolved to. Two things were wrong at once, both real only under
+  `align-items:stretch`'s own arithmetic, which an explicit height and a flat
+  `height:100%` throw away rather than reproduce: the true resting height was
+  **57px**, one more than the plain tabs' own `min-height` asks for, because
+  a stretched item with a `margin-top:-1px` (a pre-existing hack keeping the
+  "on" tab's 2px top border flush with the bar's 1px hairline) needs the
+  container a pixel taller to keep its *margin* box, not its border box,
+  flush with the container's edge; and `height:100%` on the tabs ignores that
+  same margin, landing them a pixel short of a container sized correctly.
+  Both are arithmetic a percentage or a flat number cannot recover on its
+  own — `test/verify-door.js`'s existing plate-height assertions caught the
+  first (a 1px main.clientHeight drift that had never been given a reason to
+  move) and `verify-safearea.js`'s bar check caught the second by holding
+  every tab's own bottom edge to the pixel rather than trusting the
+  container. The fix: state the number the old computation actually
+  produced (57, confirmed by rendering the pre-fix CSS and reading it back)
+  rather than the number that looked right on paper, and compensate the
+  margin explicitly (`height:calc(100% + 1px)`) rather than lean on stretch
+  to do it invisibly.
+
+  **v7.42.5 found the bar's own arithmetic was never the whole bug.** With
+  every pixel inside `nav.tabs` finally accounted for, the keeper's next
+  screenshot showed the *entire* bar — all four buttons together — sitting
+  short of the true screen edge, with plain paper below the whole thing. Not
+  a distribution problem inside the bar; `body`'s own height, the box
+  everything else is laid out inside of, was itself short of the real
+  screen. `body`'s height had trusted `window.innerHeight` (`--app-h`, set
+  by `setAppH()`) completely since v7.37.6, on the strength of a real,
+  cited iOS bug in `100dvh` and the reasoning that `innerHeight` reads the
+  settled height where `dvh` doesn't. Nothing had ever actually confirmed
+  `innerHeight` itself is trustworthy on every device — and `test/
+  verify-safearea.js`, for all its rigor about the bands, has exactly this
+  same blind spot: it overrides `--sat`/`--sab` as literal CSS values and
+  never touches `innerHeight`, which is always "correct" in headless
+  Chromium regardless of what the test asks the page to *believe* about its
+  own insets. Neither failure mode — a live `dvh` bug, a device where
+  `innerHeight` itself undercounts the safe area — reproduces outside a
+  real iPhone, so this could not be proven wrong from the sandbox, only
+  hedged against: `body`'s height is now `max(100dvh, var(--app-h,
+  100dvh))`, the larger of the two independent measurements rather than
+  either one trusted alone. A device where both happen to agree loses
+  nothing; a device where either one is short is covered by the other.
+  `verify-safearea.js` gained the one check its own blind spot could still
+  prove: force `--app-h` to an obviously-wrong 400px and confirm `body`
+  still renders at the true height anyway, which is the recovery mechanism
+  actually working rather than the bug simply not reproducing.
 
 - **Zero dependencies, zero build.** Vanilla JS, global functions, inline
   `onclick` handlers, string-templating into `innerHTML`, `esc()`/`jsq()`

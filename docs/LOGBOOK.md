@@ -75,16 +75,137 @@ Lotmark's desk. Old entries are never rewritten.*
 - **A finding's plate gained its row numeral** (`6c` draws it), so the plate a
   finding stands on and the index it came from say the same number.
 
+**Merged with `main` twice while this was built.** v7.42.4 and v7.42.5 landed
+between the commit and the push — two more iOS chrome fixes, a **seventh
+harness** (`verify-safearea.js`) and its CI step. Their code is kept whole and
+all seven suites were re-run on the merged tree, not on either side alone. Two
+stale figures came in with them and are corrected here rather than left: the
+harness count in `CLAUDE.md` still read *six*, and `verify-safearea.js` was
+documented at 15 checks while running 16.
+
 **The band, again, and louder.** `main` arrived at **5,109 / 5,000** — three more
 small fixes (v7.42.1–.3) since Phase 32, none of them a feature, all of them
 landing in `index.html`. This phase adds one changelog line and three lines of
-CSS to it and ends at **5,113**. The file has now crossed on four consecutive
-releases that added no surface at all. That is no longer a debt to record; it is
+CSS to it; after merging v7.42.4 and .5 on top, the file ends at **5,149**. It
+has now crossed on six consecutive releases that added no surface at all. That is no longer a debt to record; it is
 the split falling due, and §1 names the candidate.
 
 **Still open.** Gap 5 (the kind sheet) is the only one of the five left, and it
 is undesigned by the handoff's own statement, running on its interim wiring.
 `CITY_ARCS` still holds one key. `landKey()` is still parked.
+## 2026-08-28 — the whole bar, not just its arithmetic (v7.42.5)
+
+- **Fixing the last pixel inside the bar surfaced a bigger gap under all of
+  it.** Asked for a fresh screenshot and the device model this time, rather
+  than guessing a fifth CSS number blind — the keeper confirmed a real
+  Face ID iPhone (a genuine nonzero home indicator, ruling out "there's
+  nothing to allow for here") and sent a screenshot: the *entire* bar, all
+  four buttons together, sitting above the true screen edge with plain
+  paper below it. Not a distribution problem inside `nav.tabs` this time —
+  `body`'s own height, the box everything else lays out inside of, was
+  itself short of the real screen.
+- **The live site was checked and confirmed fresh** (`last-modified`/`age`
+  headers on `carta.quiet-matter.com/index.html` matched the just-merged
+  v7.42.4) before touching anything — this thread has been burned by stale
+  `max-age=600` caching before, and ruling it out first meant the gap was
+  real and not a rerun of that.
+- **The root cause was `body`'s trust in one measurement.** `height:
+  var(--app-h, 100dvh)` has trusted `window.innerHeight` completely since
+  v7.37.6, on the strength of a real, cited iOS bug in `100dvh` (Apple's
+  own developer forums) and the reasoning that `innerHeight` reads the
+  settled height where `dvh` doesn't. Nothing had ever confirmed
+  `innerHeight` itself holds up on every device — and it couldn't be
+  confirmed from the sandbox: `test/verify-safearea.js`, added at v7.42.3
+  specifically to stop shipping this class of bug unverified, has exactly
+  this blind spot too. It overrides `--sat`/`--sab` as literal CSS values
+  and never touches `innerHeight`, which reads correctly in headless
+  Chromium no matter what the test tells the page to believe about its own
+  insets. A live `dvh` bug and a device where `innerHeight` itself
+  undercounts the safe area are both real possibilities and neither
+  reproduces outside a real iPhone — this could be hedged against, not
+  proven from here.
+- **Shipped:** `body`'s height is `max(100dvh, var(--app-h, 100dvh))` — the
+  larger of two independent measurements, not either one trusted alone. A
+  device where both happen to read the same true height loses nothing; a
+  device where either one comes up short is covered by the other, whichever
+  it turns out to be.
+- **`verify-safearea.js` gained the one check its own blind spot could still
+  prove.** It can't tell you whether `innerHeight` is short on a real
+  iPhone, but it CAN force `--app-h` to an obviously-wrong `400px` and
+  confirm `body` still renders at the true height anyway — proving the
+  recovery mechanism actually works, not merely that the bug doesn't
+  reproduce in Chromium. Verified by failing: reverted to the old
+  single-source height, the same forced-400px probe renders body at exactly
+  400px.
+- **A note on process, for next time:** this is the point in the thread
+  where guessing a fifth CSS value blind would have cost another
+  round-trip for nothing. Asking for the screenshot and the device model
+  first — instead of pattern-matching "bottom bar bug" onto the same fix
+  shape a fourth time — is what turned up that this was a different bug
+  (whole-body height) wearing the same symptom (a gap at the bottom) as the
+  last three.
+- **Verified:** all seven harnesses green — `node test/verify-static.js` at
+  20/20, `node test/model.test.js` at 141/141, `verify-door.js` (59),
+  `verify-ask.js` (170), `verify-v7.35.js` (41), `verify-split.js` (16),
+  `verify-safearea.js` (16, the new recovery check included).
+  `APP_VERSION` and all five siblings renumbered to `7.42.5` in lockstep.
+- **Not resolved:** whether `innerHeight` or `100dvh` was the actual culprit
+  on the keeper's device. `max()` makes the answer not matter for now; if a
+  fourth bottom-edge report ever comes in after this, that question is
+  where to start rather than a sixth CSS number.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
+## 2026-08-28 — the bar, actually flush (v7.42.4)
+
+- **The fix that held once still shipped a pixel wrong.** The keeper's very
+  next screenshot after v7.42.3: the door reaching the true bottom edge, the
+  other three tabs a pixel short of it. Two sub-pixel regressions, both from
+  the same instinct — replace `align-items:stretch`'s implicit arithmetic
+  with explicit numbers — landing on numbers that were plausible rather than
+  measured.
+- **The bar's own height was wrong by one pixel.** `nav.tabs{height:56px}`
+  was chosen because the plain tabs' own `min-height` said 56 — but the old,
+  intrinsic-plus-stretch computation it replaced actually resolved to 57,
+  confirmed by rendering the pre-fix CSS and reading `nav.tabs`'s own
+  `getBoundingClientRect()` back. The extra pixel comes from a pre-existing
+  hack: the tabs carry `margin-top:-1px` to keep the "on" tab's 2px top
+  border flush with the bar's own 1px hairline, and a stretched item with a
+  negative margin needs its container one pixel taller to keep the item's
+  *margin* box — not its border box — flush with the container's edge.
+  `test/verify-door.js`'s existing plate-height assertions (03 and 04) caught
+  this: `main.clientHeight` drifted by the same pixel with nothing in that
+  phase's own work to explain it, and both asserted a design literal they had
+  no reason to move.
+- **`height:100%` doesn't know about a margin either.** Having fixed the
+  container to the right number, the plain tabs — sized `height:100%` —
+  still landed a pixel short of it, for the identical reason in reverse:
+  `100%` measures the parent's content box and ignores the item's own
+  margin, where `stretch` used to absorb it automatically. `height:calc(100%
+  + 1px)` restores the compensation explicitly. The door has no such margin
+  and needed nothing.
+- **Both were caught before a second round-trip to the keeper's phone** —
+  `verify-door.js`'s 03/04 assertions on the first, `verify-safearea.js`'s
+  bar check (holding every tab's own bottom edge to the pixel, not just the
+  container's) on the second, once it was deliberately broken to confirm the
+  check actually has teeth. That confirms the harness added in v7.42.3 is
+  doing its job: this class of regression is now a red CI run, not a fourth
+  screenshot.
+- **The lesson, stated plainly for next time:** replacing an engine's
+  implicit layout arithmetic with an explicit number is only safe once the
+  implicit number has actually been measured — "what the CSS obviously
+  means" and "what the browser's stretch algorithm actually resolves it to"
+  are not guaranteed to be the same number, and the gap between them is
+  exactly one pixel, which is invisible in a diff and only shows up on a
+  real screen.
+- **Verified:** all seven harnesses green — `node test/verify-static.js` at
+  20/20, `node test/model.test.js` at 141/141, `verify-door.js` (59, 03/04
+  passing again), `verify-ask.js` (170), `verify-v7.35.js` (41),
+  `verify-split.js` (16), `verify-safearea.js` (15, bar bottoms confirmed
+  844/844/844/844 of 844). `APP_VERSION` and all five siblings renumbered to
+  `7.42.4` in lockstep.
+- **For Lotmark's desk:** nothing new this entry.
 
 ---
 

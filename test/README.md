@@ -16,7 +16,7 @@ node test/verify-door.js       # the front door, all five states — 59 checks
 node test/verify-ask.js        # the ask at the front door — 177 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32 seam — 16 checks
-node test/verify-safearea.js   # the notch and the indicator — 15 checks
+node test/verify-safearea.js   # the notch and the indicator — 16 checks
 ```
 
 **All seven run in CI** on every push and pull request to `main`
@@ -26,7 +26,7 @@ download.
 
 ## Finding a browser
 
-`browser.js` resolves one for all four browser harnesses, in this order:
+`browser.js` resolves one for all five browser harnesses, in this order:
 `CHROME` if you set it, then whatever `npx playwright install chromium` put
 down, then `/opt/pw-browsers/chromium` (this project's dev container).
 
