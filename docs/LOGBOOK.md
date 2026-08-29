@@ -7,6 +7,47 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-29 — the screen, whole (v7.46.4)
+
+- **A sixth report on the standalone bottom-edge bug, and real numbers
+  instead of a sixth guess.** Rather than pattern-match "bottom bar bug"
+  onto the same fix shape a sixth time, a temporary `?diag=1` read-out (also
+  firing on `navigator.standalone` outright, since Add to Home Screen
+  launches `manifest.json`'s `start_url` and drops any query string the
+  icon was added with) was shipped to a keeper's own device: an iPhone 17
+  Pro on iOS 26.6, launched standalone.
+- **What it showed.** `innerHeight`, `visualViewport.height` and `--app-h`
+  all read **812**. `screen.height` read **874** — 62px more, exactly
+  `--sat`. The browser's own viewport was already shrunk to exclude the
+  status-bar band, while `env(safe-area-inset-top)` kept separately
+  reporting that same band as an inset to allow for. `max(100dvh,
+  var(--app-h))` — the fix from v7.42.5 — has nothing to recover from when
+  both of its candidates agree on the same wrong number.
+- **Shipped:** `screen.height`, immune to either measurement's mistake
+  because it isn't derived from them, as a third candidate:
+  `max(100dvh, var(--app-h), var(--full-h))`. `--full-h` is set only when
+  `navigator.standalone || matchMedia('(display-mode: standalone)').matches`
+  — a real Safari tab is correctly shorter than the physical screen once
+  its own chrome is standing in some of it, and this must never apply
+  there. The same likely explains the door card's "ON THE SHELF" row
+  reading squeezed nearly out of view in the keeper's photo: `main` was
+  losing the same 62px nothing was recovering.
+- **Verified:** the exact reported numbers (812/812/874, `--sat:62px`)
+  forced into a browser reproduce `body` computing to 812 before this
+  change and 874 after, nav.tabs bottom moving with it. `node
+  test/verify-static.js` (25/25), `node test/model.test.js` (142/142),
+  `verify-safearea.js` (16/16, still 844/844/844/844 — this device's own
+  62px gap doesn't reproduce in the sandbox, the same blind spot every
+  round of this bug has had). `APP_VERSION` and all six siblings renumbered
+  to `7.46.4` in lockstep.
+- **Not yet confirmed:** whether this actually closes it on the keeper's
+  own device — the `?diag=1`/standalone read-out is still live and should
+  be pulled once it does. If a seventh report ever comes in, the read-out
+  (or a fresh one) is still the right first move, not a seventh guess.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-29 — the far café, readable (v7.46.3)
 
 - **A keeper's own photo, read against the ruler that drew it.** The reach

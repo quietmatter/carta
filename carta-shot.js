@@ -967,4 +967,4 @@ window.shotTempGoal=shotTempGoal;
 window.setupCandidatesFromShots=setupCandidatesFromShots;
 window.firstStr=firstStr;
 
-window.SHOT_VERSION='7.46.3';
+window.SHOT_VERSION='7.46.4';

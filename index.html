@@ -99,20 +99,34 @@ html,body{height:100%}
 html{background:var(--surface-page)}
 body{
   background:var(--surface-card);color:var(--ink);font-family:var(--serif);font-size:16px;line-height:1.5;
-  /* height is the LARGER of two independent measurements, not one trusted
-     over the other. 100dvh has a live iOS regression (Apple Developer
-     Forums, thread 803987) that leaves a gap at the bottom in standalone;
-     window.innerHeight (--app-h, set by setAppH() below) was the fix for
-     that, on the theory that it reads the real settled height where dvh
-     doesn't. It might not, on every device — nothing here has confirmed
-     that measurement is trustworthy either, only that it happened to read
-     correctly at v7.37.6's own reference. If either one comes up short of
-     the device's true height, max() reads the other instead of compounding
-     whichever is wrong; the failure mode of both agreeing on a correct
-     number is indistinguishable from either being right alone, so this
-     costs nothing when both are fine. */
+  /* height is the LARGEST of three independent measurements, not any one
+     trusted over the others. 100dvh has a live iOS regression (Apple
+     Developer Forums, thread 803987) that leaves a gap at the bottom in
+     standalone; window.innerHeight (--app-h, set by setAppH() below) was
+     the fix for that, on the theory that it reads the real settled height
+     where dvh doesn't.
+
+     A keeper's own ?diag=1 reading (iPhone 17 Pro, iOS 26.6, standalone)
+     showed why that theory isn't enough on its own: innerHeight, dvh and
+     visualViewport.height all agreed on 812 — and screen.height read 874,
+     exactly 62px more, exactly matching --sat. The browser's own viewport
+     was already shrunk to exclude the status-bar band while env()
+     separately kept reporting that same band as an inset to allow for, so
+     the two measurements this rule used to pick between were both wrong by
+     the same amount — max() has nothing to recover from when both sides
+     of it agree on the wrong number.
+
+     screen.height isn't derived from either of those and wasn't fooled:
+     it's the physical device height, set as --full-h (standalone only,
+     by setAppH() below — a real Safari tab legitimately gets less height
+     than the physical screen once its own chrome is standing in it, so
+     this must never apply there). If either of the first two ever comes
+     up short again, or a future device disagrees with this one, max()
+     still reads whichever candidate is actually correct; the failure mode
+     of all three agreeing on a correct number is indistinguishable from
+     one being right alone, so this costs nothing when they're all fine. */
   max-width:480px;margin:0 auto;height:100vh;height:100dvh;
-  height:max(100dvh,var(--app-h,100dvh));
+  height:max(100dvh,var(--app-h,100dvh),var(--full-h,0px));
   display:flex;flex-direction:column;overflow:hidden;position:relative;
 }
 /* Phase 26: the leaf was ruled twice — the sheet's own edge and the margin it
@@ -1042,12 +1056,12 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.46.3"></script>
-<script src="carta-plate.js?v=7.46.3"></script>
-<script src="carta-shot.js?v=7.46.3"></script>
-<script src="carta-ask.js?v=7.46.3"></script>
-<script src="carta-atlas.js?v=7.46.3"></script>
-<script src="carta-rooms.js?v=7.46.3"></script>
+<script src="carta-map.js?v=7.46.4"></script>
+<script src="carta-plate.js?v=7.46.4"></script>
+<script src="carta-shot.js?v=7.46.4"></script>
+<script src="carta-ask.js?v=7.46.4"></script>
+<script src="carta-atlas.js?v=7.46.4"></script>
+<script src="carta-rooms.js?v=7.46.4"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4170,8 +4184,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.46.3';
+const APP_VERSION='7.46.4';
 const CHANGELOG=[
+  {v:'7.46.4',d:"The screen, whole, off the bottom edge one more time. The standalone bottom-edge bug has been fixed five times on the strength of what innerHeight and 100dvh read — and on an iPhone 17 Pro running iOS 26.6, both of them agreed on a height 62px short of the real screen, exactly the size of the status-bar band env() was separately still reporting as an inset to allow for. Two measurements trusted to catch each other's mistake are no help when they make the same one together. screen.height isn't derived from either and read the true height correctly, so it now stands as a third candidate — standalone only, since a real Safari tab is correctly shorter than the physical screen once its own chrome is standing in some of it."},
   {v:'7.46.3',d:"The far café, readable. The reach ruler names the nearest and — room permitting — the farthest café on your record, and that farthest label grew rightward from a point almost at the ruler's own edge: any name past a few kilometres ran off the visible strip and cut off mid-word (a keeper on a genuinely spread-out record saw \"BUJUMBURA CAFÉ\" clipped to four letters). It now grows backward over the line instead of past it once its dot sits in the ruler's own right third, which is exactly where a distance worth naming tends to land."},
   {v:'7.46.2',d:"Worth driving for, and a ring that agrees with it. The reach chips promise a distance, and the answer's own map draws it back as rings — for two of the three reaches, one of those rings was always exactly the promise. For \"worth driving for\", it wasn't: the plate drew 2, 6 and 15 km, and 8 — the number on the chip, the one Carta actually asked the model to hold to — wasn't among them. A café at 7 km could read as inside your reach and yet sit outside every ring drawn to say so. The middle ring is 8 now, not 6, so every reach keeps the same promise: what the chip says, one of the rings on the map says too."},
   {v:'7.46.1',d:"Nothing changes on the screen. landKey() — the passport's own country lookup — was reaching across a seam it shouldn't: a sibling file borrowing its name-normaliser from the page that loads it, rather than carrying one of its own. It always resolved correctly, but it was the wrong direction, the same shape cityKey() was fixed into at Phase 32. Carries its own now."},
@@ -4271,7 +4286,15 @@ const CHANGELOG=[
 // resize, which iOS fires more reliably than window's for a chrome
 // change — plus one delayed re-check as a backstop for a settle with no
 // event behind it at all.
-function setAppH(){document.documentElement.style.setProperty('--app-h',innerHeight+'px')}
+// screen.height is the physical device height, immune to the way a
+// standalone launch can shrink innerHeight/dvh to exclude the status-bar
+// band while env(safe-area-inset-top) still reports that same band as an
+// inset (v7.46.4, a keeper's own ?diag=1 reading: 812 on both of the above,
+// 874 on this). Standalone only — a real Safari tab is correctly shorter
+// than the physical screen once its own chrome takes some of it.
+function setAppH(){document.documentElement.style.setProperty('--app-h',innerHeight+'px');
+  if(navigator.standalone||matchMedia('(display-mode: standalone)').matches)
+    document.documentElement.style.setProperty('--full-h',screen.height+'px')}
 setAppH();addEventListener('resize',setAppH);addEventListener('pageshow',setAppH);
 if(window.visualViewport)visualViewport.addEventListener('resize',setAppH);
 setTimeout(setAppH,300);
