@@ -1893,4 +1893,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.46.0';
+window.ASK_VERSION='7.46.1';

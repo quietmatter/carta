@@ -7,6 +7,44 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-29 — landKey() carries its own fold (v7.46.1)
+
+- **The parked item from Phase 32's own entry, taken on the founder's call.**
+  `cityKey()` was fixed to stop calling `index.html`'s global `fold()` from
+  `carta-map.js`'s top level — a sibling reaching back into the document that
+  loads it for its own normaliser, the wrong direction even though it always
+  resolved (`index.html` declares `fold()` before either key function ever
+  runs). `landKey()` reached the same way and was left parked: the two folds
+  disagree on digits, and `landKey` sits inside the pure block the model
+  harness slices, so it wanted its own pass rather than a ride on Phase 32's.
+- **Copied, not borrowed from `cityKey()`.** `fold()` keeps digits
+  (`[^a-z0-9]+`); `cityKey()`'s own normaliser strips them (`[^a-z ]`).
+  `LAND_AKA` and `LANDS` were both keyed against `fold()`'s behavior, so
+  `landKey()` now carries a verbatim copy of `fold()`'s algorithm rather than
+  `cityKey()`'s — reusing the wrong one would have silently rekeyed any
+  country name that happens to carry a digit. Checked directly: folding
+  `"Côte d'Ivoire"`, `"Hawai'i"`, `"USA"` and a synthetic digit-bearing name
+  through both the old (`fold()`-calling) and new (self-contained) `landKey`
+  produces byte-identical output in every case.
+- **`verify-static.js`'s Phase 32 check now covers both functions** — it was
+  scoped to `cityKey` alone with a comment naming `landKey` as the known
+  exception; that comment and the check are gone, replaced by one that reads
+  both functions' bodies and asserts neither calls `fold(`.
+- **All seven files stay in lockstep, per the invariant.** `carta-map.js` is
+  the only file with a real content change, but `APP_VERSION`, `MAP_VERSION`
+  and the other five sibling `*_VERSION`s all moved to `7.46.1` together, the
+  six `?v=` tags with them — a sibling is an ordinary cached subresource, and
+  the boot guard only means anything if every version actually is in
+  lockstep, changed or not.
+- **All seven harnesses pass**, `verify-split.js` and `verify-door.js`
+  included, both of which walk a country chapter and so exercise `landKey`
+  at runtime (`passportSVG`, `tastedCountryMap`) — no console or page errors,
+  no regression in the country/region/farm walk.
+- **Nothing parked, nothing for Lotmark's desk.** Pure debt service, closing
+  the one seam Phase 32 didn't have time for.
+
+---
+
 ## 2026-08-29 — Phase 36: the reach, as a ruler (v7.46.0)
 
 - **Turn 8, and the handoff's own diagnosis is the sharpest one yet:** *"How far

@@ -1241,7 +1241,15 @@ function landTopoRaw(key){
   const enc=LAND_TOPO[key];
   return _landTopoCache[key]=enc?enc.split(';').map(lv=>lv?lv.split(',').filter(Boolean).map(r=>landPts(r,20)):[]):null;
 }
-function landKey(name){const f=fold(name||'');return LAND_AKA[f]||f}
+/* carries its own fold, the way cityKey() came to at Phase 32 — it was calling
+   index.html's global fold() from this file's top level: a sibling reaching
+   back into the host that loads it for its own normaliser, resolving only
+   because index.html happens to declare fold() before landKey ever runs.
+   Copied rather than shared with cityKey's own normaliser, because the two
+   disagree on digits: fold() keeps them and LAND_AKA/LANDS were keyed against
+   that, so borrowing cityKey's digit-stripping version here would silently
+   rekey any country name that carries one. */
+function landKey(name){const f=String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();return LAND_AKA[f]||f}
 function landAnchor(key){
   const rs=landRingsRaw(key);if(!rs||!rs.length)return null;
   const big=rs.reduce((a,r)=>r.length>a.length?r:a,rs[0]);
@@ -1501,4 +1509,4 @@ if(window.CARTA_CITY&&!window.customElements.get('carta-city'))customElements.de
 // the guard index.html's boot checks (ARCHITECTURE.md §1). The map had none
 // until Phase 31, though the guard's own comment already claimed every sibling
 // was covered — a stale carta-map.js is exactly the failure it exists to catch.
-window.MAP_VERSION='7.46.0';
+window.MAP_VERSION='7.46.1';

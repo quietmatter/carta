@@ -23,8 +23,9 @@ const CLOSE = '/* ==== /pure ==== */';
 // extractJSON/askStr. Everything
 // lands in one evaluated source, so function declarations hoist across the
 // whole of it; the order is what keeps top-level const initializers honest.
-// carta-map.js leads because it is first in that <head>, and its own landKey
-// and cityKey read index.html's fold() — which hoists back the other way.
+// carta-map.js leads because it is first in that <head> — it used to matter
+// for landKey/cityKey too (they read index.html's fold(), which hoists back
+// the other way), but both carry their own normaliser as of v7.46.1.
 const slice = file => {
   const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   const openAt = src.indexOf(OPEN);
