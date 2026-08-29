@@ -7,6 +7,44 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-29 — the far café, readable (v7.46.3)
+
+- **A keeper's own photo, read against the ruler that drew it.** The reach
+  composer's "how far you'll go" ruler names the nearest café and, where
+  there's room, the farthest one on the record. On a keeper's real record the
+  farthest name read as four letters and stopped — "BUJUMBURA CAFÉ" clipped
+  to "BUJU" mid-word, with the same photo also flagging the bottom nav bar as
+  not reaching the screen's edge.
+- **The bar checked out; the label didn't.** `test/verify-safearea.js`
+  already asserts the bar and the door both paint flush to the true bottom
+  edge (844/844/844/844), and re-running it here still passes — the visual
+  gap in the photo is the door's accent fill making its own safe-area
+  allowance visible while the plain tabs' identical allowance is invisible
+  (same paper color as the bar itself), not a layout defect. Recorded here
+  rather than silently dropped, since the keeper raised it directly and
+  nothing rules out a real per-device disagreement surfacing later.
+- **The label's root cause, reproduced off the device.** `reachRulerHTML`
+  (`carta-ask.js`) anchors the farthest café's name to grow rightward from a
+  point almost at the ruler's own edge (`x=rx(km)-8`, against a 440-unit
+  viewBox whose drawn line already stops at 420). A synthetic five-continent
+  record reproduced it exactly: the label started at x=412 and its own
+  `getBBox()` ran out to x=599 — clipped by the SVG's default overflow the
+  same way on a phone.
+- **Shipped:** a label whose dot sits in the ruler's own right third
+  (`x > RULER.x0+300`) now anchors from the right and grows back over the
+  line instead of past it. The `>120`-unit gap the two named labels already
+  require between them makes it impossible for both to land past that line
+  at once, so this can't introduce a new overlap between them.
+- **Verified:** `node test/verify-static.js` (25/25), `node
+  test/model.test.js` (142/142), `verify-safearea.js` (16/16, bar and door
+  both still flush), the fix reproduced and re-checked live in a browser
+  (`getBBox()` now reports the label's right edge at 428 of 440, inside the
+  box) before and after. `APP_VERSION` and all six siblings renumbered to
+  `7.46.3` in lockstep.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-29 — the REACH_KM / REACH_RINGS call, taken (v7.46.2)
 
 - **The founder's call from Phase 36's own handoff, taken directly: "take the

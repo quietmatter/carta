@@ -692,8 +692,15 @@ function reachRulerHTML(marks,km){
     <path d="M0 24H13M6 15V33" style="fill:none;stroke:var(--ink);stroke-width:1.2"/>
     ${[1,3,8].map(tick).join('')}${[1,3,8].map(num).join('')}
     ${groups.map(dot).join('')}
-    ${named.map(g=>`<text x="${rx(g.km)-8}" y="37" style="font-family:var(--sans);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:var(--track-label);fill:var(--ink-3)">${
-      esc(label(g))}, ${km1(g.km)} km</text>`).join('')}
+    ${named.map(g=>{
+      // a label anchored to grow rightward runs off the ruler's own edge once
+      // its dot sits in the right third — flip the anchor so it grows back
+      // over the line instead of past it (the >120 gap check above means the
+      // two named labels can never both land past this line at once)
+      const x=rx(g.km),right=x>RULER.x0+300;
+      return `<text x="${right?x+8:x-8}" y="37" text-anchor="${right?'end':'start'}" style="font-family:var(--sans);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:var(--track-label);fill:var(--ink-3)">${
+        esc(label(g))}, ${km1(g.km)} km</text>`;
+    }).join('')}
   </svg>`;
 }
 /* read from the count INSIDE the reach, never from the chip: the chip is the
@@ -1911,4 +1918,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.46.2';
+window.ASK_VERSION='7.46.3';
