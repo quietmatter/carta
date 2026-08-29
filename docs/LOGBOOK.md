@@ -49,9 +49,16 @@ Lotmark's desk. Old entries are never rewritten.*
   a lower bound, `>=350` against a 363 reference, so restructuring what's
   inside it doesn't fight that check). `APP_VERSION` and all six siblings
   renumbered to `7.46.5` in lockstep.
-- **Still open:** whether this closes it for the keeper — not yet
-  confirmed on the actual device. The `?diag=1`/standalone read-out is
-  still live for exactly that check.
+- **Confirmed on the keeper's own device** the same session: a first
+  re-check briefly read as a regression — the same card, still cut off —
+  which turned out to be a stale cached `carta-atlas.js` (a fresh
+  `ATLAS_VERSION` reading alongside a leaf missing `.lbody` was the tell,
+  since a file cannot execute its own last line without the code above it
+  in the same file also having run). Fixed by clearing that address's
+  website data. Full close, reopen: the card, the links row and the pull
+  handle all clear the bar. `?diag=1`/standalone read-out left in per the
+  note below — pull once the Shelf pass now underway confirms nothing
+  else needs it.
 - **For Lotmark's desk:** nothing new this entry.
 
 ---
