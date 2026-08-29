@@ -4335,6 +4335,8 @@ if(location.search.includes('diag=1')||navigator.standalone){
     diagBox.textContent=[
       'APP_VERSION: '+APP_VERSION+' / ATLAS_VERSION: '+window.ATLAS_VERSION,
       'atlasleaf has .lbody: '+(()=>{const l=document.getElementById('atlasleaf');return l?!!l.querySelector('.lbody'):'no leaf on screen'})(),
+      'doorBagLeafHTML source has lbody: '+(typeof doorBagLeafHTML==='function'&&doorBagLeafHTML.toString().includes('lbody')),
+      'atlasleaf outerHTML tail: '+(()=>{const l=document.getElementById('atlasleaf');return l?l.outerHTML.slice(-160):'none'})(),
       'innerHeight: '+innerHeight,
       'innerWidth: '+innerWidth,
       'visualViewport.h: '+(window.visualViewport?visualViewport.height:'n/a'),
