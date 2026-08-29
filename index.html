@@ -4333,6 +4333,8 @@ if(location.search.includes('diag=1')||navigator.standalone){
   document.body.appendChild(diagBox);
   const paintDiag=()=>{const cs=getComputedStyle(document.documentElement);
     diagBox.textContent=[
+      'APP_VERSION: '+APP_VERSION+' / ATLAS_VERSION: '+window.ATLAS_VERSION,
+      'atlasleaf has .lbody: '+(()=>{const l=document.getElementById('atlasleaf');return l?!!l.querySelector('.lbody'):'no leaf on screen'})(),
       'innerHeight: '+innerHeight,
       'innerWidth: '+innerWidth,
       'visualViewport.h: '+(window.visualViewport?visualViewport.height:'n/a'),
