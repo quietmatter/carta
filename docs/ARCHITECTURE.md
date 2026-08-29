@@ -540,17 +540,22 @@ Carta 7 is built exactly the way classic was, smaller:
   it as a behaviour rather than a shape: a cold `<carta-city>` attached at
   runtime must paint on its *first* paint.
 
-  *And one seam repaid.* `cityKey()` is top level in `carta-map.js` and was
-  calling `fold()` — which is not the map's own `fold` (that one is inside the
-  closure) but **`index.html`'s global**. It resolves, because `index.html`
-  declares `fold()` at top level and `cityKey` only ever runs later, and it is
-  why the model harness has to slice the map first. It is still the wrong
-  direction: a sibling borrowing its normaliser from the document that loads
-  it, now read by an element on a cold paint. `cityKey()` carries its own fold
-  as of this phase, and `verify-static.js` holds that. **`landKey()` still
-  reaches the same way** — parked, not fixed: the two folds differ on digits and
-  `landKey` is inside the tested block, so it wants its own pass rather than a
-  ride on this one. The check is scoped to `cityKey` and says so.
+  *And one seam repaid, then a second.* `cityKey()` is top level in
+  `carta-map.js` and was calling `fold()` — which is not the map's own `fold`
+  (that one is inside the closure) but **`index.html`'s global**. It resolves,
+  because `index.html` declares `fold()` at top level and `cityKey` only ever
+  runs later, and it is why the model harness has to slice the map first. It
+  was still the wrong direction: a sibling borrowing its normaliser from the
+  document that loads it, read by an element on a cold paint. `cityKey()`
+  carries its own fold as of this phase. **`landKey()` reached the same way
+  and was left parked at the time** — the two folds differ on digits and
+  `landKey` is inside the tested block, so it wanted its own pass rather than
+  a ride on this one. **v7.46.1 took that pass**: `landKey()` now carries its
+  own copy of `fold()`'s exact algorithm (digit-preserving, since `LAND_AKA`
+  and `LANDS` are keyed against that behavior — copying `cityKey()`'s
+  digit-stripping version instead would have silently rekeyed any country
+  name that carries a digit). `verify-static.js` checks both functions the
+  same way now.
 
   *The band, and its one remaining growth vector.* `index.html` finished this
   phase at **5,000 / 5,000 lines, 360.5 KB** — every line of the work went into

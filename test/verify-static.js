@@ -93,21 +93,27 @@ is(checked === tags.length,
   `the boot guard checks all ${tags.length} siblings`,
   `checks ${checked}: ${guard.trim()}`);
 
-/* ---- Phase 32 · cityKey owns its own normalisation ----
-   It used to call index.html's global fold(): a sibling borrowing its
-   normaliser from the document that loads it. It resolved — index.html
-   declares fold() at top level and cityKey only runs later — but it is the
-   wrong direction, it is why the model harness slices the map first, and
-   <carta-city> now reads cityKey on a cold paint, before the app's own script
-   has necessarily done anything. landKey() below it still reaches the same
-   way; that is a known, pre-existing case and is parked in LOGBOOK.md rather
-   than changed here, because the two folds differ on digits and landKey is in
-   the tested block. This check holds the line that was actually moved. */
+/* ---- Phase 32 / v7.46.1 · cityKey and landKey own their own normalisation ----
+   Both used to call index.html's global fold(): a sibling borrowing its
+   normaliser from the document that loads it. It resolved either way —
+   index.html declares fold() at top level and neither key function runs
+   before that has happened — but it is the wrong direction: <carta-city>
+   reads cityKey on a cold paint, before the app's own script has necessarily
+   done anything, and the model harness has to slice the map first only
+   because of this seam. cityKey was fixed at Phase 32; landKey carries its
+   own copy rather than cityKey's, because the two folds differ on digits —
+   fold() keeps them, LAND_AKA/LANDS were keyed against that, and landKey is
+   inside the tested block, so it wanted its own pass rather than a ride on
+   this one. Both checked the same way now. */
 {
-  const body = (read('carta-map.js').match(/function cityKey\([\s\S]*?\n/) || [''])[0];
-  is(body.length > 40 && !/\bfold\s*\(/.test(body),
+  const cityBody = (read('carta-map.js').match(/function cityKey\([\s\S]*?\n/) || [''])[0];
+  is(cityBody.length > 40 && !/\bfold\s*\(/.test(cityBody),
     'cityKey normalises inside carta-map.js, not through the host',
-    body.trim() || '(cityKey not found)');
+    cityBody.trim() || '(cityKey not found)');
+  const landBody = (read('carta-map.js').match(/function landKey\([\s\S]*?\n/) || [''])[0];
+  is(landBody.length > 40 && !/\bfold\s*\(/.test(landBody),
+    'landKey normalises inside carta-map.js, not through the host',
+    landBody.trim() || '(landKey not found)');
 }
 
 /* ---- the band, reported and never gated (ARCHITECTURE.md §1) ---- */
