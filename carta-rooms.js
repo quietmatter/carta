@@ -913,4 +913,4 @@ window.vSetup=vSetup;
 window.vSetups=vSetups;
 window.vShelf=vShelf;
 
-window.ROOMS_VERSION='7.46.4';
+window.ROOMS_VERSION='7.46.5';

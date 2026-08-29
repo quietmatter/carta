@@ -7,6 +7,55 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-29 — the door's own card, held to the same edge (v7.46.5)
+
+- **The keeper's own confirmation, and the next thing it surfaced.** v7.46.4
+  fixed on the keeper's device — nav.tabs bottom moved from 812 to 874, the
+  compressed card recovered its spacing. Asked to check the Shelf next, the
+  keeper instead found a smaller thing still wrong one screen back: the
+  Atlas door card's "Something else / Where to next" row **actually cut
+  off** against the bar, not merely close to it.
+- **Two distinct causes, not one.** A synthetic reproduction at the keeper's
+  exact numbers found the card's content fitting its designed 363px box
+  with zero slack (`scrollHeight === clientHeight`, 362 of 363) — real
+  Safari's own font metrics needing even a few more px than Chromium's
+  would tip that into genuine overflow. Separately, a deliberate race
+  simulation (viewport genuinely 812, then the standalone-only correction
+  landing without a repaint) showed the door card's own position is a pixel
+  value baked into the DOM by `mountAtlas()` off `main.clientHeight`,
+  measured once at render time — unlike `nav.tabs`, which reads
+  `--app-h`/`--full-h` through `var()` and repaints itself the instant
+  either one changes. A late correction reaches the bar for free and
+  leaves the card's baked position stale.
+- **What made the first cause worse than a few clipped px.** The card's
+  pull handle (`atlasHandleHTML`) rode inside the same scrolling flex
+  column as the content, positioned by `margin-top:auto` — which has
+  nothing to push against once content overflows, so the handle followed
+  the last row past the fold rather than staying reachable.
+- **Shipped, both:** the card's content now scrolls in its own `.lbody`
+  wrapper; the handle sits outside it, always at the card's true bottom.
+  Verified by force-squeezing the same reproduction to 283 of a needed
+  361px: the handle stayed fully visible at the true edge in every case,
+  and the overflow became a scroll inside the card rather than a clip
+  behind the bar. Separately, `setAppH`'s resize/pageshow/visualViewport/
+  timeout re-checks now also repaint the Atlas door (guarded to
+  `tab==='atlas'&&!pageView`, the same guard already used at
+  `index.html:3767` for a mutation-triggered repaint) — verified against
+  the same race simulation: the card's own top moves with the correction
+  instead of staying frozen.
+- **Verified:** `node test/verify-static.js` (25/25), `node
+  test/model.test.js` (142/142), `verify-safearea.js` and `verify-door.js`
+  re-run clean (the latter's own locked assertion on this leaf's height is
+  a lower bound, `>=350` against a 363 reference, so restructuring what's
+  inside it doesn't fight that check). `APP_VERSION` and all six siblings
+  renumbered to `7.46.5` in lockstep.
+- **Still open:** whether this closes it for the keeper — not yet
+  confirmed on the actual device. The `?diag=1`/standalone read-out is
+  still live for exactly that check.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-29 — the screen, whole (v7.46.4)
 
 - **A sixth report on the standalone bottom-edge bug, and real numbers

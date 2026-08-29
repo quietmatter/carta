@@ -414,6 +414,7 @@ function doorShotLeafHTML(shot,plateH){
     :[shot.roaster,shot.roastLevel?shot.roastLevel.toLowerCase():'',
       shot.grinderModel?'on the '+shot.grinderModel:''].filter(Boolean).join(' · ');
   return `<div class="doorleaf paper" id="atlasleaf" style="top:${plateH-ATLAS_OVERLAP}px">
+    <div class="lbody">
     <div class="waiting ink"><span class="mk"></span><span class="l">${esc(when?'Poured '+fmtAgo(when):'A brew, waiting')}</span></div>
     <div class="display big" style="margin:12px 0 3px">${esc(shot.coffeeName||shot.label)}</div>
     ${sub?`<div class="doorsub">${esc(sub)}</div>`:''}
@@ -423,6 +424,7 @@ function doorShotLeafHTML(shot,plateH){
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:14px">
       <span class="asttrust" style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">Read off your ${pour?'scale':'account'}, kept nowhere else.</span>
       <button class="qlink" style="flex:none;white-space:nowrap" onclick="snoozeWaitingShot()">Not now</button>
+    </div>
     </div>
     ${atlasHandleHTML(false)}
   </div>`;
@@ -443,6 +445,7 @@ function doorBagLeafHTML(bag,plateH){
   const lastLine=[day,inout].filter(Boolean).join(' · ');
   const fact=(k,v)=>`<div class="kv"><span class="k">${esc(k)}</span><span class="v${v?'':' unread'}">${v?esc(v):'unread'}</span></div>`;
   return `<div class="doorleaf paper" id="atlasleaf" style="top:${plateH-ATLAS_OVERLAP}px">
+    <div class="lbody">
     <div style="display:flex;align-items:center;gap:12px">
       ${seal}
       <span class="eyebrow" style="margin:0">${esc(bagRestLine(c))}</span>
@@ -454,6 +457,7 @@ function doorBagLeafHTML(bag,plateH){
     <div style="display:flex;justify-content:center;gap:24px;margin-top:10px">
       <button class="qlink" style="flex:none;white-space:nowrap" onclick="go('shelf')">Something else</button>
       <button class="qlink" style="flex:none;white-space:nowrap" onclick="openAskScreen()">Where to next</button>
+    </div>
     </div>
     ${atlasHandleHTML(false)}
   </div>`;
@@ -507,6 +511,7 @@ function doorAnswerLeafHTML(a,plateH){
     :lost?`${capFirst(words(grounded))} confirmed. ${capFirst(words(lost))} listed, never drawn.`
     :`Every name confirmed against a real address.`;
   return `<div class="doorleaf paper" id="atlasleaf" style="top:${plateH-ATLAS_OVERLAP}px">
+    <div class="lbody">
     <div class="doorfound">
       <span class="eyebrow" style="margin:0">What Carta found</span>
       <span class="r">${esc(a.destination)} · ${esc(words(named.length))} name${named.length===1?'':'s'}</span>
@@ -520,6 +525,7 @@ function doorAnswerLeafHTML(a,plateH){
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:12px">
       <span style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">${esc(confirmed)}</span>
       <button class="qlink" style="flex:none;white-space:nowrap" onclick="setAsideAnswer(${jsq(String(a.id))})">Not now</button>
+    </div>
     </div>
     ${atlasHandleHTML(false)}
   </div>`;
@@ -1317,4 +1323,4 @@ window.vCountryChapter=vCountryChapter;
 window.vProducerPage=vProducerPage;
 window.vRegionChapter=vRegionChapter;
 
-window.ATLAS_VERSION='7.46.4';
+window.ATLAS_VERSION='7.46.5';
