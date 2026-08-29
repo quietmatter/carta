@@ -72,7 +72,12 @@ commission in `docs/DESIGN_BRIEF.md`, drawn in `docs/redesign-concept/`.
   the brief's exact text for anyone who wants to read all of it. It composes
   **on a leaf over the map it's about**, not on a screen of its own, and the
   line under the field says only what your record can defend: *on your
-  record, two cups and two cafés — the ask is scoped to them*. Behind that line,
+  record, two cups and two cafés — the ask is scoped to them*. **How far you'll
+  go** is a distance now rather than three words: the chips carry their
+  kilometres, and under them a small ruler puts your own cafés on it, measured
+  from the middle of them — the same point every distance in an answer is
+  counted from. A line says what that reach amounts to on your record: how many
+  of your cafés fall inside it, and which one is the nearest just outside. Behind that line,
   **read it as** opens the kinds — a city, a neighborhood, a point to start
   from, a country, a route, a friend's taste — and a box for anything else the
   ask should know. Picking one says what it changes in a line: what the field

@@ -324,6 +324,15 @@ server/               Classic's sync server — dormant
     back on the leaf (`askEchoHTML`) and is repainted there *behind* the sheet as
     it is typed, so a swipe dismissal keeps it. A chip repaints the sheet in
     place — `render()` paints `#main` and the sheet is its own element.
+    **Phase 36 (v7.46.0) gave the reach chips their kilometres** (`REACH_KM` —
+    inside the pure block, because `askPromptText` reads it and the model
+    harness slices only that region) and a **ruler** under them:
+    `reachMarks`/`reachGroups`/`reachRulerHTML`/`reachSaysHTML` put the record's
+    own cafés on a 0–9 km scale off `meanPin()`, the same anchor an answer counts
+    from. The sentence reads from the count *inside* the reach, never from the
+    chip, and `scopedCups()` is shared with the read-as line so one number is not
+    counted twice. **`REACH_KM` is not `REACH_RINGS`** — they disagree for two
+    reaches of three, and that is an open founder call recorded in `LOGBOOK.md`.
     **Part three (v7.41.0) moved the composer onto a leaf too** — a 140px
     strip of the door's plate, `ask` out of `BARELESS`, and one read-as line
     under the field (`askReadAsParts`, six states) that **counts what the
@@ -585,7 +594,7 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is the one tested without a browser:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 141 cases
+node test/model.test.js        # zero deps, plain Node, 142 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
@@ -641,7 +650,7 @@ any page error, or any assertion:
 ```bash
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 189 checks
+node test/verify-ask.js        # the ask at the front door — 203 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32/35 seams — 27 checks
 node test/verify-safearea.js   # the notch and the indicator — 16 checks

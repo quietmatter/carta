@@ -42,7 +42,7 @@ vm.createContext(sandbox);
 vm.runInContext(pureSrc + `
 ;globalThis.__m = { tasteModel, briefPlainText, briefPageHTML, matchNodes, joinAlias,
   putAwayCore, restoreCore, fold, lev, esc, coffeeLabel, importClassicMap,
-  askPromptText, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
+  askPromptText, REACH_KM, parseAskJSON, matchFigure, hoodOf, cleanHood, cityOf, dedupeHits, parseMapLink,
   projectFlat, convexHull, cityShapeHull, roundedHullPath, cityShapePath, menuOCRPrompt, parseMenuOCR, extractJSON,
   ROAST_LEVELS, parseRoastLevel, doorParse, originPin, meanPin, namesBack, cfSearchPrompt, parseCfSearch,
   parseVisualizerShot, normalizeRoastLevel, matchSetupByGrinder, brewerOf, setupCandidatesFromShots,
@@ -421,6 +421,15 @@ ok('askPromptText carries a centroid and the reach the keeper stated');
 
 const promptRich = M.askPromptText('brief', 'city', 'Lisbon', '', '');
 assert.ok(!promptRich.includes("How far I'll actually go"), 'no reach stated, no reach clause invented');
+/* turn 8: the reach is a number now, and the number that leaves the device has
+   to be the one the composer's ruler drew. REACH_KM lives inside the pure block
+   for exactly this reason — the handoff placed it 450 lines below, outside the
+   slice, where this assertion could not see it and the prompt would have thrown. */
+assert.ok(promptNear.includes("How far I'll actually go: a short drive — about 3 km at most."),
+  'the reach carries its kilometres into the prompt, not just its phrase');
+assert.equal(M.REACH_KM['on foot'], 1);
+assert.equal(M.REACH_KM['worth driving for'], 8);
+ok('REACH_KM is the ladder the composer states, the ledger echoes and the prompt sends — one number, three places');
 ['"read"', '"verdict"', '"fit"', '"order"', '"travel"', '"stale"', '"mentions"', '"plan"', '"routes"', '"wildcard"']
   .forEach(k => assert.ok(promptRich.includes(k), `the prompt names ${k} — a field the model is never asked for is a field it never fills`));
 assert.ok(promptRich.includes('ONE sentence'), 'the one-sentence discipline is stated, not hoped for — this is read as chips, not prose');

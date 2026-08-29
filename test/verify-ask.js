@@ -887,6 +887,111 @@ const findState=p=>p.evaluate(()=>{
   await ctx.close();
 }
 
+/* ---- Phase 36 · the reach, as a ruler (`8a`-`8d`) ----
+   "How far you'll go" shipped as three chips that changed nothing anyone could
+   see. They carry kilometres now, and a ruler under them counts the keeper's
+   own cafés from the same anchor an answer is measured from. What these checks
+   guard is that every number on the screen is derived and that the three places
+   which state the reach cannot drift apart. */
+{
+  const {ctx,page}=await boot({});
+  await page.evaluate(()=>{askDraft.kind='city';askDraft.dest='Lisbon';askDraft.question='';
+    askDraft.reach='a short drive';openAskScreen()});
+  await page.waitForTimeout(700);
+  const r=await page.evaluate(()=>{
+    const svg=document.querySelector('.reach-rule');
+    return {chips:[...document.querySelectorAll('.picks .pick')].map(b=>b.innerText.replace(/\s+/g,' ').trim()),
+      km:[...document.querySelectorAll('.picks .pick .km')].map(k=>k.textContent.trim()),
+      rule:!!svg, ticks:svg?[...svg.querySelectorAll('text')].map(t=>t.textContent.trim()):[],
+      from:(document.querySelector('.reach-from')||{innerText:''}).innerText.trim(),
+      says:(document.querySelector('.reach-says')||{innerText:''}).innerText.trim()};
+  });
+  ok(r.rule,'the reach — the ruler draws');
+  ok(r.km.join('|')==='· 1 km|· 3 km|· 8 km','the chips carry their kilometres',JSON.stringify(r.km));
+  // the unit is written once, on the last tick — "1", "3", "8 km"
+  ok(r.ticks.slice(0,3).join(',')==='1,3,8 km','the ruler is ticked at the three reaches, the unit once',JSON.stringify(r.ticks));
+  ok(/both caf|caf|km/i.test(r.ticks[3]||''),'and the nearest group is named on the rule with its own distance',JSON.stringify(r.ticks));
+  ok(/from the middle of your two caf/i.test(r.from),'and names the anchor it counts from',r.from);
+
+  /* the sentence is read from the count INSIDE the reach, not from the chip.
+     Recomputed here from the app's own marks so the copy cannot drift from the
+     arithmetic it claims to describe. */
+  const derived=await page.evaluate(()=>{
+    const m=reachMarks(),km=reachKm(askDraft.reach);
+    return {inside:m.ds.filter(d=>d.km<=km).length,n:m.ds.length,
+      says:(document.querySelector('.reach-says')||{innerText:''}).innerText};
+  });
+  ok(derived.n>0&&derived.inside===derived.n&&/inside/i.test(derived.says),
+    'the sentence counts what is actually inside the reach',JSON.stringify(derived));
+
+  /* one number, in the three places that state it: the chip, the ledger row and
+     the prompt that actually leaves the device. The composer's whole argument is
+     that what is shown is what goes out. */
+  const three=await page.evaluate(()=>({
+    chip:reachKm(askDraft.reach),
+    ledger:(document.getElementById('ask_led')||{innerText:''}).innerText,
+    prompt:askPromptText(briefPlainText(tasteModelMemo()),
+      askScopeOf(askDraft.kind,askDraft.dest).kind,(askDraft.dest||'').trim(),'',askReach())}));
+  ok(three.chip===3&&/3 km of it/i.test(three.ledger),'the ledger states the same kilometres the chip does',three.ledger);
+  ok(/about 3 km at most/i.test(three.prompt),'and so does the prompt that actually leaves the device',
+    three.prompt.split('\n').filter(l=>/How far/.test(l)).join(''));
+
+  // picking a different reach moves the run, the dots and the sentence together
+  const moved=await page.evaluate(()=>{pickAskReach('on foot');
+    return {says:document.querySelector('.reach-says').innerText,
+      run:document.querySelector('.reach-rule path:nth-of-type(2)').getAttribute('d')}});
+  const wide=await page.evaluate(()=>{pickAskReach('worth driving for');
+    return {says:document.querySelector('.reach-says').innerText,
+      run:document.querySelector('.reach-rule path:nth-of-type(2)').getAttribute('d')}});
+  ok(moved.run!==wide.run&&moved.says!==wide.says,
+    'a different reach moves the inked run and the sentence together',JSON.stringify({moved,wide}));
+
+  /* not a place: no label, no chips, no ruler, no sentence. REACH_KINDS has
+     always decided this; the ruler must not outlive it. */
+  const noPlace=await page.evaluate(()=>{askDraft.kind='route';render();
+    return {rule:!!document.querySelector('.reach-rule'),says:!!document.querySelector('.reach-says'),
+      chips:document.querySelectorAll('.picks .pick').length,
+      text:document.getElementById('main').innerText}});
+  ok(!noPlace.rule&&!noPlace.says&&!/How far you/i.test(noPlace.text),
+    'a route has no centre, so the whole reach block leaves the composer',JSON.stringify(noPlace));
+
+  /* a scope with no placed café: the chips still stand — the setting is real and
+     rides in the prompt — but there is nothing to measure, and it says so. */
+  const bare=await page.evaluate(()=>{
+    const was=D.places.map(p=>({id:p.id,lat:p.lat,lon:p.lon}));
+    D.places.forEach(p=>{p.lat=null;p.lon=null});save();
+    askDraft.kind='city';render();
+    const out={rule:!!document.querySelector('.reach-rule'),
+      chips:document.querySelectorAll('.picks .pick').length,
+      says:(document.querySelector('.reach-says')||{innerText:''}).innerText,
+      none:!!document.querySelector('.reach-says.none'),
+      from:!!document.querySelector('.reach-from')};
+    was.forEach(w=>{const p=D.places.find(x=>x.id===w.id);p.lat=w.lat;p.lon=w.lon});save();render();
+    return out;
+  });
+  ok(bare.chips===3&&!bare.rule&&bare.none,
+    'nothing placed — the chips stand, the ruler does not, and it says why',JSON.stringify(bare));
+  ok(!bare.from,'and no anchor is named, because there is none',JSON.stringify(bare));
+
+  /* the composer got taller by a ruler and a sentence, so the action sits below
+     the fold at rest on the reference frame. It must still be REACHABLE — this
+     app's leaves scroll, and that is the guarantee, not a pixel gap. */
+  await page.evaluate(()=>{askDraft.kind='city';askDraft.reach='a short drive';render()});
+  await page.waitForTimeout(400);
+  const reach=await page.evaluate(()=>{
+    const body=document.querySelector('#askleaf .body');body.scrollTop=body.scrollHeight;
+    const btn=[...document.querySelectorAll('#askleaf button')].find(b=>/Ask Carta/.test(b.textContent));
+    const tabs=document.getElementById('tabs');
+    return {clear:Math.round(tabs.getBoundingClientRect().top-btn.getBoundingClientRect().bottom),
+      svgH:Math.round(document.querySelector('.reach-rule').getBoundingClientRect().height)};
+  });
+  ok(reach.clear>0,'the action is still reachable — the leaf scrolls and the button clears the bar',JSON.stringify(reach));
+  /* flex:none on the ruler is load-bearing: without it the SVG is the item the
+     flex column squeezes, and it is what drags the action under the bar. */
+  ok(reach.svgH===38,'and the ruler keeps its full height rather than being the item that gets squeezed',JSON.stringify(reach));
+  await ctx.close();
+}
+
 /* ---- Phase 34 · the written question, echoed on the leaf (`7c`) ----
    The composer's whole argument is that nothing leaves the device unseen. A
    sentence held behind a button would be the one thing that did. */
