@@ -1042,12 +1042,12 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.46.1"></script>
-<script src="carta-plate.js?v=7.46.1"></script>
-<script src="carta-shot.js?v=7.46.1"></script>
-<script src="carta-ask.js?v=7.46.1"></script>
-<script src="carta-atlas.js?v=7.46.1"></script>
-<script src="carta-rooms.js?v=7.46.1"></script>
+<script src="carta-map.js?v=7.46.2"></script>
+<script src="carta-plate.js?v=7.46.2"></script>
+<script src="carta-shot.js?v=7.46.2"></script>
+<script src="carta-ask.js?v=7.46.2"></script>
+<script src="carta-atlas.js?v=7.46.2"></script>
+<script src="carta-rooms.js?v=7.46.2"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4170,8 +4170,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.46.1';
+const APP_VERSION='7.46.2';
 const CHANGELOG=[
+  {v:'7.46.2',d:"Worth driving for, and a ring that agrees with it. The reach chips promise a distance, and the answer's own map draws it back as rings — for two of the three reaches, one of those rings was always exactly the promise. For \"worth driving for\", it wasn't: the plate drew 2, 6 and 15 km, and 8 — the number on the chip, the one Carta actually asked the model to hold to — wasn't among them. A café at 7 km could read as inside your reach and yet sit outside every ring drawn to say so. The middle ring is 8 now, not 6, so every reach keeps the same promise: what the chip says, one of the rings on the map says too."},
   {v:'7.46.1',d:"Nothing changes on the screen. landKey() — the passport's own country lookup — was reaching across a seam it shouldn't: a sibling file borrowing its name-normaliser from the page that loads it, rather than carrying one of its own. It always resolved correctly, but it was the wrong direction, the same shape cityKey() was fixed into at Phase 32. Carries its own now."},
   {v:'7.46.0',d:"How far you'll go, as a distance you can check. The three reach chips named a distance and showed you nothing — on foot, a short drive, worth driving for, and picking one changed nothing on the screen. They carry their kilometres now (1, 3 and 8), and those are not new numbers: they are exactly the rings Carta draws around the answer afterwards, so what the composer promises and what the map shows are one figure. Under the chips is a ruler with your own cafés on it, measured from the middle of them — the same point every distance in an answer is counted from. Carta still has no idea where you are standing and does not ask. A line under it says what the reach amounts to on your record rather than what the chip is called: how many of your cafés fall inside it, and which one is the nearest just outside. Pick a different reach and the run, the dots and the sentence all move together."},
   {v:'7.45.0',d:"The file, split a fourth time. Nothing changes on the screen. The Journal, a cup, a café, the shelf, your record, a Setup and the dials moved into a file of their own — the same screens, read from a different place. What it buys is that the one file everything else lives in is a size a person can still read whole, which is the only reason any of these splits have happened. Seven files now, still nothing to build, still nothing between the source and wherever you put it."},

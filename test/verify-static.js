@@ -116,6 +116,25 @@ is(checked === tags.length,
     landBody.trim() || '(landKey not found)');
 }
 
+/* ---- REACH_KM has a matching ring in REACH_RINGS, for every reach ----
+   The founder's call on Phase 36's own open item: what the composer promises
+   ("worth driving for — 8 km") must be a ring the answer's plate actually
+   draws, or a café the composer counts as inside the reach can land outside
+   every ring drawn to explain why. REACH_RINGS lives outside the pure block
+   (it reads the plate's own framing), so this reads both as source text
+   rather than through the model harness's sandbox. */
+{
+  const ask = read('carta-ask.js');
+  const kmSrc = (ask.match(/const REACH_KM=(\{[^}]*\});/) || [])[1];
+  const ringsSrc = (ask.match(/const REACH_RINGS=(\{[^}]*\});/) || [])[1];
+  const km = kmSrc ? JSON.parse(kmSrc.replace(/'/g, '"').replace(/([{,])(\s*)([a-z ]+):/gi, '$1"$3":')) : null;
+  const rings = ringsSrc ? JSON.parse(ringsSrc.replace(/'/g, '"').replace(/([{,])(\s*)([a-z ]+):/gi, '$1"$3":')) : null;
+  const ok = km && rings && Object.keys(km).every(r => (rings[r] || []).includes(km[r]));
+  is(ok,
+    'every REACH_KM figure is one of the rings REACH_RINGS draws for that reach',
+    JSON.stringify({ REACH_KM: km, REACH_RINGS: rings }));
+}
+
 /* ---- the band, reported and never gated (ARCHITECTURE.md §1) ---- */
 const LINE_MAX = 5000, BYTE_MAX = 500 * 1024;
 // newlines, so this agrees with `wc -l` and with every figure in the record

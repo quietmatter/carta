@@ -48,10 +48,16 @@ function askKindLabel(k){return {city:'A city',neighborhood:'A neighborhood',nea
  * sentence because the answer is read as a list of chips on a phone, not as
  * prose — length here is the failure mode, not the goal. */
 const ASK_CAPS={cafes:8,mentions:4,fit:3,routes:4};
-/* The reach, as kilometres. These are not a second opinion about distance:
-   REACH_KM is exactly what <carta-city rings="1,3,8"> draws on the answer's
-   plate afterwards, so the distance the composer promises and the distance the
-   answer draws are one number rather than two that agree by luck.
+/* The reach, as kilometres — what the composer promises, the ledger states,
+   and the prompt that leaves the device says "at most". Turn 8's own comment
+   here used to claim this is exactly what <carta-city rings="1,3,8"> draws
+   on the answer's plate afterwards — true only of "a short drive", the one
+   reach the turn's own mockup showed; REACH_RINGS (further down, outside the
+   pure block since it reads the plate's framing) carries a different, wider
+   ladder for the other two. Each of these three numbers is still one of the
+   rings that reach draws — every dot the composer counts as "inside" lands
+   inside a ring that says so on the answer — it just isn't always the
+   outermost one, which is the plate's own zoom rather than a promise.
    It lives INSIDE the pure block, against the handoff's own placement beside
    ASK_REACH — askPromptText reads it, and the model harness slices only this
    region, so a constant defined 450 lines below would be a ReferenceError in
@@ -1553,7 +1559,19 @@ function resetAnsStop(){_ansStop=ANS_REST}
  *           That is the stated coverage, not a failure — the grid and the reach
  *           are the plate's argument and the headline names the city.
  */
-const REACH_RINGS={'on foot':[1,2,4],'a short drive':[1,3,8],'worth driving for':[2,6,15]};
+/* the founder's call from Phase 36's own handoff, taken: every reach carries a
+   ring at its own REACH_KM figure, so a café the composer counts as "inside
+   the reach" is always inside a ring drawn to say so — the acceptance item
+   the turn 8 handoff named and could not itself resolve ("a dot inside the
+   run is inside the matching ring"). "on foot" (1) and "a short drive" (3)
+   already had one; "worth driving for" didn't — its middle ring moves from 6
+   to 8 to gain it. The outer rings (4, 8, 15) are untouched: they are the
+   plate's own framing, tuned separately (span reads the *middle* ring, see
+   ansFrame below), and rewriting them to cap at the chip's own figure would
+   have meant redesigning the ruler's fixed 0–9 km scale and ticks too — a
+   second, unrelated feature this call does not reopen. test/verify-static.js
+   checks every REACH_KM value has a matching entry here. */
+const REACH_RINGS={'on foot':[1,2,4],'a short drive':[1,3,8],'worth driving for':[2,8,15]};
 const ANS_LONE_SPAN=3,ANS_HEAD_CLEAR=54;   // the header row the plate is read under
 // the scrim's own readable start, and how far into the headline a mark may fall
 const ANS_MARK_HIGH=40,ANS_MARK_DEPTH=.3;
@@ -1893,4 +1911,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.46.1';
+window.ASK_VERSION='7.46.2';

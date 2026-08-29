@@ -7,6 +7,58 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-29 — the REACH_KM / REACH_RINGS call, taken (v7.46.2)
+
+- **The founder's call from Phase 36's own handoff, taken directly: "take the
+  REACH_KM vs REACH_RINGS call."** The table Phase 36 left open:
+
+  | reach | chip km (`REACH_KM`) | plate rings (`REACH_RINGS`) | the km is… |
+  |---|---|---|---|
+  | on foot | 1 | 1, 2, 4 | the innermost ring |
+  | a short drive | 3 | 1, 3, 8 | the middle ring |
+  | worth driving for | 8 | 2, 6, 15 | **not a ring at all** |
+
+  Re-reading the table rather than the two systems in the abstract narrowed
+  it: two of three reaches already had a ring at exactly their `REACH_KM`
+  figure — only *worth driving for* didn't. The failing acceptance item ("a
+  dot inside the run is inside the matching ring") was never really a
+  three-reach problem, it was one missing ring.
+- **What did NOT move, and why.** `REACH_RINGS`'s outer ring is read by
+  `ansFrame()` at `rings[1]*2.2` to size the whole plate's zoom — it is load-
+  bearing for framing, not decoration, so collapsing every reach to a single
+  ring (matching `REACH_KM` exactly, the tidier-looking fix) would have broken
+  that math and needed its own redesign. `REACH_KM` itself is read by the
+  composer chip, the ledger row, the prompt text, and Phase 36's ruler — whose
+  scale (`RULER.max=9`) and ticks (`[1,3,8]`, hardcoded, not derived) are
+  built and tested around exactly `1/3/8`. Changing `REACH_KM` to the outer
+  ring of each ladder (4/8/15) would have meant redesigning the ruler too — a
+  second, unrelated, already-shipped, heavily-tested feature this call does
+  not reopen.
+- **What moved: one number.** `REACH_RINGS['worth driving for']`'s middle ring,
+  `6 → 8`, so it now carries `REACH_KM`'s own promise (`2,6,15` → `2,8,15`).
+  `on foot` and `a short drive` are untouched — they were already correct.
+- **A static check closes the seam so this can't drift again silently**:
+  `verify-static.js` now reads both constants as source text (`REACH_RINGS`
+  sits outside the pure block, since it reads the plate's own framing, so it
+  isn't in the model harness's sandbox) and asserts every `REACH_KM` figure is
+  one of the rings its own reach draws.
+- **The stale comment corrected.** `REACH_KM`'s own doc comment used to claim
+  it "is exactly what `<carta-city rings="1,3,8">` draws on the answer's
+  plate" — true only of *a short drive*, the one reach turn 8's mockup showed.
+  Rewritten to say what's actually true: each figure is *a* ring that reach
+  draws, not always the outermost one, which is the plate's own zoom rather
+  than a promise.
+- **All seven harnesses pass**, `verify-ask.js` included (203 checks, the one
+  that exercises the composer, the ruler and both reach selections end to
+  end) — no regression in the existing "worth driving for" coverage, and the
+  new static check is green.
+- **Versions in lockstep at `7.46.2`.** Only `carta-ask.js` has a real content
+  change; the rest move to stay in the boot guard's lockstep, per the same
+  invariant the `landKey()` entry above just walked through.
+- **Nothing parked, nothing for Lotmark's desk.**
+
+---
+
 ## 2026-08-29 — landKey() carries its own fold (v7.46.1)
 
 - **The parked item from Phase 32's own entry, taken on the founder's call.**
