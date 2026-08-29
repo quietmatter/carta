@@ -1880,13 +1880,16 @@ at 1.05 km from their midpoint, recomputed through the app's own geometry.
   bundle. Carta states spacing in px; imported verbatim those tokens resolve to
   nothing and the row collapses with no error at all.
 
-**One cross-turn conflict, left for the founder.** The brief's premise is that
-the chip's km *is* the ring the answer's plate draws. Against Phase 33's shipped
-per-reach ladder that holds for one reach of three — `worth driving for` promises
-8 km and the plate rings 2/6/15. Turn 8 is internally consistent and shipped as
-specified; the ladder was reviewed and merged and is not something to rewrite on
-an inference. Which of the two is right is a call, and it is the one acceptance
-item of seven not met.
+**One cross-turn conflict, left for the founder — and taken (v7.46.2).** The
+brief's premise is that the chip's km *is* the ring the answer's plate draws.
+Against Phase 33's shipped per-reach ladder that held for one reach of three —
+`worth driving for` promised 8 km and the plate ringed 2/6/15, the one
+acceptance item of seven not met. The call: two of three reaches already had a
+ring at their own `REACH_KM` figure, so the fix was one number, not a redesign
+— `worth driving for`'s middle ring moved from 6 to 8. `REACH_RINGS`'s outer
+rings stay Phase 33's own, load-bearing for the plate's zoom (`ansFrame` reads
+the middle ring to size the frame); `REACH_KM` and the ruler built around it
+stay turn 8's own. Full account in `LOGBOOK.md`.
 
 **A second acceptance item is not met, for a reason the brief misdiagnoses.** It
 expects the action to clear the tab bar by 29px; it sits 60px below the fold. Not
