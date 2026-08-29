@@ -8,12 +8,12 @@ assertion, and the browser five also fail on any console error or page error.
 ```
 # no browser, no network, seconds
 node test/verify-static.js     # the seven files parse and agree — 23 checks
-node test/model.test.js        # the taste model and the brief — 141 cases
+node test/model.test.js        # the taste model and the brief — 142 cases
 
 # the real app, in a real browser
 npm i playwright-core --no-save
 node test/verify-door.js       # the front door, all five states — 59 checks
-node test/verify-ask.js        # the ask at the front door — 189 checks
+node test/verify-ask.js        # the ask at the front door — 203 checks
 node test/verify-v7.35.js      # the v7.35.0 fold — 41 checks
 node test/verify-split.js      # the Phase 31/32/35 seams — 27 checks
 node test/verify-safearea.js   # the notch and the indicator — 16 checks
@@ -107,6 +107,15 @@ The Atlas moved into `carta-atlas.js`, and `<carta-city>` was folded into
   line for `cityKey`.)
 
 ## `verify-ask.js` — the ask at the front door (Phases 31–34)
+
+**Phase 36 added the reach ruler.** The checks guard that every number is
+derived and that the three places stating the reach cannot drift: the chip, the
+ledger row and the prompt that actually leaves the device are one number. Also
+that a route drops the whole block, that a scope with no placed café keeps its
+chips but says there is nothing to measure, that the ruler keeps its 38px
+(`flex:none` is load-bearing), and that the action stays reachable now the
+composer is taller. Both of the load-bearing ones were verified by breaking the
+code and watching them go red.
 
 **Phase 34 added the kind sheet.** The checks follow the two capabilities out of
 the interim inline panel and into the sheet rather than being dropped: all six

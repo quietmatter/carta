@@ -1857,6 +1857,43 @@ walked now. Breaking one on purpose proved the walk catches it *and* that it
 crashed the run rather than reporting — which would have left every room after
 the broken one unchecked. `walk()` reports and continues.
 
+### Phase 36 — the reach, as a ruler (shipped — v7.46.0)
+
+*Turn 8. The handoff's own diagnosis: three chips that named a distance and
+changed nothing anyone could see.*
+
+**The chips carry their kilometres** (1 · 3 · 8), a **ruler** puts the keeper's
+own cafés on a 0–9 km scale measured from `meanPin()` of the places in scope —
+the anchor Phase 33 made every answer distance count from — and a sentence reads
+**from the count inside the reach, never from the chip**. Nothing is looked up: a
+place has coordinates because a cup put them there.
+
+**The brief handed over a falsifiable number and it held**: Maru and Endorffeine
+at 1.05 km from their midpoint, recomputed through the app's own geometry.
+
+**Two corrections to the brief, both of which would have failed silently:**
+
+- `REACH_KM` belongs **inside the pure block** — `askPromptText` reads it and the
+  model harness slices only that region, so the brief's placement 450 lines below
+  would have thrown in the one test covering the prompt.
+- Its CSS is written against a `--sp-*` spacing scale from the design-system
+  bundle. Carta states spacing in px; imported verbatim those tokens resolve to
+  nothing and the row collapses with no error at all.
+
+**One cross-turn conflict, left for the founder.** The brief's premise is that
+the chip's km *is* the ring the answer's plate draws. Against Phase 33's shipped
+per-reach ladder that holds for one reach of three — `worth driving for` promises
+8 km and the plate rings 2/6/15. Turn 8 is internally consistent and shipped as
+specified; the ladder was reviewed and merged and is not something to rewrite on
+an inference. Which of the two is right is a call, and it is the one acceptance
+item of seven not met.
+
+**A second acceptance item is not met, for a reason the brief misdiagnoses.** It
+expects the action to clear the tab bar by 29px; it sits 60px below the fold. Not
+the missing `flex:none` it blames — the SVG measures exactly 38×440 — but the
+read-as line and question echo this app's composer carries and the design's frame
+does not. The action stays reachable, and reachability is what the harness holds.
+
 ## The horizon (unscheduled, revisited)
 
 - **True multi-device sync** — the tiny server returns as a dumb, one-owner

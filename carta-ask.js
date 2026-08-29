@@ -48,6 +48,16 @@ function askKindLabel(k){return {city:'A city',neighborhood:'A neighborhood',nea
  * sentence because the answer is read as a list of chips on a phone, not as
  * prose — length here is the failure mode, not the goal. */
 const ASK_CAPS={cafes:8,mentions:4,fit:3,routes:4};
+/* The reach, as kilometres. These are not a second opinion about distance:
+   REACH_KM is exactly what <carta-city rings="1,3,8"> draws on the answer's
+   plate afterwards, so the distance the composer promises and the distance the
+   answer draws are one number rather than two that agree by luck.
+   It lives INSIDE the pure block, against the handoff's own placement beside
+   ASK_REACH — askPromptText reads it, and the model harness slices only this
+   region, so a constant defined 450 lines below would be a ReferenceError in
+   the one test that covers the prompt. */
+const REACH_KM={'on foot':1,'a short drive':3,'worth driving for':8};
+const reachKm=r=>REACH_KM[r]||0;
 function askPromptText(briefText,scopeKind,destination,question,reach){
   const kindLine={
     city:`I'm asking about the city: ${destination}.`,
@@ -57,7 +67,11 @@ function askPromptText(briefText,scopeKind,destination,question,reach){
     route:`I'm asking about this route or road trip: ${destination}.`,
     friend:`I'm asking on behalf of a friend, whose taste differs from mine like this: ${destination}.`,
   }[scopeKind]||`I'm asking about: ${destination}.`;
-  const reachLine=reach?`\nHow far I'll actually go: ${reach}.`:'';
+  /* the km rides with the phrase: what the ruler shows cannot be absent from
+     what actually goes out, or the composer's one promise is broken. */
+  const reachLine=reach
+    ?`\nHow far I'll actually go: ${reach}${REACH_KM[reach]?` — about ${REACH_KM[reach]} km at most`:''}.`
+    :'';
   const askLine=question?`\nSomething else worth knowing: ${question}`:'';
   return `${briefText}\n\n${kindLine}${reachLine}${askLine}\n
 Recommend specialty coffee cafés that match this taste, and argue for them the way someone who drinks here would: rank them, say what each one is best FOR, and name the figures above you are leaning on.\n
@@ -546,7 +560,9 @@ function askLedgerRowsHTML(){
       :'unread — no café cup has set a floor',tm.bar.floor==null],
     ['Your scores',values.length?values.join(' · '):'unread — nothing scored yet',!values.length],
     ['Already had',had?`${words(had)} coffee${had===1?'':'s'} excluded by name`:'not sent — nothing excluded by name',!had],
-    ['The scope',scope.id?`${scope.id}, read from every cup`:'every cup on the record',false],
+    ['The scope',scope.id
+      ?`${scope.id}${reachKm(askReach())?`, ${reachKm(askReach())} km of it`:', read from every cup'}`
+      :'every cup on the record',false],
   ];
   return rows.map(r=>`<div class="r"><span class="k">${esc(r[0])}</span><span class="v${r[2]?' unread':''}">${esc(r[1])}</span></div>`).join('');
 }
@@ -584,6 +600,121 @@ const ASK_KIND_PHRASE={city:'a city',neighborhood:'a neighborhood',
   friend:"a friend's taste"};
 const PLACE_KINDS=new Set(['city','neighborhood','near','country','route']);
 const pl=(n,one,many)=>`${words(n)} ${n===1?one:many}`;
+/* the cups the ask is scoped to, counted once. The read-as line above the reach
+   and the ruler's own sentence below it both state this number, and two counts
+   of the same thing are two chances to disagree. */
+function scopedCups(){
+  const scope=askScopeOf(askDraft.kind,(askDraft.dest||'').trim());
+  if(!scope.kind)return 0;
+  const s=tasteModelMemo().scope(scope.kind,scope.id);
+  return (s&&s.n)||0;
+}
+/* ---- the reach, as a ruler (§B1.4, `8a`–`8d`) -------------------------
+ * "How far you'll go" shipped as three chips that changed nothing anyone
+ * could see: three words naming a distance the composer never stated and the
+ * reader could not check. They already meant something exact — the rings
+ * <carta-city> draws on the answer's plate — so the chips carry those
+ * kilometres now, and a ruler under them counts the keeper's own record from
+ * the same anchor, in the same projection.
+ *
+ * Nothing here is looked up or invented: a place has coordinates because a cup
+ * put them there, the anchor is meanPin() over those places, and the geometry
+ * is the app's own KMX/KMY. Carta is never told where the reader is standing,
+ * and a distance from a downtown nobody named would be a fact about a guess.
+ */
+function reachPlaces(){
+  const scope=askScopeOf(askDraft.kind,(askDraft.dest||'').trim());
+  // cityPlaces() is the same filter the read-as line counts through
+  const ps=scope.kind==='city'?cityPlaces(scope.id):live('places');
+  return ps.filter(p=>p.lat!=null&&p.lon!=null);
+}
+function reachMarks(){
+  const ps=reachPlaces(),at=meanPin(ps);
+  if(!at)return {at:null,ds:[]};
+  const la0=at.lat,x0=KMX(at.lon,la0),y0=KMY(at.lat);
+  const ds=ps.map(p=>{
+    const dx=KMX(p.lon,la0)-x0,dy=KMY(p.lat)-y0;
+    return {name:p.name||'',km:Math.sqrt(dx*dx+dy*dy)};
+  }).sort((a,b)=>a.km-b.km);
+  return {at,ds};
+}
+// two places at the same distance are one dot: a dot is 7.6px wide, which is
+// 0.16 km at this scale, so anything closer than that overlaps by definition
+function reachGroups(ds){
+  const out=[];
+  ds.forEach(d=>{
+    const last=out[out.length-1];
+    if(last&&d.km-last.km<0.15)last.n++;
+    else out.push({km:d.km,name:d.name,n:1});
+  });
+  return out;
+}
+const RULER={x0:6,k:46,y:24,max:9};
+const rx=km=>RULER.x0+Math.min(km,RULER.max)*RULER.k;
+const km1=v=>(Math.round(v*100)/100).toFixed(2).replace(/0$/,'');
+const reachAnchorLine=n=>n===1?'from the one café you’ve been to'
+  :n===2?'from the middle of your two cafés'
+  :`from the middle of your ${words(n)} cafés`;
+function reachRulerHTML(marks,km){
+  if(!marks.at||!marks.ds.length)return '';
+  const groups=reachGroups(marks.ds),n=marks.ds.length;
+  /* an unselected tick is knocked out against the card first, so the hairline
+     still reads where the heavy inked run passes through it (`8c`). */
+  const tick=t=>t===km
+    ?`<path d="M${rx(t)} 13V24" style="fill:none;stroke:var(--ink);stroke-width:1.4"/>`
+    :`<path d="M${rx(t)} 14V24" style="fill:none;stroke:var(--surface-card);stroke-width:2.6"/>
+      <path d="M${rx(t)} 14V24" style="fill:none;stroke:var(--ink-3);stroke-opacity:.6;stroke-width:.9"/>`;
+  const num=t=>`<text x="${rx(t)}" y="9" text-anchor="middle" style="font-family:var(--sans);font-size:10px;${
+    t===km?'font-weight:500;':''}letter-spacing:.08em;fill:var(${t===km?'--ink':'--ink-3'})">${
+    t===8?t+' km':t}</text>`;
+  const label=g=>g.n===n?(n===2?'both cafés':`all ${words(n)} cafés`)
+    :g.n===1?g.name:`${words(g.n)} cafés`;
+  const dot=g=>{
+    const inside=g.km<=km,x=rx(g.km);
+    return `${inside?`<circle cx="${x}" cy="24" r="4.6" style="fill:var(--surface-card)"/>`:''}
+      <circle cx="${x}" cy="24" r="3.8" style="${inside?'fill:var(--ink)'
+        :'fill:var(--surface-card);stroke:var(--ink-2);stroke-width:1.3'}"/>`;
+  };
+  // the nearest group is always named; a second only where it cannot collide
+  // with the first, and the sentence below carries the rest
+  const named=[groups[0]].concat(
+    groups.length>1&&rx(groups[groups.length-1].km)-rx(groups[0].km)>120
+      ?[groups[groups.length-1]]:[]);
+  return `<svg viewBox="0 0 440 38" aria-hidden="true" class="reach-rule">
+    <path d="M6 24H420" style="fill:none;stroke:var(--ink-3);stroke-opacity:.5;stroke-width:1"/>
+    <path d="M6 24H${rx(km)}" style="fill:none;stroke:var(--ink);stroke-width:2.4"/>
+    <path d="M0 24H13M6 15V33" style="fill:none;stroke:var(--ink);stroke-width:1.2"/>
+    ${[1,3,8].map(tick).join('')}${[1,3,8].map(num).join('')}
+    ${groups.map(dot).join('')}
+    ${named.map(g=>`<text x="${rx(g.km)-8}" y="37" style="font-family:var(--sans);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:var(--track-label);fill:var(--ink-3)">${
+      esc(label(g))}, ${km1(g.km)} km</text>`).join('')}
+  </svg>`;
+}
+/* read from the count INSIDE the reach, never from the chip: the chip is the
+   setting, and what the setting amounts to on this record is the fact. */
+function reachSaysHTML(marks,km){
+  const ds=marks.ds,n=ds.length;
+  if(!n)return '<div class="reach-says none">Nothing on your record here yet, so there is nothing to measure from.</div>';
+  const inside=ds.filter(d=>d.km<=km).length,far=ds[n-1].km,slack=Math.round(km-far);
+  const all=n===2?'Both cafés':`All ${words(n)} cafés`;
+  let lead,rest;
+  if(!inside){
+    lead=n===2?'Neither café you’ve been to is inside it':'Nothing on your record is inside it';
+    rest='at this reach an answer is all ground you have nothing on.';
+  }else if(inside<n){
+    const next=ds[inside];
+    lead=`${capFirst(words(inside))} of your ${words(n)} inside it`;
+    rest=`${next.name} at ${km1(next.km)} km is the nearest one outside.`;
+  }else if(slack<1){
+    lead=`${all} are inside it`;
+    rest=`all ${words(scopedCups())} cups within reach.`;
+  }else{
+    lead=n===2?`Both inside, and ${slack} km of ground past them`
+      :`${all} inside, and ${slack} km of ground past them`;
+    rest=km===8?'the widest reach Carta draws.':'room for ground you have nothing on.';
+  }
+  return `<div class="reach-says"><b>${esc(lead)}</b> — ${esc(rest)}</div>`;
+}
 function askReadAsParts(){
   const kind=askDraft.kind,dest=(askDraft.dest||'').trim();
   if(!dest)return ['Nothing named','the ask reads every cup on the record'];
@@ -592,9 +723,9 @@ function askReadAsParts(){
   const scope=askScopeOf(kind,dest);
   const s=scope.kind?tasteModelMemo().scope(scope.kind,scope.id):null;
   if(scope.kind==='city'){
-    const cafes=cityPlaces(scope.id).length;
-    return s.n
-      ?[`On your record: ${pl(s.n,'cup','cups')}, ${pl(cafes,'café','cafés')}`,
+    const cafes=cityPlaces(scope.id).length,cups=scopedCups();
+    return cups
+      ?[`On your record: ${pl(cups,'cup','cups')}, ${pl(cafes,'café','cafés')}`,
         'the ask is scoped to them']
       /* knownCities() is built from PLACES, not cups: a café can be on the
          record with nothing scored in it. State the count there is, and name
@@ -747,10 +878,20 @@ function vAsk(){
           style="width:100%;font-family:var(--serif);font-weight:600;font-size:1.875rem;letter-spacing:-.02em;line-height:1.12;padding:6px 0 12px;border:0;border-bottom:1px solid var(--ink-3);background:transparent;color:var(--ink)">
         <div class="ra" id="ask_readas">${askReadAsHTML()}</div>
         <div id="ask_echo">${askEchoHTML()}</div>
-        ${reach?`<div class="eyebrow" id="ask_reachlab" style="margin:${ASK_REACH_LAB()}px 0 9px">How far you’ll go</div>
+        ${reach?(()=>{const marks=reachMarks(),km=reachKm(askDraft.reach);
+          /* the id and the conditional margin are turn 7's — the echo above
+             tightens this row when a question is written, and paintAskEcho()
+             still reaches for it by that id. */
+          return `<div class="reach-head" id="ask_reachlab" style="margin-top:${ASK_REACH_LAB()}px">
+          <span class="eyebrow" style="margin:0">How far you’ll go</span>
+          ${marks.at?`<span class="reach-from">${esc(reachAnchorLine(marks.ds.length))}</span>`:''}
+        </div>
         <div class="picks">
-          ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach('${jsq(r)}')">${esc(r)}</button>`).join('')}
-        </div>`:''}
+          ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach('${jsq(r)}')">${
+            esc(r)}<span class="km"> · ${REACH_KM[r]} km</span></button>`).join('')}
+        </div>
+        ${reachRulerHTML(marks,km)}
+        ${reachSaysHTML(marks,km)}`})():''}
         <div class="shead" style="margin:24px 0 0;padding-bottom:8px">
           <span class="l">What goes out with this</span><span class="r">tap to read it in full</span></div>
         <button class="led" id="ask_led" style="margin-top:14px" onclick="openAskBrief()">${askLedgerRowsHTML()}</button>
@@ -1752,4 +1893,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.45.0';
+window.ASK_VERSION='7.46.0';

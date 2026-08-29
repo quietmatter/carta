@@ -7,6 +7,73 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-29 — Phase 36: the reach, as a ruler (v7.46.0)
+
+- **Turn 8, and the handoff's own diagnosis is the sharpest one yet:** *"How far
+  you'll go shipped as three chips, and picking one changed nothing anyone could
+  see. Three boxes that don't do anything."* The words named a distance the
+  composer never stated, the app never showed, and the reader could not check.
+- **The fix is derivation, not decoration.** The chips carry kilometres (1 · 3 ·
+  8), a ruler under them puts the keeper's own cafés on a 0–9 km scale measured
+  from `meanPin()` of the places in scope — the same anchor Phase 33 made every
+  answer distance count from — and a sentence under that reads **from the count
+  inside the reach, never from the chip**. Nothing is looked up: a place has
+  coordinates because a cup put them there.
+- **The brief's own arithmetic checked out exactly.** It states Maru and
+  Endorffeine sit 1.05 km from their midpoint; recomputed through the app's own
+  `meanPin`/`KMX`/`KMY`, both come back **1.05**. A handoff that hands you a
+  falsifiable number is a handoff worth trusting, and it was worth spending a
+  render to confirm.
+- **One placement in the brief was wrong, and would have thrown.** It puts
+  `REACH_KM` beside `ASK_REACH` at line 504. But `askPromptText` reads it, and
+  `askPromptText` lives **inside the pure block** the model harness slices — a
+  constant 450 lines below the closing marker is not in the slice, so the one
+  test covering the prompt would have died on a ReferenceError. `REACH_KM` is
+  inside the markers, and a model case now pins it there.
+- **The brief's CSS is written against a spacing scale this app does not have.**
+  `--sp-1`/`--sp-2`/`--sp-3` come from the design-system bundle; Carta's token
+  layer states spacing in px. Imported verbatim they resolve to nothing and the
+  row collapses **silently** — no error, just a wrong margin. Translated.
+- **`flex:none` on the ruler is load-bearing and the brief says so.** The
+  composer is a flex column; without it the SVG is the item that gets squeezed.
+  There is a check that the ruler is still 38px tall, and removing the rule
+  turns it red.
+
+**The one cross-turn conflict, and it is not resolved here.** The brief's
+premise is that `REACH_KM` *is* what the answer's plate rings: *"the distance
+promised in the composer and the distance drawn in the answer are one number."*
+Against what Phase 33 actually shipped, that holds for one reach of three:
+
+| reach | chip km (turn 8) | plate rings (Phase 33) | the km is… |
+|---|---|---|---|
+| on foot | 1 | 1, 2, 4 | the innermost ring |
+| a short drive | 3 | 1, 3, 8 | the middle ring |
+| worth driving for | **8** | 2, 6, 15 | **not a ring at all** |
+
+The brief assumes every plate draws `rings="1,3,8"` and the three chips take one
+each — true of the mockup's own Los Angeles frame, and not of the derived
+per-reach ladder Phase 33 shipped. **Turn 8 is internally consistent and shipped
+as specified**; the ring ladder was reviewed and merged and is not something to
+rewrite on an inference. It is the founder's call which of the two is right, and
+the acceptance item that depends on it (a dot inside the run is inside the
+matching ring) is the one item of seven not met.
+
+**Acceptance 7 is not met either, and the cause is not the one the brief names.**
+It expects the *Ask Carta* button to clear the tab bar by 29px at 480×812;
+measured, it sits **60px below the fold**. The brief blames a missing
+`flex:none` — but the SVG measures exactly 38×440, so it is not being squeezed.
+The real cause is that **this app's composer carries what the design's frame does
+not**: the read-as line (turn 4) and the question echo (turn 7). The action
+remains reachable — the leaf scrolls and the button clears by 44px at the end —
+and that reachability is what the harness asserts, because a pixel gap measured
+on a frame we do not have is not a guarantee we can keep.
+
+**Also.** `scopedCups()` was extracted rather than written twice: the read-as
+line and the ruler's sentence both state the cup count, and two counts of one
+thing are two chances to disagree.
+
+---
+
 ## 2026-08-28 — Phase 35: the third split (v7.45.0)
 
 - **Taken on the founder's call.** Put as the top open item at the end of the
