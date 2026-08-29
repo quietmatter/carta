@@ -4275,6 +4275,35 @@ function setAppH(){document.documentElement.style.setProperty('--app-h',innerHei
 setAppH();addEventListener('resize',setAppH);addEventListener('pageshow',setAppH);
 if(window.visualViewport)visualViewport.addEventListener('resize',setAppH);
 setTimeout(setAppH,300);
+/* a temporary read-out, never shipped enabled — the standalone bottom-edge
+ * bug has been "fixed" five times on the strength of what innerHeight and
+ * dvh read in a sandbox that cannot reproduce it; this prints what they
+ * actually read on the device asking. ?diag=1 only. Pull this once the
+ * current report is closed. */
+if(location.search.includes('diag=1')){
+  const diagBox=document.createElement('div');
+  diagBox.style.cssText='position:fixed;left:4px;top:4px;z-index:9999;background:#000;color:#0f0;'+
+    'font:10px/1.4 monospace;padding:6px 8px;white-space:pre;pointer-events:none;max-width:96vw';
+  document.body.appendChild(diagBox);
+  const paintDiag=()=>{const cs=getComputedStyle(document.documentElement);
+    diagBox.textContent=[
+      'innerHeight: '+innerHeight,
+      'innerWidth: '+innerWidth,
+      'visualViewport.h: '+(window.visualViewport?visualViewport.height:'n/a'),
+      'documentElement.clientHeight: '+document.documentElement.clientHeight,
+      'body getBoundingClientRect: '+JSON.stringify(document.body.getBoundingClientRect()),
+      'screen.height: '+screen.height,
+      'devicePixelRatio: '+devicePixelRatio,
+      '--sat: '+cs.getPropertyValue('--sat'),
+      '--sab: '+cs.getPropertyValue('--sab'),
+      '--app-h: '+cs.getPropertyValue('--app-h'),
+      'navigator.standalone: '+navigator.standalone,
+      'nav.tabs rect: '+(()=>{const n=document.querySelector('nav.tabs');return n?JSON.stringify(n.getBoundingClientRect()):'none'})()
+    ].join('\n')};
+  paintDiag();addEventListener('resize',paintDiag);addEventListener('pageshow',paintDiag);
+  if(window.visualViewport)visualViewport.addEventListener('resize',paintDiag);
+  setTimeout(paintDiag,300);setTimeout(paintDiag,1200);
+}
 /* the sibling scripts, checked. They are versioned in the <head> so a cached
  * one cannot be served beside a fresh index.html — this is the belt to that
  * braces, and it exists because the failure it catches was invisible: at
