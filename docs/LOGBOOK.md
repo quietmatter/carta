@@ -7,6 +7,45 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-29 — a roaster's own name, in the record's own ink (v7.46.6)
+
+- **Found walking screens after the door was confirmed fixed, not from a
+  fresh report.** With the keeper already deep in dusk theme checking a
+  producer page, a café name ("Kumquat") stood out in plain blue — circled
+  and sent unprompted. A second, larger instance turned up right after on
+  "Your taste": the whole anchors list, every roaster name and every
+  average, in the same blue.
+- **One root cause, two sightings.** Both are `.rowlink` buttons whose
+  label lives in a bare `<span>` with no class and no color of its own —
+  `vProducerPage`'s café list (`carta-atlas.js`) and the ask module's
+  anchors list (`carta-ask.js`). `.rowlink` itself never set a color;
+  `.rowlink .t` did, but only labels that remembered to carry that class
+  got it. A `<button>`'s own text color is not inherited from the page the
+  way a paragraph's is, so an unclaimed label fell through to the
+  browser's own default — invisible against paper (close enough to black
+  to pass) and a plain link blue against dusk, which Carta has never once
+  used as a color.
+- **Shipped on `.rowlink` itself, not on the two labels found.** `color:
+  var(--ink)` on the base rule, so every existing labeled span keeps
+  reading correctly (a closer, explicit rule still wins) and any bare one
+  — the two found, and whatever the next screen turns out to have — reads
+  as ink by default instead of by remembering to ask for it. `.num` (the
+  anchors list's own score figure) had the identical gap and is caught by
+  the same fix, since color inherits down through it too.
+- **Verified:** reproduced the exact blue in a browser with a seeded
+  two-roaster record in dusk theme, confirmed both labels and the score
+  render in `--ink` after the fix. `node test/verify-static.js` (25/25),
+  `node test/model.test.js` (142/142). `APP_VERSION` and all six siblings
+  renumbered to `7.46.6` in lockstep.
+- **Not audited exhaustively:** every other bare-span label across every
+  screen — this closes the class of bug at its source rather than the two
+  instances found, which is the more defensible fix, but a dusk-theme
+  sweep of the remaining screens is still the honest way to confirm
+  nothing else was relying on the same accident.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-29 — the door's own card, held to the same edge (v7.46.5)
 
 - **The keeper's own confirmation, and the next thing it surfaced.** v7.46.4
