@@ -7,6 +7,34 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-29 — the front door, walked whole and closed out (v7.46.7)
+
+- **A full screen-by-screen walk on the keeper's own device, past the four
+  fixes already confirmed.** Atlas, Shelf, Journal, a cup's own detail page,
+  the full ask flow (composer through a real answer), dusk theme across a
+  café, a country chapter and the record screen, and the "read it as"
+  sheet including live typing into its free-text field — all read clean,
+  no further reports.
+- **The `?diag=1`/standalone read-out, pulled.** It found the standalone
+  height gap (v7.46.4) and the door card's stale measurement (v7.46.5) by
+  putting real numbers in front of a report that five prior rounds had
+  only ever guessed at — worth recording as the pattern for next time a
+  symptom like this comes in, not just as a diagnostic this thread
+  happened to need. Nothing it printed is needed once a fix is confirmed,
+  so it leaves with this entry rather than lingering as dead weight the
+  next reader has to explain.
+- **Verified:** `node test/verify-static.js` (25/25), `node
+  test/model.test.js` (142/142). `APP_VERSION` and all six siblings
+  renumbered to `7.46.7` in lockstep. This entry closes the thread that
+  opened with "the bottom nav bar does not sit on the bottom of the
+  screen" — four real bugs found and fixed (the reach ruler overflow, the
+  standalone height gap, the door card's own stale position, and a
+  roaster's name in the wrong color), all confirmed on the reporting
+  keeper's actual device.
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-29 — a roaster's own name, in the record's own ink (v7.46.6)
 
 - **Found walking screens after the door was confirmed fixed, not from a

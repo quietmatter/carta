@@ -1071,12 +1071,12 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.46.6"></script>
-<script src="carta-plate.js?v=7.46.6"></script>
-<script src="carta-shot.js?v=7.46.6"></script>
-<script src="carta-ask.js?v=7.46.6"></script>
-<script src="carta-atlas.js?v=7.46.6"></script>
-<script src="carta-rooms.js?v=7.46.6"></script>
+<script src="carta-map.js?v=7.46.7"></script>
+<script src="carta-plate.js?v=7.46.7"></script>
+<script src="carta-shot.js?v=7.46.7"></script>
+<script src="carta-ask.js?v=7.46.7"></script>
+<script src="carta-atlas.js?v=7.46.7"></script>
+<script src="carta-rooms.js?v=7.46.7"></script>
 </head>
 <body>
 <main id="main"></main>
@@ -4199,8 +4199,9 @@ function applyTheme(){
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.46.6';
+const APP_VERSION='7.46.7';
 const CHANGELOG=[
+  {v:'7.46.7',d:"The read-out, pulled. The temporary ?diag=1 panel that found the standalone height gap and the door card's own stale measurement did its job — confirmed on the keeper's own device, screen by screen, through the ask, through dusk, through the record. Its keep-alive is gone with it: nothing in this release changes what the app does, only that it no longer prints how tall the screen thinks it is."},
   {v:'7.46.6',d:"A roaster's own name, in the record's own ink. Two lists — a café's own page for what a farm pours through, and your taste argued back in the roasters that earn a line — named their figures in a bare label with no color of its own, which a button doesn't inherit the way a paragraph does. Nowhere it showed against paper, since a button's own default there reads close enough to black to pass; against dusk it read as a plain web link, bright blue against a screen that has never once used that color. Every name that leans on a row to carry it now reads in the same ink as everything around it, in either theme, by default — not only the two that happened to be found."},
   {v:'7.46.5',d:"The door's own card, held to the same edge. Fixing the screen's whole height surfaced the last of it: the Atlas door card's pull handle rode inside the same scrolling column as its content, on a margin that had no room to work with once real content ran even slightly past the card's own designed height — the last line before the handle read as cut off against the bar instead. The card scrolls on its own now and the handle sits outside that scroll, always at the card's true bottom, reachable no matter how much the card is holding. And the card's own position — baked into the page once, off a measurement taken at that moment — now retakes that measurement and repaints itself on the same signals that already correct the screen's height, so a late settle carries the whole door with it rather than just the bar beneath it."},
   {v:'7.46.4',d:"The screen, whole, off the bottom edge one more time. The standalone bottom-edge bug has been fixed five times on the strength of what innerHeight and 100dvh read — and on an iPhone 17 Pro running iOS 26.6, both of them agreed on a height 62px short of the real screen, exactly the size of the status-bar band env() was separately still reporting as an inset to allow for. Two measurements trusted to catch each other's mistake are no help when they make the same one together. screen.height isn't derived from either and read the true height correctly, so it now stands as a third candidate — standalone only, since a real Safari tab is correctly shorter than the physical screen once its own chrome is standing in some of it."},
@@ -4328,53 +4329,6 @@ function settleAppH(){setAppH();if(tab==='atlas'&&!pageView)render()}
 addEventListener('resize',settleAppH);addEventListener('pageshow',settleAppH);
 if(window.visualViewport)visualViewport.addEventListener('resize',settleAppH);
 setTimeout(settleAppH,300);
-/* a temporary read-out, never shipped enabled — the standalone bottom-edge
- * bug has been "fixed" five times on the strength of what innerHeight and
- * dvh read in a sandbox that cannot reproduce it; this prints what they
- * actually read on the device asking. ?diag=1, or standalone outright —
- * Add to Home Screen launches manifest.json's start_url, not the URL it was
- * added from, so the query string never survives the icon. Pull all of this
- * once the current report is closed. */
-if(location.search.includes('diag=1')||navigator.standalone){
-  let _diagOpen=false;
-  const diagBox=document.createElement('div');
-  diagBox.style.cssText='position:fixed;left:4px;top:4px;z-index:9999;background:#000;color:#0f0;'+
-    'font:10px/1.4 monospace;padding:6px 8px;white-space:pre;max-width:96vw;'+
-    'max-height:70vh;overflow-y:auto;display:none';
-  document.body.appendChild(diagBox);
-  const diagToggle=document.createElement('button');
-  diagToggle.textContent='diag';
-  diagToggle.style.cssText='position:fixed;left:4px;top:4px;z-index:10000;background:#000;color:#0f0;'+
-    'font:10px monospace;padding:3px 7px;border:1px solid #0f0;border-radius:3px;opacity:.55';
-  diagToggle.onclick=()=>{_diagOpen=!_diagOpen;
-    diagBox.style.display=_diagOpen?'block':'none'};
-  document.body.appendChild(diagToggle);
-  const paintDiag=()=>{const cs=getComputedStyle(document.documentElement);
-    diagBox.textContent=[
-      'APP_VERSION: '+APP_VERSION+' / ATLAS_VERSION: '+window.ATLAS_VERSION,
-      'atlasleaf has .lbody: '+(()=>{const l=document.getElementById('atlasleaf');return l?!!l.querySelector('.lbody'):'no leaf on screen'})(),
-      'doorBagLeafHTML source has lbody: '+(typeof doorBagLeafHTML==='function'&&doorBagLeafHTML.toString().includes('lbody')),
-      'atlasleaf outerHTML tail: '+(()=>{const l=document.getElementById('atlasleaf');return l?l.outerHTML.slice(-160):'none'})(),
-      'innerHeight: '+innerHeight,
-      'innerWidth: '+innerWidth,
-      'visualViewport.h: '+(window.visualViewport?visualViewport.height:'n/a'),
-      'documentElement.clientHeight: '+document.documentElement.clientHeight,
-      'body getBoundingClientRect: '+JSON.stringify(document.body.getBoundingClientRect()),
-      'screen.height: '+screen.height,
-      'devicePixelRatio: '+devicePixelRatio,
-      '--sat: '+cs.getPropertyValue('--sat'),
-      '--sab: '+cs.getPropertyValue('--sab'),
-      '--app-h: '+cs.getPropertyValue('--app-h'),
-      'navigator.standalone: '+navigator.standalone,
-      'display-mode standalone: '+matchMedia('(display-mode: standalone)').matches,
-      'orientation: '+(screen.orientation?screen.orientation.type:'n/a'),
-      'scrollY / scrollHeight: '+scrollY+' / '+document.documentElement.scrollHeight,
-      'nav.tabs rect: '+(()=>{const n=document.querySelector('nav.tabs');return n?JSON.stringify(n.getBoundingClientRect()):'none'})()
-    ].join('\n')};
-  paintDiag();addEventListener('resize',paintDiag);addEventListener('pageshow',paintDiag);
-  if(window.visualViewport)visualViewport.addEventListener('resize',paintDiag);
-  setTimeout(paintDiag,300);setTimeout(paintDiag,1200);
-}
 /* the sibling scripts, checked. They are versioned in the <head> so a cached
  * one cannot be served beside a fresh index.html — this is the belt to that
  * braces, and it exists because the failure it catches was invisible: at
