@@ -98,8 +98,12 @@ classic/CLAUDE.md     The third turn's architecture map, kept for the record
 classic/README.md     Classic's own user documentation
 fonts/                Self-hosted typefaces (Spectral + Libre Franklin, woff2)
 manifest.json         PWA metadata; scope /, one shortcut → ?open=door
-icon-192.svg          App icons
+sw.js                 The shell, kept — the eighth file, offline cold-launch (v7.47.0, ARCHITECTURE.md §1/§10)
+404.html              GitHub Pages' wrong-address page, in Carta's voice
+icon-192.svg          App icons (PNGs rasterized from these, checked in — iOS reads only PNG)
 icon-512.svg
+icon-512.png
+apple-touch-icon.png
 README.md             User-facing docs for Carta 7
 CNAME                 GitHub Pages custom domain
 docs/                 The design record (above)
@@ -218,9 +222,10 @@ server/               Classic's sync server — dormant
     markers; the ink for it is `sealHTML`/`cityPlate` in `index.html`.
 - **store** — `localStorage` under one key, `carta7.v1`. `D` is the ledger,
   `load()`/`save()`, `live(coll)` filters put-away records, `putAway`/`restore`
-  with undo. Photos live in a **separate key** `carta7.photos.v1`
-  (`{cupId: dataUri}`) so the ledger stays light enough to export as text;
-  `compressPhoto` shrinks on the device. Two more keys sit outside the ledger
+  with undo. Cup photos are a **retired feature**: `load()` strips any
+  lingering `cup.photo` and removes the old `carta7.photos.v1` key outright;
+  `compressPhoto` survives only for the menu capture's transient photo, which
+  is read once and kept nowhere. Two keys sit outside the ledger
   for the same reason, and the difference between them matters:
   `carta7.shots.v1` holds the **curve** a written cup redraws (400 samples),
   and `carta7.shotsread.v1` (v7.33.0) holds the whole **shot** for any brew
@@ -460,7 +465,10 @@ server/               Classic's sync server — dormant
   carry a custom element that needs the app's script.
 - **backup** — `exportLedgerJSON`, the record page's "last backed up" readout,
   `maybeAutoExport` (opt-in, off by default, checked on a real tab switch so
-  the download has a gesture behind it), `lowStorageNoteHTML`.
+  the download has a gesture behind it), `lowStorageNoteHTML`. **The export
+  strips `askKey`/`visualizerEmail`/`visualizerPassword` from prefs
+  (v7.47.0)** — "on this device, and nowhere else" holds through a backup, so
+  a restore on a new phone re-enters keys by hand, deliberately.
 - **the classic import** — `openClassicImport` → `importClassicMap` (pure,
   tested) → `applyClassicImport`. Additive, re-runnable, id-stable, one-way.
 - **sheets / dials / toast / timer** — plumbing ported wholesale from classic.
@@ -477,7 +485,7 @@ The ledger `D` is a plain object under `carta7.v1`. Every record carries `id`
 it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 - **cups** — `kind:'bar'|'home'`, `score` (1–9), `line`, `descriptors[]`,
-  `placeRef`/`coffeeRef`/`brewRef`, `photo` (body in `carta7.photos.v1`).
+  `placeRef`/`coffeeRef`/`brewRef`.
 - **coffees** — `roaster` + `roasterRef`, `name`, `origin{}` (free-text story
   fields), `roastLevel`, `roastDate`, and `home`/`homeAt` when a café coffee
   crossed the bridge onto the shelf.
@@ -495,7 +503,10 @@ it. `docs/ARCHITECTURE.md` §4 has the field-level shape; the collections are:
 
 ### Invariants to preserve
 
-- **Seven files, no build.** Vanilla JS, inline everything, nothing fetched at
+- **Eight files, no build** (seven scripts plus `sw.js`, the shell's own
+  keeper — v7.47.0, argued in `ARCHITECTURE.md` §1 and amended into §10).
+  `sw.js`'s `SW_VERSION` bumps in the same lockstep as every `?v=` tag, and
+  `verify-static.js` fails the build if it doesn't. Vanilla JS, inline everything, nothing fetched at
   load beyond the six siblings themselves. **Their `<script
   src>` tags carry `?v=<APP_VERSION>` and that must be bumped with it** — a
   sibling script is an ordinary cached subresource while `index.html` is the
@@ -594,7 +605,7 @@ wrongness would be invisible (a bad brief just looks like a mediocre brief),
 so it is the one tested without a browser:
 
 ```bash
-node test/model.test.js        # zero deps, plain Node, 142 cases
+node test/model.test.js        # zero deps, plain Node, 144 cases
 ```
 
 It slices the `/* ==== pure ==== */ … /* ==== /pure ==== */` region out of
@@ -632,7 +643,7 @@ this harness at all.)
 run first:
 
 ```bash
-node test/verify-static.js     # the seven files parse and agree — 23 checks
+node test/verify-static.js     # the eight files parse and agree — 29 checks
 ```
 
 All six parse; `APP_VERSION`, all five `?v=` tags and all five published

@@ -66,6 +66,9 @@
   const LF_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
   const LF_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
   let _lfP = null, _lfDown = false;
+  // the failure latch, cleared by the fallback note's own Retry — a session
+  // that saw one tunnel moment gets to try the tiles again on purpose
+  window.CARTA_STREETS_RETRY = () => { _lfDown = false; };
   const lfLoad = () => {
     if (window.L) return Promise.resolve();
     if (_lfP) return _lfP;
@@ -113,7 +116,7 @@
       const frameTasted = this.getAttribute('frame') === 'tasted';
       const lift = this.getAttribute('lift') === 'on';
       const wantTopo = this.getAttribute('topo') === 'on';
-      let marks2 = []; try { marks2 = JSON.parse(this.getAttribute('marks') || '[]'); } catch (e) { }
+      let marks2 = []; try { const v = JSON.parse(this.getAttribute('marks') || '[]'); if (Array.isArray(v)) marks2 = v; } catch (e) { }
       const belt = feats.filter(f => BELT_SET.has(key(f.properties.name)));
       const cw = this.clientWidth || 480, ch = this.clientHeight || 0;
       /* one SVG unit = one CSS pixel, so type and hairlines are drawn at the size
@@ -182,7 +185,7 @@
           : 'fill:var(--ca-mk-out, var(--ink-2));paint-order:stroke;stroke:var(--surface-card);stroke-width:3.5px;stroke-linejoin:round';
         marks.push(`<g class="mk" data-name="${label.replace(/"/g, '&quot;')}" style="cursor:pointer">
             <path d="${d}" style="fill:var(--ca-mk-fill, var(--surface-page));fill-opacity:${lift ? 1 : .9};stroke:var(--ca-mk-line, var(--ink-2));stroke-width:${lift ? 1.1 : 1.3};stroke-linejoin:round"></path>${contours(it.k)}
-            ${labels && put ? `<text x="${put.c.x.toFixed(1)}" y="${put.c.y.toFixed(1)}" text-anchor="${put.c.anchor}" style="font-family:var(--sans);font-size:${size}px;letter-spacing:.06em;${lstyle};pointer-events:none">${label}</text>` : ''}
+            ${labels && put ? `<text x="${put.c.x.toFixed(1)}" y="${put.c.y.toFixed(1)}" text-anchor="${put.c.anchor}" style="font-family:var(--sans);font-size:${size}px;letter-spacing:.06em;${lstyle};pointer-events:none">${esc(label)}</text>` : ''}
           </g>`);
       });
       /* the regions the record has actually found coffee from, standing on the
@@ -223,7 +226,7 @@
   const pinsOf = el => {
     const from = el.getAttribute('pins-from');
     if (from) return (window.CARTA_FIX && window.CARTA_FIX[from]) || [];
-    try { return JSON.parse(el.getAttribute('pins') || '[]'); } catch (e) { return []; }
+    try { const v = JSON.parse(el.getAttribute('pins') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
   };
 
   class Plot extends HTMLElement {
@@ -333,10 +336,14 @@
     connectedCallback() {
       this.style.display = 'block'; keepPos(this); this.style.background = 'var(--surface-sunk)';
       if (!this.style.zIndex) this.style.zIndex = '0';   // contain Leaflet's own pane z-indexes
-      this._mapHost = document.createElement('div');
-      Object.assign(this._mapHost.style, { position: 'absolute', inset: '0' });
-      this.appendChild(this._mapHost);
-      if (!navigator.onLine || _lfDown) { this.fell(); return; }
+      if (!this._mapHost) {   // a DOM move fires disconnect+connect — never stack a second host
+        this._mapHost = document.createElement('div');
+        Object.assign(this._mapHost.style, { position: 'absolute', inset: '0' });
+        this.appendChild(this._mapHost);
+      }
+      // the latch yields to the evidence: Leaflet finishing late (the 'slow'
+      // path leaves its script tag in) means window.L stands and streets work
+      if (!navigator.onLine || (_lfDown && !window.L)) { this.fell(); return; }
       lfLoad().then(() => { if (this.isConnected) this.boot(); })
               .catch(() => { _lfDown = true; if (this.isConnected) this.fell(); });
     }
@@ -349,10 +356,10 @@
       n.className = 'smap-note';
       if (box.dataset.noteStyle) n.setAttribute('style', box.dataset.noteStyle);
       n.innerHTML = `<span>${this.getAttribute('terrain') === 'on' ? 'Terrain' : 'Streets'} unavailable — showing saved positions.</span>`
-        + '<span class="text-action" onclick="render()">Retry</span>';
+        + '<button class="text-action" onclick="window.CARTA_STREETS_RETRY&&window.CARTA_STREETS_RETRY();render()">Retry</button>';
       box.appendChild(n);
     }
-    disconnectedCallback() { if (this._mo) { this._mo.disconnect(); this._mo = null; } if (this._ro) this._ro.disconnect(); if (this._map) { try { this._map.remove(); } catch (e) { } this._map = null; } }
+    disconnectedCallback() { if (this._mo) { this._mo.disconnect(); this._mo = null; } if (this._ro) this._ro.disconnect(); clearTimeout(this._rt); if (this._map) { try { this._map.remove(); } catch (e) { } this._map = null; } if (this._mapHost) { this._mapHost.remove(); this._mapHost = null; } }
     attributeChangedCallback(n) { if (!this._map) return; if (n === 'theme') this.filter(); else this.marks(); }
     filter() {
       const dusk = (this.getAttribute('theme') || document.documentElement.getAttribute('data-theme')) === 'dusk';
@@ -508,8 +515,11 @@
 
   /* one plate costs a few hundred ms of synchronous projection, and the Atlas
      repaints on every state change while several plates may share a box. Keyed
-     on everything the drawing depends on, so a box is projected once. */
-  const PLATES = {};
+     on everything the drawing depends on, so a box is projected once. Capped:
+     each entry is tens of KB and an iOS URL bar mints a new size per settle,
+     so the oldest go when the shelf fills — a cache, never a leak. */
+  const PLATES = {}, PLATE_KEYS = [], PLATE_CAP = 12;
+  const plateKeep = ck => { if (PLATES[ck] != null) return; PLATE_KEYS.push(ck); if (PLATE_KEYS.length > PLATE_CAP) delete PLATES[PLATE_KEYS.shift()]; };
   /* the tap, wired the same way <carta-belt> already wires it — g.mk carries
      the country's own name, and a click dispatches carta:country-tap the same
      way it always has (index.html's one listener resolves either the keeper's
@@ -686,6 +696,7 @@
       const caption = (this.getAttribute('caption') || 'on') !== 'off'
         ? `<text x="14" y="${H - 12}" style="${FOOT}">Natural Earth 1:110m · equirectangular</text>` : '';
 
+      plateKeep(ck);
       host.innerHTML = PLATES[ck] = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%">
         ${on('graticule') ? `<g style="fill:none;stroke:var(--ink);stroke-opacity:.07;stroke-width:.5">${grat}</g>` : ''}
         ${rest}${bandG}${ground}${marks.join('')}${ticks}${caption}
@@ -744,7 +755,7 @@
      as something CITY_ARCS has never heard of. */
 
   const num = (v, d) => { const n = parseFloat(v); return isFinite(n) ? n : d; };
-  const json = (s, d) => { try { const v = JSON.parse(s); return v || d; } catch (e) { return d; } };
+  const json = (s, d) => { try { const v = JSON.parse(s); return Array.isArray(v) ? v : d; } catch (e) { return d; } };   // attributes are a public seam — valid JSON of the wrong shape is still the wrong shape
 
   let _uid = 0;
 
@@ -1509,4 +1520,4 @@ if(window.CARTA_CITY&&!window.customElements.get('carta-city'))customElements.de
 // the guard index.html's boot checks (ARCHITECTURE.md §1). The map had none
 // until Phase 31, though the guard's own comment already claimed every sibling
 // was covered — a stale carta-map.js is exactly the failure it exists to catch.
-window.MAP_VERSION='7.46.3';
+window.MAP_VERSION='7.47.0';

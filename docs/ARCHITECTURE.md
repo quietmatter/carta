@@ -35,6 +35,24 @@ Carta 7 is built exactly the way classic was, smaller:
   between the source and the host*, and seven files you drop on a static host
   keeps it exactly as five did.
 
+  **`sw.js` is the eighth (v7.47.0), and it is a different kind of file** —
+  not a sibling script in the `<head>` but the shell's own keeper, registered
+  at boot and answering navigations when nothing else can. The argument, made
+  here before it was made in the file, per this section's own rule: the app
+  promised "works offline from then on" while its shell rode ordinary HTTP
+  cache — ten minutes on GitHub Pages, then a cold launch with no network was
+  the OS's error page, in exactly the place PIVOT.md sends a keeper (a new
+  city, roaming off). The ledger was never at risk; the *shell* was, and
+  "offline-first" that ends at the front door is not offline-first. The worker
+  is ~60 hand-written lines, zero dependencies, no build; it precaches the
+  eight files plus fonts and icons keyed to `APP_VERSION`, serves navigations
+  network-first (an online keeper always runs the newest `index.html` — the
+  v7.31.1 stale-shell lesson is the design constraint here, not a footnote),
+  and never touches a cross-origin request, so every degrade in §7 behaves
+  exactly as written. `verify-static.js` holds the lockstep: `SW_VERSION`
+  moves with `APP_VERSION` or the build says so. §10's refusal of a service
+  worker is amended there, in the open, as the second amendment to that list.
+
   *The line band's history: 3–4,000 through Phase 12, 3–4,500 through
   Phase 14, 3–4,800 through Phase 16, and amended here, at Phase 17, to
   **3–5,000**.* Each of the first three amendments was made with an argument
@@ -1254,6 +1272,10 @@ pass over the board will meet the same disagreement.
 
 ## 7. Network posture (the whole of it)
 
+*(v7.47.0: `sw.js` sits under none of these. It intercepts same-origin GETs
+only — the shell serving itself — and passes every cross-origin touch below
+straight through, so each row's stated degrade is exactly what still happens.)*
+
 | Touch | When | Degrades to |
 |---|---|---|
 | Geocode (Nominatim) | placing a café; grounding an ask's answer; reading a pasted map link's real address (Phase 16) | typed city, drawn plot |
@@ -1667,16 +1689,16 @@ invisible (a bad brief just looks like a mediocre brief). So:
 
 ## 10. What is deliberately not built
 
-No framework, no bundler, no TypeScript, no service worker beyond the PWA
-basics classic has, no accounts, no server in 7.x (the dormant one returns
-only as the horizon's dumb backup), no analytics of any kind, no OCR
+No framework, no bundler, no TypeScript, no accounts, no server in 7.x (the
+dormant one returns only as the horizon's dumb backup), no analytics of any
+kind, no OCR
 dependency (the ask's own channel does that job, or nothing does), no
 embedding/vector machinery in the taste model (counts and means with
 evidence beat opaque similarity for a corpus of hundreds — and they can be
 *read*). Each of these is a door we know the address of; not opening them is
 the architecture.
 
-**The one amendment so far**, recorded here because a list of refusals is
+**The first amendment**, recorded here because a list of refusals is
 worth nothing if it quietly stops being true: Phase 12 vendored `d3-array`
 and `d3-geo` inline (§1). That is not a bundler, a build step or an npm
 dependency — it is two dist files pasted into the page — but it *is* 54 KB
@@ -1687,6 +1709,18 @@ half:** region-scale relief could have been had by vendoring finer contour
 data, and was not — it asks a tile server for it instead, on the row §7
 already had, and draws nothing at all when it can't. Elevation data in the
 file is still exactly `LAND_TOPO`, cut against whole countries.
+
+**The second amendment (v7.47.0): the service worker.** This list used to
+refuse one ("no service worker beyond the PWA basics classic has" — and
+classic, checked, has none, so the refusal was total). It stopped being true
+the day the offline promise was read closely: with no worker, a cold launch
+with no network is the browser's error page, and an offline-first app whose
+front door needs the network is telling a quiet lie. `sw.js` is the answer at
+its smallest — hand-written, dependency-free, same-origin only, version-locked
+to `APP_VERSION` by `verify-static.js` — and §1 carries the full argument.
+What this amendment does **not** open: background sync, push, notification
+permission, periodic anything. The worker serves the shell and does nothing
+else; any of those would be a new argument here first.
 
 **What Phase 18 also declined:** a `regions` collection. Regions are the
 obvious place to hang a coordinate, and giving them one would mean matching

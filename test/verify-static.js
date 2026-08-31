@@ -135,6 +135,27 @@ is(checked === tags.length,
     JSON.stringify({ REACH_KM: km, REACH_RINGS: rings }));
 }
 
+/* ---- v7.47.0 · the shell worker moves in lockstep, or it is the stale-shell
+   bug it exists to prevent ----
+   sw.js precaches the siblings under their ?v= URLs and drops its cache on
+   every version change — but only if SW_VERSION actually moved. A worker left
+   at an old version keeps serving an old './' forever on the offline path,
+   which is v7.31.1 wearing a new coat. So: it parses, it agrees on the one
+   version, it lists every sibling on disk, and index.html registers it. */
+{
+  const sw = read('sw.js');
+  const swErr = compile(sw, 'sw.js');
+  is(!swErr, 'sw.js — parses', swErr);
+  const swV = (sw.match(/const SW_VERSION\s*=\s*'([^']+)'/) || [])[1];
+  is(swV === appV, `sw.js — SW_VERSION matches APP_VERSION (${appV})`, String(swV));
+  const sibsIn = onDisk.filter(f => sw.includes(`'${f}'`));
+  is(sibsIn.length === onDisk.length,
+    'sw.js — its shell list names every sibling on disk',
+    `missing: ${onDisk.filter(f => !sibsIn.includes(f)).join(', ')}`);
+  is(/serviceWorker.*register\('sw\.js'\)/.test(inline),
+    'index.html registers sw.js at boot');
+}
+
 /* ---- the band, reported and never gated (ARCHITECTURE.md §1) ---- */
 const LINE_MAX = 5000, BYTE_MAX = 500 * 1024;
 // newlines, so this agrees with `wc -l` and with every figure in the record
