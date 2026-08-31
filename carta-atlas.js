@@ -45,6 +45,11 @@
  * under it is the record read against geography — your cities, what you've
  * tasted, and where the record argues you should go next.
  */
+// the grouping key for a stated name: fold() where it holds, the trimmed name
+// itself where fold strips everything — a name written wholly outside Latin
+// (中山農園) must not fold to '' and merge with every other such name, nor
+// match a coffee that stated nothing at all
+const gkey=s=>fold(s)||String(s||'').trim().toLowerCase();
 // every cup the record can trace to a country, counted by that country
 function countryCupCounts(){
   const m={};
@@ -58,7 +63,7 @@ function countryCupCounts(){
 }
 const placeCups=placeId=>live('cups').filter(c=>c.kind==='bar'&&c.placeRef===placeId&&c.score!=null);
 function placeAvg(placeId){const cs=placeCups(placeId);return cs.length?cs.reduce((s,c)=>s+c.score,0)/cs.length:null}
-const cityPlaces=city=>live('places').filter(p=>p.city&&fold(p.city)===fold(city));
+const cityPlaces=city=>live('places').filter(p=>p.city&&gkey(p.city)===gkey(city));
 // what a city amounts to, in one line: how many cafés, how many cups, and who
 // leads — the same three facts the city's own sheet opens with
 function cityMetaLine(city){
@@ -98,16 +103,16 @@ function cityLead(city){
     knownCities().forEach(c=>{
       let best=null;
       cityPlaces(c).forEach(p=>{const a=placeAvg(p.id);if(a!=null&&(!best||a>best.avg))best={name:p.name,avg:a}});
-      _cityLeadCache[fold(c)]=best;
+      _cityLeadCache[gkey(c)]=best;
     });
   }
-  return _cityLeadCache[fold(city)]||null;
+  return _cityLeadCache[gkey(city)]||null;
 }
 function cityLede(city){
   const places=cityPlaces(city);
   const lead=cityLead(city);
   if(!lead)return null;
-  const others=knownCities().filter(c=>fold(c)!==fold(city));
+  const others=knownCities().filter(c=>gkey(c)!==gkey(city));
   const top=others.length&&others.every(c=>{
     const o=cityLead(c);
     return !o||o.avg<lead.avg;
@@ -421,7 +426,7 @@ function doorShotLeafHTML(shot,plateH){
     ${doorFigsHTML(fg)}
     <button class="btn btn-graphite" style="min-height:52px;padding:15px 16px;margin-top:18px" onclick="openShotScreen(${jsq(String(shot.id))})">Write the cup →</button>
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:14px">
-      <span class="asttrust" style="font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-3)">Read off your ${pour?'scale':'account'}, kept nowhere else.</span>
+      <span class="asktrust" style="margin-top:0">Read off your ${pour?'scale':'account'}, kept nowhere else.</span>
       <button class="qlink" style="flex:none;white-space:nowrap" onclick="snoozeWaitingShot()">Not now</button>
     </div>
     ${atlasHandleHTML(false)}
@@ -709,7 +714,7 @@ function coffeeGroundPin(coffee){
   const country=originOf(coffee).country;
   if(!country)return null;
   const region=regionOf(coffee);
-  const siblings=countryCoffees(country).filter(c=>region?fold(regionOf(c))===fold(region):true);
+  const siblings=countryCoffees(country).filter(c=>region?(regionOf(c)&&gkey(regionOf(c))===gkey(region)):true);
   return regionPin(siblings);
 }
 // a list row's lead: the same soft silhouette a city row already carries
@@ -751,7 +756,7 @@ function coffeeCardMapHTML(coffee){
     </svg>
   </div>`;
 }
-function farmCoffees(country,farm){return countryCoffees(country).filter(c=>fold(growerOf(c))===fold(farm))}
+function farmCoffees(country,farm){return countryCoffees(country).filter(c=>{const g=growerOf(c);return g&&gkey(g)===gkey(farm)})}
 // a region stands where its placed farms stand — and is drawn only where some do
 function regionMarks(country){
   return groupStated(countryCoffees(country),regionOf).map(r=>{
@@ -768,7 +773,7 @@ function clearFarmPin(country,farm){
 let _farmBusy=false;
 async function placeFarms(country,region){
   if(_farmBusy)return;_farmBusy=true;
-  const inScope=c=>region?fold(regionOf(c))===fold(region):true;
+  const inScope=c=>region?(regionOf(c)&&gkey(regionOf(c))===gkey(region)):true;
   const farms=groupStated(countryCoffees(country).filter(inScope),growerOf)
     .filter(g=>!g.items.some(farmPin)&&!g.items.every(c=>originOf(c).geocoded));
   if(!farms.length){_farmBusy=false;toast('Every farm here is already placed, or none is named.');return}
@@ -794,7 +799,7 @@ function groupStated(list,keyFn){
   const m={};
   list.forEach(x=>{
     const raw=String(keyFn(x)||'').trim();if(!raw)return;
-    const k=fold(raw);
+    const k=gkey(raw);
     (m[k]=m[k]||{key:k,label:raw,items:[],spellings:{}});
     m[k].items.push(x);m[k].spellings[raw]=(m[k].spellings[raw]||0)+1;
   });
@@ -991,7 +996,7 @@ function vCountryChapter(label){
         <span class="r">${words(growers.length)} named${noGrower?` · ${words(noGrower)} unread`:''}</span></div>
       ${growers.length?growers.map(g=>{
         const producer=g.items.map(c=>String(originOf(c).producer||'').trim()).find(Boolean);
-        const meta=[producer&&fold(producer)!==fold(g.label)?producer:null,
+        const meta=[producer&&gkey(producer)!==gkey(g.label)?producer:null,
           `${words(g.items.length)} green${g.items.length===1?'':'s'}`].filter(Boolean).join(' · ');
         return `<button class="rowlink" style="padding:13px 0" onclick="openProducerPage(${jsq(label)},${jsq(g.label)},${jsq(regionOf(g.items[0]))})">
           <span style="min-width:0"><span class="t" style="display:block;font-size:17px">${esc(g.label)}</span>
@@ -1040,7 +1045,7 @@ function regionFarmPins(coffees){
 function vRegionChapter(country,view){
   const region=(view&&view.region)||'';
   const all=countryCoffees(country);
-  const coffees=region?all.filter(c=>fold(regionOf(c))===fold(region)):all.filter(c=>!regionOf(c));
+  const coffees=region?all.filter(c=>{const r=regionOf(c);return r&&gkey(r)===gkey(region)}):all.filter(c=>!regionOf(c));
   const label=region||'No region named';
   const cups=cupsOfCoffees(coffees);
   const growers=groupStated(coffees,growerOf).sort((x,y)=>y.items.length-x.items.length);
@@ -1091,7 +1096,7 @@ function vRegionChapter(country,view){
         <span class="r">${words(growers.length)} named${noGrower?` · ${words(noGrower)} unread`:''}</span></div>
       ${growers.map(g=>{
         const producer=g.items.map(c=>String(originOf(c).producer||'').trim()).find(Boolean);
-        const meta=[producer&&fold(producer)!==fold(g.label)?producer:null,
+        const meta=[producer&&gkey(producer)!==gkey(g.label)?producer:null,
           `${words(g.items.length)} green${g.items.length===1?'':'s'}`].filter(Boolean).join(' · ');
         return `<button class="rowlink" style="padding:14px 0;min-height:58px" onclick="openProducerPage(${jsq(country)},${jsq(g.label)},${jsq(region)})">
           <span style="min-width:0"><span class="t" style="display:block;font-size:17px">${esc(g.label)}</span>
@@ -1130,7 +1135,7 @@ function vRegionChapter(country,view){
 function vProducerPage(name,view){
   const country=(view&&view.country)||'';
   const region=(view&&view.region)||'';
-  const coffees=countryCoffees(country).filter(c=>fold(growerOf(c))===fold(name));
+  const coffees=farmCoffees(country,name);
   const cups=cupsOfCoffees(coffees);
   const roasters=groupStated(coffees,c=>c.roaster);
   const producer=coffees.map(c=>String(originOf(c).producer||'').trim()).find(Boolean)||'';
@@ -1140,7 +1145,7 @@ function vProducerPage(name,view){
   const first=coffees.slice().sort((a,b)=>a.createdAt.localeCompare(b.createdAt))[0];
   const pours=[...new Set(cups.filter(c=>c.kind==='bar'&&c.placeRef).map(c=>c.placeRef))].map(placeById).filter(Boolean);
   const ledger=[
-    ['Grower',producer&&fold(producer)!==fold(name)?producer:''],
+    ['Grower',producer&&gkey(producer)!==gkey(name)?producer:''],
     ['Altitude',alts.length?(Math.min(...alts)===Math.max(...alts)?`${Math.min(...alts).toLocaleString()} m`:`${Math.min(...alts).toLocaleString()} – ${Math.max(...alts).toLocaleString()} m`):''],
     ['Varieties',varieties.join(' · ')],
     ['Processing',processes.join(' · ')],
@@ -1224,9 +1229,11 @@ function pasteFarmLink(country,name,inputId){
   toast('Placed.',()=>{clearFarmPin(country,name);save();render()},'Undo');
 }
 function unplaceFarm(country,name){
-  const was=farmCoffees(country,name).map(c=>({c,lat:originOf(c).lat,lon:originOf(c).lon}));
+  // the undo restores the geocoded marker too — a lookup already known to
+  // fail must not come back from unplace-then-undo ready to be re-spent
+  const was=farmCoffees(country,name).map(c=>({c,lat:originOf(c).lat,lon:originOf(c).lon,geo:originOf(c).geocoded}));
   clearFarmPin(country,name);save();render();
-  toast('Taken off the map.',()=>{was.forEach(w=>{if(w.lat!=null){w.c.origin.lat=w.lat;w.c.origin.lon=w.lon;w.c.origin.geocoded=true}});save();render()},'Undo');
+  toast('Taken off the map.',()=>{was.forEach(w=>{if(w.geo||w.lat!=null){w.c.origin=w.c.origin||{};w.c.origin.geocoded=true}if(w.lat!=null){w.c.origin.lat=w.lat;w.c.origin.lon=w.lon}});save();render()},'Undo');
 }
 
 /* ============ a city — streets, edge to edge, with the record over them ============
@@ -1268,7 +1275,7 @@ function vCityChapter(city){
       </div>
       <div class="list noscroll">
         ${rows.length?rows.map(p=>{
-          const a=placeAvg(p.id),n=placeCups(p.id).length;
+          const a=placeAvg(p.id),n=live('cups').filter(c=>c.kind==='bar'&&c.placeRef===p.id).length;   // every cup, not only the scored — the header counts the same way
           return `<button class="lrow" style="min-height:60px" onclick="openCafeScreen('${p.id}')">
             <span class="mid"><span class="t">${esc(p.name)}</span>
             <span class="m">${esc([p.branches&&p.branches.length?'several here — place it':p.neighborhood||'',a!=null?`${n} cup${n===1?'':'s'}`:'not scored yet'].filter(Boolean).join(' · '))}</span></span>
@@ -1317,4 +1324,4 @@ window.vCountryChapter=vCountryChapter;
 window.vProducerPage=vProducerPage;
 window.vRegionChapter=vRegionChapter;
 
-window.ATLAS_VERSION='7.46.3';
+window.ATLAS_VERSION='7.47.0';

@@ -47,7 +47,7 @@ function firstStr(d,keys){
 function parseVisualizerShot(d){
   d=d||{};
   const num=v=>{if(v==null||v==='')return null;const n=Number(v);return isNaN(n)?null:n};
-  const str=v=>(v||'').trim();
+  const str=v=>typeof v==='string'?v.trim():'';
   const time=Number(d.duration);
   const roaster=str(d.bean_brand),coffeeName=str(d.bean_type);
   const curve=shotCurve(d);
@@ -281,9 +281,18 @@ let _vizResume=null;
 // which would make that file's evaluation depend on this one having loaded,
 // the exact stale-sibling failure APP_VERSION's check exists to survive.
 function vizResumeAfterSignIn(f){_vizResume=f}
+// a network-layer death is said in Carta's words, never the browser's —
+// "Failed to fetch" is a status code wearing a sentence's clothes
+const vizErrMsg=e=>{const m=(e&&e.message)||'';
+  return (!m||/failed to fetch|load failed|networkerror/i.test(m))
+    ?'Visualizer didn’t answer — nothing changed. Try again in a moment.':m};
 function saveVisualizerKey(){
-  const w=document.getElementById('viz_watch');
-  setPref('visualizerEmail',val('viz_email'));setPref('visualizerPassword',val('viz_password'));
+  const w=document.getElementById('viz_watch'),em=val('viz_email');
+  // a different account typed over the first takes the first's reads with it,
+  // the same promise signing out keeps — account B never shows account A's shots
+  if(em!==visualizerEmail()){_vizWaiting=null;_shots={busy:false,rows:null,error:null,scope:'all'};_vizCache={};
+    _shotsReadCache={};try{localStorage.removeItem(SHOTSREAD_KEY)}catch(e){}}
+  setPref('visualizerEmail',em);setPref('visualizerPassword',val('viz_password'));
   setPref('vizWatch',!!(w&&w.checked));
   closeSheet();render();toast('Saved — on this device only.');
   if(_vizResume&&visualizerAuthHeader()){const f=_vizResume;_vizResume=null;setTimeout(f,60)}
@@ -318,17 +327,19 @@ function applyVisualizerShot(shot){['dose','water','time','grind'].forEach(k=>{i
  * which is a different and much more alarming claim than the truth. It counts
  * them now (`_shots.unread`) and the screen says which it means. */
 async function fetchVisualizerShots(n){
-  const list=(await callVisualizer(`?page=1&items=${n}`)).data||[];
+  // the list answer is not ours: cap it at what was asked for, and never let
+  // an id rewrite the download path it rides in
+  const list=(((await callVisualizer(`?page=1&items=${n}`)).data)||[]).slice(0,n);
   let unread=0;
   const rows=(await Promise.all(list.map(async s=>{
-    try{return {...parseVisualizerShot(await callVisualizer(`/${s.id}/download`)),clock:s.clock,id:s.id}}
+    try{return {...parseVisualizerShot(await callVisualizer('/'+encodeURIComponent(String(s.id))+'/download')),clock:s.clock,id:s.id}}
     catch(e){unread++;return null}
   }))).filter(Boolean);
   rows.unread=unread;rows.listed=list.length;
   return rows;
 }
 function vizShotRowHTML(r,onclickFn){
-  return `<button class="lrow" onclick="${onclickFn}('${r.id}')"><span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc([r.time?fmtTime(r.time):'',fmtWhen(new Date(r.clock*1000).toISOString())].filter(Boolean).join(' · '))}</span></span></button>`;
+  return `<button class="lrow" onclick="${onclickFn}(${jsq(String(r.id))})"><span class="mid"><span class="t">${esc(r.label)}</span><span class="m">${esc([r.time?fmtTime(r.time):'',Number.isFinite(r.clock)?fmtWhen(new Date(r.clock*1000).toISOString()):''].filter(Boolean).join(' · '))}</span></span></button>`;
 }
 let _vizBusy=false,_vizShots=[];
 async function openVisualizerPicker(){
@@ -343,7 +354,7 @@ async function openVisualizerPicker(){
     box.innerHTML=rows.length?rows.map(r=>vizShotRowHTML(r,'vizShotPicked')).join('')
       :'<div class="muted small" style="margin-top:8px">No brews on your account yet.</div>';
   }catch(e){
-    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>
+    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc(vizErrMsg(e))}</div>
       <button class="btn btn-quiet mini" style="margin-top:10px;min-height:36px" onclick="openVisualizerPicker()">Try again</button>`;
   }
   _vizBusy=false;
@@ -382,7 +393,7 @@ async function loadSetupCandidates(){
           <span class="m">seen on your Visualizer account</span></span></button>`).join('')
       :'<div class="muted small" style="margin-top:8px">Nothing new on your last brews — every grinder there already has a Setup, or none of them said one.</div>';
   }catch(e){
-    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc((e&&e.message)||'Could not reach Visualizer.')}</div>
+    box.innerHTML=`<div class="muted small" style="margin-top:8px">${esc(vizErrMsg(e))}</div>
       <button class="btn btn-quiet" style="margin-top:12px" onclick="loadSetupCandidates()">Try again</button>`;
   }
 }
@@ -522,8 +533,10 @@ const shotWhen=s=>!s?null:(s.at||(s.clock?new Date(s.clock*1000).toISOString():n
 let _vizFullFetches={};
 function fetchShotFull(id){
   const key=String(id);
-  return _vizFullFetches[key]||(_vizFullFetches[key]=callVisualizer(`/${key}/download`)
-    .then(parseVisualizerShot).catch(()=>null));
+  return _vizFullFetches[key]||(_vizFullFetches[key]=callVisualizer('/'+encodeURIComponent(key)+'/download')
+    .then(parseVisualizerShot)
+    // a failed read is forgotten, not cached — the next open tries again
+    .catch(()=>{delete _vizFullFetches[key];return null}));
 }
 /* the full file is fetched for its curve, but it is also the only call that
  * carries the shot's own settings: `?essentials=true` states neither the
@@ -588,8 +601,9 @@ function openShotsScreen(){
 async function loadShots(force){
   if(_shots.busy||(_shots.rows&&!force))return;
   _shots.busy=true;_shots.error=null;render();
-  try{_shots.rows=(await fetchVisualizerShots(8)).map(cacheShot)}
-  catch(e){_shots.error=(e&&e.message)||'Could not reach Visualizer.'}
+  try{const r=await fetchVisualizerShots(8);_shots.rows=r.map(cacheShot);
+    _shots.rows.unread=r.unread;_shots.rows.listed=r.listed}   // map() drops the expandos the empty state reads
+  catch(e){_shots.error=vizErrMsg(e)}
   _shots.busy=false;
   if(pageView&&pageView.kind==='shots')render();
 }
@@ -818,9 +832,13 @@ function tasteHomePick(n){
 function shotOfBrew(brew){
   if(!brew||brew.vizShotId==null)return null;
   const cached=vizShotById(brew.vizShotId);
-  return {id:brew.vizShotId,curve:getShotCurve(brew.vizShotId)||(cached&&cached.curve)||null,
+  // the curve votes on the method before the espresso default does — a
+  // method-less older brew whose stored curve is a pour-over must not walk
+  // back into the espresso arm's d="null" plate (the v7.31.3 failure)
+  const curve=getShotCurve(brew.vizShotId)||(cached&&cached.curve)||null;
+  return {id:brew.vizShotId,curve,
     at:brew.at||(cached&&cached.at)||null,
-    method:brew.method||(cached&&cached.method)||'espresso',
+    method:brew.method||(cached&&cached.method)||(curve&&curve.method)||'espresso',
     pours:brew.pours||(cached&&cached.pours)||[],
     dose:brew.doseG,water:brew.waterG,time:brew.timeSec,grind:brew.grind,tempC:brew.tempC,
     brewer:brew.brewer||(cached&&cached.brewer)||'',
@@ -967,4 +985,4 @@ window.shotTempGoal=shotTempGoal;
 window.setupCandidatesFromShots=setupCandidatesFromShots;
 window.firstStr=firstStr;
 
-window.SHOT_VERSION='7.46.3';
+window.SHOT_VERSION='7.47.0';

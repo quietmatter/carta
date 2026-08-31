@@ -232,7 +232,7 @@ function shotFigures(shot){
   let total=shot&&shot.timeExact!=null?shot.timeExact:(shot&&shot.time!=null?shot.time:null);
   if(total==null&&c)total=c.t[c.t.length-1];
   if(shotMethod(shot)==='pourover'){
-    const pours=(shot&&shot.pours)||(c?shotPours(c):[])||[];
+    const pours=(shot&&shot.pours&&shot.pours.length)?shot.pours:(c?shotPours(c):[]);   // an empty [] must not outvote the curve (platePaths already lets it fall through)
     const wIn=c&&c.wIn;
     const yld=(shot&&shot.water!=null)?shot.water:(wIn?wIn[wIn.length-1]:null);
     return {method:'pourover',pours,
@@ -495,7 +495,7 @@ function plateScrub(e){
  * copy it expects. A mismatch means a cached sibling (see index.html's <head>)
  * and is worth saying out loud — at v7.31.1 the same mismatch was silent and
  * looked to the keeper like their Visualizer account had stopped working. */
-window.PLATE_VERSION='7.46.3';
+window.PLATE_VERSION='7.47.0';
 window.shotCurve=shotCurve;
 window.shotPours=shotPours;
 window.shotPreinfusion=shotPreinfusion;

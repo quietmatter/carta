@@ -7,6 +7,71 @@ Lotmark's desk. Old entries are never rewritten.*
 
 ---
 
+## 2026-08-31 — the shakedown (v7.47.0)
+
+- **A production pass over the whole kit, on the founder's ask: review
+  everything, make it launch-ready.** Five adversarial review sweeps (one per
+  region of the codebase, plus voice/a11y and the production shell) surfaced
+  ~40 verified findings; the ones that shipped are below, the ones parked are
+  at the foot.
+- **Correctness.** The reach chips were dead — `jsq()` wrapped in a second
+  pair of quotes rendered every chip's onclick a syntax error, and the ask
+  harness never saw it because it drives `pickAskReach` directly (a harness
+  gap worth remembering). A backup exported `askKey`, `visualizerEmail` and
+  `visualizerPassword` in plaintext against three screens' explicit promise —
+  stripped now, restore re-enters keys by hand. A cancelled ask could still
+  write `D.asks` if a new ask reset the one global cancel flag while the old
+  run sat in an await — each run carries an identity token now, and a foreign
+  run's narration can no longer paint the live wait. `cfAutosave` rebuilt
+  `origin` from the form's eight text fields, erasing a placed farm's
+  `lat/lon/geocoded` on the first keystroke. The classic import's *preview*
+  enriched matched places in the live ledger — it maps against a clone now
+  and the real map runs at Add. A corrupt `carta7.v1` fell to a blank ledger
+  whose first `save()` destroyed the recoverable bytes — they're set aside
+  under `carta7.v1.bad` first. A lookup nobody answered stamped `geocoded`
+  and retired a café from placement forever (`lookupPlace` now answers null
+  for no-answer vs `[]` for no-such-place — `backfillCountries`' own law,
+  applied to the caller that predates it). `fold()` folds any wholly
+  non-Latin name to `''`, which merged distinct CJK farms *and* let a farm
+  page's "Place it" write coordinates onto every grower-less coffee in the
+  country — `gkey()` falls back to the trimmed name. Plus: the streets'
+  failure latch never released (Retry was a lie); `vShots`' unread-counter
+  expandos were dropped by a `.map`; an all-archived-Setups record silently
+  filed new brews onto a retired Setup; `replaceCafe` destroyed a good pin
+  with no undo; back-navigation deduped screens by kind alone, so cup→cup
+  lost a step; and a missing sibling script died as a white page before the
+  boot guard could speak (`SCREENS` reads `window.*` now).
+- **The shell (the §10 amendment).** `sw.js` — the eighth file. The README
+  promised "works offline from then on" and a cold launch without network was
+  the OS error page; ARCHITECTURE §1 carries the argument, §10 records the
+  amendment (the second, after the d3 vendoring), and `verify-static.js`
+  holds `SW_VERSION` in the same lockstep as every `?v=` tag. Also:
+  `apple-touch-icon.png` (iOS ignores SVG — the install icon was a
+  screenshot), manifest recut from first-turn copy ("CARTA Coffee Ledger" /
+  "one cup, two contexts") to the fourth turn's own sentence, dusk
+  `theme-color` via media-scoped metas, a meta description + OG tags, a
+  404 page in the voice, and `user-scalable=no` dropped.
+- **The floor.** The toast announces itself (`role="status"`) and its Undo is
+  a real button; the dials answer to a keyboard (a keyboard click has
+  `detail 0`) and the steppers say their names; sheets move focus in and give
+  it back; a screen change moves focus with it; the °C/°F toggle and every
+  text-action are buttons; placeholders and the `.lcard` unread states read
+  at reading contrast; `.qlink` buys its touch target with padding and gives
+  the layout back with margin. Raw "Failed to fetch" is said in Carta's words
+  at every network surface.
+- **Verified:** all seven harnesses green — static grew to 29 checks (four on
+  the sw seam), the model harness to 144 (the `pours:[]` fallback, non-string
+  shot fields). CLAUDE.md's photo-store drift corrected (cup photos are a
+  retired feature; the map said otherwise).
+- **Parked, not absorbed:** keyboard access on the map's own pins (every
+  destination is also a real button, so floor-passable); `<carta-city>`'s
+  km grid thinning on tall frames (geometry change, wants its own careful
+  pass); richer backup-restore UX for the `.bad` key (today it is a
+  recoverable artifact, not a surface).
+- **For Lotmark's desk:** nothing new this entry.
+
+---
+
 ## 2026-08-29 — the far café, readable (v7.46.3)
 
 - **A keeper's own photo, read against the ruler that drew it.** The reach

@@ -2,13 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#f2eee6">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2eee6">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171310">
+<meta name="description" content="Carta — a coffee journal and a hunting instrument. The cup you made, the cup you were served, and whether either was worth finding again. Offline-first, no account, your record stays on your device.">
+<meta property="og:title" content="Carta">
+<meta property="og:description" content="A coffee journal and a hunting instrument. The record of your taste, and where it points next.">
+<meta property="og:image" content="/icon-512.png">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon-192.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="mask-icon" href="favicon.svg" color="#241d18">
 <title>Carta</title>
 <style>
@@ -223,7 +228,7 @@ label.f span.l,div.f span.l{display:block;font-family:var(--sans);font-size:11px
 input[type=text],input[type=password],input[type=number],input[type=date],select,textarea{
   width:100%;font-family:var(--serif);font-size:16px;padding:9px 0;border:none;border-bottom:1px solid var(--ink-3);
   border-radius:0;background:transparent;color:var(--ink);appearance:none;-webkit-appearance:none}
-input::placeholder,textarea::placeholder{color:var(--ink-d);font-style:italic}
+input::placeholder,textarea::placeholder{color:var(--ink-3);font-style:italic}   /* a placeholder that is a field's only prompt must read at reading contrast */
 select{background:transparent}
 input:focus,select:focus,textarea:focus{outline:none;border-bottom-color:var(--ink)}
 textarea{min-height:60px;resize:vertical;border:1px solid var(--line);padding:9px 11px}
@@ -251,7 +256,7 @@ details.more[open] summary{margin-bottom:10px}
 .dedit{width:2.7em;min-width:46px;max-width:88%;font-family:var(--sans);font-size:34px;font-weight:500;font-variant-numeric:tabular-nums;text-align:center;border:none;background:transparent;color:var(--ink);padding:0}
 .dedit:focus{outline:none}
 .dcorner{position:absolute;top:7px;right:7px;display:flex;gap:3px}
-.dcorner .ut{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.02em;padding:2px 6px;border:1px solid var(--line-strong);background:transparent;color:var(--ink-3);border-radius:var(--chipr);cursor:pointer}
+.dcorner .ut{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.02em;padding:2px 6px;border:1px solid var(--line-strong);background:transparent;color:var(--ink-3);border-radius:var(--chipr);cursor:pointer;appearance:none;-webkit-appearance:none}
 .dcorner .ut.on{background:var(--ink);color:var(--accent-ink);border-color:var(--ink)}
 .dialrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
@@ -349,7 +354,7 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
   z-index:99;opacity:0;transition:opacity .2s;pointer-events:none;
   max-width:calc(100% - 28px);white-space:normal;text-align:center;line-height:1.45}
 .toast.withundo{pointer-events:auto}
-.toast .undo{margin-left:10px;text-decoration:underline;cursor:pointer}
+.toast .undo{margin-left:10px;text-decoration:underline;cursor:pointer;background:none;border:0;padding:0;font:inherit;color:inherit}
 .toast.show{opacity:1}
 
 /* ===== the map surfaces — drawn by carta-maps.js, inked here (MAPPING.md's law:
@@ -387,7 +392,7 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 .leaflet-control-attribution a{color:var(--ink-3)!important;text-decoration:none}
 .smap-note{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;background:var(--paper-card);border:1px solid var(--line);
   padding:6px 9px;font-family:var(--sans);font-size:11px;color:var(--ink-3);display:flex;gap:8px;align-items:center;justify-content:space-between}
-.text-action{text-decoration:underline;cursor:pointer;flex:none;color:var(--ink-3)}
+.text-action{text-decoration:underline;cursor:pointer;flex:none;color:var(--ink-3);background:none;border:0;padding:0;font:inherit}
 
 /* ===== the rooms — one screen's own furniture (ROADMAP.md Phase 12) ===== */
 /* a screen's header, held at the top of its own scroll */
@@ -458,10 +463,10 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 .lcard .ans{flex:none;text-align:right}
 .lcard .sc{display:block;font-family:var(--serif);font-size:25px;font-weight:600;
   font-variant-numeric:tabular-nums;line-height:1.1;color:var(--accent)}
-.lcard .sc.none{font-style:italic;font-weight:400;font-size:21px;line-height:1.3;color:var(--text-disabled)}
+.lcard .sc.none{font-style:italic;font-weight:400;font-size:21px;line-height:1.3;color:var(--text-subtle)}   /* unread reads at reading contrast, the same v7.35.0 rule .lrow already keeps */
 .lcard .of{display:block;font-family:var(--sans);font-size:var(--s10);letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-3);margin-top:3px}
-.lcard .of.none{color:var(--ink-d)}
+.lcard .of.none{color:var(--text-subtle)}
 /* the fact rows — `.kv`'s own mechanics, ruled above rather than below, so the
    last fact closes the card instead of leaving a hairline hanging under it */
 .lcard .facts{display:block;margin-top:11px}
@@ -507,12 +512,6 @@ html[data-theme="dusk"] .sheet-bg{background:rgba(0,0,0,.55)}
 .cchip .n{font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);font-variant-numeric:tabular-nums}
 /* a boxed aside — the panel a screen argues from */
 .box{border:1px solid var(--line);background:var(--surface-page);padding:18px}
-/* the welcome, six lines on the lift (v7.35.0, critique rec 5). An app whose
-   whole argument is that it keeps the story of your taste used to open on an
-   empty map and say nothing about itself. */
-.welcome{border:1px solid var(--line-strong);background:var(--surface-page);padding:20px 18px 18px;margin-top:14px}
-.welcome .ln{font-family:var(--serif);font-size:16.5px;line-height:1.6;color:var(--ink);max-width:37ch}
-.welcome .ln+.ln{margin-top:10px}
 .box.firm{border-color:var(--line-strong)}
 /* the city's sheet, pulled up over its own streets */
 .citysheet{position:absolute;left:0;right:0;bottom:0;z-index:5;background:var(--surface-card);
@@ -809,8 +808,8 @@ button.led:active{background:var(--paper-2)}
    dotted underneath, in the eyebrow's own ink and size */
 .whenlink{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:inherit;
   letter-spacing:inherit;text-transform:inherit;border-bottom:1px dotted var(--ink-3)}
-.qlink{background:none;border:0;padding:2px 0;cursor:pointer;font-family:var(--sans);font-size:11px;
-  color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;letter-spacing:.01em}
+.qlink{background:none;border:0;padding:12px 6px;margin:-10px -6px;cursor:pointer;font-family:var(--sans);font-size:11px;
+  color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;letter-spacing:.01em}   /* the padding buys the touch target; the margin gives the layout back */
 .qlink:active{color:var(--ink)}
 .qlink.faint{color:var(--ink-3)}
 
@@ -1042,19 +1041,19 @@ button.led:active{background:var(--paper-2)}
      shot was swallowed by a catch and reported as "no brews on your account".
      The query string makes that impossible; PLATE_VERSION below makes it loud
      if this line is ever forgotten. -->
-<script src="carta-map.js?v=7.46.3"></script>
-<script src="carta-plate.js?v=7.46.3"></script>
-<script src="carta-shot.js?v=7.46.3"></script>
-<script src="carta-ask.js?v=7.46.3"></script>
-<script src="carta-atlas.js?v=7.46.3"></script>
-<script src="carta-rooms.js?v=7.46.3"></script>
+<script src="carta-map.js?v=7.47.0"></script>
+<script src="carta-plate.js?v=7.47.0"></script>
+<script src="carta-shot.js?v=7.47.0"></script>
+<script src="carta-ask.js?v=7.47.0"></script>
+<script src="carta-atlas.js?v=7.47.0"></script>
+<script src="carta-rooms.js?v=7.47.0"></script>
 </head>
 <body>
 <main id="main"></main>
 <nav class="tabs" id="tabs"></nav>
 <div class="sheet-bg" id="sheetbg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 'use strict';
@@ -1072,7 +1071,7 @@ let D=load();
 // photos retired (PIVOT.md decision #1, reopened) — the separate store is
 // gone, and a lingering cup.photo would otherwise claim an image that no
 // longer exists. One-time, harmless once both are already clear.
-function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):clone(blank);d.prefs=d.prefs||{};d.menus=d.menus||[];d.asks=d.asks||[];
+function load(){let raw=null;try{raw=localStorage.getItem(KEY);const d=raw?JSON.parse(raw):clone(blank);d.prefs=d.prefs||{};d.menus=d.menus||[];d.asks=d.asks||[];
   (d.cups||[]).forEach(c=>{if(c.photo)delete c.photo});
   try{localStorage.removeItem('carta7.photos.v1')}catch(e){}
   /* Phase 31 · every ask already on the record has been read — it was read on
@@ -1093,7 +1092,12 @@ function load(){try{const r=localStorage.getItem(KEY);const d=r?JSON.parse(r):cl
     (d.asks||[]).forEach(a=>{if(a&&!a.openedAt&&!a.setAsideAt)a.openedAt=a.createdAt||new Date().toISOString()});
     d.prefs.asksReadBackfill=new Date().toISOString();
   }
-  return d}catch(e){return clone(blank)}}
+  return d}catch(e){
+  // a record that would not parse is set aside whole, never overwritten: the
+  // next save() writes a blank ledger over KEY, and these bytes are the
+  // recoverable 99% of what the keeper actually had
+  try{if(raw)localStorage.setItem(KEY+'.bad',raw)}catch(_){}
+  return clone(blank)}}
 function save(){_tasteDirty=true;clearCupNos();clearCityLead();try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save — is storage full?')}}
 
 /* the shot curves — same reasoning as the photos, one key over (Phase 26). A
@@ -2041,7 +2045,7 @@ function go(t){stopTimer(true);_navStack.length=0;tab=t;pageView=null;render();m
 function openScreen(kind,id,extra){
   // a repaint of the screen you are already on is not a step: re-reading the
   // city while its cafés geocode must not stack forty cities to walk back out of
-  if(!_navRestoring&&!(pageView&&pageView.kind===kind)){
+  if(!_navRestoring&&!(pageView&&pageView.kind===kind&&String(pageView.id||'')===String(id||''))){   // same kind AND id — cup→cup through a coffee sheet is a real step
     _navStack.push({tab:tab,pageView:pageView});
     if(_navStack.length>40)_navStack.shift();
   }
@@ -2160,11 +2164,15 @@ try{
     try{history.pushState({cartaTrap:1},'')}catch(e){}
   });
 }catch(e){/* no history to trap (a file:// frame, an old webview) — the on-screen ← still works */}
-const SCREENS={atlas:vAtlas,journal:vJournal,shelf:vShelf,country:vCountryChapter,
-  region:vRegionChapter,producer:vProducerPage,city:vCityChapter,cafe:vCafe,cup:vCup,
-  taste:vTaste,brief:vBrief,ask:vAsk,asking:vAsking,askresult:vAskResult,askfind:vAskFinding,menu:vMenu,
-  record:vRecord,setups:vSetups,setup:vSetup,brew:vBrew,
-  shot:vShot,shots:vShots,tastehome:vTasteHome};
+/* read through window, never as bare identifiers: most views arrive from the
+ * siblings, and a sibling the cache evicted would otherwise kill this whole
+ * script with a ReferenceError here — a silent white page, before the boot
+ * guard built for exactly that failure ever gets to speak (v7.31.1) */
+const SCREENS={atlas:window.vAtlas,journal:window.vJournal,shelf:window.vShelf,country:window.vCountryChapter,
+  region:window.vRegionChapter,producer:window.vProducerPage,city:window.vCityChapter,cafe:window.vCafe,cup:window.vCup,
+  taste:window.vTaste,brief:window.vBrief,ask:window.vAsk,asking:window.vAsking,askresult:window.vAskResult,askfind:window.vAskFinding,menu:vMenu,
+  record:window.vRecord,setups:window.vSetups,setup:window.vSetup,brew:window.vBrew,
+  shot:window.vShot,shots:window.vShots,tastehome:window.vTasteHome};
 let _lastScreenKey=null;
 function render(){
   const view=pageView||{kind:tab,id:null};
@@ -2175,7 +2183,9 @@ function render(){
   nav.innerHTML=bare?'':TABS.map(t=>
     `<button class="${room===t.id?'on':''}" onclick="go('${t.id}')">${t.label}</button>`).join('')
     +`<button class="door" onclick="openDoor()" aria-label="Log a cup">＋ A cup</button>`;
-  const body=(SCREENS[view.kind]||vAtlas)(view.id,view);
+  const viewFn=SCREENS[view.kind]||SCREENS.atlas;
+  if(!viewFn){document.getElementById('main').innerHTML='<div class="empty" style="margin:40vh 24px 0">Part of Carta failed to load — reload the page.</div>';return}
+  const body=viewFn(view.id,view);
   const screenKey=view.kind+'|'+(view.id||'');
   // a repaint of the screen you are already reading keeps your place: marking a
   // finding, settling a café, correcting a dial all re-read the same page, and
@@ -2205,6 +2215,10 @@ function render(){
   m.classList.toggle('bare',bare);
   m.innerHTML=settle?`<div class="ca-screen">${body}</div>`:body;
   m.scrollTop=keep;
+  // a real screen change moves focus with it — with no signal, a screen
+  // reader is still standing in a page that no longer exists. A repaint
+  // keeps the keeper's place, focus included; an open sheet keeps its own.
+  if(!same&&!sheetOpen()){m.setAttribute('tabindex','-1');m.focus({preventScroll:true})}
   _askSettle=false;
   if(view.kind==='city')mountCity();
   if(view.kind==='atlas')mountAtlas();
@@ -2225,16 +2239,23 @@ function ariaPass(root){
 /* a map surface inside a sheet cleans itself up: carta-maps' elements tear
    their own Leaflet context down in disconnectedCallback, so replacing the
    sheet's innerHTML is all the disposal there is to do. */
+let _sheetFrom=null;   // where focus stood before the sheet took it — aria-modal hides the page, so focus must move in and come back
 function openSheet(html){const s=document.getElementById('sheet');
   s.innerHTML='<div class="grab" aria-hidden="true"></div>'+html;
   s.classList.remove('dragging');s.style.transform='';document.getElementById('sheetbg').style.opacity='';
   s.classList.add('open');document.getElementById('sheetbg').classList.add('open');
   s.setAttribute('role','dialog');s.setAttribute('aria-modal','true');
-  s.scrollTop=0;ariaPass(s);}
+  s.scrollTop=0;ariaPass(s);
+  _sheetFrom=document.activeElement&&document.activeElement!==document.body?document.activeElement:null;
+  // focus the heading, never a field — a sheet must not open a keyboard uninvited
+  const h=s.querySelector('h3,h2')||s;
+  h.setAttribute('tabindex','-1');h.focus({preventScroll:true});}
 function closeSheet(){const s=document.getElementById('sheet');
   s.classList.remove('open');document.getElementById('sheetbg').classList.remove('open');stopTimer(false);
   cfFlush();
   s.innerHTML='';
+  if(_sheetFrom&&_sheetFrom.isConnected)try{_sheetFrom.focus({preventScroll:true})}catch(e){}
+  _sheetFrom=null;
 }
 (function initSheetDrag(){
   const sheet=document.getElementById('sheet');
@@ -2275,7 +2296,7 @@ let _toastUndo=null;
 function toast(m,actionFn,actionLabel){
   const t=document.getElementById('toast');
   _toastUndo=actionFn||null;
-  t.innerHTML=esc(m)+(actionFn?` <span class="undo" onclick="_toastUndo&&_toastUndo();_toastUndo=null;document.getElementById('toast').classList.remove('show')">${esc(actionLabel||'Undo')}</span>`:'');
+  t.innerHTML=esc(m)+(actionFn?` <button class="undo" onclick="_toastUndo&&_toastUndo();_toastUndo=null;document.getElementById('toast').classList.remove('show')">${esc(actionLabel||'Undo')}</button>`:'');
   t.classList.toggle('withundo',!!actionFn);
   t.classList.add('show');
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),actionFn?4000:1800);
@@ -2292,11 +2313,11 @@ function dial(id,label,unit,value,step,min,max,dp,opts){
   dialState[id]={v:value,step,min,max,dp:dp??(String(step).includes('.')?1:0),unit,kind:opts.kind||null};
   const corner=opts.corner?`<div class="dcorner">${opts.corner}</div>`:(opts.hint?`<div class="ticks">${opts.hint}</div>`:'');
   return `<div class="dial">${corner}<div class="l">${label}</div>
-    <div class="v num tapedit" id="dv_${id}" onclick="editDial('${id}')">${fmtDial(id)}<span class="u">${unit}</span></div>
+    <div class="v num tapedit" id="dv_${id}" role="button" tabindex="0" onclick="editDial('${id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editDial('${id}')}">${fmtDial(id)}<span class="u">${unit}</span></div>
     <div class="ctl">
-      <button type="button" onpointerdown="holdStart(event,'${id}',-1)">−</button>
-      <button type="button" onpointerdown="holdStart(event,'${id}',1)">+</button>
-    </div></div>`;
+      <button type="button" aria-label="${esc(label)} down" onpointerdown="holdStart(event,'${id}',-1)" onclick="if(!event.detail)nudge('${id}',-1)">−</button>
+      <button type="button" aria-label="${esc(label)} up" onpointerdown="holdStart(event,'${id}',1)" onclick="if(!event.detail)nudge('${id}',1)">+</button>
+    </div></div>`;   // a keyboard click arrives with detail 0 and no pointer sequence — it steps once
 }
 function fmtDial(id){const s=dialState[id];if(s.v==null)return '—';
   if(s.kind==='time')return fmtTime(s.v);
@@ -2356,7 +2377,7 @@ function tempDialHTML(tempC){
 function dialTempC(){const s=dialState.temp;if(!s||s.v==null)return null;
   return tempUnit()==='F'?Number(f2c(s.v).toFixed(1)):s.v;}
 function tempCorner(){const u=tempUnit();
-  return `<span class="ut ${u==='C'?'on':''}" onclick="setTempUnit('C')">°C</span><span class="ut ${u==='F'?'on':''}" onclick="setTempUnit('F')">°F</span>`;}
+  return `<button type="button" class="ut ${u==='C'?'on':''}" onclick="setTempUnit('C')">°C</button><button type="button" class="ut ${u==='F'?'on':''}" onclick="setTempUnit('F')">°F</button>`;}
 function setTempUnit(u){if(u!=='C'&&u!=='F')return;
   const c=dialTempC();setPref('tempUnit',u);
   const box=document.getElementById('dialbox_temp');if(box)box.innerHTML=tempDialHTML(c);}
@@ -2917,7 +2938,7 @@ function saveSetup(id){
 }
 function saveBrewFlow(coffeeId,editId){
   let setupId=val('b_setup');
-  if(!setupId&&!D.setups.length){
+  if(!setupId&&!D.setups.some(x=>!x.archived)){   // the same live-only count the brew form's band uses
     const g=val('n_grinder'),br=val('n_brewer');
     if(!g&&!br){toast('Name your grinder or brewer — once is enough');return}
     const st={id:uid(),createdAt:new Date().toISOString(),name:[g,br].filter(Boolean).join(' · '),grinder:g,brewer:br};
@@ -2994,7 +3015,10 @@ function cfAutosave(){
     D.coffees.push({id:_cfId=uid(),createdAt:new Date().toISOString(),home:true,...f});
     const sb=document.getElementById('cf_search_btn');if(sb)sb.style.display='';
   }else{
-    Object.assign(coffeeById(_cfId),f,{updatedAt:new Date().toISOString()});
+    // merge into origin, never replace it — a placed farm's lat/lon/geocoded
+    // are not on this form, and a keystroke in Notes must not unpin the farm
+    const c=coffeeById(_cfId);
+    Object.assign(c,f,{origin:Object.assign({},c.origin,f.origin),updatedAt:new Date().toISOString()});
   }
   clearTimeout(_cfTimer);_cfTimer=setTimeout(save,400);   // debounced: the write into D above is what a swipe can't lose
 }
@@ -3533,7 +3557,7 @@ function streetsHTML(list,o){
       <carta-plot class="plot frame" fit="frame" pins="${pins}" dot="${o.dot||7}" labels="${o.labels||'off'}"></carta-plot>
     </div>`;
   const layer=o.terrain?'Terrain':'Streets';
-  const note=`<div class="smap-note" style="${o.noteStyle||''}"><span>${layer} unavailable — showing saved positions.</span><span class="text-action" onclick="render()">Retry</span></div>`;
+  const note=`<div class="smap-note" style="${o.noteStyle||''}"><span>${layer} unavailable — showing saved positions.</span><button class="text-action" onclick="window.CARTA_STREETS_RETRY&&window.CARTA_STREETS_RETRY();render()">Retry</button></div>`;
   const streets=`<carta-streets style="position:absolute;inset:0" pins="${pins}"${o.names?' names="on"':''}${o.terrain?' terrain="on"':''}${o.zoom?` zoom="${o.zoom}"`:''}${o.still?' still="on"':''}${o.insetBottom?` inset-bottom="${o.insetBottom}"`:''} attrib-lift="${o.attribLift||0}"></carta-streets>`;
   return `<div class="mapbox" style="${o.boxStyle||''}"${o.noteStyle?` data-note-style="${esc(o.noteStyle)}"`:''}>
     ${floor}${navigator.onLine?streets:note}
@@ -3610,27 +3634,30 @@ document.addEventListener('carta:pin-tap',e=>{
  * wrong pin was permanent and there was no way in the app to say so.
  * Asking for five and reading their areas costs the same one call. */
 async function lookupPlace(name,neighborhood,city){
+  // [] is OSM saying "no such place"; null is nobody answering at all — the
+  // callers stamp `geocoded` only on the first, because a request nobody
+  // answered is not an answer (the same law backfillCountries states)
   const q=[name,neighborhood,city].filter(Boolean).join(', ');
   if(!q)return [];
   try{
     const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
-    if(!r.ok)return [];
+    if(!r.ok)return null;
     const list=await r.json();
-    if(!Array.isArray(list))return [];
+    if(!Array.isArray(list))return null;
     return dedupeHits(list.map(x=>{
       const lat=Number(x.lat),lon=Number(x.lon);
       if(!isFinite(lat)||!isFinite(lon))return null;
       return {lat,lon,name:String(x.name||'').trim(),hood:hoodOf(x.address),city:cityOf(x.address),
         country:countryOf(x.address)};
     }).filter(Boolean));
-  }catch(e){return []}
+  }catch(e){return null}
 }
 // the ask's own grounding still wants one answer to a question it already
 // asked precisely — it supplies the model's neighborhood, so its lookup is
 // rarely the ambiguous kind. It takes the first and now keeps the area too.
 async function geocodeCafe(name,neighborhood,city){
   const hits=await lookupPlace(name,neighborhood,city);
-  return hits.length?hits[0]:null;
+  return hits&&hits.length?hits[0]:null;
 }
 // the other direction through the same keyless door (Phase 16): not "where is
 // this name" but "what's at this coordinate" — the question OSM can answer
@@ -3661,14 +3688,18 @@ let _geocoding=new Set(),_geoRenderT=null;
  * with its own real neighborhoods to choose from. That is the gentle join's
  * posture — offer, never merge — applied to an address instead of a name. */
 async function geocodeCityPlaces(city){
-  const targets=live('places').filter(p=>p.city&&fold(p.city)===fold(city)&&p.lat==null&&!p.geocoded&&!_geocoding.has(p.id));
+  const targets=live('places').filter(p=>p.city&&gkey(p.city)===gkey(city)&&p.lat==null&&!p.geocoded&&!_geocoding.has(p.id));
   for(const p of targets){
+    // re-check per iteration: a second loop (another chapter opened during
+    // this one's pacing sleep) may have taken or settled this café already
+    if(p.lat!=null||p.geocoded||_geocoding.has(p.id))continue;
     _geocoding.add(p.id);
     const hits=await lookupPlace(p.name,'',p.city);
+    _geocoding.delete(p.id);
+    if(hits==null){await new Promise(r=>setTimeout(r,1100));continue}   // nobody answered — not retired, tried again next open
     p.geocoded=true;
     if(hits.length===1)settlePlace(p,hits[0]);
     else if(hits.length>1)p.branches=hits;
-    _geocoding.delete(p.id);
     save();
     // one repaint once the batch settles, not one per café: a repaint replaces
     // the screen's DOM, and the street layer inside it goes with it — so a
@@ -3807,9 +3838,9 @@ function placeBranchHTML(p){
   // fixed by hand, precisely because a name search could never find it, had
   // no way back to that same fix once "not right?" tried that same search
   // again and failed the same way. The box stays available in every state.
-  if(p.lat!=null)return `<div class="m" style="margin-top:16px">Placed · <span class="text-action" onclick="replaceCafe('${p.id}')">not right?</span></div>
+  if(p.lat!=null)return `<div class="m" style="margin-top:16px">Placed · <button class="text-action" onclick="replaceCafe('${p.id}')">not right?</button></div>
     ${mapLinkHTML(p)}`;
-  return `<div class="m" style="margin-top:16px">Not placed yet · <span class="text-action" onclick="replaceCafe('${p.id}')">look it up</span></div>
+  return `<div class="m" style="margin-top:16px">Not placed yet · <button class="text-action" onclick="replaceCafe('${p.id}')">look it up</button></div>
     ${mapLinkHTML(p)}`;
 }
 // paste, parse, confirm — the same settle as a branch pick, same undo. A link
@@ -3839,15 +3870,25 @@ async function replaceCafe(placeId){
   toast('Looking again…');
   const hits=await lookupPlace(p.name,'',p.city);
   const q=placeById(placeId);if(!q)return;
+  if(hits==null){toast('The lookup didn’t answer — nothing changed. Try again in a moment.');return}
   if(!hits.length){toast('No address could be confirmed for that name.');return}
-  q.lat=null;q.lon=null;q.geocoded=true;
+  q.geocoded=true;
   if(hits.length===1){
-    const was=q.city,hit=hits[0];
-    const cityChanged=hit.city&&fold(hit.city)!==fold(was||'');
+    // the standing pin is kept until the new one is settled, and the settle
+    // carries the same undo every other settle here already does
+    const was={lat:q.lat,lon:q.lon,neighborhood:q.neighborhood,city:q.city,country:q.country,branches:q.branches};
+    const hit=hits[0],cityChanged=hit.city&&fold(hit.city)!==fold(was.city||'');
     settlePlace(q,hit);save();render();
-    toast(`Placed in ${[hit.hood,cityChanged?hit.city:''].filter(Boolean).join(', ')||q.city||'the city'}.`);
+    toast(`Placed in ${[hit.hood,cityChanged?hit.city:''].filter(Boolean).join(', ')||q.city||'the city'}.`,()=>{
+      const w=placeById(placeId);if(!w)return;
+      w.lat=was.lat;w.lon=was.lon;w.neighborhood=was.neighborhood;w.city=was.city;w.country=was.country;
+      if(was.branches)w.branches=was.branches;else delete w.branches;
+      save();render();
+    },'Undo');
     return;
   }
+  // several of it: the question is asked with the old pin still standing —
+  // a keeper who never answers has lost nothing
   q.branches=hits;save();render();
 }
 
@@ -4051,7 +4092,7 @@ function confirmImportCard(){
  * and re-runnable: import the same file twice and the second run adds
  * nothing, because every minted record carries a sourceId back to classic's
  * own id and the mapper checks for it first. ---- */
-let classicPending=null;
+let classicPending=null;   // the parsed export, held until Add is tapped — never a mapped result
 function openClassicImport(){
   classicPending=null;
   openSheet(`<h3>Import from classic</h3>
@@ -4066,8 +4107,11 @@ function classicFilePicked(e){
   const reader=new FileReader();
   reader.onload=()=>{
     let json;try{json=JSON.parse(String(reader.result))}catch(err){toast('Could not read that file — is it classic\'s JSON export?');return}
-    let mapped;try{mapped=importClassicMap(json,D)}catch(err){toast('Could not map that export');return}
-    classicPending=mapped;
+    // the preview maps against a CLONE: the mapper enriches matched places in
+    // place (city, coordinates, palette), and a preview the keeper walks away
+    // from must leave the live ledger untouched. The real map runs at Add.
+    let mapped;try{mapped=importClassicMap(json,clone(D))}catch(err){toast('Could not map that export');return}
+    classicPending=json;
     renderClassicPreview(mapped);
   };
   reader.onerror=()=>toast('Could not read that file');
@@ -4085,7 +4129,7 @@ function renderClassicPreview(m){
 }
 function applyClassicImport(){
   if(!classicPending)return;
-  const m=classicPending;
+  let m;try{m=importClassicMap(classicPending,D)}catch(err){classicPending=null;toast('Could not map that export');return}
   D.roasters.push(...m.newRoasters);D.places.push(...m.newPlaces);D.setups.push(...m.newSetups);
   D.coffees.push(...m.newCoffees);D.brews.push(...m.newBrews);D.cups.push(...m.newCups);
   classicPending=null;save();closeSheet();render();
@@ -4162,16 +4206,17 @@ function confirmRestoreBackup(){
 const duskMQ=matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
   document.documentElement.setAttribute('data-theme',duskMQ.matches?'dusk':'paper');
-  const mc=document.querySelector('meta[name=theme-color]');
-  if(mc)mc.setAttribute('content',duskMQ.matches?'#171310':'#f2eee6');
+  // theme-color rides the two media-scoped metas in the <head> now — the
+  // browser switches them itself, before this script has even run
   // a live street map repaints itself: carta-streets watches <html data-theme>
   // and re-filters its own tiles in place, no remount, no refetch
 }
 duskMQ.addEventListener('change',applyTheme);
 
 /* ============ version ============ */
-const APP_VERSION='7.46.3';
+const APP_VERSION='7.47.0';
 const CHANGELOG=[
+  {v:'7.47.0',d:"The shakedown. A pass over everything before the trailhead. The reach chips answer to a tap again — a quoting slip had left them silent. A backup carries the record and never your keys: the Anthropic key and the Visualizer sign-in stay on this device, which is what every sheet already promised. The shell keeps itself now, so opening Carta with no network at all opens Carta, not the browser's error page. A keystroke in a coffee's notes no longer unpins its farm; the classic import writes nothing until you tap Add; cancelling an ask cancels it even if you ask again straight away; a lookup nobody answered no longer retires a café unplaced forever; a put-away Setup stops collecting new brews; and “not right?” keeps the old pin standing until you have picked the new one, with an undo. A record that would not read is set aside whole rather than written over. The dials, the sheets and every quiet link answer to a keyboard now and say their names to a screen reader, the toast included. And Carta installs with its own icon on an iPhone at last."},
   {v:'7.46.3',d:"The far café, readable. The reach ruler names the nearest and — room permitting — the farthest café on your record, and that farthest label grew rightward from a point almost at the ruler's own edge: any name past a few kilometres ran off the visible strip and cut off mid-word (a keeper on a genuinely spread-out record saw \"BUJUMBURA CAFÉ\" clipped to four letters). It now grows backward over the line instead of past it once its dot sits in the ruler's own right third, which is exactly where a distance worth naming tends to land."},
   {v:'7.46.2',d:"Worth driving for, and a ring that agrees with it. The reach chips promise a distance, and the answer's own map draws it back as rings — for two of the three reaches, one of those rings was always exactly the promise. For \"worth driving for\", it wasn't: the plate drew 2, 6 and 15 km, and 8 — the number on the chip, the one Carta actually asked the model to hold to — wasn't among them. A café at 7 km could read as inside your reach and yet sit outside every ring drawn to say so. The middle ring is 8 now, not 6, so every reach keeps the same promise: what the chip says, one of the rings on the map says too."},
   {v:'7.46.1',d:"Nothing changes on the screen. landKey() — the passport's own country lookup — was reaching across a seam it shouldn't: a sibling file borrowing its name-normaliser from the page that loads it, rather than carrying one of its own. It always resolved correctly, but it was the wrong direction, the same shape cityKey() was fixed into at Phase 32. Carries its own now."},
@@ -4291,8 +4336,13 @@ if([window.MAP_VERSION,window.PLATE_VERSION,window.SHOT_VERSION,window.ASK_VERSI
 }
 applyTheme();
 render();
+// the shell keeps itself (sw.js): a cold launch with no network now opens the
+// app instead of the OS's error page. https-only, so the local harnesses and
+// a python http.server run exactly as before; a failure to register is the
+// old behavior, not an error.
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 // What's New, once per version — and never over a first open, where the
-// welcome is the only thing the screen should be saying (rec 5)
+// door's own first leaf is the only thing the screen should be saying
 if(live('cups').length&&getPref('lastSeenVersion','')!==APP_VERSION){
   setTimeout(()=>{if(!sheetOpen())openWhatsNew()},900);
 }

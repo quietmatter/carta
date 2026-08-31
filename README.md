@@ -383,7 +383,7 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 | `manifest.json`, `icon-*.svg`, `favicon.svg` | PWA metadata and the mark — the seal cut by the belt, at every size and both masks. |
 | `server/` | The optional sync server — dormant in 7.0, kept for the record. |
 | `test/model.test.js` | Zero-dep test for the taste model + the brief. |
-| `test/verify-static.js` | Zero-dep check that the seven files parse and agree on one version. |
+| `test/verify-static.js` | Zero-dep check that the eight files parse and agree on one version. |
 | `test/verify-door.js`, `test/verify-v7.35.js`, `test/verify-split.js` | Browser harnesses — they boot the real app against a seeded record and walk its flows. |
 | `.github/workflows/tests.yml` | CI — runs all five harnesses on every push and PR. Not a build step: nothing it does changes the files you'd drop on a host. |
 | `docs/` | The design record: the pivot, the roadmap, the architecture, the voice standard, and classic's own design history. |
@@ -391,7 +391,11 @@ Franklin) are self-hosted from `fonts/` — nothing loads from a third party.
 ## Installing on a phone
 
 Open the page in Safari or Chrome, then "Add to Home Screen" — it installs as
-a standalone app and works offline from then on.
+a standalone app and works offline from then on. Since v7.47.0 that promise
+covers the cold start too: a small service worker keeps the shell itself, so
+opening Carta with no network at all opens Carta, not an error page. It keeps
+only Carta's own files — every outward touch (tiles, lookups, the ask) still
+degrades exactly as documented above.
 
 ## Your data
 

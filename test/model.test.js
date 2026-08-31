@@ -984,6 +984,25 @@ assert.ok(M.shotFigures({ curve: onePourCurve, dose: 15, timeExact: 80 }).drawdo
   'its one wait is still the drawdown, because nothing was added after it');
 ok('shotFigures states no bloom on a brew poured in one go rather than calling its only wait one');
 
+// v7.47.0 — a shot handed pours:[] (shotOfBrew's shape for an older brew that
+// never stored them) still reads its pours off the curve: an empty array is an
+// absence, not a statement, and it must not outvote the staircase the curve
+// actually recorded. platePaths already let it fall through; the figures didn't.
+const emptyPourFigs = M.shotFigures({ curve: pourCurve, pours: [], dose: 15, water: 250, timeExact: 184 });
+assert.ok(Math.abs(emptyPourFigs.bloom - 42) <= 1, 'bloom is read off the curve when pours:[] rides in');
+assert.ok(Math.abs(emptyPourFigs.drawdown - 52) <= 1.5, 'and so is the drawdown');
+ok('shotFigures lets the curve vote when a caller hands it an empty pours array');
+
+// v7.47.0 — a payload whose string fields are not strings (bean_brand: 123, an
+// object where a name should be) costs those fields, never the whole shot: the
+// old `(v||'').trim()` threw, and the picker counted the shot unread.
+shot = M.parseVisualizerShot({ duration: 20, bean_brand: 123, bean_type: { odd: true }, grinder_model: 45, profile_title: null });
+assert.equal(shot.roaster, '', 'a non-string roaster reads as unstated, never a throw');
+assert.equal(shot.coffeeName, '');
+assert.equal(shot.grinderModel, '');
+assert.equal(shot.time, 20, 'the rest of the shot still reads');
+ok('parseVisualizerShot survives string fields that are not strings, at the cost of only those fields');
+
 // a file that stops the moment the last pour ends states a drawdown of nothing.
 // That is what the file says; it is not detectable as truncated from the file
 // alone, and inventing an ending for it is what `unread` exists to prevent.

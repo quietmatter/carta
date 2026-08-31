@@ -323,7 +323,7 @@ function askRowHTML(a){
     ||grounded.map(f=>f.city&&cityCountry(f.city)).find(Boolean)
     ||(key?landLabel(key):'');
   const said=(a.read||(a.plan&&a.plan.move)||'').trim();
-  return `<button class="lcard" onclick="openAskResultScreen('${a.id}')">
+  return `<button class="lcard" onclick="closeSheet();openAskResultScreen('${a.id}')">
     <span class="head${seal?'':' bare'}">
       ${seal}
       <span class="eyeb">Found ${esc(ASK_PREP[a.kind]||'in')} ${esc(a.destination)}</span>
@@ -720,7 +720,8 @@ function reachSaysHTML(marks,km){
     rest=`${next.name} at ${km1(next.km)} km is the nearest one outside.`;
   }else if(slack<1){
     lead=`${all} are inside it`;
-    rest=`all ${words(scopedCups())} cups within reach.`;
+    const sc=scopedCups();
+    rest=sc?`all ${words(sc)} cup${sc===1?'':'s'} within reach.`:'everything you have measured from is within reach.';
   }else{
     lead=n===2?`Both inside, and ${slack} km of ground past them`
       :`${all} inside, and ${slack} km of ground past them`;
@@ -900,7 +901,7 @@ function vAsk(){
           ${marks.at?`<span class="reach-from">${esc(reachAnchorLine(marks.ds.length))}</span>`:''}
         </div>
         <div class="picks">
-          ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach('${jsq(r)}')">${
+          ${ASK_REACH.map(r=>`<button class="pick${askDraft.reach===r?' on':''}" onclick="pickAskReach(${jsq(r)})">${
             esc(r)}<span class="km"> · ${REACH_KM[r]} km</span></button>`).join('')}
         </div>
         ${reachRulerHTML(marks,km)}
@@ -960,10 +961,10 @@ let _askBusy=false;
 // wildcard. So it paces itself a second apart, the way geocodeCityPlaces does,
 // and the progress line says which name it's on rather than sitting on "Asking…"
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function groundNamed(list,fallbackCity,say,onPlaced){
+async function groundNamed(list,fallbackCity,say,onPlaced,dead){
   const out=[];
   for(let i=0;i<list.length;i++){
-    if(_askCancel)break;
+    if(_askCancel||(dead&&dead()))break;
     const f=list[i];
     const city=f.city||fallbackCity||'';
     if(i)await sleep(1000);
@@ -1173,23 +1174,27 @@ async function runAsk(){
   const destination=(askDraft.dest||'').trim();
   const question=(askDraft.question||'').trim();
   const reach=askReach();
-  if(!destination){toast('Where should Carta ask about?');return}
+  if(!destination){toast('Name a place first — a city, a country, a route.');return}
   _askBusy=true;
   askBegin(destination,kind,reach);
-  const beat=ms=>sleep(_askCancel?0:ms);
+  // the cancel flag is one global and the next ask resets it — a run parked in
+  // an await when that happens must not wake into someone else's wait. The
+  // token is this run's own identity; the run is dead the moment it isn't.
+  const run=askRun,dead=()=>_askCancel||askRun!==run;
+  const beat=ms=>sleep(dead()?0:ms);
   try{
     const tm=tasteModelMemo();
     const scope=askScopeOf(kind,destination);
     for(const [line,pct] of askOpeningLines(tm,scope)){
       askSay(line,pct);
       await beat(reducedMotion()?200:620);
-      if(_askCancel)return;
+      if(dead())return;
     }
     const briefText=briefPlainText(D,scope.kind,scope.id,tm);
     const prompt=askPromptText(briefText,kind,destination,question,reach);
     askSay('Asking, with your key, this once.',ASK_PCT_ASKING);
     const raw=await callAskModel(prompt);
-    if(_askCancel)return;
+    if(dead())return;
     const parsed=parseAskJSON(raw);
     // v7.35.0, critique rec 10: an unreadable reply used to fall through as an
     // empty answer — the wait completed, the result screen opened, and it said
@@ -1205,20 +1210,20 @@ async function runAsk(){
     askRun.total=named;
     askSay(`Reading the answer back — ${words(named)} name${named===1?'':'s'}, ranked and argued.`,ASK_PCT_READBACK);
     await beat(reducedMotion()?200:700);
-    if(_askCancel)return;
+    if(dead())return;
     // one line per name, and the pin the moment the address confirms it: the
     // grounding pass was always the slow half, and now it is the readable half
     let placed_=0;
-    const say=m=>askSay(m,ASK_PCT_READBACK+(ASK_PCT_PLACED-ASK_PCT_READBACK)*(placed_/Math.max(1,named)));
-    const step=f=>{placed_++;askPlace(f)};
+    const say=m=>{if(!dead())askSay(m,ASK_PCT_READBACK+(ASK_PCT_PLACED-ASK_PCT_READBACK)*(placed_/Math.max(1,named)))};
+    const step=f=>{placed_++;if(!dead())askPlace(f)};
     const near=(kind==='city'||kind==='near')?destination:'';
-    const findings=await groundNamed(parsed.findings,near,say,step);
-    if(_askCancel)return;
-    const mentions=await groundNamed(parsed.mentions,near,say,step);
-    if(_askCancel)return;
+    const findings=await groundNamed(parsed.findings,near,say,step,dead);
+    if(dead())return;
+    const mentions=await groundNamed(parsed.mentions,near,say,step,dead);
+    if(dead())return;
     const plan=parsed.plan?Object.assign({},parsed.plan,
-      {wildcard:parsed.plan.wildcard?(await groundNamed([parsed.plan.wildcard],near,say,step))[0]:null}):null;
-    if(_askCancel)return;
+      {wildcard:parsed.plan.wildcard?(await groundNamed([parsed.plan.wildcard],near,say,step,dead))[0]:null}):null;
+    if(dead())return;
     const all=findings.concat(mentions,(plan&&plan.wildcard)?[plan.wildcard]:[]);
     const lost=all.filter(f=>!f.grounded);
     askSay(lost.length
@@ -1228,20 +1233,25 @@ async function runAsk(){
     const ask={id:uid(),createdAt:new Date().toISOString(),kind,destination,question,reach,
       model:askModel(),read:parsed.read,findings,mentions,plan};
     await beat(reducedMotion()?200:900);
+    if(dead())return;
     _askBusy=false;
-    if(_askCancel)return;
     // the write waits for the last beat's own cancel check — a cancel this
     // late still meets a fully-grounded answer, but it must still meet nothing
     // written, the same promise every earlier stage of this call already kept
     D.asks.unshift(ask);save();
     askDraft.dest='';   // the ask is on the record now; the field starts clean
     askRun=null;
-    askLandsOnDoor();
+    // land on the door only if the keeper is still on the wait — an answer
+    // arriving into some other screen waits on the door's own rung instead
+    if(pageView&&pageView.kind==='asking')askLandsOnDoor();
   }catch(e){
+    if(dead()||(e&&e.name==='AbortError'))return;
     _askBusy=false;
-    if(_askCancel||(e&&e.name==='AbortError'))return;
-    // the degrade is stated where the wait was, with both doors on it
-    const msg=(e&&e.message)||'Could not reach the model.';
+    // the degrade is stated where the wait was, with both doors on it — and a
+    // network-layer death is said in Carta's own words, never the browser's
+    const raw=(e&&e.message)||'';
+    const msg=(!raw||/failed to fetch|load failed|networkerror/i.test(raw))
+      ?'Could not reach the model — nothing left the device. Try again in a moment.':raw;
     // the stage it failed on stays on the page: what was being attempted is
     // half the answer to why it didn't work
     if(askRun){if(askRun.now)askRun.done.push(askRun.now);askRun.error=msg;askRun.now='';}
@@ -1918,4 +1928,4 @@ window.askResumeAfterKey=askResumeAfterKey;
 window.runAsk=runAsk;
 window.copyScopedBrief=copyScopedBrief;
 
-window.ASK_VERSION='7.46.3';
+window.ASK_VERSION='7.47.0';

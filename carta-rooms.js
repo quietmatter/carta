@@ -576,7 +576,11 @@ function exportedLine(){
 }
 function exportLedgerJSON(){
   const stamp=new Date().toISOString().slice(0,10);
-  downloadBlob(new Blob([JSON.stringify(D,null,2)],{type:'application/json'}),`carta-${stamp}.json`);
+  // the backup carries the record, never your keys — "on this device, and
+  // nowhere else" has to hold through a file that leaves it
+  const out={...D,prefs:{...D.prefs}};
+  delete out.prefs.askKey;delete out.prefs.visualizerEmail;delete out.prefs.visualizerPassword;
+  downloadBlob(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}),`carta-${stamp}.json`);
   setPref('exportedAt',new Date().toISOString());
   render();
   toast('Backed up — saved to your downloads.');
@@ -599,7 +603,7 @@ function storageUsedBytes(){
   return used*2;   // UTF-16 — the unit a browser's quota actually counts against
 }
 function lowStorageNoteHTML(){
-  return `<div class="note">Storage is getting full. <span class="text-action" onclick="exportLedgerJSON()">Back up now</span> to be safe.</div>`;
+  return `<div class="note">Storage is getting full. <button class="text-action" onclick="exportLedgerJSON()">Back up now</button> to be safe.</div>`;
 }
 
 function recordMetaLine(){
@@ -844,10 +848,15 @@ function vBrew(coffeeId,view){
   const coffee=coffeeById(coffeeId);
   if(!coffee)return `<div class="pad" style="padding-top:26px"><div class="empty">That coffee isn't on the record.</div></div>`;
   const editId=(view&&view.editId)||'';
-  const noSetup=!D.setups.length;
+  // a put-away Setup is retired, not a default — the fresh-brew fallback only
+  // ever reaches for a live one, and a retired one reached by edit says so
+  const liveSetups=D.setups.filter(x=>!x.archived);
+  const noSetup=!liveSetups.length;
   const editing=editId?brewById(editId):null;
   const last=editing||D.brews.filter(b=>b.coffeeRef===coffeeId).sort(byNew)[0]||D.brews.slice().sort(byNew)[0];
-  const setup=noSetup?null:(editing?setupById(editing.setupId):(last?setupById(last.setupId):D.setups[D.setups.length-1]));
+  const lastSetup=last&&setupById(last.setupId);
+  const setup=editing?setupById(editing.setupId)
+    :noSetup?null:((lastSetup&&!lastSetup.archived)?lastSetup:liveSetups[liveSetups.length-1]);
   const setups=D.setups.filter(x=>!x.archived||(setup&&x.id===setup.id));
   const techs=[...new Set(D.brews.map(x=>x.technique).filter(Boolean))];
   const setupBand=noSetup
@@ -861,7 +870,7 @@ function vBrew(coffeeId,view){
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);background:var(--surface-page);padding:12px 14px;margin-bottom:16px">
           <div style="min-width:0">
             <div class="eyebrow" style="margin:0">Setup</div>
-            <div style="font-family:var(--serif);font-size:16px;margin-top:2px">${esc((setup&&(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')))||'—')}</div>
+            <div style="font-family:var(--serif);font-size:16px;margin-top:2px">${esc((setup&&(setup.name||[setup.grinder,setup.brewer].filter(Boolean).join(' · ')))||'—')}${setup&&setup.archived?' · retired':''}</div>
           </div>
           <span style="font-family:var(--sans);font-size:var(--s11);color:var(--ink-3);letter-spacing:.04em;max-width:15ch;text-align:right;line-height:1.4">grind reads true only inside this Setup</span>
         </div>`;
@@ -913,4 +922,4 @@ window.vSetup=vSetup;
 window.vSetups=vSetups;
 window.vShelf=vShelf;
 
-window.ROOMS_VERSION='7.46.3';
+window.ROOMS_VERSION='7.47.0';
